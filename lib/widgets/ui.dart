@@ -18,8 +18,10 @@ import '../core/fmt.dart';
 import '../core/models.dart';
 import '../core/theme.dart';
 
-/// Curva firma del sistema (EASE [0.16, 1, 0.3, 1]).
-const Cubic kEaseVe = Cubic(0.16, 1.0, 0.3, 1.0);
+/// Curva firma del sistema (EASE [0.16, 1, 0.3, 1]) — definida UNA sola vez
+/// en core/theme.dart (§8) y re-exportada aquí para no romper a quien ya la
+/// importaba desde ui.dart.
+export '../core/theme.dart' show kEaseVe;
 
 const Duration kTapDur = Duration(milliseconds: 120);
 const Duration kStateDur = Duration(milliseconds: 200);
@@ -100,7 +102,7 @@ class Flag extends StatelessWidget {
   }
 }
 
-/// Sello puntual de estado/fuente: borde de tinta 38 %, fondo al 7 %.
+/// Sello puntual de estado/fuente: borde de tinta 38 %, fondo al 8 % (§8).
 class Stamp extends StatelessWidget {
   const Stamp(this.text, {super.key, this.color, this.icon});
 
@@ -117,7 +119,7 @@ class Stamp extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border.all(color: c.withValues(alpha: 0.38)),
         borderRadius: BorderRadius.circular(5),
-        color: c.withValues(alpha: 0.07),
+        color: c.withValues(alpha: 0.08),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -161,8 +163,8 @@ class ReadWindow extends StatelessWidget {
             ? VeColors.mutedDark.withValues(alpha: 0.8)
             : VeColors.mutedLight.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        // §8 regla dura: bordes 100 % sólidos (nunca alpha parcial).
+        border: Border.all(color: dark ? VeColors.borderDark : VeColors.borderLight),
       ),
       child: Semantics(
         label: semanticLabel,
@@ -172,7 +174,11 @@ class ReadWindow extends StatelessWidget {
   }
 }
 
-/// Renglón «Etiqueta ······ cifra» con puntos contables (solo cierre cuentas).
+/// Renglón «Etiqueta ······ cifra» con puntos contables — SOLO cierre de
+/// cuentas (§8). Default `dots: false`: las listas de items NO encienden
+/// puntos (contrato: quien necesite filete contable pasa dots: true).
+/// Sin puntos, el label ocupa el resto de la fila para que la cifra quede
+/// alineada a la derecha igual que con ellos (misma geometría, sin dot-leader).
 class LedgerRow extends StatelessWidget {
   const LedgerRow({
     super.key,
@@ -181,7 +187,7 @@ class LedgerRow extends StatelessWidget {
     this.valueColor,
     this.boldValue = false,
     this.leading,
-    this.dots = true,
+    this.dots = false,
     this.onTap,
   });
 
@@ -199,13 +205,22 @@ class LedgerRow extends StatelessWidget {
     final row = Row(
       children: [
         if (leading != null) ...[leading!, const SizedBox(width: 6)],
-        Flexible(
-          child: Text(
-            label,
-            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: scheme.onSurface),
-            overflow: TextOverflow.ellipsis,
+        if (dots)
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: scheme.onSurface),
+              overflow: TextOverflow.ellipsis,
+            ),
+          )
+        else
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: scheme.onSurface),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-        ),
         if (dots) ...[
           const SizedBox(width: 6),
           Expanded(child: _LedgerDots(color: scheme.onSurfaceVariant.withValues(alpha: 0.42))),
@@ -247,17 +262,18 @@ class _LedgerDots extends StatelessWidget {
   }
 }
 
-/// Doble filete contable (rule-double): cierre de totales.
+/// Doble filete contable (rule-double): cierre de totales. §8 bordes 100 %:
+/// filete fuerte = token border sólido · filete débil = token muted sólido.
 class RuleDouble extends StatelessWidget {
   const RuleDouble({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final Color c = Theme.of(context).colorScheme.outlineVariant;
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Column(children: [
-      Container(height: 1, color: c.withValues(alpha: 0.9)),
+      Container(height: 1, color: dark ? VeColors.borderDark : VeColors.borderLight),
       const SizedBox(height: 2),
-      Container(height: 1, color: c.withValues(alpha: 0.6)),
+      Container(height: 1, color: dark ? VeColors.mutedDark : VeColors.mutedLight),
     ]);
   }
 }
@@ -467,10 +483,12 @@ class PageHeader extends StatelessWidget {
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // §8: display en SpaceGrotesk (los números siguen tabulares).
             Text(title,
                 style: TextStyle(
+                    fontFamily: 'SpaceGrotesk',
                     fontSize: 20,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     color: scheme.onSurface,
                     height: 1.1)),
             if (hint != null) ...[
@@ -962,8 +980,28 @@ class _RateTickerState extends State<RateTicker> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    if (widget.mode == 'off' || widget.items.isEmpty) {
-      return const SizedBox.shrink();
+    // Modo off = preferencia del usuario → no se monta (shrink). Sin datos →
+    // placeholder anti-CLS con la misma altura (delega en RateTicker).
+    if (widget.mode == 'off') return const SizedBox.shrink();
+    if (widget.items.isEmpty) {
+      final double height = switch (widget.size) {
+        'compact' => 30.0,
+        'large' => 48.0,
+        _ => 38.0,
+      };
+      final bool dark = Theme.of(context).brightness == Brightness.dark;
+      return Container(
+        height: height,
+        color: (dark ? VeColors.mutedDark : VeColors.mutedLight).withValues(alpha: 0.4),
+        alignment: Alignment.center,
+        child: Text(
+          'Cargando cotizaciones…',
+          style: TextStyle(
+            fontSize: 13.5,
+            color: dark ? VeColors.mutedFgDark : VeColors.mutedFgLight,
+          ),
+        ),
+      );
     }
     _ctrl.duration = Duration(seconds: widget.speed);
     final (double height, double labelSize, double valueSize) = switch (widget.size) {
@@ -1020,13 +1058,76 @@ class SkeletonPaper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: height,
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+        // §8 regla dura: borde sólido (nunca alpha parcial).
+        border: Border.all(color: dark ? VeColors.borderDark : VeColors.borderLight),
+      ),
+    );
+  }
+}
+
+/// ─── Tintas semánticas por divisa / categoría (CONTRATO §8) ────────────────
+/// CONTRATO PARA FEATURE-AGENT: `currencyInk(Currency)` y
+/// `categoryInk(String)` son helpers PURos sin BuildContext — devuelven la
+/// tinta canónica CLARA de cada divisa/categoría de fuente. Sirven para
+/// colorea dots/badges/datos donde ya existe contexto de tema o para PDFs
+/// con tema fijo claro. Para tinta con tema oscuro usa VeColors.of(context).
+
+/// Tinta firma por divisa (§8): VES azul · USD rojo · EUR violeta ·
+/// COP oliva · BRL verde · MXN magenta.
+Color currencyInk(Currency c) => switch (c) {
+      Currency.ves => Color(0xFF2563EB),
+      Currency.usd => Color(0xFFCF4437),
+      Currency.eur => Color(0xFF6E5BB8),
+      Currency.cop => Color(0xFF5D6B13),
+      Currency.brl => Color(0xFF12873C),
+      Currency.mxn => Color(0xFFB03D90),
+    };
+
+/// Tinta por categoría de fuente de tasa (código string del enum
+/// SourceCategory: 'official' | 'mixed' | 'parallel' | 'manual').
+/// Tolerante: código desconocido → neutro (mutedFg claro).
+Color categoryInk(String sourceCategory) => switch (sourceCategory) {
+      'official' => VeColors.posLight,
+      'mixed' => VeColors.warnLight,
+      'parallel' => VeColors.negLight,
+      'manual' => VeColors.manualLight,
+      _ => VeColors.mutedFgLight,
+    };
+
+/// Marca de la app: tile azul-noche con la «V» blanca en SpaceGrotesk bold.
+/// Tamaños fijados por §8 (header 24×24 radius 6).
+class LogoMark extends StatelessWidget {
+  const LogoMark({super.key, this.size = 24, this.radius = 6});
+
+  final double size;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFF22354E),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: Text(
+        'V',
+        style: TextStyle(
+          fontFamily: 'SpaceGrotesk',
+          fontSize: size * 0.58,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          height: 1.0,
+        ),
       ),
     );
   }

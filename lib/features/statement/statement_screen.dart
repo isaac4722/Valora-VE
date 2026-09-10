@@ -5,6 +5,8 @@
 /// Tres caminos NUNCA auto-print: PNG 1080×1350 (4:5) · Compartir · PDF.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -16,9 +18,10 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
+import '../../services/sharing.dart';
 
 const kInkPos = Color(0xFF10755A);
-const kInkNeg = Color(0xFFB8352A);
+const kInkNeg = Color(0xFFCF4437); // §8: rojo firma de datos (neg) real
 const kInkAccent = Color(0xFF22354E);
 
 class StatementScreen extends StatefulWidget {
@@ -34,7 +37,12 @@ class _StatementScreenState extends State<StatementScreen> {
   int _scope = 0; // 0 mensual · 1 trimestral · 2 anual
   int _offset = 0; // hacia atrás desde hoy
 
+  /// RepaintBoundary del documento: fuente REAL del PNG 1080×1350.
+  final GlobalKey _docKey = GlobalKey();
+
   String get _scopeLabel => switch (_scope) { 0 => 'Mensual', 1 => 'Trimestral', _ => 'Anual' };
+
+  String get _pngName => 'constancia-${_scopeLabel.toLowerCase()}-valorave.png';
 
   DateTimeRange get _range {
     final now = DateTime.now();
@@ -94,63 +102,61 @@ class _StatementScreenState extends State<StatementScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Documento (RepaintBoundary fuente del PNG).
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(color: kInkAccent, borderRadius: BorderRadius.circular(9)),
-                  alignment: Alignment.center,
-                  child: const Text('V', style: TextStyle(fontFamily: 'SpaceGrotesk', fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-                ),
-                const SizedBox(width: 10),
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('ValoraVE', style: VeText.displayNum(15, color: kInkAccent)),
-                  Text('Constancia ${widget.kind == 'finance' ? 'de finanzas' : 'de compras'}',
-                      style: const TextStyle(fontSize: 10.5, color: Colors.black54)),
+          // Documento: RepaintBoundary REAL, fuente del PNG (captureWidget).
+          RepaintBoundary(
+            key: _docKey,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: scheme.outlineVariant),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(color: kInkAccent, borderRadius: BorderRadius.circular(9)),
+                    alignment: Alignment.center,
+                    child: const Text('V', style: TextStyle(fontFamily: 'SpaceGrotesk', fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('ValoraVE', style: VeText.displayNum(15, color: kInkAccent)),
+                    Text('Constancia ${widget.kind == 'finance' ? 'de finanzas' : 'de compras'}',
+                        style: const TextStyle(fontSize: 10.5, color: Colors.black54)),
+                  ]),
+                  const Spacer(),
+                  Text(label.toUpperCase(), style: VeText.labelCaps(9, color: Colors.black54)),
                 ]),
-                const Spacer(),
-                Text(label.toUpperCase(), style: VeText.labelCaps(9, color: Colors.black54)),
+                const Divider(height: 26),
+                if (widget.kind == 'finance') ...[
+                  _row('Ingresos', fmtUSD(income), kInkPos),
+                  _row('Gastos', fmtUSD(expense), kInkNeg),
+                  const Divider(),
+                  _row('Balance', fmtUSD(income - expense), income >= 0 ? kInkAccent : kInkNeg, big: true),
+                  const SizedBox(height: 10),
+                  ..._categoryRows(tx),
+                ] else ...[
+                  _row('Compras', '${purchases.length}', kInkAccent, big: true),
+                  _row('Total USD', fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD)), kInkAccent),
+                  _row('Total Bs ponderado', 'Bs ${fmtNum(totalBs)}', kInkAccent),
+                  const SizedBox(height: 10),
+                  ..._storeRows(purchases),
+                ],
+                const SizedBox(height: 16),
+                Text('Generado ${fmtDateTime(DateTime.now())} · ValoraVE 1.0.0-beta',
+                    style: const TextStyle(fontSize: 9, color: Colors.black38)),
               ]),
-              const Divider(height: 26),
-              if (widget.kind == 'finance') ...[
-                _row('Ingresos', fmtUSD(income), kInkPos),
-                _row('Gastos', fmtUSD(expense), kInkNeg),
-                const Divider(),
-                _row('Balance', fmtUSD(income - expense), income >= 0 ? kInkAccent : kInkNeg, big: true),
-                const SizedBox(height: 10),
-                ..._categoryRows(tx),
-              ] else ...[
-                _row('Compras', '${purchases.length}', kInkAccent, big: true),
-                _row('Total USD', fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD)), kInkAccent),
-                _row('Total Bs ponderado', 'Bs ${fmtNum(totalBs)}', kInkAccent),
-                const SizedBox(height: 10),
-                ..._storeRows(purchases),
-              ],
-              const SizedBox(height: 16),
-              Text('Generado ${fmtDateTime(DateTime.now())} · ValoraVE 1.0.0-beta',
-                  style: const TextStyle(fontSize: 9, color: Colors.black38)),
-            ]),
+            ),
           ),
           const SizedBox(height: 16),
           // Tres caminos: nunca auto-print.
           FilledButton.icon(
             icon: const Icon(Icons.image_outlined, size: 17),
             label: const Text('Generar PNG (1080×1350)'),
-            onPressed: () {
-              // El PNG se dibuja con canvas Flutter y se comparte (buildShareImage).
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Constancia PNG lista: se comparte o guarda desde el panel de Android'),
-                  behavior: SnackBarBehavior.floating));
-            },
+            onPressed: () => unawaited(_sharePng(context)),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
@@ -210,6 +216,33 @@ class _StatementScreenState extends State<StatementScreen> {
       for (final e in sorted.take(6))
         _row(e.key, fmtUSD(e.value), Colors.black87),
     ];
+  }
+
+  /// PNG REAL (1080×1350 aprox, §9.9): captura el RepaintBoundary del
+  /// documento con captureWidget (pixelRatio 3 → ~1080 px de ancho en
+  /// pantallas típicas) y lo comparte vía share_plus. Si la captura falla
+  /// → SnackBar de error honesto. NUNCA auto-print.
+  Future<void> _sharePng(BuildContext context) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    try {
+      final bytes = await captureWidget(_docKey, targetWidth: 1080);
+      if (!mounted) return;
+      if (bytes == null) {
+        messenger.showSnackBar(const SnackBar(
+            content: Text('No se pudo capturar la constancia. Intenta de nuevo.'),
+            behavior: SnackBarBehavior.floating));
+        return;
+      }
+      await sharePng(bytes, _pngName);
+    } catch (_) {
+      // Degradación honesta: sin share_plus/captura disponible se avisa,
+      // jamás se simula éxito ni se imprime solo.
+      if (mounted) {
+        messenger.showSnackBar(const SnackBar(
+            content: Text('No se pudo compartir el PNG de la constancia.'),
+            behavior: SnackBarBehavior.floating));
+      }
+    }
   }
 
   Future<void> _printPdf(BuildContext context, AppStore store, DateTimeRange range, String label,

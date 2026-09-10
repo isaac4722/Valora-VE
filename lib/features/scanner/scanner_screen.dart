@@ -1,10 +1,13 @@
 /// ─── Escáner de códigos de barras (§9.4/§12.2 · mobile_scanner) ────────────
-/// Escaneo continuo con linterna y fallback manual (el web escanea en
-/// Productos y Lista). Devuelve el código por Navigator.pop(context, código).
-/// Debounce de 800 ms anti-doble-lectura del mismo fotograma.
+/// Escaneo continuo con linterna, pinch-zoom (InteractiveViewer ×4) y
+/// fallback manual (el web escanea en Productos y Lista). Feedback de
+/// lectura: HapticFeedback.mediumImpact + SystemSound.alert. Devuelve el
+/// código por Navigator.pop(context, código). Debounce de 800 ms
+/// anti-doble-lectura del mismo fotograma.
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class ScannerScreen extends StatefulWidget {
@@ -48,6 +51,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
       }
       _lastCode = code;
       _lastHit = now;
+      // Feedback de lectura: vibración + sonido del sistema.
+      HapticFeedback.mediumImpact();
+      SystemSound.play(SystemSoundType.alert);
       Navigator.of(context).pop(code);
       return;
     }
@@ -73,7 +79,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
         ],
       ),
       body: Stack(children: [
-        MobileScanner(controller: _controller, onDetect: _onDetect),
+        // Pinch-zoom de la preview (hasta 4×): InteractiveViewer no interfiere
+        // con la detección ni con el auto-cierre.
+        Positioned.fill(
+          child: InteractiveViewer(
+            maxScale: 4,
+            child: MobileScanner(controller: _controller, onDetect: _onDetect),
+          ),
+        ),
         // Ventana de apuntado (marco redondeado, no bloquea gestos).
         const IgnorePointer(
           child: Center(

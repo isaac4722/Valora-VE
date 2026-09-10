@@ -44,10 +44,12 @@ void _prune(List<SnapshotPoint> store, DateTime now) {
     ..addAll(kept);
 }
 
-/// Serie de una fuente a [days] días (asc por día).
+/// Serie de una fuente a [days] días (asc por día). Recorta a los últimos
+/// [days] días desde hoy: puntos con día < cutoff se descartan (§4).
 List<SnapshotPoint> snapshotSeries(List<SnapshotPoint> store, String sourceId, int days) {
+  final cutoff = SnapshotPoint.dayKey(DateTime.now().subtract(Duration(days: days)));
   return store
-      .where((p) => p.sourceId == sourceId)
+      .where((p) => p.sourceId == sourceId && p.day.compareTo(cutoff) >= 0)
       .toList()
       ..sort((a, b) => a.day.compareTo(b.day))
     ..removeWhere((p) => p.day.isEmpty);

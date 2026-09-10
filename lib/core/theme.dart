@@ -1,10 +1,15 @@
 /// Tema «El Instrumento» de ValoraVE — tokens exactos del sistema de diseño
 /// v15 (DESIGN.md). Superficie neutra de precisión: azul tinta señala lo
 /// tocable, el color de datos solo significa (oficial/paralelo, sube/baja).
+/// CONTRATO (§8): aquí vive la ÚNICA definición de kEaseVe — ui.dart la
+/// re-exporta para no romper a quien la importe desde ahí.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+/// Curva firma del sistema (EASE [0.16, 1, 0.3, 1]).
+const Cubic kEaseVe = Cubic(0.16, 1.0, 0.3, 1.0);
 
 /// Paleta por rol, light (canónico) y dark (grafito frío).
 class VeColors {
@@ -180,8 +185,9 @@ abstract final class AppTheme {
         scrolledUnderElevation: 0,
         backgroundColor: bg,
         foregroundColor: fg,
+        // §8: display en SpaceGrotesk (los números siguen tabulares).
         titleTextStyle: TextStyle(
-          fontFamily: 'Inter',
+          fontFamily: 'SpaceGrotesk',
           fontSize: 17,
           fontWeight: FontWeight.w700,
           color: fg,
@@ -189,8 +195,10 @@ abstract final class AppTheme {
         ),
         systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       ),
+      // §8 sombra firma sutil: card eleva 1 con sombra azul-noche al 8 %.
       cardTheme: CardThemeData(
-        elevation: 0,
+        elevation: 1,
+        shadowColor: const Color(0x140C1016),
         color: card,
         surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
@@ -199,6 +207,17 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(color: border),
         ),
+      ),
+      // §8 transición de página firma (slide 18/10 px + fade).
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: <TargetPlatform, PageTransitionsBuilder>{
+          TargetPlatform.android: VePageTransitionsBuilder(),
+          TargetPlatform.iOS: VePageTransitionsBuilder(),
+          TargetPlatform.macOS: VePageTransitionsBuilder(),
+          TargetPlatform.linux: VePageTransitionsBuilder(),
+          TargetPlatform.windows: VePageTransitionsBuilder(),
+          TargetPlatform.fuchsia: VePageTransitionsBuilder(),
+        },
       ),
       dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
       inputDecorationTheme: InputDecorationTheme(
@@ -269,6 +288,9 @@ abstract final class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: card,
         surfaceTintColor: Colors.transparent,
+        // §8: diálogos elevan 8 con sombra firma al 12 %.
+        elevation: 8,
+        shadowColor: const Color(0x1F0C1016),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         titleTextStyle: TextStyle(
           fontFamily: 'Inter',
@@ -311,10 +333,43 @@ abstract final class AppTheme {
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         showDragHandle: true,
+        elevation: 8,
+        shadowColor: Color(0x1F0C1016),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
         ),
       ),
+    );
+  }
+}
+
+/// Transición de página firma (§8): slide sutil (dx 18 px · dy 10 px) +
+/// fade, con la curva kEaseVe sobre la duración estándar de ruta (300 ms).
+/// Con `disableAnimations` del sistema → SOLO fade (accesibilidad).
+class VePageTransitionsBuilder extends PageTransitionsBuilder {
+  const VePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final CurvedAnimation curved =
+        CurvedAnimation(parent: animation, curve: kEaseVe, reverseCurve: kEaseVe.flipped);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return FadeTransition(opacity: curved, child: child);
+    }
+    final Size size = MediaQuery.sizeOf(context);
+    final Offset begin = Offset(
+      size.width > 0 ? 18 / size.width : 0.02,
+      size.height > 0 ? 10 / size.height : 0.012,
+    );
+    return SlideTransition(
+      position: Tween<Offset>(begin: begin, end: Offset.zero).animate(curved),
+      child: FadeTransition(opacity: curved, child: child),
     );
   }
 }

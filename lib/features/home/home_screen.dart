@@ -1,8 +1,12 @@
 /// ─── Inicio (§9.1) ──────────────────────────────────────────────────────────
-/// Hero fecha/saludo · Cotización principal (rows → setRateSource) ·
-/// calculadora de sueldo fija + tiles + extras regionales + derivadas LOTTT ·
-/// Resumen del mes · Tus tiendas · Registros recientes · Herramientas.
+/// Hero fecha/hora/saludo · Cotización principal (rows → setRateSource) ·
+/// calculadora de sueldo fija + tiles copiables + extras regionales +
+/// derivadas LOTTT · Divisas del foco (→ conversor) · Resumen del mes ·
+/// Alertas de precios (metas) · Tus tiendas · Registros recientes ·
+/// Herramientas.
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -24,7 +28,6 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final poller = context.watch<RatesPoller>();
     final scheme = Theme.of(context).colorScheme;
-    final now = DateTime.now();
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
@@ -33,10 +36,12 @@ class HomeScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           children: [
-            _Hero(now: now, poller: poller),
+            _Hero(poller: poller),
             _CotizacionPrincipal(),
             _SueldoSection(),
+            _DivisasFoco(),
             _ResumenMes(),
+            _AlertasPrecios(),
             _TusTiendas(),
             _RegistrosRecientes(),
             _Herramientas(),
@@ -47,10 +52,32 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _Hero extends StatelessWidget {
-  const _Hero({required this.now, required this.poller});
-  final DateTime now;
+class _Hero extends StatefulWidget {
+  const _Hero({required this.poller});
   final RatesPoller poller;
+
+  @override
+  State<_Hero> createState() => _HeroState();
+}
+
+class _HeroState extends State<_Hero> {
+  Timer? _clock;
+  DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    // Hora viva del héroe: refresco cada 30 s (dispose correcto abajo).
+    _clock = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _clock?.cancel();
+    super.dispose();
+  }
 
   /// % del paralelo (o BCV) vs el último snapshot de AYER — la píldora
   /// «vs ayer» del héroe v15. Null honesto si no hay datos comparables.
@@ -58,7 +85,7 @@ class _Hero extends StatelessWidget {
     for (final id in const ['ves-parallel', 'ves-bcv']) {
       final today = store.board.sources[id]?.rate;
       if (today == null || today <= 0) continue;
-      final day = SnapshotPoint.dayKey(now.subtract(const Duration(days: 1)));
+      final day = SnapshotPoint.dayKey(_now.subtract(const Duration(days: 1)));
       final yest = store.snapshots
           .where((p) => p.sourceId == id && p.day == day)
           .toList()
@@ -74,11 +101,15 @@ class _Hero extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final store = context.watch<AppStore>();
+    final now = _now;
+    // Hora 24 h es-VE junto a la fecha (HH:mm, cero dependencias de locale).
+    final hhmm =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     // «hace X» con el reloj real del cliente (fetchedAt del tablero);
-    // se recalcula en cada rebuild (el poller notifica ~cada 60 s y cada
-    // mutación del store) — sin timers periódicos para no ensuciar tests.
+    // se recalcula en cada rebuild (el poller notifica ~cada 60 s, cada
+    // mutación del store y este timer de 30 s).
     final fetched = store.board.fetchedAt;
-    final freshness = poller.loading
+    final freshness = widget.poller.loading
         ? null
         : (fetched == null ? 'sin datos aún' : timeAgo(fetched, now));
     final vsAyer = _vsAyer(store);
@@ -88,12 +119,13 @@ class _Hero extends StatelessWidget {
       child: Row(children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(saludo(now), style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
+            Text('${saludo(now)} · $hhmm',
+                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
             Text(fmtDateLong(now),
                 style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, color: scheme.onSurface, height: 1.2)),
           ]),
         ),
-        if (poller.loading)
+        if (widget.poller.loading)
           const SizedBox(
             width: 16,
             height: 16,
@@ -242,6 +274,31 @@ class _SueldoSectionState extends State<_SueldoSection> {
     if (s.salaryVariable != null) _varCtrl.text = fmtPlain(s.salaryVariable!, 2);
     if (s.salaryMin != null) _minCtrl.text = fmtPlain(s.salaryMin!, 2);
     if (s.salaryMax != null) _maxCtrl.text = fmtPlain(s.salaryMax!, 2);
+  }
+
+  /// Texto a copiar según el modo del sueldo:
+  /// · fijo → línea de contrato «Bs X · USD Y · EUR Z»
+  /// · base → monto simple
+  /// · rango → «min – máx»
+  String _salaryCopy(Settings s, Currency salaryCur, double effective, RateContext ctx) {
+    if (s.salaryMode == 'rango' && s.salaryMin != null && s.salaryMax != null) {
+      return '${fmtMoney(s.salaryMin!, salaryCur)} – ${fmtMoney(s.salaryMax!, salaryCur)}';
+    }
+    if (s.salaryMode == 'fijo') {
+      double? inCur(Currency c) {
+        final p = ctx.plan(salaryCur, c);
+        return p == null ? null : effective * p.rate;
+      }
+      final ves = inCur(Currency.ves);
+      if (ves != null) {
+        final usd = inCur(Currency.usd);
+        final eur = inCur(Currency.eur);
+        return 'Bs ${fmtMoney(ves, Currency.ves)}'
+            '${usd != null ? ' · USD ${fmtMoney(usd, Currency.usd)}' : ''}'
+            '${eur != null ? ' · EUR ${fmtMoney(eur, Currency.eur)}' : ''}';
+      }
+    }
+    return fmtCurrency(effective, salaryCur);
   }
 
   @override
@@ -404,20 +461,31 @@ class _SueldoSectionState extends State<_SueldoSection> {
             if (hasSalary) ...[
               const SizedBox(height: 14),
               ReadWindow(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Sueldo pactado', style: VeText.labelCaps(9, color: scheme.onSurfaceVariant)),
-                  const SizedBox(height: 4),
-                  if (s.salaryMode == 'rango')
-                    Text(
-                        '${fmtMoney(s.salaryMin!, salaryCur)} – ${fmtMoney(s.salaryMax!, salaryCur)}'
-                        '  ·  promedio ${fmtCurrency(effective, salaryCur)}',
-                        style: VeText.displayNum(21, color: scheme.onSurface))
-                  else
-                    Text(fmtCurrency(effective, salaryCur),
-                        style: VeText.displayNum(24, color: scheme.onSurface)),
-                  if (s.salaryMode == 'base')
-                    Text('${fmtMoney(s.salaryBase ?? 0, salaryCur)} fijo + ${fmtMoney(s.salaryVariable ?? 0, salaryCur)} variable',
-                        style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Sueldo pactado', style: VeText.labelCaps(9, color: scheme.onSurfaceVariant)),
+                      const SizedBox(height: 4),
+                      if (s.salaryMode == 'rango')
+                        Text(
+                            '${fmtMoney(s.salaryMin!, salaryCur)} – ${fmtMoney(s.salaryMax!, salaryCur)}'
+                            '  ·  promedio ${fmtCurrency(effective, salaryCur)}',
+                            style: VeText.displayNum(21, color: scheme.onSurface))
+                      else
+                        Text(fmtCurrency(effective, salaryCur),
+                            style: VeText.displayNum(24, color: scheme.onSurface)),
+                      if (s.salaryMode == 'base')
+                        Text('${fmtMoney(s.salaryBase ?? 0, salaryCur)} fijo + ${fmtMoney(s.salaryVariable ?? 0, salaryCur)} variable',
+                            style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+                    ]),
+                  ),
+                  const SizedBox(width: 6),
+                  TextButton.icon(
+                    onPressed: () => copiarAlPortapapeles(
+                        context, _salaryCopy(s, salaryCur, effective, ctx), 'Sueldo copiado'),
+                    icon: const Icon(Icons.copy, size: 14),
+                    label: const Text('Copiar', style: TextStyle(fontSize: 12)),
+                  ),
                 ]),
               ),
               const SizedBox(height: 10),
@@ -467,27 +535,185 @@ class _SalaryTiles extends StatelessWidget {
         runSpacing: 8,
         children: [
           for (final (label, value) in tiles)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: scheme.outlineVariant),
+            TapScale(
+              onTap: () => copiarAlPortapapeles(context, value, 'Sueldo copiado'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(label, style: VeText.labelCaps(9, color: scheme.onSurfaceVariant)),
+                  const SizedBox(height: 3),
+                  Text(value, style: VeText.displayNum(14.5, color: scheme.onSurface)),
+                ]),
               ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(label, style: VeText.labelCaps(9, color: scheme.onSurfaceVariant)),
-                const SizedBox(height: 3),
-                Text(value, style: VeText.displayNum(14.5, color: scheme.onSurface)),
-              ]),
             ),
         ],
       ),
       if (ves != null) ...[
         const SizedBox(height: 8),
+        // LOTTT: 30 días para la diaria · 176 h/mes (22 d × 8 h) para la hora.
         Text('Derivadas LOTTT: ${fmtMoney(ves / 30, Currency.ves)} / día · '
-                '${fmtMoney(ves / 30 / 8, Currency.ves)} / hora aprox.',
+                '${fmtMoney(ves / 176, Currency.ves)} / hora aprox.',
             style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
       ],
+    ]);
+  }
+}
+
+/// «Divisas del foco»: las 6 divisas con flag + code + tasa activa (fuente
+/// seleccionada para esa moneda). Tap → abre el Conversor con ese par
+/// montado. Acento con currencyInk (tinta firma por divisa).
+class _DivisasFoco extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final ctx = store.contextOf();
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SectionTitle('Divisas del foco', index: 3,
+          actionLabel: 'Ir al conversor', onAction: () => context.go('/conversor')),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final c in CurrencyX.focus)
+                _DivisaTile(currency: c, rate: ctx.activeRate(c)),
+            ],
+          ),
+        ),
+      ),
+    ]);
+  }
+}
+
+class _DivisaTile extends StatelessWidget {
+  const _DivisaTile({required this.currency, required this.rate});
+
+  final Currency currency;
+  final double rate;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final ink = currencyInk(currency);
+    final hasRate = rate > 0;
+    return TapScale(
+      onTap: () {
+        // Par del foco: USD → divisa (o EUR → USD si la divisa es el dólar).
+        final from = currency == Currency.usd ? Currency.eur : Currency.usd;
+        context.read<AppStore>().setConverterPair(from.code, currency.code);
+        context.go('/conversor');
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 3,
+            height: 26,
+            decoration: BoxDecoration(
+                color: ink, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(width: 8),
+          Flag(currency, size: 18),
+          const SizedBox(width: 6),
+          Text(currency.code,
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800)),
+          const SizedBox(width: 10),
+          Text(hasRate ? fmtRate(rate) : '—',
+              style: VeText.displayNum(14.5, color: scheme.onSurface)),
+        ]),
+      ),
+    );
+  }
+}
+
+/// «Alertas de precios»: productos CON meta fijada — nombre, meta, último
+/// precio y estado honesto (¡bajo meta! pos / pendiente). Tap → Productos.
+/// Vacío → fila muted + CTA honesto a Productos.
+class _AlertasPrecios extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final scheme = Theme.of(context).colorScheme;
+    final sem = VeColors.of(context);
+    final targets = store.products
+        .where((p) => p.targetPrice != null && p.targetPrice! > 0)
+        .toList()
+      ..sort((a, b) => (b.latestRecord?.date ?? b.createdAt)
+          .compareTo(a.latestRecord?.date ?? a.createdAt));
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SectionTitle('Alertas de precios', index: 5,
+          actionLabel: 'Ver productos', onAction: () => context.go('/productos')),
+      if (targets.isEmpty)
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(children: [
+              Icon(Icons.notifications_none, size: 18, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Sin metas configuradas',
+                    style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant)),
+              ),
+              TextButton(
+                onPressed: () => context.go('/productos'),
+                child: const Text('Fijar una meta'),
+              ),
+            ]),
+          ),
+        )
+      else
+        Card(
+          child: Column(children: [
+            for (final p in targets.take(6))
+              InkWell(
+                onTap: () => context.go('/productos'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Row(children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(p.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                        Text(
+                            'Meta ${fmtUSD(p.targetPrice!)} · Último ${p.latestRecord != null ? fmtUSD(p.latestRecord!.price) : '—'}',
+                            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                      ]),
+                    ),
+                    const SizedBox(width: 8),
+                    if (an.computeTargetInfo(p).met)
+                      Stamp('¡bajo meta!', color: sem.pos)
+                    else
+                      Stamp('pendiente', color: scheme.onSurfaceVariant),
+                  ]),
+                ),
+              ),
+            if (targets.length > 6)
+              Padding(
+                padding: const EdgeInsets.only(left: 14, right: 14, bottom: 10),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('y ${targets.length - 6} metas más en Productos.',
+                      style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                ),
+              ),
+          ]),
+        ),
     ]);
   }
 }
@@ -513,7 +739,7 @@ class _ResumenMes extends StatelessWidget {
     final sorted = byCat.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Resumen del mes', index: 3,
+      SectionTitle('Resumen del mes', index: 4,
           actionLabel: 'Ver finanzas', onAction: () => context.go('/finanzas')),
       Card(
         child: Padding(
@@ -539,6 +765,7 @@ class _ResumenMes extends StatelessWidget {
                     label: e.key.label,
                     value: fmtUSD(e.value),
                     leading: CategoryIcon(finCat: e.key, size: 24),
+                    dots: true, // cierre del resumen: conserva puntos contables
                   ),
                 ),
             ],
@@ -557,7 +784,7 @@ class _TusTiendas extends StatelessWidget {
     if (stats.isEmpty) return const SizedBox.shrink();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Tus tiendas', index: 4,
+      SectionTitle('Tus tiendas', index: 6,
           actionLabel: 'Ver historial', onAction: () => context.go('/historial')),
       Card(
         child: Padding(
@@ -639,6 +866,7 @@ void showStoreSheet(BuildContext context, String storeName) {
                   child: LedgerRow(
                     label: '${fmtDate(p.date)} · ${p.items.length} artículos',
                     value: fmtUSD(p.totalUSD),
+                    dots: true, // cierre de la cuenta por tienda: con puntos
                   ),
                 ),
               if (purchases.length > 12)
@@ -680,7 +908,7 @@ class _RegistrosRecientes extends StatelessWidget {
     if (recents.isEmpty) return const SizedBox.shrink();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Registros recientes', index: 5,
+      SectionTitle('Registros recientes', index: 7,
           actionLabel: 'Ver historial', onAction: () => context.go('/historial')),
       Card(
         child: Padding(
@@ -706,7 +934,7 @@ class _Herramientas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Herramientas', index: 6),
+      SectionTitle('Herramientas', index: 8),
       Row(children: [
         Expanded(child: _Tool(icon: Icons.calculate_outlined, label: 'Conversor', onTap: () => context.go('/conversor'))),
         const SizedBox(width: 8),

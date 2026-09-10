@@ -53,8 +53,19 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final monthTx = store.transactions.where((t) => t.date.year == now.year && t.date.month == now.month).toList();
     final income = monthTx.where((t) => t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
     final expense = monthTx.where((t) => !t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
+    // Mes previo: para el delta pequeño bajo cada StatCard.
+    final prev = DateTime(now.year, now.month - 1, 1);
+    final prevTx = store.transactions
+        .where((t) => t.date.year == prev.year && t.date.month == prev.month)
+        .toList();
+    final prevIncome = prevTx.where((t) => t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
+    final prevExpense = prevTx.where((t) => !t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
     final filtered = _filtered(store);
-    final pageItems = filtered.skip(_page * 20).take(20).toList();
+    final int pages = (filtered.length / 20).ceil();
+    final int lastPage = pages > 0 ? pages - 1 : 0;
+    // Guard del paginador: el filtro puede encoger la lista bajo la página activa.
+    final int page = _page < 0 ? 0 : (_page > lastPage ? lastPage : _page);
+    final pageItems = filtered.skip(page * 20).take(20).toList();
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
@@ -86,17 +97,27 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     decimals: 2),
                 const SizedBox(height: 12),
                 Row(children: [
-                  Expanded(child: StatCard(label: 'Ingresos', value: fmtUSD(income), icon: Icons.south_west, tone: StatTone.pos)),
+                  Expanded(
+                    child: StatCard(
+                        label: 'Ingresos',
+                        value: fmtUSD(income),
+                        sub: _deltaSub(income, prevIncome),
+                        icon: Icons.south_west,
+                        tone: StatTone.pos),
+                  ),
                   const SizedBox(width: 8),
-                  Expanded(child: StatCard(label: 'Gastos', value: fmtUSD(expense), icon: Icons.north_east, tone: StatTone.neg)),
+                  Expanded(
+                    child: StatCard(
+                        label: 'Gastos',
+                        value: fmtUSD(expense),
+                        sub: _deltaSub(expense, prevExpense),
+                        icon: Icons.north_east,
+                        tone: StatTone.neg),
+                  ),
                 ]),
               ]),
             ),
           ),
-          // 03 Análisis (donut + barras).
-          SectionTitle('Análisis', index: 3),
-          _DonutChart(transactions: store.transactions),
-          _BarsChart(transactions: store.transactions),
           // 02 Movimientos.
           SectionTitle('Movimientos', index: 2, actionLabel: 'Exportar CSV', onAction: () => _export(context, filtered)),
           Wrap(spacing: 6, children: [
@@ -132,7 +153,29 @@ class _FinanceScreenState extends State<FinanceScreen> {
                           if (v == 'edit') {
                             _txDialog(context, store, t);
                           } else if (v == 'delete') {
-                            store.deleteTransaction(t.id);
+                            // Confirmación antes de borrar (mismo patrón que Historial).
+                            showDialog<void>(
+                              context: context,
+                              builder: (dctx) => AlertDialog(
+                                title: const Text('Eliminar movimiento'),
+                                content: const Text('Se elimina el movimiento de finanzas. '
+                                    'El historial de compras no se toca.'),
+                                actions: [
+                                  TextButton(
+                                      onPressed: () => Navigator.pop(dctx),
+                                      child: const Text('Cancelar')),
+                                  FilledButton(
+                                    onPressed: () {
+                                      store.deleteTransaction(t.id);
+                                      Navigator.pop(dctx);
+                                    },
+                                    style: FilledButton.styleFrom(
+                                        backgroundColor: VeColors.of(context).neg),
+                                    child: const Text('Eliminar'),
+                                  ),
+                                ],
+                              ),
+                            );
                           }
                         },
                         itemBuilder: (_) => const [
@@ -143,18 +186,33 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     ]),
                   ),
               ])),
-            if (filtered.length > 20)
+            if (pages > 1)
               Padding(
                 padding: const EdgeInsets.only(top: 10),
                 child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  IconButton(onPressed: _page > 0 ? () => setState(() => _page--) : null, icon: const Icon(Icons.chevron_left)),
-                  Text('Página ${_page + 1}', style: const TextStyle(fontSize: 12)),
-                  IconButton(onPressed: () => setState(() => _page++), icon: const Icon(Icons.chevron_right)),
+                  IconButton(
+                      onPressed: page > 0 ? () => setState(() => _page--) : null,
+                      icon: const Icon(Icons.chevron_left)),
+                  Text('Página ${page + 1} de $pages', style: const TextStyle(fontSize: 12)),
+                  IconButton(
+                      onPressed: page < lastPage ? () => setState(() => _page++) : null,
+                      icon: const Icon(Icons.chevron_right)),
                 ]),
               ),
+          // 03 Análisis (donut + barras).
+          SectionTitle('Análisis', index: 3),
+          _DonutChart(transactions: store.transactions),
+          _BarsChart(transactions: store.transactions),
         ],
       ),
     );
+  }
+
+  /// Delta pequeño del StatCard vs el mes anterior (texto honesto: sin
+  /// datos del mes previo se dice explícito).
+  String _deltaSub(double current, double prev) {
+    if (prev <= 0) return 'Mes previo: sin datos';
+    return 'vs mes previo: ${fmtPct((current / prev - 1) * 100, forceSign: true)}';
   }
 
   void _export(BuildContext context, List<Transaction> list) {

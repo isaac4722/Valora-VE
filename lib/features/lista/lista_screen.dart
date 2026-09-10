@@ -34,6 +34,8 @@ class _ListaScreenState extends State<ListaScreen> {
   final _nameCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
   final _qtyCtrl = TextEditingController(text: '1');
+  final _storeCtrl = TextEditingController(); // tienda sugerida (anti-duplicado)
+  final _totalsKey = GlobalKey(); // RepaintBoundary de Totales → PNG
   String _addCurrency = 'VES';
   String _storeName = '';
 
@@ -42,6 +44,7 @@ class _ListaScreenState extends State<ListaScreen> {
     _nameCtrl.dispose();
     _priceCtrl.dispose();
     _qtyCtrl.dispose();
+    _storeCtrl.dispose();
     super.dispose();
   }
 
@@ -145,6 +148,12 @@ class _ListaScreenState extends State<ListaScreen> {
         : (ctx.unitsPerUSD(calcCur) ?? 0) > 0
             ? totals.usd * (ctx.unitsPerUSD(calcCur) ?? 0.0)
             : 0.0;
+    // Sugerencia pasiva anti-duplicado de tienda (nunca bloquea).
+    final typed = _storeName.trim();
+    final String? rawSuggest =
+        typed.length >= 3 ? an.findSimilarStore(typed, store.stores) : null;
+    final String? suggestion =
+        (rawSuggest != null && rawSuggest != typed) ? rawSuggest : null;
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
@@ -164,7 +173,8 @@ class _ListaScreenState extends State<ListaScreen> {
               const SizedBox(height: 4),
               AnimatedNumber(
                 totalInCalc,
-                style: VeText.displayNum(44, color: scheme.onSurface),
+                // Héroe: cifra a 64 px tabular (firma de la app).
+                style: VeText.displayNum(64, color: scheme.onSurface),
                 decimals: smartDecimals(totalInCalc, calcCur),
               ),
             ]),
@@ -227,9 +237,33 @@ class _ListaScreenState extends State<ListaScreen> {
                 ]),
                 const SizedBox(height: 8),
                 TextField(
-                  onChanged: (v) => _storeName = v,
+                  controller: _storeCtrl,
+                  onChanged: (v) => setState(() => _storeName = v),
                   decoration: const InputDecoration(hintText: 'Tienda (opcional)'),
                 ),
+                if (suggestion != null)
+                  // Sugerencia PASIVA anti-duplicado: nunca bloquea el alta.
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: TapScale(
+                      onTap: () {
+                        _storeCtrl.text = suggestion;
+                        setState(() => _storeName = suggestion);
+                      },
+                      child: Row(children: [
+                        Icon(Icons.lightbulb_outline,
+                            size: 13, color: scheme.primary),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text('¿Quizá quisiste «$suggestion»?',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.primary)),
+                        ),
+                      ]),
+                    ),
+                  ),
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
@@ -256,6 +290,7 @@ class _ListaScreenState extends State<ListaScreen> {
                         item.id, item.copyWith(checked: v, checkedBy: v ? (by ?? '') : null, clearCheckedBy: !v)),
                     onQty: (q) => store.updateCartItem(item.id, item.copyWith(quantity: q.clamp(1, 999))),
                     onRemove: () => store.removeFromCart(item.id),
+                    onEdit: () => _editCartItem(store, item),
                   ),
               ]),
             ),
@@ -273,18 +308,56 @@ class _ListaScreenState extends State<ListaScreen> {
               onTap: () => showRoomSheet(context),
             ),
           ),
-          // Totales por moneda + compartir.
+          // Totales por moneda + compartir (texto y PNG).
           if (store.cart.isNotEmpty) ...[
             SectionTitle('Totales'),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(children: [
-                  for (final e in totals.byCurrency.entries)
-                    _TotalsRow(text: fmtCurrency(e.value, e.key), code: e.key),
-                  const RuleDouble(),
+                  // Área capturada a PNG (fondo de tarjeta para el share).
+                  RepaintBoundary(
+                    key: _totalsKey,
+                    child: Container(
+                      color: scheme.surface,
+                      padding: const EdgeInsets.all(8),
+                      child: Column(children: [
+                        Row(children: [
+                          const Expanded(
+                            child: Text('ValoraVE · Totales',
+                                style: TextStyle(
+                                    fontFamily: 'SpaceGrotesk',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800)),
+                          ),
+                          Text(fmtDate(DateTime.now()),
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: scheme.onSurfaceVariant)),
+                        ]),
+                        const SizedBox(height: 6),
+                        for (final e in totals.byCurrency.entries)
+                          _TotalsRow(text: fmtCurrency(e.value, e.key), code: e.key),
+                        const RuleDouble(),
+                        const SizedBox(height: 6),
+                        Text('Total USD: ${fmtUSD(totals.usd)}',
+                            style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurface)),
+                      ]),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(children: [
+                    Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: _shareTotalsPng,
+                        icon: const Icon(Icons.image_outlined, size: 15),
+                        label: const Text('Compartir PNG', style: TextStyle(fontSize: 12.5)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => shareTotalsText(context, store, totals),
@@ -309,6 +382,62 @@ class _ListaScreenState extends State<ListaScreen> {
         ],
       ),
     );
+  }
+
+  /// Comparte los Totales como PNG (captura de la tarjeta, mismo camino
+  /// que el PNG del Conversor).
+  Future<void> _shareTotalsPng() async {
+    final bytes = await captureWidget(_totalsKey);
+    if (!mounted) return;
+    if (bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No pude generar la imagen'), behavior: SnackBarBehavior.floating));
+      return;
+    }
+    await sharePng(bytes, 'valorave-totales.png');
+  }
+
+  /// Editar ítem: nombre + precio (>0 validado) → updateCartItem.
+  Future<void> _editCartItem(AppStore store, CartItem item) async {
+    final nameCtrl = TextEditingController(text: item.name);
+    final priceCtrl = TextEditingController(
+        text: fmtMoney(item.price, CurrencyX.from(item.currency)));
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Editar ítem'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: nameCtrl,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Nombre'),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: priceCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              hintText: 'Precio',
+              labelText: 'Precio (${CurrencyX.from(item.currency).code})',
+            ),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Guardar')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final name = nameCtrl.text.trim();
+    final price = parseLocaleNum(priceCtrl.text) ?? 0;
+    if (name.isEmpty || price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Nombre y precio válido (> 0) requeridos'),
+          behavior: SnackBarBehavior.floating));
+      return;
+    }
+    store.updateCartItem(item.id, item.copyWith(name: name, price: price));
   }
 
   static ({double usd, Map<Currency, double> byCurrency, int units}) cartTotalsUsd(
@@ -353,6 +482,7 @@ class _CartRow extends StatelessWidget {
     required this.onChecked,
     required this.onQty,
     required this.onRemove,
+    required this.onEdit,
   });
 
   final CartItem item;
@@ -360,50 +490,59 @@ class _CartRow extends StatelessWidget {
   final void Function(bool, String?) onChecked;
   final ValueChanged<int> onQty;
   final VoidCallback onRemove;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final c = CurrencyX.from(item.currency);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(children: [
-        Checkbox(
-          value: item.checked,
-          onChanged: (v) => onChecked(v ?? false, 'Yo'),
-        ),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(
-              item.name,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
-                decoration: item.checked ? TextDecoration.lineThrough : null,
-                color: item.checked ? scheme.onSurfaceVariant : scheme.onSurface,
+    return GestureDetector(
+      onLongPress: onEdit,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(children: [
+          Checkbox(
+            value: item.checked,
+            onChanged: (v) => onChecked(v ?? false, 'Yo'),
+          ),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                item.name,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  decoration: item.checked ? TextDecoration.lineThrough : null,
+                  color: item.checked ? scheme.onSurfaceVariant : scheme.onSurface,
+                ),
               ),
-            ),
-            Text(
-              '${fmtCurrency(item.price, c)} × ${item.quantity}'
-              '${item.checkedBy != null && item.checkedBy!.isNotEmpty ? ' · ${item.checkedBy}' : ''}',
-              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
-            ),
-          ]),
-        ),
-        InkWell(
-          onTap: () => onQty(item.quantity - 1),
-          child: const Padding(padding: EdgeInsets.all(6), child: Icon(Icons.remove, size: 16)),
-        ),
-        Text('${item.quantity}', style: VeText.displayNum(13.5, color: scheme.onSurface)),
-        InkWell(
-          onTap: () => onQty(item.quantity + 1),
-          child: const Padding(padding: EdgeInsets.all(6), child: Icon(Icons.add, size: 16)),
-        ),
-        IconButton(
-          icon: Icon(Icons.close, size: 16, color: scheme.onSurfaceVariant),
-          onPressed: onRemove,
-        ),
-      ]),
+              Text(
+                '${fmtCurrency(item.price, c)} × ${item.quantity}'
+                '${item.checkedBy != null && item.checkedBy!.isNotEmpty ? ' · ${item.checkedBy}' : ''}',
+                style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+              ),
+            ]),
+          ),
+          InkWell(
+            onTap: () => onQty(item.quantity - 1),
+            child: const Padding(padding: EdgeInsets.all(6), child: Icon(Icons.remove, size: 16)),
+          ),
+          Text('${item.quantity}', style: VeText.displayNum(13.5, color: scheme.onSurface)),
+          InkWell(
+            onTap: () => onQty(item.quantity + 1),
+            child: const Padding(padding: EdgeInsets.all(6), child: Icon(Icons.add, size: 16)),
+          ),
+          IconButton(
+            icon: Icon(Icons.edit_outlined, size: 15, color: scheme.onSurfaceVariant),
+            tooltip: 'Editar',
+            onPressed: onEdit,
+          ),
+          IconButton(
+            icon: Icon(Icons.close, size: 16, color: scheme.onSurfaceVariant),
+            onPressed: onRemove,
+          ),
+        ]),
+      ),
     );
   }
 }

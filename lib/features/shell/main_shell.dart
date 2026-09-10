@@ -84,11 +84,15 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final int current = navigationShell.currentIndex;
+    // Rate-health (§5): el banner se monta SIEMPRE encima del body y decide
+    // solo su visibilidad (rateStale = se vio tablero OK hace >15 min).
+    final RatesPoller poller = context.watch<RatesPoller>();
 
     return Scaffold(
       body: Column(
         children: [
           _Header(activeIndex: current),
+          RateHealthBanner(stale: poller.rateStale, onRetry: () => poller.refreshNow()),
           if (current == 0) _HomeTicker(),
           Expanded(child: navigationShell),
         ],
@@ -144,9 +148,8 @@ class _TabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    return InkWell(
+    return TapScale(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
       child: SizedBox(
         height: 58,
         child: Column(
@@ -201,15 +204,15 @@ class _TabButton extends StatelessWidget {
   }
 }
 
-/// Cinta solo-Inicio con las fuentes del tablero vivo.
+/// Cinta solo-Inicio con las fuentes del tablero vivo. Sin datos NO hace
+/// shrink aquí: el placeholder anti-CLS vive dentro de RateTicker (misma
+/// altura, «Cargando cotizaciones…») para que la cinta no salte el layout.
 class _HomeTicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    final items = tickerItems(store);
-    if (items.isEmpty) return const SizedBox.shrink();
     return RateTicker(
-      items: items,
+      items: tickerItems(store),
       mode: store.settings.tickerMode,
       size: store.settings.tickerSize,
       speed: store.settings.tickerSpeed,
@@ -217,7 +220,8 @@ class _HomeTicker extends StatelessWidget {
   }
 }
 
-/// Cabecera: nombre + búsqueda + tema + campana + ajustes.
+/// Cabecera: marca ValoraVE + píldora live + frescura + búsqueda/tema/
+/// campana/ajustes. Tap en la marca → refresca el tablero manualmente.
 class _Header extends StatelessWidget {
   const _Header({required this.activeIndex});
   final int activeIndex;
@@ -226,8 +230,15 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final store = context.watch<AppStore>();
+    final RatesPoller poller = context.watch<RatesPoller>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     final unread = store.notifs.where((n) => !n.read).length;
+
+    // Píldora live (§8): live = última fetch OK hace <2 min; si no, apagada
+    // (LiveBadge se oculta sola) y queda la frescura «hace X min» como pista.
+    final DateTime? fetchedAt = store.board.fetchedAt;
+    final DateTime? lastOk = poller.lastBoardOk;
+    final bool live = lastOk != null && DateTime.now().difference(lastOk).inMinutes < 2;
 
     return Container(
       decoration: BoxDecoration(
@@ -241,19 +252,30 @@ class _Header extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(left: 16),
             child: Row(children: [
-              InkWell(
-                onTap: () => context.go('/'),
-                borderRadius: BorderRadius.circular(10),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                  child: RichText(
-                    text: TextSpan(
-                      style: VeText.displayNum(18, color: scheme.onSurface, weight: FontWeight.w700),
-                      children: [
-                        const TextSpan(text: 'Valora'),
-                        TextSpan(text: 'VE', style: TextStyle(color: scheme.primary)),
+              TapScale(
+                onTap: () => poller.refreshNow(),
+                child: Tooltip(
+                  message: 'Actualizar tasas',
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const LogoMark(),
+                      const SizedBox(width: 8),
+                      const Flag(Currency.ves, size: 14),
+                      const SizedBox(width: 7),
+                      LiveBadge(live: live),
+                      if (fetchedAt != null) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          timeAgo(fetchedAt),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
                       ],
-                    ),
+                    ]),
                   ),
                 ),
               ),
