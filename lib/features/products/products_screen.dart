@@ -70,13 +70,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
       code = ctrl.text.trim();
     }
     if (code == null || code.isEmpty || !mounted) return;
+    final scanned = code; // final local: promoción de tipo dentro de closures
 
-    final found = store.products.where((p) => p.barcode == code).toList();
+    final found = store.products.where((p) => p.barcode == scanned).toList();
     if (found.isNotEmpty) {
       // Producto(es) registrados con ese código → al primero.
       setState(() {
-        _query = code;
-        _searchCtrl.text = code;
+        _query = scanned;
+        _searchCtrl.text = scanned;
         _page = 0;
       });
       _showProductDialog(context, store, found.first);
@@ -84,11 +85,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
     // Sin registro: alta nueva con el código ya lleno.
     setState(() {
-      _query = code;
-      _searchCtrl.text = code;
+      _query = scanned;
+      _searchCtrl.text = scanned;
       _page = 0;
     });
-    _showProductDialog(context, store, null, initialBarcode: code);
+    _showProductDialog(context, store, null, initialBarcode: scanned);
   }
 
   @override

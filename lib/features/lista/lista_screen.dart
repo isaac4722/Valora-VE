@@ -73,8 +73,9 @@ class _ListaScreenState extends State<ListaScreen> {
       code = ctrl.text.trim();
     }
     if (code == null || code.isEmpty || !mounted) return;
+    final scanned = code; // final local: promoción de tipo dentro de closures
 
-    final matches = store.products.where((p) => p.barcode == code).toList();
+    final matches = store.products.where((p) => p.barcode == scanned).toList();
     if (matches.isNotEmpty) {
       final p = matches.first;
       final last = p.latestRecord;
@@ -103,7 +104,7 @@ class _ListaScreenState extends State<ListaScreen> {
       return;
     }
     // Código nuevo: prellena el campo con el código para completar a mano.
-    setState(() => _nameCtrl.text = code);
+    setState(() => _nameCtrl.text = scanned);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Código sin registrar — escribe nombre y precio'),
         behavior: SnackBarBehavior.floating));

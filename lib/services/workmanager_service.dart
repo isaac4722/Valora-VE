@@ -42,7 +42,7 @@ void callbackDispatcher() {
         try {
           final prefs = await SharedPreferences.getInstance();
           final engine = AlertEngine(prefs);
-          await engine.reminderCheck(NotificationsService(), now: DateTime.now());
+          engine.reminderCheck(NotificationsService(), now: DateTime.now());
         } catch (_) {/* sin canal de notifs: no bloquea */}
         return true;
       case kBackupTask:
