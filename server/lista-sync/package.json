@@ -1,0 +1,14 @@
+{
+  "name": "lista-sync",
+  "version": "1.0.0",
+  "description": "ValoraVE · sala de compras en vivo (socket.io, protocolo lista-sync)",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "bun run index.ts",
+    "dev": "bun run --watch index.ts"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.5"
+  }
+}

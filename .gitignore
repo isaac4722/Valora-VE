@@ -1,0 +1,39 @@
+# Flutter/Dart estándar
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+android/app/valorave-release.keystore
+*.keystore
+keystore.properties
+*.jks
+gradle-wrapper.jar
+
+# Símbolos de ofuscación (se suben como artifacts, nunca al repo)
+build/symbols/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Keystore y secretos: PROHIBIDO commitearlos (AGENT.md §5)
+*.pem
+*.p12
+*.pfx
+secrets/
