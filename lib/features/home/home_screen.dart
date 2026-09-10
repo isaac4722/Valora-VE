@@ -52,9 +52,37 @@ class _Hero extends StatelessWidget {
   final DateTime now;
   final RatesPoller poller;
 
+  /// % del paralelo (o BCV) vs el último snapshot de AYER — la píldora
+  /// «vs ayer» del héroe v15. Null honesto si no hay datos comparables.
+  (String, double)? _vsAyer(AppStore store) {
+    for (final id in const ['ves-parallel', 'ves-bcv']) {
+      final today = store.board.sources[id]?.rate;
+      if (today == null || today <= 0) continue;
+      final day = SnapshotPoint.dayKey(now.subtract(const Duration(days: 1)));
+      final yest = store.snapshots
+          .where((p) => p.sourceId == id && p.day == day)
+          .toList()
+        ..sort((a, b) => a.day.compareTo(b.day));
+      if (yest.isEmpty || yest.last.rate <= 0) continue;
+      final pct = (today / yest.last.rate - 1) * 100;
+      return (id == 'ves-parallel' ? 'Paralelo' : 'BCV', pct);
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final store = context.watch<AppStore>();
+    // «hace X» con el reloj real del cliente (fetchedAt del tablero);
+    // se recalcula en cada rebuild (el poller notifica ~cada 60 s y cada
+    // mutación del store) — sin timers periódicos para no ensuciar tests.
+    final fetched = store.board.fetchedAt;
+    final freshness = poller.loading
+        ? null
+        : (fetched == null ? 'sin datos aún' : timeAgo(fetched, now));
+    final vsAyer = _vsAyer(store);
+
     return Padding(
       padding: const EdgeInsets.only(top: 10, bottom: 14),
       child: Row(children: [
@@ -71,8 +99,16 @@ class _Hero extends StatelessWidget {
             height: 16,
             child: CircularProgressIndicator(strokeWidth: 2),
           )
-        else
-          Text('hace instantes', style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+        else ...[
+          if (vsAyer != null) ...[
+            Tooltip(
+              message: '${vsAyer.$1} hoy vs ayer (snapshot local)',
+              child: TrendBadge(vsAyer.$2),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Text(freshness ?? '', style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+        ],
       ]),
     );
   }
@@ -179,77 +215,214 @@ class _SueldoSection extends StatefulWidget {
 
 class _SueldoSectionState extends State<_SueldoSection> {
   final _amountCtrl = TextEditingController();
+  final _baseCtrl = TextEditingController();
+  final _varCtrl = TextEditingController();
+  final _minCtrl = TextEditingController();
+  final _maxCtrl = TextEditingController();
+  bool _seeded = false;
 
   @override
   void dispose() {
     _amountCtrl.dispose();
+    _baseCtrl.dispose();
+    _varCtrl.dispose();
+    _minCtrl.dispose();
+    _maxCtrl.dispose();
     super.dispose();
+  }
+
+  /// Prellena los campos una sola vez con lo que haya guardado (nunca
+  /// pisa lo que el usuario está tecleando en rebuilds posteriores).
+  void _seed(AppStore store) {
+    if (_seeded) return;
+    _seeded = true;
+    final s = store.settings;
+    if (s.salaryAmount != null) _amountCtrl.text = fmtPlain(s.salaryAmount!, 2);
+    if (s.salaryBase != null) _baseCtrl.text = fmtPlain(s.salaryBase!, 2);
+    if (s.salaryVariable != null) _varCtrl.text = fmtPlain(s.salaryVariable!, 2);
+    if (s.salaryMin != null) _minCtrl.text = fmtPlain(s.salaryMin!, 2);
+    if (s.salaryMax != null) _maxCtrl.text = fmtPlain(s.salaryMax!, 2);
   }
 
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
+    _seed(store);
     final scheme = Theme.of(context).colorScheme;
     final ctx = store.contextOf();
-    final salary = store.settings.salaryAmount;
-    final salaryCur = CurrencyX.from(store.settings.salaryCurrency);
+    final s = store.settings;
+    final salaryCur = CurrencyX.from(s.salaryCurrency);
+    final effective = s.effectiveSalary();
+    final hasSalary = effective != null;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Tu sueldo', index: 2,
-          actionLabel: salary == null ? null : 'Quitar sueldo',
-          onAction: salary == null ? null : () => store.setSetting('salary', null)),
+          actionLabel: hasSalary ? 'Quitar sueldo' : null,
+          onAction: hasSalary
+              ? () {
+                  store.setSetting('salary', null);
+                  _amountCtrl.clear();
+                  _baseCtrl.clear();
+                  _varCtrl.clear();
+                  _minCtrl.clear();
+                  _maxCtrl.clear();
+                }
+              : null),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(
-                child: TextField(
-                  controller: _amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    hintText: salary == null ? 'Monto mensual pactado' : 'Cambiar monto',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              CurrencySelect(
-                value: salaryCur,
-                onChanged: (c) {
-                  if (salary != null) {
-                    store.setSetting('salary', {'amount': salary, 'currency': c.code});
-                  }
-                },
-              ),
+            // Modo (web v12: fijo | base+variable | rango, máx 2 opciones).
+            Wrap(spacing: 6, children: [
+              for (final (mode, label) in const [
+                ('fijo', 'Fijo'),
+                ('base', 'Base + variable'),
+                ('rango', 'Rango min–máx'),
+              ])
+                ChipTag(label,
+                    selected: s.salaryMode == mode,
+                    onTap: () => store.setSetting('salary', {'mode': mode})),
             ]),
             const SizedBox(height: 10),
-            Row(children: [
-              FilledButton(
-                onPressed: () {
-                  final v = parseLocaleNum(_amountCtrl.text);
-                  if (v == null || v <= 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Ingresa un monto válido'), behavior: SnackBarBehavior.floating));
-                    return;
-                  }
-                  store.setSetting('salary', {'amount': v, 'currency': salaryCur.code});
-                  _amountCtrl.clear();
-                },
-                child: Text(salary == null ? 'Guardar sueldo' : 'Actualizar'),
-              ),
-            ]),
-            if (salary != null && salary > 0) ...[
+            if (s.salaryMode == 'fijo')
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: _amountCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      hintText: effective == null || s.salaryMode != 'fijo'
+                          ? 'Monto mensual pactado'
+                          : 'Cambiar monto',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                CurrencySelect(
+                  value: salaryCur,
+                  onChanged: (c) {
+                    if (s.salaryAmount != null) {
+                      store.setSetting('salary', {'amount': s.salaryAmount, 'currency': c.code});
+                    }
+                  },
+                ),
+              ])
+            else if (s.salaryMode == 'base')
+              Column(children: [
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _baseCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(hintText: 'Pago fijo'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _varCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(hintText: 'Variable aprox.'),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                Row(children: [
+                  FilledButton(
+                    onPressed: () {
+                      final b = parseLocaleNum(_baseCtrl.text);
+                      final v = parseLocaleNum(_varCtrl.text) ?? 0;
+                      if (b == null || b <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                            content: Text('Ingresa el pago fijo'), behavior: SnackBarBehavior.floating));
+                        return;
+                      }
+                      store.setSetting('salary', {
+                        'mode': 'base', 'base': b, 'variable': v, 'currency': salaryCur.code,
+                      });
+                    },
+                    child: const Text('Guardar sueldo'),
+                  ),
+                ]),
+              ])
+            else
+              Column(children: [
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _minCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(hintText: 'Mínimo del mes'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _maxCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(hintText: 'Máximo del mes'),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                Row(children: [
+                  FilledButton(
+                    onPressed: () {
+                      final lo = parseLocaleNum(_minCtrl.text);
+                      final hi = parseLocaleNum(_maxCtrl.text);
+                      if (lo == null || lo <= 0 || hi == null || hi < lo) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                            content: Text('Rango inválido: mínimo ≤ máximo'), behavior: SnackBarBehavior.floating));
+                        return;
+                      }
+                      store.setSetting('salary', {
+                        'mode': 'rango', 'min': lo, 'max': hi, 'currency': salaryCur.code,
+                      });
+                    },
+                    child: const Text('Guardar sueldo'),
+                  ),
+                ]),
+              ]),
+            if (s.salaryMode == 'fijo') ...[
+              const SizedBox(height: 10),
+              Row(children: [
+                FilledButton(
+                  onPressed: () {
+                    final v = parseLocaleNum(_amountCtrl.text);
+                    if (v == null || v <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Ingresa un monto válido'), behavior: SnackBarBehavior.floating));
+                      return;
+                    }
+                    store.setSetting('salary', {'amount': v, 'currency': salaryCur.code});
+                    _amountCtrl.clear();
+                  },
+                  child: Text(hasSalary && s.salaryMode == 'fijo' ? 'Actualizar' : 'Guardar sueldo'),
+                ),
+              ]),
+            ],
+            if (hasSalary) ...[
               const SizedBox(height: 14),
               ReadWindow(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Sueldo pactado', style: VeText.labelCaps(9, color: scheme.onSurfaceVariant)),
                   const SizedBox(height: 4),
-                  Text(fmtCurrency(salary, salaryCur), style: VeText.displayNum(24, color: scheme.onSurface)),
+                  if (s.salaryMode == 'rango')
+                    Text(
+                        '${fmtMoney(s.salaryMin!, salaryCur)} – ${fmtMoney(s.salaryMax!, salaryCur)}'
+                        '  ·  promedio ${fmtCurrency(effective, salaryCur)}',
+                        style: VeText.displayNum(21, color: scheme.onSurface))
+                  else
+                    Text(fmtCurrency(effective, salaryCur),
+                        style: VeText.displayNum(24, color: scheme.onSurface)),
+                  if (s.salaryMode == 'base')
+                    Text('${fmtMoney(s.salaryBase ?? 0, salaryCur)} fijo + ${fmtMoney(s.salaryVariable ?? 0, salaryCur)} variable',
+                        style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
                 ]),
               ),
               const SizedBox(height: 10),
               // Tiles: contrato (moneda pactada), USD, EUR + extras del país.
-              _SalaryTiles(ctx: ctx, salary: salary, salaryCur: salaryCur),
+              _SalaryTiles(ctx: ctx, salary: effective, salaryCur: salaryCur),
             ],
           ]),
         ),
@@ -393,10 +566,14 @@ class _TusTiendas extends StatelessWidget {
             for (final s in stats)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                child: LedgerRow(
-                  label: s.store.isEmpty ? 'Sin tienda' : s.store,
-                  value: fmtUSD(s.totalUSD),
-                  leading: StoreAvatar(s.store.isEmpty ? 'Sin Tienda' : s.store, size: 28),
+                child: InkWell(
+                  onTap: () => showStoreSheet(context, s.store),
+                  borderRadius: BorderRadius.circular(10),
+                  child: LedgerRow(
+                    label: s.store.isEmpty ? 'Sin tienda' : s.store,
+                    value: fmtUSD(s.totalUSD),
+                    leading: StoreAvatar(s.store.isEmpty ? 'Sin Tienda' : s.store, size: 28),
+                  ),
                 ),
               ),
           ]),
@@ -404,6 +581,89 @@ class _TusTiendas extends StatelessWidget {
       ),
     ]);
   }
+}
+
+/// Detalle por tienda (StoreSheet del web §9.1): gasto total, frecuencia,
+/// última compra y las compras de esa tienda con cross-link al Historial.
+void showStoreSheet(BuildContext context, String storeName) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.62,
+      maxChildSize: 0.9,
+      builder: (ctx, scroll) {
+        final store = ctx.watch<AppStore>();
+        final scheme = Theme.of(ctx).colorScheme;
+        final stats = an.storeStats(store.purchases);
+        final stat = stats.where((s) => s.store == storeName).firstOrNull;
+        final purchases = an.storeDetail(store.purchases, storeName);
+        final label = storeName.isEmpty ? 'Sin tienda' : storeName;
+        return ListView(
+          controller: scroll,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          children: [
+            Row(children: [
+              StoreAvatar(storeName.isEmpty ? 'Sin Tienda' : storeName, size: 40),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                  if (stat != null)
+                    Text('${stat.count} compras · última ${stat.last == null ? '—' : fmtDate(stat.last!)}',
+                        style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                ]),
+              ),
+            ]),
+            const SizedBox(height: 14),
+            if (stat == null)
+              Padding(
+                padding: const EdgeInsets.only(top: 30),
+                child: Text('Sin compras registradas de esta tienda.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
+              )
+            else ...[
+              ReadWindow(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('GASTO ACUMULADO', style: VeText.labelCaps(9, color: scheme.onSurfaceVariant)),
+                  const SizedBox(height: 4),
+                  Text(fmtUSD(stat.totalUSD), style: VeText.displayNum(26, color: scheme.onSurface)),
+                ]),
+              ),
+              const SizedBox(height: 12),
+              for (final p in purchases.take(12))
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: LedgerRow(
+                    label: '${fmtDate(p.date)} · ${p.items.length} artículos',
+                    value: fmtUSD(p.totalUSD),
+                  ),
+                ),
+              if (purchases.length > 12)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text('y ${purchases.length - 12} compras más en el Historial.',
+                      style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+                ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonal(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    ctx.go('/historial');
+                  },
+                  child: const Text('Ver en el Historial'),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    ),
+  );
 }
 
 class _RegistrosRecientes extends StatelessWidget {

@@ -445,6 +445,30 @@ class _AlertasState extends State<_Alertas> {
                 if (value != null) store.setSetting('rateTargetAlerts.parallel', value);
               },
             ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Recordatorio diario de precios', style: TextStyle(fontSize: 13)),
+              subtitle: Text(alerts.reminderEnabled
+                  ? 'Avisa a las ${alerts.reminderHour}:00 (con la app abierta o cerrada, ±1 h)'
+                  : 'Un aviso al día para registrar tus precios',
+                  style: const TextStyle(fontSize: 11)),
+              value: alerts.reminderEnabled,
+              onChanged: (v) {
+                alerts.setReminderEnabled(v);
+                setState(() {});
+              },
+            ),
+            if (alerts.reminderEnabled)
+              Wrap(spacing: 6, children: [
+                for (final h in const [7, 8, 9, 12, 19, 21])
+                  ChipTag('$h:00',
+                      selected: alerts.reminderHour == h,
+                      onTap: () {
+                        alerts.setReminderHour(h);
+                        setState(() {});
+                      }),
+              ]),
             Row(children: [
               Expanded(
                 child: Text('Brecha BCV↔paralelo > ${fmtNum(alerts.gapThreshold, decimals: 0)} %',

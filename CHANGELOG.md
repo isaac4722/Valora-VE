@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.0.1-beta+2 (2026-09-10) · v1.0.1-beta
+
+Ronda de paridad y estabilización contra el informe del web v15. Arregla
+el bug que dejaba a la app «solo en la pantalla de bienvenida» y el icono
+transparente del lanzador.
+
+### Corregido
+- **Router recreado en cada rebuild (bloqueante)**: `buildRouter()` vivía
+  dentro de `ValoraApp.build()` con `context.watch<AppStore>()` — cada
+  mutación del store (elegir país en el paso 1 del onboarding, tasas
+  nuevas del poller cada 60 s, cualquier registro) fabricaba un GoRouter
+  nuevo y reseteaba la navegación a `initialLocation`. El usuario quedaba
+  atrapado en la bienvenida y la app parecía «solo una pantalla». Ahora
+  el router se crea UNA vez (`initState`) y el onboarding se resuelve con
+  `refreshListenable` + `redirect`, el patrón canónico de go_router.
+- **Icono del lanzador transparente**: los `mipmap-*/ic_launcher.png`
+  eran PNG vacíos (píxeles 0,0,0,0). Regenerados desde `assets/brand/`:
+  legacy (5 densidades) + round + **adaptive icon** (API 26+:
+  foreground maskable sobre azul #2749CB) + **monochrome** para themed
+  icons de Android 13+.
+
+### Añadido (paridad web v15)
+- **Escáner de códigos de barras** cableado (la dependencia
+  `mobile_scanner` estaba declarada y sin uso): pantalla nueva con
+  escaneo continuo, linterna, marco de apuntado, debounce 800 ms y
+  fallback «a mano». En Productos: abre la ficha del producto o el alta
+  con el código prellenado. En Lista: agrega directo con el precio
+  vigente del libro, o prellena el formulario.
+- **Sueldo variable** (web v12): modos fijo · base+variable · rango
+  min–máx con sueldo efectivo (promedio del rango) alimentando tiles y
+  derivadas LOTTT; JSON `salary` tolerante con respaldos antiguos.
+- **Recordatorio diario de precios** (Ajustes → Alertas): hora
+  seleccionable, disparo in-app (AlertEngine) y con app cerrada
+  (WorkManager horario, ±1 h), claim por día anti-duplicados.
+- **StoreSheet**: tocar una tienda en «Tus tiendas» abre su detalle
+  (gasto acumulado, frecuencia, compras, cross-link al Historial).
+- **Compartir cálculo del Conversor** como PNG 1080 px (monto + ruta +
+  fuentes) vía `captureWidget` + share_plus.
+- **Barras de finanzas 6/12 meses** conmutable (paridad web).
+- **Héroe del Inicio con frescura real**: «hace X min» con el
+  `fetchedAt` del tablero + píldora «% vs ayer» comparando el snapshot
+  local del paralelo (o BCV).
+
+### Mantenimiento
+- `ValoraApp` ya no observa el store en la raíz (solo el tema): las
+  pantallas se suscriben individualmente y MaterialApp deja de
+  reconstruirse en cada ciclo del poller.
+
 ## 1.0.0-beta+1 (2026-09-10) · v1.0.0-beta
 
 Arranque desde cero de la app nativa Flutter (el repo web se orfanó).

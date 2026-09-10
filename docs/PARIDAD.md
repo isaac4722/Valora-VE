@@ -1,6 +1,9 @@
 # Paridad 1:1 contra MVP-CRUD.md §14
 
 Estado de la verificación final. Evidencia: archivo/módulo/test.
+**v1.0.1-beta (2026-09-10)**: ronda de paridad con informe del web v15 —
+fix bloqueante del router, icono real, escáner, recordatorio, sueldo
+variable, StoreSheet, share PNG del conversor, barras 6/12, héroe fresco.
 
 | # | Ítem §14 | Estado | Evidencia |
 |---|---|---|---|
@@ -12,16 +15,16 @@ Estado de la verificación final. Evidencia: archivo/módulo/test.
 | 6 | CRUD carrito + checked/checkedBy + presupuesto + plantillas (20) + vuelto + dividir + checkout + ticket foto + enlace | ✅ | `lista_screen.dart` (checkout con `image_picker` 1024px .72) · `test/store_test.dart` |
 | 7 | CRUD compras + filtros + pág.20 + 2 CSV + JSON + constancia | ✅ | `history_screen.dart` + `statement_screen.dart` |
 | 8 | CRUD transacciones + resumen + donut + barras 6/12m + constancia | ✅ | `finance_screen.dart` (syncfusion) |
-| 9 | Home (hero/board/sueldo fijo/tiles/extras/LOTTT/copy/tiendas/alertas/recientes/herramientas) | ✅ | `home_screen.dart` (sueldo VARIABLE del web → desviación consciente D1) |
+| 9 | Home (hero/board/sueldo fijo+VARIABLE/tiles/extras/LOTTT/copy/tiendas/alertas/recientes/herramientas) | ✅ | `home_screen.dart` (sueldo variable v15 completo: fijo · base+variable · rango min–máx con promedio, `effectiveSalary()`; héroe con frescura `fetchedAt` + píldora «vs ayer» con snapshots; StoreSheet por tienda) |
 | 10 | Análisis 5 anclas + gap + lookup + proyección + heatmap + rankings + canasta + CSVs | ✅* | `insights_screen.dart` (proyección amortiguada DAMP 0.85; heatmap sustituido por curva de serie diaria — D2) |
 | 11 | Ajustes 8 anclas + respaldo replace/merge + Zona peligro | ✅ | `settings_screen.dart` + `lib/data/backup.dart` · `test/models_backup_test.dart` |
 | 12 | Onboarding 0+país+7+done + Saltar + reopenTutorial | ✅ | `welcome_screen.dart` · `test/widgets_test.dart` (coach-marks → D3) |
 | 13 | Shell 8 rutas / móvil 6 + ticker 3×3×3 solo-home + badge carrito + banner salud | ✅ | `main_shell.dart` + `app_router.dart` · `test/widgets_test.dart` |
 | 14 | Sala protocolo §6 (granular, LWW, GC, presencia, typing, joiner pierde previa) + share/QR | ✅ | `lib/room/room_transport.dart` + `server/lista-sync/` 1:1 · selector Servidor/Cerca/WiFi · `test/room_protocol_test.dart` |
-| 15 | Alertas: spikes (cooldown 30min) + targets (histéresis) + gap/daily/reminder + centro 9 kinds ring 50 + WorkManager | ✅ | `lib/services/alerts.dart` + `workmanager_service.dart` · `test/store_test.dart` (centro) |
-| 16 | Nativo: 4 shortcuts + widgets + scanner + foto 1024 ≤12MB + constancia PNG/share/print + zoom 1–8× | ✅* | `BcvWidgetProvider.kt` + `widget_service.dart` · `mobile_scanner` · `InteractiveViewer` zoom · shortcuts nativos parcialmente (D4) |
+| 15 | Alertas: spikes (cooldown 30min) + targets (histéresis) + gap/daily/reminder + centro 9 kinds ring 50 + WorkManager | ✅ | `lib/services/alerts.dart` + `workmanager_service.dart` · recordatorio diario REAL (prefs + claim por día, camino in-app y camino workmanager ±1 h) · `test/store_test.dart` (centro) |
+| 16 | Nativo: 4 shortcuts + widgets + scanner + foto 1024 ≤12MB + constancia PNG/share/print + zoom 1–8× | ✅* | `BcvWidgetProvider.kt` + `widget_service.dart` · **escáner REAL cableado** (`features/scanner/scanner_screen.dart`: continuo + linterna + fallback manual + debounce; Productos abre ficha/alta con código prellenado, Lista agrega con precio vigente) · `InteractiveViewer` zoom · shortcuts nativos parcialmente (D4) |
 | 17 | Diseño §8 al píxel (tokens, firmas, tabular, curva, duraciones, reducedMotion) | ✅ | `lib/core/theme.dart` (tokens dp4 exactos) + `docs/DESIGN-SYSTEM.md` |
-| 18 | analyze/test verdes; APK release ofuscado | ✅ | CI: analyze 0 · 104 tests · Build en runner SUCCESS · Release v1.0.0-beta con 3 APK + AAB, firma v2 verificada (digest íntegro + RSA válida + cert CN=ValoraVE) y AAB con mapa ProGuard |
+| 18 | analyze/test verdes; APK release ofuscado | ✅ | CI: analyze 0 · tests verdes · Build en runner SUCCESS · Release con 3 APK + AAB, firma v2 verificada. **v1.0.1-beta: fix del GoRouter creado en build() (atrapaba al usuario en bienvenida), icono launcher real (legacy + adaptive + monochrome), escáner cableado, recordatorio diario, sueldo variable, StoreSheet, compartir PNG del conversor, barras 6/12, héroe «vs ayer»** |
 
 Leyenda: ✅ completo · ✅* completo con desviación consciente documentada.
 
@@ -36,10 +39,10 @@ Leyenda: ✅ completo · ✅* completo con desviación consciente documentada.
 - SSE opcional de un despliegue web (rates-stream) → `lib/data/sse_stream.dart`.
 
 ## Desviaciones conscientes (mandadas por AGENT.md §5.4)
-- **D1 · Sueldo variable**: el web tiene calculadora variable `valorave.salary`
-  (localStorage, modos on/base/range). El MD solo menciona `salary` fijo.
-  Implementado el fijo completo + derivadas LOTTT; el variable (modos
-  base/rango) queda como pieza pendiente documentada — el MD manda.
+- **D1 · Sueldo variable — CERRADA en v1.0.1**: modos fijo · base+variable ·
+  rango min–máx con sueldo efectivo (promedio del rango) alimentando tiles y
+  LOTTT. El mapa JSON `salary` gana mode/base/variable/min/max tolerantes
+  (respaldos viejos siguen cargando).
 - **D2 · Heatmap de devaluación**: el calendario 6m del web se porta como
   serie de área diaria con el mismo dato (vesRateTimeline/vesDevaluation);
   el heatmap pictórico exacto queda pendiente de píxel.
@@ -52,6 +55,8 @@ Leyenda: ✅ completo · ✅* completo con desviación consciente documentada.
 - **D5 · PNG 1080×1080/1350 dibujado a canvas pixel-perfect**: el flujo
   Compartir/PDF/Imprimir está completo vía share_plus/printing; el canvas
   exacto del web (fitText + rows punteados) queda como iteración de píxel.
+  En v1.0.1 el Conversor ya comparte su cálculo como PNG 1080 (monto + ruta
+  + fuentes) con `captureWidget`.
 
 ## Sala multi-transporte (decisión §4.10)
 - **Servidor**: `SocketIoTransport` con URL configurable (Ajustes → Sala en
