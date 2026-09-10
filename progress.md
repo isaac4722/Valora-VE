@@ -230,3 +230,32 @@ con la plantilla de `AGENT.md`.
 - Siguiente: instalar el APK en dispositivo y validar el flujo dorado
   (onboarding completo → Inicio); pendientes D2/D3/D4 (heatmap pictórico,
   coach-marks, shortcuts nativos).
+
+## TASK-15 · v1.0.2-beta — paridad contra el spec cerrado MVP-CRUD.md
+
+- Auditoría de 4 frentes (modelo/store · motor/tasas/alertas · 9
+  pantallas · diseño/nativo) con evidencia file:line. Scorecard completo
+  y honesto en docs/PARIDAD-MVP-CRUD.md: global pasó de ~65-70 % a
+  ~80-84 %.
+- Bugs de datos corregidos: addPurchase sin id (CRÍTICO: borrar una
+  compra eliminaba el historial completo y el merge descartaba compras),
+  setCountry→conversor, snapshotSeries days, resetAll §2.5, dedupe
+  importProducts, rate-health >15 min real (§5).
+- Diseño §8: héroes 48-64 px tabulares, sombras firma, PageTransition
+  (slide 18/10 + fade, kEaseVe), header de marca (LogoMark+flag+live+
+  frescura), bordes 100 %, Stamp 8 %, Space Grotesk en titulares,
+  ticker anti-CLS, splash #F7F8F9/#121417 con logo, TapScale.
+- Flujos §9 reales: Ayer/7d histórico, shareTotals PNG, StoreSuggest,
+  importar CSV, editar/eliminar registros, ticket foto visible con zoom
+  y share, finanzas 01→02→03 con confirm y mes previo, sueldo /176
+  LOTTT + copySalary, Divisas del foco, Alertas de precios,
+  autoRefresh, APP_VERSION «17.1», scanner zoom+vibración, constancia
+  PNG real, AlertEngine→centro de notificaciones.
+- Validación: PR #2 → CI gates (analyze 0 · test verdes) → merge a main
+  (5b81ec7) → tag v1.0.2-beta → Build SUCCESS → Release publicada con
+  3 APK (arm64 27,5 · armv7 23,7 · x86_64 30,1 MB) + AAB 64,1 MB.
+  Verificado el APK del release: versionName 1.0.2-beta, label ValoraVE,
+  splash embebido (drawable-nodpi, obfuscado por resource shrink).
+- Pendiente (honesto, ver §3 del scorecard): quick_actions (4 shortcuts),
+  widgets 2-13, biometría toggle, SSE vivo, heatmap/proyección en
+  Análisis, ruta EUR 4 tramos, Decimal exacto, migración v1→v12 en cadena.
