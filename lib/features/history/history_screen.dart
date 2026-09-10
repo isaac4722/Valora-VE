@@ -5,9 +5,13 @@
 /// export: compras CSV · movimientos CSV · JSON backup · constancia.
 library;
 
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
@@ -177,6 +181,7 @@ class _Seat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final ticket = _ticketBytes(); // decodificado UNA vez por build
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
@@ -202,6 +207,19 @@ class _Seat extends StatelessWidget {
           const RuleDouble(),
           const SizedBox(height: 8),
           Row(children: [
+            // Miniatura del ticket (si la compra trae foto) → abre el modal.
+            if (ticket != null)
+              GestureDetector(
+                onTap: () => _view(context),
+                child: Tooltip(
+                  message: 'Ver ticket',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(ticket,
+                        width: 44, height: 44, fit: BoxFit.cover, gaplessPlayback: true),
+                  ),
+                ),
+              ),
             if (purchase.rateSourceId != null)
               Stamp(RateSource.of(purchase.rateSourceId!)?.label ?? purchase.rateSourceId!,
                   color: scheme.primary)
@@ -260,18 +278,84 @@ class _Seat extends StatelessWidget {
     );
   }
 
+  /// Bytes del ticket (data URL 'data:image/jpeg;base64,…' → JPEG crudo).
+  /// Null honesto si no hay foto o el data URL está corrupto.
+  Uint8List? _ticketBytes() {
+    final raw = purchase.ticketPhoto;
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final b64 = raw.contains(',') ? raw.substring(raw.indexOf(',') + 1) : raw;
+      return base64Decode(b64);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Comparte el ticket como JPEG (mismo patrón share_plus del repo).
+  Future<void> _shareTicket(Uint8List bytes) async {
+    await SharePlus.instance.share(ShareParams(
+      text: 'Ticket de compra · ValoraVE',
+      files: [
+        XFile.fromData(bytes, mimeType: 'image/jpeg', name: 'ticket-valorave.jpg'),
+      ],
+    ));
+  }
+
   void _view(BuildContext context) {
+    final bytes = _ticketBytes();
     showDialog<void>(
       context: context,
       builder: (ctx) => Dialog(
-        child: InteractiveViewer(
-          maxScale: 8,
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Text(purchaseDetailText(purchase, context),
-                style: const TextStyle(fontSize: 13, height: 1.5)),
-          ),
-        ),
+        child: bytes == null
+            ? InteractiveViewer(
+                maxScale: 8,
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Text(purchaseDetailText(purchase, context),
+                      style: const TextStyle(fontSize: 13, height: 1.5)),
+                ),
+              )
+            : SizedBox(
+                width: double.maxFinite,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 14, 12, 6),
+                    child: Row(children: [
+                      Expanded(
+                        child: Text(
+                            '${purchase.store ?? 'Compra'} · ${fmtDate(purchase.date)} · ${fmtUSD(purchase.totalUSD)}',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        tooltip: 'Cerrar',
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ]),
+                  ),
+                  Flexible(
+                    child: InteractiveViewer(
+                      minScale: 1,
+                      maxScale: 8,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        child: Image.memory(bytes, fit: BoxFit.contain),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 6, 18, 12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.tonalIcon(
+                        onPressed: () => _shareTicket(bytes),
+                        icon: const Icon(Icons.ios_share, size: 15),
+                        label: const Text('Compartir ticket'),
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
       ),
     );
   }

@@ -168,13 +168,17 @@ class AppStore extends ChangeNotifier {
   }
 
   /// setCountry: no-op si inválido; set país + fuente EUR del país +
-  /// converter USD→moneda.
+  /// converter USD→moneda del país (§2.1). Si la moneda del país ES USD
+  /// (Global/US), el par cae a USD→VES para que el conversor siga útil.
   void setCountry(Country code) {
     _patchSettings(country: code.code);
-    _data = AppData.fromJson(_data.toJson()..['rateSource'] = {
-      ..._data.rateSource,
-      'EUR': code.eurSource,
-    });
+    final String to = code.currency == Currency.usd ? Currency.ves.code : code.currency.code;
+    _data = AppData.fromJson(_data.toJson()
+      ..['rateSource'] = {
+        ..._data.rateSource,
+        'EUR': code.eurSource,
+      }
+      ..['converter'] = ConverterState(from: Currency.usd.code, to: to).toJson());
     _persist();
   }
 
@@ -419,24 +423,29 @@ class AppStore extends ChangeNotifier {
     _persist();
   }
 
-  /// importProducts CSV: dedupe barcode sino nombre case-insensitive;
-  /// crea {category:'otros', presentation:'unit', size:1, records:[]}.
+  /// importProducts CSV: dedupe por barcode PRIMERO (si la fila lo trae);
+  /// solo filas SIN barcode dedupean por nombre case-insensitive (§2.2).
+  /// Crea {category:'otros', presentation:'unit', size:1, records:[]}.
   int importProducts(List<({String name, String? barcode, DateTime? date})> rows) {
     var added = 0;
     final list = [..._data.products];
     for (final row in rows) {
       final name = row.name.trim();
       if (name.isEmpty) continue;
-      final dup = list.any((p) =>
-          (row.barcode != null && row.barcode!.isNotEmpty && p.barcode == row.barcode) ||
-          p.name.toLowerCase() == name.toLowerCase());
+      final bar = row.barcode?.trim() ?? '';
+      // Barcode manda: con barcode la comparación es EXCLUSIVAMENTE por
+      // barcode (dos productos distintos pueden compartir nombre); sin
+      // barcode, nombre lower como única señal de duplicado.
+      final dup = bar.isNotEmpty
+          ? list.any((p) => (p.barcode ?? '') == bar)
+          : list.any((p) => p.name.toLowerCase() == name.toLowerCase());
       if (dup) continue;
       list.insert(
         0,
         Product(
           id: newId(),
           name: name,
-          barcode: row.barcode,
+          barcode: bar.isEmpty ? null : bar,
           category: ProductCategory.otros,
           presentation: Presentation.unit,
           size: 1,
@@ -508,7 +517,10 @@ class AppStore extends ChangeNotifier {
   }
 
   void addPurchase(Purchase p) {
-    final purchase = p.id.isEmpty ? p.copyWith() : p;
+    // Toda compra nueva DEBE tener id único: sin él, deletePurchase y los
+    // backups merge (dedupe por id) corrompían el historial. Si el caller
+    // no lo trae, se genera aquí (newId) vía copyWith(id: …).
+    final purchase = p.id.isEmpty ? p.copyWith(id: newId()) : p;
     final list = [purchase, ..._data.purchases]; // unshift
     _data = AppData.fromJson(_data.toJson()..['purchases'] = list.map((e) => e.toJson()).toList());
     if ((p.store ?? '').trim().isNotEmpty) addStore(p.store!);
@@ -761,11 +773,22 @@ class AppStore extends ChangeNotifier {
     _persist();
   }
 
-  // ─── resetAll conserva el tablero vivo (§2.5) ───────────────────────────
+  // ─── resetAll (§2.5): limpia TODO salvo el tablero vivo ──────────────────
 
+  /// Comportamiento documentado: se conserva ÚNICAMENTE el tablero vivo
+  /// (board). Todo lo demás vuelve a defaults de fábrica:
+  /// · settings → Settings por defecto (país VE, onboarding de nuevo).
+  /// · rateSource → defaults oficiales del modelo (AppData.rateSource).
+  /// · rateHistory (snapshots) → BORRADA (no se conserva).
+  /// · centro de notificaciones → vaciado.
+  /// El outbox de sala y las quick-tools de prefs NO se tocan (colas de
+  /// sincronización/operación, no datos del usuario).
   void resetAll() {
     final liveBoard = _data.board;
-    _data = AppData(board: liveBoard, rateSource: _data.rateSource, settings: _data.settings);
+    _data = AppData(board: liveBoard);
+    snapshots.clear();
+    persistSnapshots();
+    notifs.clear();
     _persist();
     _persistNotifs();
   }

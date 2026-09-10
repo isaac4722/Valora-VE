@@ -26,6 +26,10 @@ import '../../services/sharing.dart';
 import '../../state/app_state.dart';
 import '../../widgets/ui.dart';
 
+/// Versión visible de la app (la del marketing); el buildNumber real viene
+/// de PackageInfo en la fila «Acerca de».
+const String kAppVersionVisible = '17.1';
+
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -97,10 +101,43 @@ class _Pais extends StatelessWidget {
               onPressed: () => store.setSetting('currencyOrder', <String>[]),
               child: const Text('Restablecer orden'),
             ),
+            // Espejo del Home: quitar el sueldo guardado (con confirmación).
+            if (store.settings.effectiveSalary() != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => _confirmQuitSalary(context),
+                  icon: const Icon(Icons.payments_outlined, size: 16),
+                  label: const Text('Quitar sueldo'),
+                ),
+              ),
           ]),
         ),
       ),
     ]);
+  }
+
+  /// Confirmación + setSetting('salary', null) — espejo del «Quitar sueldo»
+  /// del Home (§9.1), aquí donde vive el país/foco.
+  void _confirmQuitSalary(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Quitar el sueldo?'),
+        content: const Text('Se borra el sueldo guardado (monto, base/variable o rango). '
+            'Podrás escribirlo de nuevo cuando quieras.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () {
+              store.setSetting('salary', null);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Quitar'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _move(BuildContext context, List<Currency> order, int from, int to) {
@@ -212,6 +249,15 @@ class _Monedas extends StatelessWidget {
             const SizedBox(height: 6),
             for (final module in RateModule.values)
               _ModuleSource(store: store, module: module),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Refresco automático de tasas', style: TextStyle(fontSize: 13)),
+              subtitle: const Text('Consulta el tablero en segundo plano al abrir la app',
+                  style: TextStyle(fontSize: 11)),
+              value: store.settings.autoRefresh,
+              onChanged: (v) => store.setSetting('autoRefresh', v),
+            ),
             const SizedBox(height: 8),
             Text('Tasas manuales (offline)', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
             const SizedBox(height: 4),
@@ -701,7 +747,8 @@ class _TutorialLegal extends StatelessWidget {
             builder: (context, snap) => ListTile(
               leading: const Icon(Icons.info_outline),
               title: const Text('Acerca de ValoraVE', style: TextStyle(fontSize: 13.5)),
-              subtitle: Text('Versión ${snap.data?.version ?? '1.0.0-beta'} · es-VE · offline-first',
+              subtitle: Text(
+                  'ValoraVE $kAppVersionVisible · build ${snap.data?.buildNumber} · es-VE · offline-first',
                   style: const TextStyle(fontSize: 11.5)),
             ),
           ),

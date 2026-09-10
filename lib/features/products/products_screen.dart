@@ -5,7 +5,10 @@
 /// (TARGET_EPS + metSince es-VE) · CSV ⇄ · escáner prefill.
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/analytics.dart' as an;
@@ -19,6 +22,32 @@ import '../../widgets/ui.dart';
 import '../../services/sharing.dart';
 
 const int kPageSize = 20;
+
+/// Fecha tolerante del CSV: ISO ('2026-02-02'), '02/02/2026' o el formato
+/// propio de export '02-feb-2026'. Null honesto si no parsea.
+DateTime? parseCsvDate(String raw) {
+  final s = raw.trim();
+  if (s.isEmpty) return null;
+  final iso = DateTime.tryParse(s);
+  if (iso != null) return iso;
+  final m = RegExp(r'^(\d{1,2})[-/](\d{1,2}|[a-záéíúüñ]{3,})[-/](\d{2,4})$', caseSensitive: false)
+      .firstMatch(s);
+  if (m == null) return null;
+  final day = int.tryParse(m.group(1)!);
+  var month = int.tryParse(m.group(2)!);
+  if (month == null) {
+    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    final t = m.group(2)!.toLowerCase();
+    final idx = meses.indexWhere((mm) => t.startsWith(mm));
+    if (idx < 0) return null;
+    month = idx + 1;
+  }
+  var year = int.tryParse(m.group(3)!);
+  if (year == null) return null;
+  if (year < 100) year += 2000;
+  if (day == null || day < 1 || day > 31 || month < 1 || month > 12) return null;
+  return DateTime(year, month, day);
+}
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -156,11 +185,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
         children: [
           PageHeader('Productos', hint: 'Tu libro de precios: qué pagas, dónde y cuándo',
-            action: IconButton(
-              icon: const Icon(Icons.ios_share, size: 19),
-              tooltip: 'Exportar CSV',
-              onPressed: () => _exportCsv(context, store),
-            )),
+            action: Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(
+                icon: const Icon(Icons.upload_file, size: 19),
+                tooltip: 'Importar CSV',
+                onPressed: () => _importCsv(context, store),
+              ),
+              IconButton(
+                icon: const Icon(Icons.ios_share, size: 19),
+                tooltip: 'Exportar CSV',
+                onPressed: () => _exportCsv(context, store),
+              ),
+            ])),
           Row(children: [
             Expanded(
               child: TextField(
@@ -250,6 +286,72 @@ class _ProductsScreenState extends State<ProductsScreen> {
     ));
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('${p.name} agregado a la lista'), behavior: SnackBarBehavior.floating));
+  }
+
+  /// Importa productos desde CSV (columnas «Codigo,Nombre,Fecha»; delimitador
+  /// y comillas los maneja parseCSV). Dedupe por código o nombre dentro de
+  /// store.importProducts → SnackBar honesta con importados vs duplicados.
+  Future<void> _importCsv(BuildContext context, AppStore store) async {
+    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['csv', 'txt']);
+    if (picked.isEmpty) return;
+    final raw = await picked.single.readAsBytes().then((b) => utf8.decode(b, allowMalformed: true));
+    final rows = parseCSV(raw);
+    if (rows.length < 2) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('El CSV no trae filas de datos '
+                '(se espera encabezado + filas, ej.: Codigo,Nombre,Fecha)'),
+            behavior: SnackBarBehavior.floating));
+      }
+      return;
+    }
+    final header = rows.first.map((c) => c.trim().toLowerCase()).toList();
+    int findCol(List<String> keys) {
+      for (final k in keys) {
+        final i = header.indexWhere((h) => h.contains(k));
+        if (i >= 0) return i;
+      }
+      return -1;
+    }
+    final iName = findCol(['nombre', 'producto', 'name']);
+    if (iName < 0) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Falta la columna «Nombre» en el CSV'),
+            behavior: SnackBarBehavior.floating));
+      }
+      return;
+    }
+    final iCode = findCol(['codigo']);
+    final iDate = findCol(['fecha', 'date']);
+    final valid = <({String name, String? barcode, DateTime? date})>[];
+    for (final row in rows.skip(1)) {
+      String cell(int i) => (i >= 0 && i < row.length) ? row[i].trim() : '';
+      final name = cell(iName);
+      if (name.isEmpty) continue;
+      final code = cell(iCode);
+      valid.add((
+        name: name,
+        barcode: code.isEmpty ? null : code,
+        date: parseCsvDate(cell(iDate)),
+      ));
+    }
+    if (valid.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Sin filas válidas: la columna «Nombre» no trae datos'),
+            behavior: SnackBarBehavior.floating));
+      }
+      return;
+    }
+    final added = store.importProducts(valid);
+    final dedupe = valid.length - added;
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(added > 0
+            ? (dedupe > 0 ? '$added importados · Ya están en libro: $dedupe' : '$added importados')
+            : 'Ya están en libro: $dedupe'),
+        behavior: SnackBarBehavior.floating));
   }
 
   void _exportCsv(BuildContext context, AppStore store) {
@@ -400,6 +502,76 @@ class _SparkPainter extends CustomPainter {
   bool shouldRepaint(covariant _SparkPainter old) => old.values != values;
 }
 
+/// Edita un registro existente: precio nuevo (>0 validado) + tienda opcional
+/// → store.updateRecord.
+Future<void> _editRecordDialog(
+    BuildContext context, AppStore store, String productId, PriceRecord r) async {
+  final priceCtrl =
+      TextEditingController(text: fmtMoney(r.originalPrice, CurrencyX.from(r.currency)));
+  final storeCtrl = TextEditingController(text: r.store ?? '');
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Editar registro'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(
+          controller: priceCtrl,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            hintText: 'Precio',
+            labelText: 'Precio (${r.currency})',
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: storeCtrl,
+          decoration: const InputDecoration(hintText: 'Tienda (opcional)'),
+        ),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Guardar')),
+      ],
+    ),
+  );
+  if (ok != true) return;
+  final price = parseLocaleNum(priceCtrl.text);
+  if (price == null || price <= 0) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Precio inválido: debe ser mayor que 0'),
+          behavior: SnackBarBehavior.floating));
+    }
+    return;
+  }
+  final s = storeCtrl.text.trim();
+  store.updateRecord(productId, r.id,
+      newUSD: price, newOriginal: price, store: s.isEmpty ? null : s);
+}
+
+/// Elimina un registro con confirmación → store.deleteRecord.
+Future<void> _confirmDeleteRecord(
+    BuildContext context, AppStore store, String productId, PriceRecord r) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Eliminar registro'),
+      content: Text(
+          'Se quita el registro del ${fmtDate(r.date)} (${fmtUSD(r.price)}). El producto se conserva.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: VeColors.of(context).neg),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Eliminar'),
+        ),
+      ],
+    ),
+  );
+  if (ok == true) store.deleteRecord(productId, r.id);
+}
+
 /// Diálogo de producto: ficha + CRUD + records + meta + disponibilidad.
 /// [initialBarcode] prellena el código (alta desde el escáner).
 Future<void> _showProductDialog(BuildContext context, AppStore store, Product? existing,
@@ -481,6 +653,12 @@ Future<void> _showProductDialog(BuildContext context, AppStore store, Product? e
                         sourceId: sCtx.sel(Currency.ves),
                         date: DateTime.now(),
                       ));
+                      // Meta de precio: aviso si quedó POR DEBAJO (TARGET_EPS 0.005).
+                      final target = existing.targetPrice;
+                      if (target != null && target > 0 && raw < target * (1 - an.kTargetEps)) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                            content: Text('¡bajo tu meta!'), behavior: SnackBarBehavior.floating));
+                      }
                       Navigator.pop(ctx);
                     },
                     child: const Text('Guardar precio'),
@@ -514,17 +692,38 @@ Future<void> _showProductDialog(BuildContext context, AppStore store, Product? e
                     child: Text(existing.isUnavailable ? 'Marcar disponible' : 'No disponible'),
                   ),
                 ]),
-                if (existing.records.isNotEmpty) ...[
-                  SectionTitle('Historial de precios'),
-                  for (final r in existing.records.reversed.take(10))
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: LedgerRow(
-                        label: '${fmtDate(r.date)} · ${r.store ?? 'Sin tienda'}',
-                        value: fmtUSD(r.price),
-                      ),
-                    ),
-                ],
+                // Historial de precios VIVO: se re-dibuja al editar/eliminar
+                // registros (escucha al store). Tap → editar · borrar → confirm.
+                ListenableBuilder(
+                  listenable: store,
+                  builder: (ctx, _) {
+                    final fresh =
+                        store.products.where((p) => p.id == existing.id).firstOrNull ?? existing;
+                    if (fresh.records.isEmpty) return const SizedBox.shrink();
+                    return Column(children: [
+                      SectionTitle('Historial de precios'),
+                      for (final r in fresh.records.reversed.take(10))
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: Row(children: [
+                            Expanded(
+                              child: LedgerRow(
+                                label: '${fmtDate(r.date)} · ${r.store ?? 'Sin tienda'}',
+                                value: fmtUSD(r.price),
+                                onTap: () => _editRecordDialog(ctx, store, fresh.id, r),
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete_outline,
+                                  size: 16, color: VeColors.of(ctx).neg),
+                              tooltip: 'Eliminar registro',
+                              onPressed: () => _confirmDeleteRecord(ctx, store, fresh.id, r),
+                            ),
+                          ]),
+                        ),
+                    ]);
+                  },
+                ),
                 const SizedBox(height: 14),
                 Row(children: [
                   Expanded(

@@ -1,5 +1,72 @@
 # Changelog
 
+## 1.0.2-beta+3 (2026-09-11) · v1.0.2-beta
+
+Ronda de paridad contra el spec cerrado `MVP-CRUD.md` (auditoría de 4
+frentes: modelo/store · motor/tasas/alertas · 9 pantallas · diseño/nativo).
+Objetivo: que la app se PAREZCA a la web original y cerrar el bug crítico
+de pérdida de datos. Scorecard completo en `docs/PARIDAD-MVP-CRUD.md`.
+
+### Corregido (bugs de datos)
+- **CRÍTICO — `addPurchase` no generaba id**: toda compra persistía con
+  `id=''`; «Eliminar compra» borraba el HISTORIAL COMPLETO, «Editar»
+  editaba en masa y el merge de backups descartaba todas las compras.
+  Ahora genera id único (con test).
+- `setCountry` no actualizaba el conversor a `USD→monedaDelPaís` (§2.1).
+- `snapshotSeries` ignoraba `days`: las gráficas recibían la serie
+  completa en vez de los últimos N días (con test).
+- `resetAll` conservaba settings/rateSource: ahora limpia TODO salvo el
+  tablero vivo (§2.5, con test).
+- Dedupe de `importProducts`: barcode primero; nombre solo si la fila no
+  trae barcode.
+- Rate-health real (§5): «tasas viejas» solo si se vieron antes y pasan
+  >15 min sin refrescar (antes: banner instantáneo al primer error).
+
+### Corregido (diseño §8 — lo que se nota)
+- **Cifras héroe 48–64 px tabulares**: conversor 56, lista 64 (eran 22/44).
+- **Sombras firma**: card elevación 1 sutil + diálogos/sheets elevación 8
+  (antes: cero sombras en toda la app).
+- **Transición de página firma**: slide 18/10 px + fade con la curva
+  `kEaseVe` (0.16,1,0.3,1) y respeto a `disableAnimations`.
+- **Header de marca**: LogoMark tile #22354E con V blanca + bandera VE +
+  píldora `live` + «hace X min» (tap = refrescar tablero).
+- **Bordes al 100 %** (regla dura): ReadWindow/SkeletonPaper/RuleDouble
+  sin alfas; Stamp con fondo exacto 8 %.
+- **Space Grotesk en titulares** (PageHeader + AppBar), no solo números.
+- **Ledger-dots solo en cierres de cuenta** (§8): los listados dejan de
+  llevar puntos contables; Resumen y cuenta por tienda los conservan.
+- **Ticker anti-CLS**: placeholder «Cargando cotizaciones…» a la altura
+  exacta en vez de colapsar el layout.
+- **Splash de marca**: fondo #F7F8F9 (oscuro #121417) + logo centrado
+  (antes: blanco puro sin marca).
+- **TapScale (0.96) en pestañas y acciones clave**.
+
+### Añadido (paridad §9)
+- **Conversor**: Ayer y «Hace 7 días» cargan tasas históricas REALES;
+  notas con debounce 600 ms; recientes guardan el monto real; PNG
+  compartido con marca ValoraVE; héroes 56 px.
+- **Lista**: compartir totales como PNG; StoreSuggest pasivo
+  («¿Quizá quisiste…?»); edición de nombre/precio del ítem.
+- **Productos**: Importar CSV (importe → importados vs «ya están en
+  libro»); corregir/eliminar registros de precio; SnackBar
+  «¡bajo tu meta!» al registrar bajo TARGET_EPS.
+- **Historial**: el ticket de fotos POR FIN se ve (miniatura, zoom 1-8×)
+  y se comparte como JPEG.
+- **Finanzas**: orden 01→02→03, confirmación al borrar movimiento, delta
+  del mes previo bajo cada StatCard, paginador topeado.
+- **Inicio**: hora en el héroe (reloj 30 s), /hora = sueldo/176 (LOTTT),
+  copiar sueldo (3 modos), secciones «Divisas del foco» y «Alertas de
+  precios» (metas).
+- **Ajustes**: toggle autoRefresh, versión visible «17.1 · build N»,
+  «Quitar sueldo» (espejo web).
+- **Alertas ↔ centro de notificaciones**: cada aviso del motor entra al
+  ring (pico/meta/brecha/daily/recordatorio) — antes solo sonaba y no
+  dejaba rastro.
+- **Scanner**: pinch-zoom ×4, vibración + sonido al leer.
+- **Constancia**: el botón «Generar PNG» ya no es falso — captura el
+  documento y lo comparte como imagen.
+
+
 ## 1.0.1-beta+2 (2026-09-10) · v1.0.1-beta
 
 Ronda de paridad y estabilización contra el informe del web v15. Arregla

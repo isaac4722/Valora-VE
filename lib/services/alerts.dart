@@ -16,6 +16,12 @@ import '../core/models.dart';
 import '../data/store.dart';
 import 'notifications.dart';
 
+/// Callback opcional para escribir cada aviso al centro de notificaciones
+/// del store (AppStore.pushNotification). Se inyecta como función desde
+/// app_state para no crear imports cíclicos y para que los caminos sin
+/// store (workmanager en background) sigan funcionando igual que antes.
+typedef AlertPersist = void Function(NotifKind kind, String title, String body);
+
 class AlertEngine {
   AlertEngine(this._prefs) {
     _loadFired();
@@ -41,7 +47,7 @@ class AlertEngine {
   /// evaluado en cada ciclo del tablero) y desde la tarea horaria de
   /// workmanager (app cerrada — precisión ±1 h, honesta para un aviso de
   /// rutina). El claim por día evita duplicados entre ambos caminos.
-  void reminderCheck(NotificationsService notifs, {DateTime? now}) {
+  void reminderCheck(NotificationsService notifs, {DateTime? now, AlertPersist? persist}) {
     if (!reminderEnabled) return;
     final t = now ?? DateTime.now();
     if (t.hour != reminderHour) return;
@@ -53,6 +59,7 @@ class AlertEngine {
       title: '¿Ya registraste los precios de hoy?',
       body: 'Un minuto en Productos mantiene tu libro al día '
           '(y tus metas de precio útiles).',
+      persist: persist,
     );
   }
 
@@ -94,10 +101,14 @@ class AlertEngine {
   final Map<String, double> _baseline = {}; // fuente → última tasa vista
 
   /// Evaluación tras cada board (spikes solo con fuentes cambiadas).
+  /// [persist] (opcional) escribe cada aviso también en el centro de
+  /// notificaciones del store — mapeo 1:1 de kinds del §7: pico→spike,
+  /// meta→target, brecha→gap, daily→daily, recordatorio→reminder.
   void evaluate({
     required AppStore store,
     required List<String> changed,
     required NotificationsService notifs,
+    AlertPersist? persist,
   }) {
     final s = store.settings;
     final ctx = store.contextOf();
@@ -126,6 +137,7 @@ class AlertEngine {
           title: 'Pico en $label',
           body: 'La tasa de $label movió ${pct.toStringAsFixed(1)} % '
               '(de ${base.toStringAsFixed(2)} a ${rate.toStringAsFixed(2)}).',
+          persist: persist,
         );
       }
     } else {
@@ -137,8 +149,8 @@ class AlertEngine {
     }
 
     // ── Metas de tasa (histéresis) ──
-    _targetRate(notifs, 'bcv', 'ves-bcv', s.targetBcv, store, 'BCV');
-    _targetRate(notifs, 'parallel', 'ves-parallel', s.targetParallel, store, 'Paralelo');
+    _targetRate(notifs, 'bcv', 'ves-bcv', s.targetBcv, store, 'BCV', persist);
+    _targetRate(notifs, 'parallel', 'ves-parallel', s.targetParallel, store, 'Paralelo', persist);
 
     // ── Brecha BCV↔Paralelo ──
     final gap = ctx.gapPct();
@@ -151,6 +163,7 @@ class AlertEngine {
           title: 'Brecha BCV ↔ Paralelo',
           body: 'La brecha está en ${gap.toStringAsFixed(1)} % '
               '(umbral ${gapThreshold.toStringAsFixed(0)} %).',
+          persist: persist,
         );
       }
     }
@@ -171,17 +184,19 @@ class AlertEngine {
           channelId: 'rate_alerts',
           title: 'Cambio del día en BCV',
           body: 'La tasa oficial movió ${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)} % hoy.',
+          persist: persist,
         );
       }
     }
 
     // ── Recordatorio diario (app abierta) ──
-    reminderCheck(notifs, now: now);
+    reminderCheck(notifs, now: now, persist: persist);
   }
 
   /// Histéresis de metas: avisa una vez al cruzar, rearma al bajar.
   void _targetRate(NotificationsService notifs, String key, String sourceId,
-      double? target, AppStore store, String label) {
+      double? target, AppStore store, String label,
+      [AlertPersist? persist]) {
     if (target == null || target <= 0) return;
     final rate = store.board.sources[sourceId]?.rate;
     if (rate == null || rate <= 0) return;
@@ -196,6 +211,7 @@ class AlertEngine {
           title: '$label alcanzó tu meta',
           body: 'La tasa de $label llegó a ${rate.toStringAsFixed(2)} '
               '(meta ${target.toStringAsFixed(2)}).',
+          persist: persist,
         );
       }
     } else {
@@ -204,14 +220,19 @@ class AlertEngine {
     }
   }
 
+  /// Emite el aviso por el canal del sistema SIEMPRE, y además lo escribe
+  /// al centro de notificaciones del store cuando hay callback [persist]
+  /// (mismo kind/title/body — ver contrato AlertPersist).
   void _notify(
     NotificationsService notifs, {
     required NotifKind kind,
     required String channelId,
     required String title,
     required String body,
+    AlertPersist? persist,
   }) {
     unawaited(notifs.show(channelId: channelId, title: title, body: body, tag: 'valorave-$kind'));
+    persist?.call(kind, title, body);
     debugPrint('[alertas] $title · $body');
   }
 }

@@ -5,6 +5,8 @@
 /// notas (5000) · tabla de referencia · compartir.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -33,42 +35,65 @@ class _ConverterScreenState extends State<ConverterScreen> {
   Map<String, double>? _historicRates; // tasas históricas (sourceId → rate)
   bool _historicLoading = false;
   final _notesCtrl = TextEditingController();
+  Timer? _notesSave; // debounce 600 ms de las notas
+  AppStore? _storeRef; // para el flush en dispose (sin context)
 
   @override
   void initState() {
     super.initState();
     final store = context.read<AppStore>();
+    _storeRef = store;
     _notesCtrl.text = store.readConversionNotes();
-    _notesCtrl.addListener(() {
-      store.writeConversionNotes(_notesCtrl.text);
+    _notesCtrl.addListener(_onNotesChanged);
+  }
+
+  /// Debounce de notas: reprograma el guardado a 600 ms de la última tecla.
+  void _onNotesChanged() {
+    _notesSave?.cancel();
+    _notesSave = Timer(const Duration(milliseconds: 600), () {
+      _storeRef?.writeConversionNotes(_notesCtrl.text);
     });
   }
 
   @override
   void dispose() {
+    final pending = _notesSave?.isActive ?? false;
+    _notesSave?.cancel();
+    // Flush del debounce: si quedó texto sin guardar, se persiste al salir.
+    if (pending) _storeRef?.writeConversionNotes(_notesCtrl.text);
     _amountCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
 
+  /// Fecha objetivo del modo elegido: los 3 presets (Ayer · Hace 7 días ·
+  /// Elegir fecha) van por el MISMO camino de carga histórica real.
   void _applyRateContext() {
+    final DateTime? target = switch (_dateMode) {
+      'yesterday' => DateTime.now().subtract(const Duration(days: 1)),
+      'week' => DateTime.now().subtract(const Duration(days: 7)),
+      'custom' => _customDate,
+      _ => null,
+    };
     setState(() {
       _historicRates = null;
-      if (_dateMode == 'custom' && _customDate != null) {
+      if (target != null) {
         _historicLoading = true;
-        _loadCustom();
+        _loadHistoric(target);
       }
     });
   }
 
-  Future<void> _loadCustom() async {
+  /// Carga histórica real (serie remota + respaldo de snapshots locales).
+  /// Sin dato → mapa vacío → mensaje honesto; nunca fabrica tasas.
+  Future<void> _loadHistoric(DateTime date) async {
     final store = context.read<AppStore>();
-    final date = SnapshotPoint.dayKey(_customDate!);
+    final day = SnapshotPoint.dayKey(date);
     final rates = <String, double>{};
     for (final id in ['ves-bcv', 'ves-parallel', 'eur-ves-oficial', 'cop-trm', 'brl-br', 'mxn-banxico']) {
       try {
-        final point = await rateOn(id, date, localFallback: (sourceId, day) {
-          final local = store.snapshots.where((p) => p.sourceId == sourceId && p.day == day).toList()
+        final point = await rateOn(id, day, localFallback: (sourceId, d) {
+          final local = store.snapshots.where((p) => p.sourceId == sourceId && p.day == d).toList()
             ..sort((a, b) => a.day.compareTo(b.day));
           return local.isEmpty ? null : HistPoint(date: local.last.day, rate: local.last.rate);
         });
@@ -83,7 +108,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
     }
   }
 
-  /// Contexto efectivo: vivo o histórico (fecha seleccionada).
+  /// Contexto efectivo: vivo (hoy) o histórico (fecha seleccionada).
   RateContext _context(AppStore store) {
     final base = store.contextOf(module: RateModule.converter);
     if (_dateMode == 'today' || _historicRates == null) return base;
@@ -140,6 +165,35 @@ class _ConverterScreenState extends State<ConverterScreen> {
                   onTo: (c) => store.setConverterPair(from.code, c.code),
                 ),
                 _RutaCalculo(plan: plan),
+                // Marca que sale en el PNG compartido (fila firma).
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, bottom: 2),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Container(
+                      width: 22,
+                      height: 22,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF22354E),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text('V',
+                          style: TextStyle(
+                              fontFamily: 'SpaceGrotesk',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              height: 1)),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text('ValoraVE',
+                        style: TextStyle(
+                            fontFamily: 'SpaceGrotesk',
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF22354E))),
+                  ]),
+                ),
               ]),
             ),
           ),
@@ -188,7 +242,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
           ),
           _TablaFuentes(ctx: ctx, from: from, to: to),
           _TablaReferencia(ctx: ctx, amount: _amount, from: from),
-          _Recientes(from: from, to: to, result: result, plan: plan),
+          _Recientes(from: from, to: to, amount: _amount, result: result, plan: plan),
           _Notas(ctrl: _notesCtrl),
         ],
       ),
@@ -232,7 +286,8 @@ class _DualInput extends StatelessWidget {
               child: TextField(
                 controller: amountCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: VeText.displayNum(22, color: scheme.onSurface),
+                // Héroe del par: cifra grande tabular (firma de la app).
+                style: VeText.displayNum(56, color: scheme.onSurface),
                 textAlign: TextAlign.end,
                 decoration: const InputDecoration(hintText: 'Monto'),
                 onChanged: (t) => onAmount(parseLocaleNum(t) ?? 0),
@@ -268,7 +323,8 @@ class _DualInput extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   AnimatedNumber(
                     result,
-                    style: VeText.displayNum(22, color: scheme.onSurface),
+                    // Héroe del par: cifra grande tabular (firma de la app).
+                    style: VeText.displayNum(56, color: scheme.onSurface),
                     decimals: smartDecimals(result, to),
                   ),
                   Text(fmtCurrency(result, to),
@@ -349,7 +405,9 @@ class _FechaTasas extends StatelessWidget {
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: scheme.primary)),
           ),
       ]),
-      if (mode == 'custom') ...[
+      // Los 3 presets + custom cargan histórico real: loading y mensaje
+      // honesto si la fecha no tiene dato.
+      if (mode != 'today') ...[
         const SizedBox(height: 8),
         if (loading)
           const Padding(padding: EdgeInsets.all(8), child: SizedBox(
@@ -483,8 +541,15 @@ class _TablaReferencia extends StatelessWidget {
 }
 
 class _Recientes extends StatelessWidget {
-  const _Recientes({required this.from, required this.to, required this.result, required this.plan});
+  const _Recientes({
+    required this.from,
+    required this.to,
+    required this.amount,
+    required this.result,
+    required this.plan,
+  });
   final Currency from, to;
+  final double amount;
   final double result;
   final ({double rate, List<Currency> path, List<String> sourceIds})? plan;
 
@@ -493,10 +558,11 @@ class _Recientes extends StatelessWidget {
     final store = context.watch<AppStore>();
     final recents = store.readRecentConversions();
 
-    // Registra la conversión actual (dedupe <60s dentro del store).
+    // Registra la conversión actual con el MONTO REAL del campo
+    // (dedupe <60s dentro del store).
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (result > 0 && plan != null) {
-        store.pushRecentConversion(store.data.converter.from.isEmpty ? 1 : 1, from, to);
+      if (result > 0 && plan != null && amount > 0) {
+        store.pushRecentConversion(amount, from, to);
       }
     });
 

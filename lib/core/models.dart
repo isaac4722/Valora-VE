@@ -626,6 +626,7 @@ class Purchase {
   double get paidUSD => paidTotal ?? totalUSD;
 
   Purchase copyWith({
+    String? id, // respaldado: addPurchase genera id para compras sin él
     DateTime? date,
     String? store,
     List<PurchaseItem>? items,
@@ -640,7 +641,7 @@ class Purchase {
     String? notes,
   }) =>
       Purchase(
-        id: id,
+        id: id ?? this.id,
         date: date ?? this.date,
         store: store ?? this.store,
         items: items ?? this.items,

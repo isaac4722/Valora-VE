@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valorave/core/currencies.dart';
 import 'package:valorave/core/models.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:valorave/data/rate_history.dart';
 import 'package:valorave/data/store.dart';
 
 void main() {
@@ -61,10 +62,15 @@ void main() {
       expect(store.settings.rateSourcesByModule.containsKey('converter:VES'), isFalse);
     });
 
-    test('setCountry ajusta fuente EUR y converter', () {
+    test('setCountry ajusta fuente EUR y converter USD→moneda del país', () {
       store.setCountry(Country.CO);
       expect(store.settings.country, 'CO');
       expect(store.data.rateSource['EUR'], 'eur-cop');
+      expect(store.data.converter.from, 'USD');
+      expect(store.data.converter.to, 'COP');
+      // País con moneda USD (Global/US): el par cae a USD→VES (§2.1).
+      store.setCountry(Country.US);
+      expect(store.data.converter.to, 'VES');
     });
   });
 
@@ -136,6 +142,29 @@ void main() {
       ]);
       expect(n, 2); // dedupe por barcode+nombre: «Harina…» y «Producto nuevo»
     });
+
+    test('importProducts: barcode manda, nombre sin barcode no bloquea otro', () {
+      // Dos productos con MISMO nombre pero distinto barcode: con barcode el
+      // dedupe es EXCLUSIVAMENTE por barcode → ambos entran.
+      final n = store.importProducts([
+        (name: 'Café', barcode: '111', date: null),
+        (name: 'Café', barcode: '222', date: null),
+        (name: 'Café', barcode: null, date: null), // sin barcode → dedupe por nombre
+      ]);
+      expect(n, 2);
+    });
+
+    test('addPurchase genera id único si viene sin él', () {
+      store.addPurchase(Purchase(
+        id: '',
+        date: DateTime(2026),
+        items: const [],
+        totalUSD: 5,
+        totalBS: 200,
+        rate: 40,
+      ));
+      expect(store.purchases.first.id, isNotEmpty);
+    });
   });
 
   group('Carrito, presupuesto y plantillas (§2.3/2.4)', () {
@@ -191,16 +220,42 @@ void main() {
       expect(store2.cart.any((c) => c.name == 'Persistente'), isTrue);
     });
 
-    test('resetAll conserva el tablero vivo y ajustes', () {
+    test('resetAll conserva SOLO el tablero vivo (§2.5 v15)', () {
       store.setRateBoard(RateBoard(sources: {
         'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026)),
       }));
       store.addToCart(const CartItem(id: '', name: 'X', quantity: 1, price: 1, currency: 'USD'));
-      store.setCountry(Country.VE);
+      store.setCountry(Country.CO); // muda settings + rateSource + converter
       store.resetAll();
       expect(store.cart, isEmpty);
       expect(store.board.sources['ves-bcv'], isNotNull);
+      // Settings y rateSource vuelven a defaults de fábrica (país VE, EUR
+      // oficial a Bs), el conversor al par canónico USD→VES.
       expect(store.settings.country, 'VE');
+      expect(store.settings.onboarded, isFalse);
+      expect(store.data.rateSource['EUR'], 'eur-ves-oficial');
+      expect(store.data.converter.from, 'USD');
+      expect(store.data.converter.to, 'VES');
+      // El ring de notificaciones también se vacía.
+      store.pushNotification(kind: NotifKind.info, title: 'T', body: 'b');
+      store.resetAll();
+      expect(store.notifs, isEmpty);
+    });
+  });
+
+  group('Snapshots · snapshotSeries (§4)', () {
+    test('recorta a los últimos [days] días', () {
+      final now = DateTime.now();
+      final store2 = <SnapshotPoint>[
+        SnapshotPoint(sourceId: 'ves-bcv', day: SnapshotPoint.dayKey(now.subtract(const Duration(days: 200))), rate: 1),
+        SnapshotPoint(sourceId: 'ves-bcv', day: SnapshotPoint.dayKey(now.subtract(const Duration(days: 40))), rate: 2),
+        SnapshotPoint(sourceId: 'ves-bcv', day: SnapshotPoint.dayKey(now.subtract(const Duration(days: 5))), rate: 3),
+        SnapshotPoint(sourceId: 'ves-bcv', day: SnapshotPoint.dayKey(now), rate: 4),
+      ];
+      final s30 = snapshotSeries(store2, 'ves-bcv', 30);
+      expect(s30.length, 2); // 5 días y hoy; 40 y 200 fuera
+      expect(s30.last.rate, 4);
+      expect(snapshotSeries(store2, 'ves-bcv', 365).length, 4);
     });
   });
 

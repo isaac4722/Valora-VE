@@ -59,6 +59,16 @@ class RatesPoller extends ChangeNotifier {
   bool get stale => _stale;
   bool get networkBlocked => _networkBlocked;
 
+  /// Último fetch OK (§5 rate-health): null = jamás se vio el tablero vivo.
+  DateTime? _lastBoardOk;
+  DateTime? get lastBoardOk => _lastBoardOk;
+
+  /// ¿Tasas viejas? SOLO si se vieron antes y llevan >15 min sin refrescar
+  /// (regla §5: la caída se declara cuando hubo frescura y desapareció;
+  /// sin primera vista no hay «caída», hay «sin datos» → networkBlocked).
+  bool get rateStale =>
+      _lastBoardOk != null && DateTime.now().difference(_lastBoardOk!).inMinutes > 15;
+
   /// Última lista de fuentes cambiadas (para flashes del tablero).
   List<String> lastChanged = [];
 
@@ -71,14 +81,20 @@ class RatesPoller extends ChangeNotifier {
       final result = await fetchBoard(_store.board);
       _store.setRateBoard(result.board);
       lastChanged = result.changed;
+      // Rate-health: fetch OK → reloj de frescura al día (§5).
+      _lastBoardOk = DateTime.now();
       // Snapshots 180 días.
       appendSnapshots(_store.snapshots, result.board);
       _store.persistSnapshots();
-      // Motor de alertas (spikes, metas, brecha, daily).
+      // Motor de alertas (spikes, metas, brecha, daily). El callback
+      // persist escribe cada aviso al centro de notificaciones del store
+      // (sin import ciclos: el engine solo recibe la función).
       _alerts.evaluate(
         store: _store,
         changed: result.changed,
         notifs: _notifs,
+        persist: (kind, title, body) =>
+            _store.pushNotification(kind: kind, title: title, body: body),
       );
       // Widget BCV 4×1 (home_widget).
       unawaited(WidgetService.updateBcv(
@@ -88,7 +104,8 @@ class RatesPoller extends ChangeNotifier {
       _networkBlocked = false;
     } catch (_) {
       // Sin red o fuente caída: la UI cae al tablero vivo + manuales,
-      // y a los 15 min el banner de salud aparece (stale).
+      // y el banner de salud (rateStale) aparece cuando la última vista
+      // OK envejece >15 min — NUNCA antes de haber visto el tablero.
       if (_store.board.isEmpty) _networkBlocked = true;
       _stale = true;
     } finally {
