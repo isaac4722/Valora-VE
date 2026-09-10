@@ -22,7 +22,7 @@ android {
 
     compileOptions {
         // flutter_local_notifications exige core library desugaring.
-        coreLibraryDesugaringEnabled = true
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
