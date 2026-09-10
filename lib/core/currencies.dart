@@ -14,6 +14,16 @@ enum Currency { usd, ves, cop, eur, brl, mxn }
 /// official verde · mixed ámbar · parallel rojo · manual violeta.
 enum SourceCategory { official, mixed, parallel, manual }
 
+/// Etiqueta corta de categoría de fuente (web CATEGORY_LABEL).
+extension SourceCategoryX on SourceCategory {
+  String get label => switch (this) {
+        SourceCategory.official => 'Oficial',
+        SourceCategory.mixed => 'Promedio',
+        SourceCategory.parallel => 'Paralelo',
+        SourceCategory.manual => 'Manual',
+      };
+}
+
 /// Código corto seguro (el `.name` del enum puede quedar tapado por
 /// extensiones; `toString().split('.')` es inmune).
 String enumCode(Object e) => e.toString().split('.').last;

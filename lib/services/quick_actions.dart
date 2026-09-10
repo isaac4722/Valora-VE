@@ -32,10 +32,10 @@ class QuickActionsService {
       // Sin iconos custom: Android usa el ícono de la app (evita depender
       // de drawables que no existen en este árbol).
       await _plugin.setShortcutItems(<ShortcutItem>[
-        const ShortcutItem(type: 'action_lista', localizedLabel: 'Lista'),
-        const ShortcutItem(type: 'action_conversor', localizedLabel: 'Conversor'),
-        const ShortcutItem(type: 'action_escanear', localizedLabel: 'Escanear'),
-        const ShortcutItem(type: 'action_bcv', localizedLabel: 'Tasa BCV'),
+        const ShortcutItem(type: 'action_lista', localizedTitle: 'Lista'),
+        const ShortcutItem(type: 'action_conversor', localizedTitle: 'Conversor'),
+        const ShortcutItem(type: 'action_escanear', localizedTitle: 'Escanear'),
+        const ShortcutItem(type: 'action_bcv', localizedTitle: 'Tasa BCV'),
       ]);
     } catch (e) {
       // Degradación honesta: sin shortcuts el resto de la app vive igual.

@@ -34,7 +34,7 @@ double toUSD(double amount, double rate) {
     final c = CurrencyX.from(item.currency);
     final u = usdOf(c);
     if (u > 0) {
-      totalUSD += line / Decimal.parse(u.toString());
+      totalUSD += (line / Decimal.parse(u.toString())).toDecimal();
     }
     units += item.quantity;
   }
@@ -58,8 +58,9 @@ double toUSD(double amount, double rate) {
     return (paid: paidUSD + paidBS, diff: 0, missing: 0, change: 0);
   }
   final r = Decimal.parse(rate.toString());
-  final totalUsd = Decimal.parse(totalBS.toString()) / r;
-  final paidTotal = Decimal.parse(paidUSD.toString()) + Decimal.parse(paidBS.toString()) / r;
+  final totalUsd = (Decimal.parse(totalBS.toString()) / r).toDecimal();
+  final paidTotal =
+      Decimal.parse(paidUSD.toString()) + (Decimal.parse(paidBS.toString()) / r).toDecimal();
   final diff = paidTotal - totalUsd;
   if (diff < Decimal.zero) {
     return (paid: paidTotal.toDouble(), diff: diff.toDouble(), missing: -diff.toDouble(), change: 0);

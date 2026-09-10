@@ -72,7 +72,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _step == 0 ? 26 : 24),
+          padding: EdgeInsets.symmetric(horizontal: _step == 0 ? 26 : 24),
           child: Column(
             children: [
               // Saltar (bienvenida dp4): pasa directo al país obligatorio.
