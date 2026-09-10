@@ -154,14 +154,16 @@ void main() {
       ));
       await tester.pump(const Duration(milliseconds: 300));
       // Bienvenida dp4: PageView de 3 páginas (Siguiente ×2 → Comenzar).
+      // pumpAndSettle: la animación del PageView (280 ms) + onPageChanged
+      // deben completarse antes del siguiente tap.
       expect(find.text('Siguiente'), findsOneWidget);
       await tester.tap(find.text('Siguiente'));
-      await tester.pump(const Duration(milliseconds: 320));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Siguiente'));
-      await tester.pump(const Duration(milliseconds: 320));
+      await tester.pumpAndSettle();
       expect(find.text('Comenzar'), findsOneWidget);
       await tester.tap(find.text('Comenzar'));
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
       expect(find.text('¿Desde dónde miras las tasas?'), findsOneWidget);
       await tester.tap(find.text('Elegir Venezuela'));
       await tester.pump(const Duration(milliseconds: 300));
