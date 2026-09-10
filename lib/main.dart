@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme.dart';
 import 'data/store.dart';
 import 'services/notifications.dart';
+import 'services/quick_actions.dart';
 import 'services/widget_service.dart';
 import 'services/workmanager_service.dart';
 import 'state/app_state.dart';
@@ -77,6 +78,13 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Shortcuts del launcher (4 del manifest PWA): tras el primer frame,
+    // con el router único ya montado. Falla silencioso sin canal nativo.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      QuickActionsService.bind(_router);
+      QuickActionsService.init();
+    });
     // Primer refresco tras el primer frame (no bloquea LCP).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

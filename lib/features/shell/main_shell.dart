@@ -9,13 +9,12 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/currencies.dart';
-import '../../core/fmt.dart';
 import '../../core/theme.dart';
-import '../../core/models.dart';
 import '../../data/store.dart';
 import '../../state/app_state.dart';
 import '../../widgets/ui.dart';
 import 'notifs_center.dart';
+import 'global_search_screen.dart';
 import '../../widgets/app_router.dart' show kNavBarKey, kHeaderActionsKey;
 
 /// Ítems del ticker según modo: featured (protagonistas+EUR) / focus (orden
@@ -220,8 +219,10 @@ class _HomeTicker extends StatelessWidget {
   }
 }
 
-/// Cabecera: marca ValoraVE + píldora live + frescura + búsqueda/tema/
-/// campana/ajustes. Tap en la marca → refresca el tablero manualmente.
+/// Cabecera mínima del dp4: SOLO el nombre «ValoraVE» en tipografía
+/// display + acciones esenciales. Sin logo (lo pone el ícono del
+/// launcher), sin píldora «en vivo», sin frescura — menos ruido, más
+/// aire. La frescura vive en el héroe de Inicio y en RateHealthBanner.
 class _Header extends StatelessWidget {
   const _Header({required this.activeIndex});
   final int activeIndex;
@@ -230,15 +231,8 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final store = context.watch<AppStore>();
-    final RatesPoller poller = context.watch<RatesPoller>();
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     final unread = store.notifs.where((n) => !n.read).length;
-
-    // Píldora live (§8): live = última fetch OK hace <2 min; si no, apagada
-    // (LiveBadge se oculta sola) y queda la frescura «hace X min» como pista.
-    final DateTime? fetchedAt = store.board.fetchedAt;
-    final DateTime? lastOk = poller.lastBoardOk;
-    final bool live = lastOk != null && DateTime.now().difference(lastOk).inMinutes < 2;
 
     return Container(
       decoration: BoxDecoration(
@@ -252,30 +246,21 @@ class _Header extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(left: 16),
             child: Row(children: [
-              TapScale(
-                onTap: () => poller.refreshNow(),
-                child: Tooltip(
-                  message: 'Actualizar tasas',
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const LogoMark(),
-                      const SizedBox(width: 8),
-                      const Flag(Currency.ves, size: 14),
-                      const SizedBox(width: 7),
-                      LiveBadge(live: live),
-                      if (fetchedAt != null) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          timeAgo(fetchedAt),
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
+              // Marca tipográfica pura, patrón dp4: «Valora» + «VE» en
+              // tinta primaria. Tap → Inicio.
+              InkWell(
+                onTap: () => context.go('/'),
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  child: RichText(
+                    text: TextSpan(
+                      style: VeText.displayNum(18, color: scheme.onSurface, weight: FontWeight.w700),
+                      children: <InlineSpan>[
+                        const TextSpan(text: 'Valora'),
+                        TextSpan(text: 'VE', style: TextStyle(color: scheme.primary)),
                       ],
-                    ]),
+                    ),
                   ),
                 ),
               ),
@@ -286,7 +271,11 @@ class _Header extends StatelessWidget {
                   _HeaderIcon(
                     icon: Icons.search,
                     tooltip: 'Buscar en la app',
-                    onTap: () => showGlobalSearch(context),
+                    // dp4: búsqueda global como pantalla completa (módulos,
+                    // productos, compras con tienda y avisos).
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const GlobalSearchScreen()),
+                    ),
                   ),
                   _HeaderIcon(
                     icon: dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
@@ -358,130 +347,3 @@ class _HeaderIcon extends StatelessWidget {
   }
 }
 
-/// Búsqueda global (módulos + productos + notificaciones).
-void showGlobalSearch(BuildContext context) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (_) => const _GlobalSearchSheet(),
-  );
-}
-
-class _GlobalSearchSheet extends StatefulWidget {
-  const _GlobalSearchSheet();
-
-  @override
-  State<_GlobalSearchSheet> createState() => _GlobalSearchSheetState();
-}
-
-class _GlobalSearchSheetState extends State<_GlobalSearchSheet> {
-  String _q = '';
-
-  static const List<(String, String, IconData)> _modules = [
-    ('Inicio', '/', Icons.home_outlined),
-    ('Conversor', '/conversor', Icons.swap_horiz),
-    ('Lista', '/lista', Icons.shopping_cart_outlined),
-    ('Productos', '/productos', Icons.inventory_2_outlined),
-    ('Historial', '/historial', Icons.receipt_long_outlined),
-    ('Finanzas', '/finanzas', Icons.account_balance_wallet_outlined),
-    ('Análisis', '/analisis', Icons.bar_chart_outlined),
-    ('Ajustes', '/ajustes', Icons.settings_outlined),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    final q = fold(_q.trim().toLowerCase());
-    bool match(String s) => q.isEmpty || fold(s.toLowerCase()).contains(q);
-
-    final modules = _modules.where((m) => match(m.$1)).toList();
-    final products = q.isEmpty
-        ? const <Product>[]
-        : store.products.where((p) => match(p.name) || (p.barcode ?? '').contains(_q)).take(6).toList();
-    final notifs = q.isEmpty
-        ? const <NotificationItem>[]
-        : store.notifs.where((n) => match(n.title)).take(4).toList();
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.75,
-        maxChildSize: 0.92,
-        builder: (context, scroll) => Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              autofocus: true,
-              onChanged: (v) => setState(() => _q = v),
-              decoration: const InputDecoration(
-                hintText: 'Módulos, productos, compras, avisos…',
-                prefixIcon: Icon(Icons.search, size: 18),
-              ),
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              controller: scroll,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              children: [
-                if (modules.isNotEmpty) ...[
-                  Text('Módulos', style: VeText.labelCaps(10, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                  const SizedBox(height: 6),
-                  for (final m in modules)
-                    ListTile(
-                      dense: true,
-                      leading: Icon(m.$3, size: 19, color: Theme.of(context).colorScheme.primary),
-                      title: Text(m.$1, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.go(m.$2);
-                      },
-                    ),
-                ],
-                if (products.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Text('Productos', style: VeText.labelCaps(10, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                  const SizedBox(height: 6),
-                  for (final p in products)
-                    ListTile(
-                      dense: true,
-                      leading: const Icon(Icons.inventory_2_outlined, size: 19),
-                      title: Text(p.name, style: const TextStyle(fontSize: 13.5)),
-                      subtitle: Text(p.barcode ?? p.category.label, style: const TextStyle(fontSize: 11.5)),
-                      onTap: () {
-                        Navigator.pop(context);
-                        context.go('/productos');
-                      },
-                    ),
-                ],
-                if (notifs.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Text('Notificaciones', style: VeText.labelCaps(10, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                  const SizedBox(height: 6),
-                  for (final n in notifs)
-                    ListTile(
-                      dense: true,
-                      leading: const Icon(Icons.notifications_outlined, size: 19),
-                      title: Text(n.title, style: const TextStyle(fontSize: 13)),
-                      onTap: () {
-                        Navigator.pop(context);
-                        showNotificationCenter(context);
-                      },
-                    ),
-                ],
-                if (modules.isEmpty && products.isEmpty && notifs.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 40),
-                    child: Text('Sin resultados para «$_q»',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                  ),
-              ],
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
-}

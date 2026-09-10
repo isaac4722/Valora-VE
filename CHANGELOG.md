@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.1.0-dp4+6 · rama fix/v1.1.0-dp4-paridad
+
+Ronda de CALIDAD VISUAL guiada por el prototipo de referencia **dp4**
+(`valorave-flutter-source-dp4.zip`, la reconstrucción fiel del catálogo dp
+#4) + cierre de pendientes del spec `MVP-CRUD.md`. Trabaja en rama aparte
+según lo acordado: se compila, el dueño prueba y solo entonces se fusiona
+a main.
+
+### Añadido
+- **Cabecera mínima dp4**: SOLO el nombre «ValoraVE» en tipografía display
+  («Valora» + «VE» en tinta primaria), sin logo interno, sin píldora «en
+  vivo» ni frescura — menos ruido, más aire. La frescura vive en el héroe
+  de Inicio y en RateHealthBanner.
+- **Héroe de la tasa protagonista (patrón dp4)** en Inicio: tarjeta con
+  cifra héroe en ReadWindow (displayNum 38), banderas, botón copiar,
+  sellos de categoría/fuente y píldoras «brecha vs BCV» y «vs ayer» con
+  datos REALES del tablero vivo (nunca demo).
+- **Búsqueda global dp4 como pantalla completa**: módulos, productos del
+  catálogo, compras con tienda y avisos; matching sin acentos. Con el
+  fix dp5: UN solo aviso discreto al abrir un resultado (el quirk del
+  dp4 apilaba dos SnackBar).
+- **Bienvenida multipantalla dp4**: PageView de 3 páginas (marca y
+  promesa · lo que hace · datos en vivo de APIs + offline-first) con
+  puntos de progreso y «Saltar». NO rejugable desde Ajustes (decisión
+  del dueño); el tutorial (país + 7 slides + done) sigue reabriendo.
+- **quick_actions**: los 4 shortcuts del manifest de la PWA en el
+  launcher Android — Lista, Conversor, Escanear (abre el escáner) y
+  Tasa BCV.
+- **Notificaciones TESTEABLES**: «Probar aviso» en Ajustes → Alertas
+  pide POST_NOTIFICATIONS si falta y dispara una notificación ANDROID
+  real por flutter_local_notifications (canal General), además de
+  escribir en el centro interno. AlertEngine ya emitía al sistema.
+- **Dinero exacto (§3.2 decimal.js)**: `cartTotals` y `computeChange`
+  suman y dividen con `Decimal` (paquete decimal) sin cambiar sus APIs.
+
+### Honestos pendientes (documentados en `docs/PARIDAD-MVP-CRUD.md`)
+- Los «13 widgets» del §14 referían a la base original perdida (este
+  repo nació con 1). Se mantiene el widget BCV funcional; la familia
+  ampliada queda como pendiente explícito con su plan.
+
 ## 1.0.2-beta+3 (2026-09-11) · v1.0.2-beta
 
 Ronda de paridad contra el spec cerrado `MVP-CRUD.md` (auditoría de 4

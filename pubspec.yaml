@@ -3,7 +3,7 @@ description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/parale
 publish_to: 'none'
 
 # v1.0.1-beta+2 · ronda de paridad (router/icono/escáner/sueldo variable).
-version: 1.0.2-beta+3
+version: 1.1.0-dp4+6
 
 environment:
   sdk: ^3.9.2
@@ -39,6 +39,7 @@ dependencies:
   share_plus: ^13.0.0               # compartir PNG/PDF/CSV
   image_picker: ^1.1.2              # foto de ticket (1024px JPEG .72 nativo)
   mobile_scanner: ^5.2.3            # escáner continuo con zoom
+  quick_actions: ^1.2.0             # 4 shortcuts del launcher (manifest PWA)
   nearby_connections: ^4.1.0        # sala P2P sin internet (WiFi-Direct/BT/BLE)
 
   # ── UI / visualización / documentos ──────────────────────────────────────
@@ -48,6 +49,7 @@ dependencies:
   pdf: ^3.11.1                      # constancias PDF
   printing: ^5.13.2
   intl: ^0.19.0                     # formato es-VE
+  decimal: ^3.0.2                   # dinero exacto (decimal.js del web → Decimal Dart)
 
 dev_dependencies:
   flutter_test:

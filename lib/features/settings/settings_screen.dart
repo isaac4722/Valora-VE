@@ -550,9 +550,34 @@ class _AlertasState extends State<_Alertas> {
               ),
             ]),
             TextButton.icon(
-              onPressed: () {
-                store.pushNotification(kind: NotifKind.test, title: 'Aviso de prueba',
-                    body: 'Si lo ves, el centro de notificaciones está vivo.');
+              // Prueba REAL de la tubería Android: pide POST_NOTIFICATIONS si
+              // falta y dispara por flutter_local_notifications (canal
+              // General), además de escribir en el centro interno.
+              onPressed: () async {
+                final notifs = context.read<NotificationsService>();
+                var granted = await notifs.areEnabled();
+                if (!granted) granted = await notifs.requestPermission();
+                final String body = granted
+                    ? 'Si lees esto en la bandeja del sistema, los canales '
+                        'funcionan: picos, metas, brecha y recordatorio usan '
+                        'la misma tubería.'
+                    : 'Sin permiso POST_NOTIFICATIONS el aviso solo aparece '
+                        'aquí. Actívalo desde el sistema o reintenta.';
+                await notifs.show(
+                  channelId: 'default',
+                  title: 'Aviso de prueba',
+                  body: body,
+                  tag: 'valorave-test',
+                );
+                store.pushNotification(kind: NotifKind.test, title: 'Aviso de prueba', body: body);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(SnackBar(
+                        content: Text(granted
+                            ? 'Notificación enviada a la bandeja del sistema'
+                            : 'Permiso de notificaciones denegado')));
+                }
               },
               icon: const Icon(Icons.science_outlined, size: 15),
               label: const Text('Probar aviso'),

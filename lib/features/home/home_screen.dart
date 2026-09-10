@@ -19,6 +19,7 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../state/app_state.dart';
+import '../../widgets/app_router.dart' show kHeroRateKey;
 import '../../widgets/ui.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -37,6 +38,7 @@ class HomeScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           children: [
             _Hero(poller: poller),
+            _RateHero(),
             _CotizacionPrincipal(),
             _SueldoSection(),
             _DivisasFoco(),
@@ -142,6 +144,146 @@ class _HeroState extends State<_Hero> {
           Text(freshness ?? '', style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
         ],
       ]),
+    );
+  }
+}
+
+/// ─── Héroe de la tasa protagonista (patrón dp4, datos reales) ───────────────
+/// Tarjeta «Dólar en Venezuela»: cifra héroe en ReadWindow (displayNum 38),
+/// botón copiar, sellos de categoría/fuente y píldoras de brecha y vs-ayer.
+/// Usa la fuente VES activa del tablero vivo (nunca demo).
+class _RateHero extends StatelessWidget {
+  const _RateHero();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final store = context.watch<AppStore>();
+    final VeInk sem = VeColors.of(context);
+
+    // Fuente VES activa del tablero vivo; si no hay datos, nada (honesto).
+    final activeId = store.sourceFor(Currency.ves);
+    final s = RateSource.of(activeId);
+    final e = store.board.sources[activeId];
+    if (s == null || e == null) return const SizedBox.shrink();
+
+    final Color catColor = switch (s.category) {
+      SourceCategory.official => sem.pos,
+      SourceCategory.mixed => sem.warn,
+      SourceCategory.parallel => sem.neg,
+      SourceCategory.manual => sem.manual,
+    };
+
+    // Brecha real vs BCV cuando la activa NO es la oficial (sello del héroe).
+    final double? bcv = store.board.sources['ves-bcv']?.rate;
+    final double? gapPct =
+        (bcv != null && bcv > 0 && e.rate > 0 && activeId != 'ves-bcv') ? (e.rate / bcv - 1) * 100 : null;
+
+    // vs ayer: snapshot local del día anterior para la fuente activa.
+    String? vsAyerLabel;
+    final String dayKey = SnapshotPoint.dayKey(DateTime.now().subtract(const Duration(days: 1)));
+    final yest = store.snapshots
+        .where((p) => p.sourceId == activeId && p.day == dayKey)
+        .toList()
+      ..sort((a, b) => a.day.compareTo(b.day));
+    if (yest.isNotEmpty && yest.last.rate > 0) {
+      final double pct = (e.rate / yest.last.rate - 1) * 100;
+      vsAyerLabel = 'vs ayer ${fmtPct(pct, forceSign: true)}';
+    }
+
+    return Card(
+      key: kHeroRateKey,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(
+              child: Text(
+                s.currency == Currency.usd ? 'Dólar en Venezuela' : s.label,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: scheme.onSurface, height: 1.1),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(2.5),
+              decoration: BoxDecoration(
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Flag(Currency.ves, size: 13),
+            ),
+          ]),
+          const SizedBox(height: 14),
+          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Expanded(
+              child: ReadWindow(
+                semanticLabel: '1 dólar igual a ${fmtRate(e.rate)} bolívares',
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Flexible(
+                      child: Text(fmtRate(e.rate),
+                          style: VeText.displayNum(38, color: scheme.onSurface),
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: 9),
+                    const Flag(Currency.usd, size: 21),
+                    const SizedBox(width: 6),
+                    Text('USD', style: VeText.displayNum(20, color: scheme.onSurfaceVariant, weight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            InkWell(
+              onTap: () => copiarAlPortapapeles(
+                  context, fmtRate(e.rate).replaceAll('.', ','), 'Tasa copiada'),
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Icon(Icons.copy_outlined, size: 14, color: scheme.onSurfaceVariant),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Stamp(s.category.label, color: catColor),
+              Stamp(s.detail, color: scheme.onSurfaceVariant),
+              if (gapPct != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: sem.neg.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(999)),
+                  child: Text(
+                    'brecha ${fmtPct(gapPct)}',
+                    style: TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.w700, fontFamily: 'SpaceGrotesk', color: sem.neg),
+                  ),
+                ),
+              if (vsAyerLabel != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: sem.pos.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(999)),
+                  child: Text(
+                    vsAyerLabel,
+                    style: TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.w700, fontFamily: 'SpaceGrotesk', color: sem.pos),
+                  ),
+                ),
+            ],
+          ),
+        ]),
+      ),
     );
   }
 }

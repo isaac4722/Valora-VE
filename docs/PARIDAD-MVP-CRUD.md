@@ -53,16 +53,26 @@
 
 ## 3. Lo que sigue fuera (honesto)
 
-- **Fase D restante**: 4 shortcuts (`quick_actions`), widgets BCV
-  adicionales (hoy 1/13), biometría sin toggle, `price_targets` de
-  producto en 2º plano, SSE vivo (el poll 60 s funciona; el cliente SSE
-  existe sin instanciar).
+> Ronda **1.1.0-dp4** (rama `fix/v1.1.0-dp4-paridad`) cerró de la lista
+> siguiente: shortcuts `quick_actions` (4/4), Decimal exacto en
+> `cartTotals`/`computeChange`, notificaciones testeables desde Ajustes
+> («Probar aviso» dispara notificación Android real por canal), y la
+> identidad visual dp4 (cabecera solo-nombre, héroe de tasa con
+> ReadWindow 38 px, búsqueda global a pantalla completa con el fix dp5,
+> bienvenida PageView de 3 páginas). Queda:
+
+- **Fase D restante**: widgets BCV adicionales (hoy 1/13 — los «13»
+  referían a la base original perdida; este repo nació con 1; plan:
+  familia por subclassing de `BcvWidgetProvider`), `price_targets` de
+  producto en 2º plano, biometría sin toggle, SSE vivo (el poll 60 s
+  funciona; el cliente SSE existe sin instanciar).
 - **Análisis 9.7**: heatmap 6 m, proyección punteada DAMP (el motor
   `predictPrice` φ=0.85 existe), rankings de compras/día/moneda,
   historial multi-divisa, exportGapCsv.
 - **Motor**: ruta EUR de 4 tramos visible (hoy colapsada a 2 banderas),
-  `direct` en ConversionPlan, Decimal exacto (hoy `double` tolerante),
-  migración v1→v12 como cadena real (hoy parsing tolerante).
+  `direct` en ConversionPlan, Decimal solo en totales/vuelto (resto del
+  motor en `double` tolerante), migración v1→v12 como cadena real (hoy
+  parsing tolerante).
 - **§8 micro**: hover-pausa del ticker (no aplica táctil), `accentDark`
   propio, `kInkNeg` de constancia ya unificado a `#CF4437`.
 

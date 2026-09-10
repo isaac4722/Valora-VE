@@ -4,6 +4,8 @@
 /// Todo puro: sin IO, testeable sin red ni Hive.
 library;
 
+import 'package:decimal/decimal.dart';
+
 import 'currencies.dart';
 import 'fmt.dart'; // fold()
 import 'models.dart';
@@ -18,34 +20,51 @@ double toUSD(double amount, double rate) {
 
 /// cartTotals del web (§3.2): SIN IGTF — total == subtotal siempre en
 /// compras nuevas. [usdOf] normaliza cada moneda a USD (motor activo).
+/// Dinero exacto (§3.2 decimal.js): la suma se hace con Decimal y se
+/// redondea a 6 decimales solo al salir (los USD normalizados pueden
+/// necesitar 4+ decimales para el precio por unidad).
 ({double totalUSD, Map<String, double> byCurrency, int units})
     cartTotals(List<CartItem> cart, double Function(Currency c) usdOf) {
-  final byCurrency = <String, double>{};
-  var totalUSD = 0.0;
+  final byCurrency = <String, Decimal>{};
+  var totalUSD = Decimal.zero;
   var units = 0;
   for (final item in cart) {
-    final line = item.price * item.quantity;
-    byCurrency[item.currency] = (byCurrency[item.currency] ?? 0) + line;
+    final line = Decimal.fromInt(item.quantity) * Decimal.parse(item.price.toString());
+    byCurrency[item.currency] = (byCurrency[item.currency] ?? Decimal.zero) + line;
     final c = CurrencyX.from(item.currency);
-    totalUSD += usdOf(c) > 0 ? line / usdOf(c) : 0;
+    final u = usdOf(c);
+    if (u > 0) {
+      totalUSD += line / Decimal.parse(u.toString());
+    }
     units += item.quantity;
   }
-  return (totalUSD: totalUSD, byCurrency: byCurrency, units: units);
+  return (
+    totalUSD: (totalUSD.toDouble() * 1e6).roundToDouble() / 1e6,
+    byCurrency: byCurrency.map((k, v) => MapEntry(k, (v.toDouble() * 1e6).roundToDouble() / 1e6)),
+    units: units,
+  );
 }
 
 /// Vuelto (§3.2 computeChange): {paid, diff, missing, change}.
 /// Pagó en USD y/o Bs; la cuenta en Bs con la tasa activa.
+/// División/multiplicación con Decimal para no arrastrar el error binario.
 ({double paid, double diff, double missing, double change}) computeChange({
   required double totalBS,
   required double paidUSD,
   required double paidBS,
   required double rate,
 }) {
-  final totalUsd = toUSD(totalBS, rate);
-  final paidTotal = paidUSD + toUSD(paidBS, rate);
+  if (rate <= 0) {
+    return (paid: paidUSD + paidBS, diff: 0, missing: 0, change: 0);
+  }
+  final r = Decimal.parse(rate.toString());
+  final totalUsd = Decimal.parse(totalBS.toString()) / r;
+  final paidTotal = Decimal.parse(paidUSD.toString()) + Decimal.parse(paidBS.toString()) / r;
   final diff = paidTotal - totalUsd;
-  if (diff < 0) return (paid: paidTotal, diff: diff, missing: -diff, change: 0);
-  return (paid: paidTotal, diff: diff, missing: 0, change: diff * rate);
+  if (diff < Decimal.zero) {
+    return (paid: paidTotal.toDouble(), diff: diff.toDouble(), missing: -diff.toDouble(), change: 0);
+  }
+  return (paid: paidTotal.toDouble(), diff: diff.toDouble(), missing: 0, change: (diff * r).toDouble());
 }
 
 // ─── Precios: variación y proyección ───────────────────────────────────────

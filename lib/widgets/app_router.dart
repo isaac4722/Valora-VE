@@ -32,6 +32,7 @@ import '../features/welcome/welcome_screen.dart';
 /// Claves para widget tests (GUI dp4).
 const kNavBarKey = Key('nav-bar');
 const kHeaderActionsKey = Key('header-actions');
+const kHeroRateKey = Key('hero-rate');
 
 GoRouter buildRouter({required AppStore store}) {
   return GoRouter(

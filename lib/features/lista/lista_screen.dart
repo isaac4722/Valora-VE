@@ -18,6 +18,7 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
+import '../../services/quick_actions.dart' show scanRequest;
 import '../../services/sharing.dart';
 import '../scanner/scanner_screen.dart';
 import '../../widgets/ui.dart';
@@ -40,7 +41,29 @@ class _ListaScreenState extends State<ListaScreen> {
   String _storeName = '';
 
   @override
+  void initState() {
+    super.initState();
+    // Shortcut «Escanear» del launcher: si hay petición pendiente, abre el
+    // escáner en el primer frame (quick_actions → scanRequest).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (scanRequest.value) {
+        scanRequest.value = false;
+        _scanItem(context.read<AppStore>());
+      }
+    });
+    scanRequest.addListener(_onScanRequest);
+  }
+
+  void _onScanRequest() {
+    if (!mounted || !scanRequest.value) return;
+    scanRequest.value = false;
+    _scanItem(context.read<AppStore>());
+  }
+
+  @override
   void dispose() {
+    scanRequest.removeListener(_onScanRequest);
     _nameCtrl.dispose();
     _priceCtrl.dispose();
     _qtyCtrl.dispose();

@@ -153,6 +153,12 @@ void main() {
         child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router2),
       ));
       await tester.pump(const Duration(milliseconds: 300));
+      // Bienvenida dp4: PageView de 3 páginas (Siguiente ×2 → Comenzar).
+      expect(find.text('Siguiente'), findsOneWidget);
+      await tester.tap(find.text('Siguiente'));
+      await tester.pump(const Duration(milliseconds: 320));
+      await tester.tap(find.text('Siguiente'));
+      await tester.pump(const Duration(milliseconds: 320));
       expect(find.text('Comenzar'), findsOneWidget);
       await tester.tap(find.text('Comenzar'));
       await tester.pump(const Duration(milliseconds: 300));
