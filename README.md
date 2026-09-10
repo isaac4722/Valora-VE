@@ -7,6 +7,8 @@
 
 </div>
 
+> 📦 **Descarga actual:** [Release v1.0.0-beta](https://github.com/isaac4722/Valora-VE/releases/tag/v1.0.0-beta) — 3 APK firmados (armeabi-v7a · arm64-v8a · x86_64) + AAB, ofuscados (`--obfuscate --split-debug-info`).
+
 **ValoraVE** es una app Android nativa (Flutter/Dart puro) para saber
 cuánto vale tu dinero en Venezuela: tasas BCV y paralelo, conversor
 multi-divisa (USD · VES · EUR · COP · BRL · MXN), lista de compras

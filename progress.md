@@ -122,3 +122,36 @@ con la plantilla de `AGENT.md`.
   runner de 16 GB (nota §Fase 6).
 - Siguiente: re-apuntar tag v1.0.0-beta → Release con 3 APK + AAB →
   verificación de firma → informe final de paridad.
+
+---
+
+## [TASK-12] Release v1.0.0-beta publicada y verificada · 2026-09-10 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Hecho:
+  - Build en main verde (55c8ee0) tras el fix del widget BCV.
+  - Primer intento de tag: el paso de Release falló con 403 «Resource
+    not accessible by integration» — `github.token` por defecto es
+    read-only en este repo. Fix: `permissions: contents: write` a nivel
+    de workflow (privilegio mínimo, futuro-proof aunque ACTIONS_TOKEN
+    desaparezca).
+  - Tag re-apuntado a 82103f7 → Build del tag VERDE → **Release
+    v1.0.0-beta publicada** con 4 assets: 3 APK (armeabi-v7a 23,4 MB ·
+    arm64-v8a 27,2 MB · x86_64 29,8 MB) + AAB (63,6 MB).
+  - Verificación de binarios (scripts/verify_apk_sig.py, parser propio
+    del APK Signing Block — sin dependencias pesadas): los 3 APK con
+    esquema v2 PRESENTE, content digest recalculado COINCIDE (íntegros),
+    firma RSA-PKCS1v15/SHA-256 VÁLIDA, cert CN=ValoraVE (keystore de
+    secrets). AAB válido: manifest + dex + mapa ProGuard (ofuscación).
+  - PARIDAD.md ítem 18 actualizado con la evidencia; README con enlace
+    de descarga.
+- Decisiones:
+  - bundletool no disponible local (sin JDK+build-tools completos); la
+    validez del AAB se verificó por estructura (zip con base/manifest,
+    base/dex, BUNDLE-METADATA/proguard.map). Documentado aquí como
+    sustituto honesto de `bundletool build-apks`.
+  - apksigner ausente: sustituido por el verificador propio que replica
+    la verificación v2 (digests chunked por secciones + firma RSA).
+- Gates: analyze=0 · test=104/104 · integration=5/5 host · build=SUCCESS
+  (tag 82103f7) · release=publicada y verificada.
+- Bloqueos: ninguno nuevo.
+- Siguiente: informe final al dueño. Proyecto completo según §10.

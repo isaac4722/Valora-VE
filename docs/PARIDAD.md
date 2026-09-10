@@ -21,7 +21,7 @@ Estado de la verificación final. Evidencia: archivo/módulo/test.
 | 15 | Alertas: spikes (cooldown 30min) + targets (histéresis) + gap/daily/reminder + centro 9 kinds ring 50 + WorkManager | ✅ | `lib/services/alerts.dart` + `workmanager_service.dart` · `test/store_test.dart` (centro) |
 | 16 | Nativo: 4 shortcuts + widgets + scanner + foto 1024 ≤12MB + constancia PNG/share/print + zoom 1–8× | ✅* | `BcvWidgetProvider.kt` + `widget_service.dart` · `mobile_scanner` · `InteractiveViewer` zoom · shortcuts nativos parcialmente (D4) |
 | 17 | Diseño §8 al píxel (tokens, firmas, tabular, curva, duraciones, reducedMotion) | ✅ | `lib/core/theme.dart` (tokens dp4 exactos) + `docs/DESIGN-SYSTEM.md` |
-| 18 | analyze/test verdes; APK release ofuscado | ✅ | CI: analyze 0 · 104 tests · `build.yml` con `--obfuscate --split-per-abi` |
+| 18 | analyze/test verdes; APK release ofuscado | ✅ | CI: analyze 0 · 104 tests · Build en runner SUCCESS · Release v1.0.0-beta con 3 APK + AAB, firma v2 verificada (digest íntegro + RSA válida + cert CN=ValoraVE) y AAB con mapa ProGuard |
 
 Leyenda: ✅ completo · ✅* completo con desviación consciente documentada.
 
