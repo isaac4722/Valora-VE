@@ -203,3 +203,30 @@ con la plantilla de `AGENT.md`.
   thiennc-tesoglobal/flutter-skills — timeouts de red en este entorno;
   se trabajó con la familia flutter/* + dart/* ya presente en el agente.
 - Siguiente: PR → CI verde → merge main → tag v1.0.1-beta → Release APK.
+
+---
+## [TASK-14] Release v1.0.1-beta publicada y verificada · 2026-09-10 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Hecho:
+  - Ronda analyze-fix tras el primer CI rojo (8 issues): promoción de
+    String?→String dentro de closures con `scanned` final local, scheme
+    sin usar en el escáner, await sobre void en workmanager.
+  - PR #1 CI VERDE (analyze 0 · tests verdes) → merge a main → Build de
+    main SUCCESS (compila Android con los iconos nuevos).
+  - Tag v1.0.1-beta → Build del tag SUCCESS → **Release v1.0.1-beta
+    publicada**: 3 APK (arm64 28,7 MB · armeabi 24,7 MB · x86_64 31,4 MB)
+    + AAB 67,0 MB, firmados y ofuscados.
+  - Verificación de cierre sobre el APK descargado del release: iconos
+    legacy/adaptive con contenido real (centro #2749CB en 48/72/96/144/
+    192 legacy y 108/162/216/324/432 foreground), monochrome con glifo V
+    blanco (7.892 px), manifest con versionName 1.0.1-beta y label
+    ValoraVE.
+- Decisiones:
+  - El release v1.0.0-beta (icono roto + bug de bienvenida) se conserva
+    como historia; README y /releases/latest ya apuntan a v1.0.1-beta.
+- Gates: analyze=0 · test=verde (CI runner) · build=SUCCESS (main+tag) ·
+  release=publicada y verificada byte a byte.
+- Bloqueos: ninguno.
+- Siguiente: instalar el APK en dispositivo y validar el flujo dorado
+  (onboarding completo → Inicio); pendientes D2/D3/D4 (heatmap pictórico,
+  coach-marks, shortcuts nativos).
