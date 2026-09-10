@@ -155,3 +155,51 @@ con la plantilla de `AGENT.md`.
   (tag 82103f7) · release=publicada y verificada.
 - Bloqueos: ninguno nuevo.
 - Siguiente: informe final al dueño. Proyecto completo según §10.
+
+---
+## [TASK-13] v1.0.1-beta · fix bloqueante del router + icono real + ronda de paridad · 2026-09-10 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Hecho:
+  - DIAGNÓSTICO del «solo carga bienvenida y MAS NADA»: `buildRouter()` se
+    invocaba dentro de `ValoraApp.build()` con `context.watch<AppStore>()`.
+    Cada mutación del store (setCountry del paso 1 del onboarding,
+    refresh del poller cada 60 s, cualquier registro) recreaba el
+    GoRouter y reseteaba la navegación a initialLocation → usuario
+    atrapado en la bienvenida. Confirmado por lectura del código.
+  - FIX router: instancia única en `initState` (`late final`), onboarding
+    vía `refreshListenable: store` + `redirect` (patrón canónico
+    go_router); la raíz ya no observa el store (solo tema).
+  - FIX icono: mipmaps legacy eran PNG 100% transparentes (verificado
+    píxel a píxel). Regenerados desde assets/brand con script propio:
+    legacy 5 densidades + round + adaptive (foreground maskable + bg
+    #2749CB + monochrome para themed icons 13+).
+  - Escáner REAL: `features/scanner/scanner_screen.dart` (continuo,
+    linterna, debounce 800 ms, fallback manual). Cableado en Productos
+    (ficha o alta con código prellenado) y Lista (agrega con precio
+    vigente). La dependencia mobile_scanner estaba sin usar.
+  - Sueldo variable (cierra D1): Settings +salaryMode/base/variable/min/max
+    tolerantes en JSON, `effectiveSalary()` (promedio del rango), UI de
+    3 modos en Home alimentando tiles y LOTTT.
+  - Recordatorio diario real: prefs + AlertEngine.reminderCheck (in-app)
+    y camino WorkManager horario (cerrada, ±1 h), claim por día; UI en
+    Ajustes → Alertas con horas 7/8/9/12/19/21.
+  - StoreSheet (detalle por tienda con an.storeDetail), compartir PNG del
+    conversor (captureWidget 1080), barras Finanzas 6/12, héroe con
+    frescura fetchedAt + píldora «vs ayer» (snapshots locales).
+  - Docs: PARIDAD.md (D1 cerrada, #15/#16/#18 actualizados), CHANGELOG,
+    README (descarga + novedades), pubspec 1.0.1-beta+2.
+- Decisiones:
+  - Redirect de onboarding en el router en lugar de recrearlo: conserva
+    la pila de navegación y re-evalúa solo el flag (go_router docs).
+  - Recordatorio sin plugin de timezone: ventana horaria exacta por
+    claim + tarea horaria existente (precisión ±1 h honesta, sin deps).
+  - Sin timers periódicos en el héroe (romperían pumpAndSettle de los
+    widget tests): el poller notifica ~60 s y cada rebuild recalcula.
+  - Sin sueldo variable NO se rompe nada viejo: fromJson tolerante y
+    respaldos anteriores cargan igual (round-trip de tests intacto).
+- Gates: analyze/test pendientes del runner (sin SDK local por disco);
+  build real en GitHub Actions tras el push (branch → PR → main → tag).
+- Bloqueos: npx skills add flutter/agent-plugins dart-lang/skills y
+  thiennc-tesoglobal/flutter-skills — timeouts de red en este entorno;
+  se trabajó con la familia flutter/* + dart/* ya presente en el agente.
+- Siguiente: PR → CI verde → merge main → tag v1.0.1-beta → Release APK.

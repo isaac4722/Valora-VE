@@ -19,6 +19,7 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../services/sharing.dart';
+import '../scanner/scanner_screen.dart';
 import '../../widgets/ui.dart';
 import '../room/room_sheet.dart';
 
@@ -42,6 +43,71 @@ class _ListaScreenState extends State<ListaScreen> {
     _priceCtrl.dispose();
     _qtyCtrl.dispose();
     super.dispose();
+  }
+
+  /// Escanea un código y lo convierte en ítem: producto registrado con
+  /// precio → entra directo al carrito; con registro sin precio o nuevo,
+  /// prellena el formulario para completar a mano (§9.3 escáner).
+  Future<void> _scanItem(AppStore store) async {
+    var code = await ScannerScreen.scan(context);
+    if (!mounted) return;
+    if (code == '__manual__') {
+      final ctrl = TextEditingController();
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Código a mano'),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(hintText: 'Código de barras'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Buscar')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      code = ctrl.text.trim();
+    }
+    if (code == null || code.isEmpty || !mounted) return;
+    final scanned = code; // final local: promoción de tipo dentro de closures
+
+    final matches = store.products.where((p) => p.barcode == scanned).toList();
+    if (matches.isNotEmpty) {
+      final p = matches.first;
+      final last = p.latestRecord;
+      if (last != null) {
+        // Precio vigente del libro → directo al carrito.
+        store.addToCart(CartItem(
+          id: '',
+          productId: p.id,
+          name: p.name,
+          quantity: int.tryParse(_qtyCtrl.text) ?? 1,
+          price: last.originalPrice,
+          currency: last.currency,
+          barcode: p.barcode,
+        ));
+        if (_storeName.trim().isNotEmpty) store.addStore(_storeName);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('${p.name} · ${fmtMoneyCode(last.originalPrice, last.currency)} agregado'),
+            behavior: SnackBarBehavior.floating));
+        return;
+      }
+      // Registrado pero sin precios → prellena el nombre.
+      setState(() => _nameCtrl.text = p.name);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('${p.name} no tiene precio registrado — complétalo'),
+          behavior: SnackBarBehavior.floating));
+      return;
+    }
+    // Código nuevo: prellena el campo con el código para completar a mano.
+    setState(() => _nameCtrl.text = scanned);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Código sin registrar — escribe nombre y precio'),
+        behavior: SnackBarBehavior.floating));
   }
 
   void _addItem(AppStore store) {
@@ -137,6 +203,11 @@ class _ListaScreenState extends State<ListaScreen> {
                       textAlign: TextAlign.center,
                       decoration: const InputDecoration(hintText: 'Cant.'),
                     ),
+                  ),
+                  IconButton.filledTonal(
+                    onPressed: () => _scanItem(store),
+                    tooltip: 'Escanear código de barras',
+                    icon: const Icon(Icons.qr_code_scanner, size: 20),
                   ),
                 ]),
                 const SizedBox(height: 8),

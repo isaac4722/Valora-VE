@@ -8,9 +8,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../data/store.dart';
+import 'alerts.dart';
+import 'notifications.dart';
 import 'widget_service.dart';
 
 const kFetchTask = 've.valorave.rates-sync';
@@ -34,6 +37,13 @@ void callbackDispatcher() {
             );
           }
         } catch (_) {/* sin red: nada */}
+        // Recordatorio diario con app cerrada (precisión horaria; el claim
+        // por día en AlertEngine evita duplicar con el camino in-app).
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final engine = AlertEngine(prefs);
+          engine.reminderCheck(NotificationsService(), now: DateTime.now());
+        } catch (_) {/* sin canal de notifs: no bloquea */}
         return true;
       case kBackupTask:
         await autoBackup(store);

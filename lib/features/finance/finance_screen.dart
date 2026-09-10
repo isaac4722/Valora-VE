@@ -333,17 +333,25 @@ class _DonutChart extends StatelessWidget {
   }
 }
 
-/// Barras ingresos vs gastos últimos 6 meses.
-class _BarsChart extends StatelessWidget {
+/// Barras ingresos vs gastos (6 o 12 meses, conmutable — paridad web).
+class _BarsChart extends StatefulWidget {
   const _BarsChart({required this.transactions});
   final List<Transaction> transactions;
+
+  @override
+  State<_BarsChart> createState() => _BarsChartState();
+}
+
+class _BarsChartState extends State<_BarsChart> {
+  int _months = 6;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final now = DateTime.now();
+    final transactions = widget.transactions;
     final months = <String, ({double income, double expense})>{};
-    for (var i = 5; i >= 0; i--) {
+    for (var i = _months - 1; i >= 0; i--) {
       final m = DateTime(now.year, now.month - i, 1);
       months['${m.month}/${m.year % 100}'] = (income: 0, expense: 0);
     }
@@ -361,28 +369,38 @@ class _BarsChart extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: SfCartesianChart(
-          title: ChartTitle(text: 'Ingresos vs gastos (6 meses)', textStyle: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-          legend: const Legend(isVisible: true, position: LegendPosition.bottom, textStyle: TextStyle(fontSize: 10)),
-          primaryXAxis: const CategoryAxis(),
-          tooltipBehavior: TooltipBehavior(enable: true),
-          series: [
-            ColumnSeries<_BarPoint, String>(
-              dataSource: data,
-              xValueMapper: (p, _) => p.month,
-              yValueMapper: (p, _) => p.income,
-              name: 'Ingresos',
-              color: VeColors.of(context).pos,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          SegmentedChips<String>(
+            options: const ['6 m', '12 m'],
+            value: _months == 6 ? '6 m' : '12 m',
+            onChanged: (v) => setState(() => _months = v == '12 m' ? 12 : 6),
+          ),
+          SizedBox(
+            height: 220,
+            child: SfCartesianChart(
+              title: ChartTitle(text: 'Ingresos vs gastos ($_months meses)', textStyle: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+              legend: const Legend(isVisible: true, position: LegendPosition.bottom, textStyle: TextStyle(fontSize: 10)),
+              primaryXAxis: const CategoryAxis(),
+              tooltipBehavior: TooltipBehavior(enable: true),
+              series: [
+                ColumnSeries<_BarPoint, String>(
+                  dataSource: data,
+                  xValueMapper: (p, _) => p.month,
+                  yValueMapper: (p, _) => p.income,
+                  name: 'Ingresos',
+                  color: VeColors.of(context).pos,
+                ),
+                ColumnSeries<_BarPoint, String>(
+                  dataSource: data,
+                  xValueMapper: (p, _) => p.month,
+                  yValueMapper: (p, _) => p.expense,
+                  name: 'Gastos',
+                  color: VeColors.of(context).neg,
+                ),
+              ],
             ),
-            ColumnSeries<_BarPoint, String>(
-              dataSource: data,
-              xValueMapper: (p, _) => p.month,
-              yValueMapper: (p, _) => p.expense,
-              name: 'Gastos',
-              color: VeColors.of(context).neg,
-            ),
-          ],
-        ),
+          ),
+        ]),
       ),
     );
   }

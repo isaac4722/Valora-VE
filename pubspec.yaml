@@ -2,8 +2,8 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y finanzas. Offline-first."
 publish_to: 'none'
 
-# v1.0.0-beta+1 · primer corte nativo Flutter (NO hereda numeración v15/v17).
-version: 1.0.0-beta+1
+# v1.0.1-beta+2 · ronda de paridad (router/icono/escáner/sueldo variable).
+version: 1.0.1-beta+2
 
 environment:
   sdk: ^3.9.2

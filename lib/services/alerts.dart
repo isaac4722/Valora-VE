@@ -27,6 +27,35 @@ class AlertEngine {
   static const _kFired = 'valorave.alert-fired';
   static const _kThresholds = 'valorave.alert-thresholds';
 
+  // Recordatorio diario (prefs, no modelo — igual que los coach-marks).
+  static const _kReminderEnabled = 'valorave.reminder.enabled';
+  static const _kReminderHour = 'valorave.reminder.hour';
+
+  bool get reminderEnabled => _prefs.getBool(_kReminderEnabled) ?? false;
+  int get reminderHour => _prefs.getInt(_kReminderHour) ?? 9;
+
+  void setReminderEnabled(bool v) => _prefs.setBool(_kReminderEnabled, v);
+  void setReminderHour(int h) => _prefs.setInt(_kReminderHour, h);
+
+  /// Dispara el recordatorio diario: se llama desde evaluate() (app abierta,
+  /// evaluado en cada ciclo del tablero) y desde la tarea horaria de
+  /// workmanager (app cerrada — precisión ±1 h, honesta para un aviso de
+  /// rutina). El claim por día evita duplicados entre ambos caminos.
+  void reminderCheck(NotificationsService notifs, {DateTime? now}) {
+    if (!reminderEnabled) return;
+    final t = now ?? DateTime.now();
+    if (t.hour != reminderHour) return;
+    if (!_claim('reminder.${SnapshotPoint.dayKey(t)}')) return;
+    _notify(
+      notifs,
+      kind: NotifKind.reminder,
+      channelId: 'reminders',
+      title: '¿Ya registraste los precios de hoy?',
+      body: 'Un minuto en Productos mantiene tu libro al día '
+          '(y tus metas de precio útiles).',
+    );
+  }
+
   double get gapThreshold => _prefs.getDouble('$_kThresholds.gap') ?? 15;
   double get dailyThreshold => _prefs.getDouble('$_kThresholds.daily') ?? 5;
 
@@ -145,6 +174,9 @@ class AlertEngine {
         );
       }
     }
+
+    // ── Recordatorio diario (app abierta) ──
+    reminderCheck(notifs, now: now);
   }
 
   /// Histéresis de metas: avisa una vez al cruzar, rearma al bajar.

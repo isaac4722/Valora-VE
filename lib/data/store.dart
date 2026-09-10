@@ -219,11 +219,28 @@ class AppStore extends ChangeNotifier {
         patched = s.copyWith(targetParallel: (value as num?)?.toDouble(), clearTargetParallel: value == null);
       case 'salary':
         final m = value as Map?;
-        patched = s.copyWith(
-          salaryAmount: (m?['amount'] as num?)?.toDouble(),
-          clearSalary: m == null || m['amount'] == null,
-          salaryCurrency: m?['currency'] != null ? '${m?['currency']}' : null,
-        );
+        if (m == null) {
+          patched = s.copyWith(clearSalary: true, clearSalaryBase: true,
+              clearSalaryVariable: true, clearSalaryMin: true, clearSalaryMax: true);
+        } else if (m['mode'] is String && (m['amount'] ?? m['base'] ?? m['min']) == null) {
+          // Solo cambia de modo (chips Fijo/Base/Rango del Home).
+          patched = s.copyWith(salaryMode: m['mode'] as String);
+        } else {
+          patched = s.copyWith(
+            salaryAmount: (m['amount'] as num?)?.toDouble(),
+            clearSalary: m['amount'] == null && s.salaryMode == 'fijo',
+            salaryCurrency: m['currency'] != null ? '${m['currency']}' : null,
+            salaryMode: m['mode'] is String ? m['mode'] as String : null,
+            salaryBase: (m['base'] as num?)?.toDouble(),
+            clearSalaryBase: m['base'] == null,
+            salaryVariable: (m['variable'] as num?)?.toDouble(),
+            clearSalaryVariable: m['variable'] == null,
+            salaryMin: (m['min'] as num?)?.toDouble(),
+            clearSalaryMin: m['min'] == null,
+            salaryMax: (m['max'] as num?)?.toDouble(),
+            clearSalaryMax: m['max'] == null,
+          );
+        }
       case 'tickerSize':
         patched = s.copyWith(tickerSize: '$value');
       case 'tickerSpeed':

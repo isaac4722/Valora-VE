@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -51,18 +52,27 @@ Future<void> main({String? documentsDir}) async {
 
   runApp(MultiProvider(
     providers: appProviders(store: store, theme: theme, notifs: notifs, prefs: prefs),
-    child: const ValoraApp(),
+    child: ValoraApp(store: store),
   ));
 }
 
 class ValoraApp extends StatefulWidget {
-  const ValoraApp({super.key});
+  const ValoraApp({super.key, required this.store});
+
+  /// El mismo store que vive en los providers: el router lo necesita como
+  /// refreshListenable y se crea una única vez en initState.
+  final AppStore store;
 
   @override
   State<ValoraApp> createState() => _ValoraAppState();
 }
 
 class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
+  /// Router ÚNICO por sesión (ver contrato en app_router.dart): crearlo
+  /// dentro de build() reiniciaba la navegación en cada mutación del store
+  /// y atrapaba al usuario en la pantalla de bienvenida.
+  late final GoRouter _router = buildRouter(store: widget.store);
+
   @override
   void initState() {
     super.initState();
@@ -95,8 +105,11 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // SOLO el tema se mira aquí: observar el store en la raíz reconstruía
+    // MaterialApp en cada mutación (60 s de poller, cada tap) y, con el
+    // router creado en build, fabricaba un GoRouter nuevo por ciclo.
+    // Las pantallas se suscriben al store individualmente.
     final theme = context.watch<ThemeController>();
-    final store = context.watch<AppStore>();
     return MaterialApp.router(
       title: 'ValoraVE',
       debugShowCheckedModeBanner: false,
@@ -104,9 +117,7 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
       darkTheme: AppTheme.dark(),
       themeMode: theme.mode,
       locale: const Locale('es', 'VE'),
-      routerConfig: buildRouter(
-        onboarded: store.settings.onboarded,
-      ),
+      routerConfig: _router,
     );
   }
 }

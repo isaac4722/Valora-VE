@@ -814,8 +814,13 @@ class Settings {
   final Map<String, String> rateSourcesByModule; // 'modulo:DIVISA' → fuente
   final double? targetBcv; // v12 rateTargetAlerts.bcv (null = off)
   final double? targetParallel; // v12 rateTargetAlerts.parallel
-  final double? salaryAmount; // v12.2 sueldo mensual pactado
+  final double? salaryAmount; // v12.2 sueldo mensual pactado (modo fijo)
   final String salaryCurrency;
+  final String salaryMode; // v15 D1: 'fijo' | 'base' | 'rango' (máx 2 opciones)
+  final double? salaryBase; // modo base: pago fijo
+  final double? salaryVariable; // modo base: parte variable
+  final double? salaryMin; // modo rango: mínimo
+  final double? salaryMax; // modo rango: máximo
   final String tickerSize; // v13 'compact' | 'normal' | 'large'
   final int tickerSpeed; // v13 90 | 120 | 180 (segundos por vuelta)
   final List<String> currencyOrder; // v13 (vacío = canónico, se purga)
@@ -834,6 +839,11 @@ class Settings {
     this.targetParallel,
     this.salaryAmount,
     this.salaryCurrency = 'USD',
+    this.salaryMode = 'fijo',
+    this.salaryBase,
+    this.salaryVariable,
+    this.salaryMin,
+    this.salaryMax,
     this.tickerSize = 'normal',
     this.tickerSpeed = 120,
     this.currencyOrder = const [],
@@ -855,6 +865,11 @@ class Settings {
         targetParallel = null,
         salaryAmount = null,
         salaryCurrency = 'USD',
+        salaryMode = 'fijo',
+        salaryBase = null,
+        salaryVariable = null,
+        salaryMin = null,
+        salaryMax = null,
         tickerSize = 'normal',
         tickerSpeed = 120,
         currencyOrder = const [];
@@ -876,6 +891,15 @@ class Settings {
     double? salaryAmount,
     bool clearSalary = false,
     String? salaryCurrency,
+    String? salaryMode,
+    double? salaryBase,
+    bool clearSalaryBase = false,
+    double? salaryVariable,
+    bool clearSalaryVariable = false,
+    double? salaryMin,
+    bool clearSalaryMin = false,
+    double? salaryMax,
+    bool clearSalaryMax = false,
     String? tickerSize,
     int? tickerSpeed,
     List<String>? currencyOrder,
@@ -895,6 +919,12 @@ class Settings {
             clearTargetParallel ? null : (targetParallel ?? this.targetParallel),
         salaryAmount: clearSalary ? null : (salaryAmount ?? this.salaryAmount),
         salaryCurrency: salaryCurrency ?? this.salaryCurrency,
+        salaryMode: salaryMode ?? this.salaryMode,
+        salaryBase: clearSalaryBase ? null : (salaryBase ?? this.salaryBase),
+        salaryVariable:
+            clearSalaryVariable ? null : (salaryVariable ?? this.salaryVariable),
+        salaryMin: clearSalaryMin ? null : (salaryMin ?? this.salaryMin),
+        salaryMax: clearSalaryMax ? null : (salaryMax ?? this.salaryMax),
         tickerSize: tickerSize ?? this.tickerSize,
         tickerSpeed: tickerSpeed ?? this.tickerSpeed,
         currencyOrder: currencyOrder ?? this.currencyOrder,
@@ -911,13 +941,49 @@ class Settings {
         'spikeWatch': spikeWatch,
         'rateSourcesByModule': rateSourcesByModule,
         'rateTargetAlerts': {'bcv': targetBcv, 'parallel': targetParallel},
-        'salary': salaryAmount == null
-            ? null
-            : {'amount': salaryAmount, 'currency': salaryCurrency},
+        'salary': _salaryToJson(
+            salaryAmount, salaryCurrency, salaryMode, salaryBase,
+            salaryVariable, salaryMin, salaryMax),
         'tickerSize': tickerSize,
         'tickerSpeed': tickerSpeed,
         'currencyOrder': currencyOrder,
       };
+
+  /// Mapa de sueldo tolerante: el modo fijo usa amount; los modos variables
+  /// (base+rango del web v12) arrastran sus campos. Null si no hay nada.
+  static Map<String, dynamic>? _salaryToJson(
+      double? amount, String currency, String mode,
+      double? base, double? variable, double? min, double? max) {
+    final hasAny = amount != null || base != null || variable != null || min != null || max != null;
+    if (!hasAny) return null;
+    return {
+      'amount': amount,
+      'currency': currency,
+      'mode': mode,
+      'base': base,
+      'variable': variable,
+      'min': min,
+      'max': max,
+    };
+  }
+
+  /// Sueldo mensual efectivo según el modo (fijo | base+variable | rango).
+  /// Null honesto cuando el modo activo no tiene datos completos.
+  double? effectiveSalary() {
+    switch (salaryMode) {
+      case 'base':
+        final b = salaryBase ?? salaryAmount;
+        final v = salaryVariable ?? 0;
+        if (b == null || b <= 0) return null;
+        return b + v;
+      case 'rango':
+        final lo = salaryMin, hi = salaryMax;
+        if (lo == null || hi == null || lo <= 0 || hi < lo) return null;
+        return (lo + hi) / 2;
+      default:
+        return (salaryAmount != null && salaryAmount! > 0) ? salaryAmount : null;
+    }
+  }
 
   /// Merge tolerante de settings incompletos (repara HMR del web §2).
   static Settings fromJson(Map<String, dynamic> j) {
@@ -945,6 +1011,15 @@ class Settings {
       targetParallel: numOrNull(targets['parallel'] ?? j['targetParallel']),
       salaryAmount: salary['amount'] != null ? dOf(salary['amount']) : null,
       salaryCurrency: sOf(salary['currency'], 'USD').toUpperCase(),
+      salaryMode: switch (sOf(salary['mode'], 'fijo')) {
+        'base' => 'base',
+        'rango' => 'rango',
+        _ => 'fijo',
+      },
+      salaryBase: salary['base'] != null ? dOf(salary['base']) : null,
+      salaryVariable: salary['variable'] != null ? dOf(salary['variable']) : null,
+      salaryMin: salary['min'] != null ? dOf(salary['min']) : null,
+      salaryMax: salary['max'] != null ? dOf(salary['max']) : null,
       tickerSize: switch (sOf(j['tickerSize'], 'normal')) {
         'compact' => 'compact',
         'large' => 'large',

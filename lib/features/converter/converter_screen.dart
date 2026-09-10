@@ -14,6 +14,7 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/history_api.dart';
 import '../../data/store.dart';
+import '../../services/sharing.dart';
 import '../../widgets/ui.dart';
 
 class ConverterScreen extends StatefulWidget {
@@ -25,6 +26,7 @@ class ConverterScreen extends StatefulWidget {
 
 class _ConverterScreenState extends State<ConverterScreen> {
   final _amountCtrl = TextEditingController(text: '1');
+  final _shareKey = GlobalKey(); // RepaintBoundary del cálculo → PNG
   double _amount = 1;
   String _dateMode = 'today'; // today | yesterday | week | custom
   DateTime? _customDate;
@@ -91,6 +93,18 @@ class _ConverterScreenState extends State<ConverterScreen> {
     );
   }
 
+  /// Comparte el cálculo como PNG (tarjeta 1080px con monto, ruta y marca).
+  Future<void> _sharePng() async {
+    final bytes = await captureWidget(_shareKey);
+    if (!mounted) return;
+    if (bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No pude generar la imagen'), behavior: SnackBarBehavior.floating));
+      return;
+    }
+    await sharePng(bytes, 'valorave-conversion.png');
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
@@ -109,16 +123,40 @@ class _ConverterScreenState extends State<ConverterScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           const PageHeader('Conversor', hint: 'Puente USD · EUR visible · ruta honesta'),
-          _DualInput(
-            amountCtrl: _amountCtrl,
-            from: from,
-            to: to,
-            result: result,
-            plan: plan,
-            onAmount: (v) => setState(() => _amount = v),
-            onSwap: () => store.setConverterPair(to.code, from.code),
-            onFrom: (c) => store.setConverterPair(c.code, to.code),
-            onTo: (c) => store.setConverterPair(from.code, c.code),
+          RepaintBoundary(
+            key: _shareKey,
+            child: Container(
+              color: scheme.surfaceContainerLowest,
+              child: Column(children: [
+                _DualInput(
+                  amountCtrl: _amountCtrl,
+                  from: from,
+                  to: to,
+                  result: result,
+                  plan: plan,
+                  onAmount: (v) => setState(() => _amount = v),
+                  onSwap: () => store.setConverterPair(to.code, from.code),
+                  onFrom: (c) => store.setConverterPair(c.code, to.code),
+                  onTo: (c) => store.setConverterPair(from.code, c.code),
+                ),
+                _RutaCalculo(plan: plan),
+              ]),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(children: [
+              FilledButton.tonalIcon(
+                onPressed: plan == null || result <= 0 ? null : _sharePng,
+                icon: const Icon(Icons.ios_share, size: 16),
+                label: const Text('Compartir cálculo'),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Imagen 1080 px con ruta y fuentes.',
+                    style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
+              ),
+            ]),
           ),
           _QuickAdjustments(
             amount: _amount,
@@ -148,7 +186,6 @@ class _ConverterScreenState extends State<ConverterScreen> {
               _applyRateContext();
             },
           ),
-          _RutaCalculo(plan: plan),
           _TablaFuentes(ctx: ctx, from: from, to: to),
           _TablaReferencia(ctx: ctx, amount: _amount, from: from),
           _Recientes(from: from, to: to, result: result, plan: plan),

@@ -14,6 +14,7 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
+import '../scanner/scanner_screen.dart';
 import '../../widgets/ui.dart';
 import '../../services/sharing.dart';
 
@@ -28,10 +29,68 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   String _query = '';
+  final _searchCtrl = TextEditingController();
   ProductCategory? _cat;
   bool _onlyUnavailable = false;
   bool _onlyTarget = false;
   int _page = 0;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Escanea un código: si el producto ya existe abre su ficha; si no,
+  /// abre el alta con el código prellenado. «A mano» pide el código en
+  /// un diálogo (mismo camino que una lectura).
+  Future<void> _scanCode() async {
+    final store = context.read<AppStore>();
+    var code = await ScannerScreen.scan(context);
+    if (!mounted) return;
+    if (code == '__manual__') {
+      final ctrl = TextEditingController();
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Código a mano'),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(hintText: 'Código de barras'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Buscar')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      code = ctrl.text.trim();
+    }
+    if (code == null || code.isEmpty || !mounted) return;
+    final scanned = code; // final local: promoción de tipo dentro de closures
+
+    final found = store.products.where((p) => p.barcode == scanned).toList();
+    if (found.isNotEmpty) {
+      // Producto(es) registrados con ese código → al primero.
+      setState(() {
+        _query = scanned;
+        _searchCtrl.text = scanned;
+        _page = 0;
+      });
+      _showProductDialog(context, store, found.first);
+      return;
+    }
+    // Sin registro: alta nueva con el código ya lleno.
+    setState(() {
+      _query = scanned;
+      _searchCtrl.text = scanned;
+      _page = 0;
+    });
+    _showProductDialog(context, store, null, initialBarcode: scanned);
+  }
 
   @override
   void initState() {
@@ -102,18 +161,29 @@ class _ProductsScreenState extends State<ProductsScreen> {
               tooltip: 'Exportar CSV',
               onPressed: () => _exportCsv(context, store),
             )),
-          TextField(
-            onChanged: (v) {
-              setState(() {
-                _query = v;
-                _page = 0;
-              });
-            },
-            decoration: const InputDecoration(
-              hintText: 'Buscar por nombre o código de barras',
-              prefixIcon: Icon(Icons.search, size: 18),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _searchCtrl,
+                onChanged: (v) {
+                  setState(() {
+                    _query = v;
+                    _page = 0;
+                  });
+                },
+                decoration: const InputDecoration(
+                  hintText: 'Buscar por nombre o código de barras',
+                  prefixIcon: Icon(Icons.search, size: 18),
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              onPressed: _scanCode,
+              tooltip: 'Escanear código de barras',
+              icon: const Icon(Icons.qr_code_scanner, size: 20),
+            ),
+          ]),
           const SizedBox(height: 10),
           Wrap(spacing: 6, runSpacing: 6, children: [
             ChipTag('Todas', selected: _cat == null, onTap: () => setState(() { _cat = null; _page = 0; })),
@@ -331,9 +401,11 @@ class _SparkPainter extends CustomPainter {
 }
 
 /// Diálogo de producto: ficha + CRUD + records + meta + disponibilidad.
-Future<void> _showProductDialog(BuildContext context, AppStore store, Product? existing) async {
+/// [initialBarcode] prellena el código (alta desde el escáner).
+Future<void> _showProductDialog(BuildContext context, AppStore store, Product? existing,
+    {String? initialBarcode}) async {
   final nameCtrl = TextEditingController(text: existing?.name ?? '');
-  final barcodeCtrl = TextEditingController(text: existing?.barcode ?? '');
+  final barcodeCtrl = TextEditingController(text: existing?.barcode ?? initialBarcode ?? '');
   final priceCtrl = TextEditingController();
   final storeCtrl = TextEditingController();
   final targetCtrl = TextEditingController(text: existing?.targetPrice == null ? '' : '${existing!.targetPrice}');
