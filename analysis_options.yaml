@@ -1,0 +1,20 @@
+# This file configures the analyzer, which statically analyzes Dart code to
+# check for errors, warnings, and lints.
+
+# The following line activates a set of recommended lints for Flutter apps,
+# packages, and plugins designed to encourage good coding practices.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+
+linter:
+  rules:
+    # Códigos ISO (USD, VES, COP, EUR, BRL, MXN, VE…) son identificadores
+    # estándar del dominio monetario: se mantienen en mayúsculas por diseño.
+    constant_identifier_names: false
+
+# Additional information about this file can be found at
+# https://dart.dev/guides/language/analysis-options

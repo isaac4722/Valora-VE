@@ -1,0 +1,185 @@
+/// ─── AlertEngine · picos, metas, brecha, cambio diario (§7) ─────────────────
+/// Reglas del web: spikes con cooldown 30 min/fuente y umbral
+/// max(setting, 0.5 %); metas BCV/paralelo con histéresis (avisa 1 vez al
+/// cruzar ≥target, rearma al bajar); brecha >15 %; cambio diario >5 %;
+/// recordatorio diario. Umbrales en prefs (valorave.alert-thresholds) y
+/// disparadas en valorave.alert-fired (~60 s dedupe).
+library;
+
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../core/currencies.dart';
+import '../core/models.dart';
+import '../data/store.dart';
+import 'notifications.dart';
+
+class AlertEngine {
+  AlertEngine(this._prefs) {
+    _loadFired();
+  }
+
+  final SharedPreferences _prefs;
+  final Map<String, DateTime> _fired = {};
+
+  static const _kFired = 'valorave.alert-fired';
+  static const _kThresholds = 'valorave.alert-thresholds';
+
+  double get gapThreshold => _prefs.getDouble('$_kThresholds.gap') ?? 15;
+  double get dailyThreshold => _prefs.getDouble('$_kThresholds.daily') ?? 5;
+
+  void setThreshold(String key, double value) =>
+      _prefs.setDouble('$_kThresholds.$key', value);
+
+  void _loadFired() {
+    final raw = _prefs.getStringList(_kFired) ?? const [];
+    for (final item in raw) {
+      final parts = item.split('|');
+      if (parts.length == 2) {
+        final at = DateTime.tryParse(parts[1]);
+        if (at != null) _fired[parts[0]] = at;
+      }
+    }
+  }
+
+  void _saveFired() {
+    _prefs.setStringList(
+        _kFired, _fired.entries.map((e) => '${e.key}|${e.value.toIso8601String()}').toList());
+  }
+
+  /// Dedupe ~60 s por clave (antiduplicado del web §7).
+  bool _claim(String key) {
+    final now = DateTime.now();
+    final last = _fired[key];
+    if (last != null && now.difference(last).inSeconds < 60) return false;
+    _fired[key] = now;
+    // Poda: disparadas de más de 1 día.
+    _fired.removeWhere((_, at) => now.difference(at).inMinutes > 1440);
+    _saveFired();
+    return true;
+  }
+
+  final Map<String, DateTime> _spikeCooldown = {};
+  final Map<String, double> _baseline = {}; // fuente → última tasa vista
+
+  /// Evaluación tras cada board (spikes solo con fuentes cambiadas).
+  void evaluate({
+    required AppStore store,
+    required List<String> changed,
+    required NotificationsService notifs,
+  }) {
+    final s = store.settings;
+    final ctx = store.contextOf();
+    final now = DateTime.now();
+
+    // ── Picos (spikes) ──
+    if (s.spikeAlerts) {
+      final threshold = s.spikeThreshold < 0.5 ? 0.5 : s.spikeThreshold;
+      for (final id in s.spikeWatch) {
+        final rate = store.board.sources[id]?.rate;
+        if (rate == null) continue;
+        final base = _baseline[id] ?? rate;
+        _baseline[id] = rate;
+        if (base <= 0) continue;
+        final pct = (rate / base - 1) * 100;
+        if (pct.abs() < threshold) continue;
+        final lastSpike = _spikeCooldown[id];
+        if (lastSpike != null && now.difference(lastSpike).inMinutes < 30) continue;
+        _spikeCooldown[id] = now;
+        if (!_claim('spike.$id')) continue;
+        final label = RateSource.of(id)?.label ?? id;
+        _notify(
+          notifs,
+          kind: NotifKind.spike,
+          channelId: 'rate_alerts',
+          title: 'Pico en $label',
+          body: 'La tasa de $label movió ${pct.toStringAsFixed(1)} % '
+              '(de ${base.toStringAsFixed(2)} a ${rate.toStringAsFixed(2)}).',
+        );
+      }
+    } else {
+      // La baseline SIEMPRE avanza (§7).
+      for (final id in s.spikeWatch) {
+        final rate = store.board.sources[id]?.rate;
+        if (rate != null) _baseline[id] = rate;
+      }
+    }
+
+    // ── Metas de tasa (histéresis) ──
+    _targetRate(notifs, 'bcv', 'ves-bcv', s.targetBcv, store, 'BCV');
+    _targetRate(notifs, 'parallel', 'ves-parallel', s.targetParallel, store, 'Paralelo');
+
+    // ── Brecha BCV↔Paralelo ──
+    final gap = ctx.gapPct();
+    if (gap != null && gap.abs() >= gapThreshold) {
+      if (_claim('gap')) {
+        _notify(
+          notifs,
+          kind: NotifKind.gap,
+          channelId: 'rate_alerts',
+          title: 'Brecha BCV ↔ Paralelo',
+          body: 'La brecha está en ${gap.toStringAsFixed(1)} % '
+              '(umbral ${gapThreshold.toStringAsFixed(0)} %).',
+        );
+      }
+    }
+
+    // ── Cambio del día (BCV vs snapshot de ayer) ──
+    final today = SnapshotPoint.dayKey(now);
+    final yesterday = SnapshotPoint.dayKey(now.subtract(const Duration(days: 1)));
+    final t = store.snapshots.where((p) => p.sourceId == 'ves-bcv').toList()
+      ..sort((a, b) => a.day.compareTo(b.day));
+    final todayP = t.where((p) => p.day == today).firstOrNull;
+    final yestP = t.where((p) => p.day == yesterday).firstOrNull;
+    if (todayP != null && yestP != null && yestP.rate > 0) {
+      final pct = (todayP.rate / yestP.rate - 1) * 100;
+      if (pct.abs() >= dailyThreshold && _claim('daily.$today')) {
+        _notify(
+          notifs,
+          kind: NotifKind.daily,
+          channelId: 'rate_alerts',
+          title: 'Cambio del día en BCV',
+          body: 'La tasa oficial movió ${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)} % hoy.',
+        );
+      }
+    }
+  }
+
+  /// Histéresis de metas: avisa una vez al cruzar, rearma al bajar.
+  void _targetRate(NotificationsService notifs, String key, String sourceId,
+      double? target, AppStore store, String label) {
+    if (target == null || target <= 0) return;
+    final rate = store.board.sources[sourceId]?.rate;
+    if (rate == null || rate <= 0) return;
+    final armed = _prefs.getBool('valorave.target-armed.$key') ?? true;
+    if (rate >= target) {
+      if (armed && _claim('target.$key')) {
+        _prefs.setBool('valorave.target-armed.$key', false); // dispara y desarma
+        _notify(
+          notifs,
+          kind: NotifKind.target,
+          channelId: 'rate_alerts',
+          title: '$label alcanzó tu meta',
+          body: 'La tasa de $label llegó a ${rate.toStringAsFixed(2)} '
+              '(meta ${target.toStringAsFixed(2)}).',
+        );
+      }
+    } else {
+      // Bajó de la meta: rearma para el próximo cruce.
+      if (!armed) _prefs.setBool('valorave.target-armed.$key', true);
+    }
+  }
+
+  void _notify(
+    NotificationsService notifs, {
+    required NotifKind kind,
+    required String channelId,
+    required String title,
+    required String body,
+  }) {
+    unawaited(notifs.show(channelId: channelId, title: title, body: body, tag: 'valorave-$kind'));
+    debugPrint('[alertas] $title · $body');
+  }
+}
