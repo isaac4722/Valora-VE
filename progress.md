@@ -71,3 +71,54 @@ con la plantilla de `AGENT.md`.
   por disco; la build real la hace el runner con 16 GB — §Fase 6 nota RAM).
 - Bloqueos: ninguno.
 - Siguiente: verificación remota de Actions/Release tras el push y el tag.
+
+---
+
+## [TASK-11] Ronda build-fix · widget BCV + integration en host · 2026-09-10 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Hecho:
+  - (Ronda previa sin registrar, commits 05773e0/188b700/79d9c21: Gradle
+    8.14, AGP 8.11.1, Kotlin 2.2.20, core library desugaring y su sintaxis
+    Kotlin DSL — mínimos exigidos por el tooling de Flutter 3.47.)
+  - Causa raíz del Build rojo encontrada: `BcvWidgetProvider.kt` importaba
+    `es.antonioheres.home_widget.HomeWidgetPlugin` (paquete inexistente y
+    además clase de plugin no visible en compile time) → fallaba
+    `:app:compileReleaseKotlin`.
+  - Fix: el provider lee DIRECTAMENTE el SharedPreferences
+    «HomeWidgetPreferences» (verificado en la fuente de home_widget 0.9.x:
+    `HomeWidgetPlugin.getData()` es exactamente ese `getSharedPreferences`;
+    los String se guardan crudos con `putString`; `setAppGroupId` es no-op
+    en Android). Cero acoplamiento al paquete del plugin.
+  - proguard-rules.pro: keep explícito de `BcvWidgetProvider`
+    (`Class.forName` reflexivo de home_widget) y de `ve.valorave.app.**`
+    (workmanager).
+  - build.yml: paso del keystore reescrito con env indirection (los secrets
+    ya no pasan por heredoc con expansión de shell).
+  - main(): seam `documentsDir` + try/catch honesto en notificaciones,
+    home_widget y workmanager — el arranque nunca depende de un canal.
+  - widget_service.updateBcv: tolerante a canal ausente (errores async no
+    manejados imposibles).
+  - integration_test: corre en host (`-d flutter-tester`) con directorio
+    temporal por test + mock del canal home_widget (solo infra de test);
+    expect EUR→COP corregido (arista directa 4500 ⇒ 450.000, el 88,89
+    anterior era un error del test, no del motor); flujo UI de onboarding
+    con gate de dispositivo.
+  - Push 55c8ee0 → Build en runner: SUCCESS (artifact valorave-binarios,
+    116 MB: 3 APK + AAB + símbolos, retención 30).
+- Decisiones:
+  - SharedPreferences directo en lugar de importar el plugin: mismo
+    mecanismo documentado en el código del provider.
+  - El flujo UI de onboarding en host se salta con motivo registrado: el
+    binding live de integration_test no despacha taps a la vista en
+    flutter-tester (multi-view 3.47); se valida en emulador/dispositivo
+    (docs/RELEASE.md §2) y el onboarding ya está cubierto por widget
+    tests de test/.
+- Gates: analyze=0 issues · test=104/104 · integration=5/5 en host ·
+  build=SUCCESS en runner (main 55c8ee0).
+- Bloqueos: entorno de ejecución con filesystem inestable (lecturas que
+  a veces vuelven vacías/parciales) y display del shell que traga la
+  secuencia literal `[m` — se trabajó con escrituras/lecturas verificadas
+  byte a byte. Sin Android SDK local (disco): build real validada por el
+  runner de 16 GB (nota §Fase 6).
+- Siguiente: re-apuntar tag v1.0.0-beta → Release con 3 APK + AAB →
+  verificación de firma → informe final de paridad.
