@@ -39,7 +39,7 @@ dependencies:
   share_plus: ^13.0.0               # compartir PNG/PDF/CSV
   image_picker: ^1.1.2              # foto de ticket (1024px JPEG .72 nativo)
   mobile_scanner: ^5.2.3            # escáner continuo con zoom
-  quick_actions: ^1.2.0             # 4 shortcuts del launcher (manifest PWA)
+  quick_actions: ^1.1.1             # 4 shortcuts del launcher (manifest PWA)
   nearby_connections: ^4.1.0        # sala P2P sin internet (WiFi-Direct/BT/BLE)
 
   # ── UI / visualización / documentos ──────────────────────────────────────
