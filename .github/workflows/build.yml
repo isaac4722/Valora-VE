@@ -7,6 +7,12 @@ on:
     branches: [main]
     tags: ['v*']
 
+# Privilegio mínimo: solo escritura de contenidos (crear Release y subir
+# assets). Sin esto, github.token por defecto es read-only y el paso de
+# Release falla con 403 «Resource not accessible by integration».
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
