@@ -31,14 +31,19 @@ jobs:
           flutter test
 
       - name: Decodificar keystore desde secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_STORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KS_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/valorave-release.keystore
-          cat > android/keystore.properties <<EOF
-          storeFile=valorave-release.keystore
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          EOF
+          echo "$KEYSTORE_B64" | base64 -d > android/app/valorave-release.keystore
+          {
+            echo "storeFile=valorave-release.keystore"
+            echo "storePassword=$KS_STORE_PASS"
+            echo "keyAlias=$KS_ALIAS"
+            echo "keyPassword=$KS_KEY_PASS"
+          } > android/keystore.properties
 
       - name: flutter build apk (release, split-per-abi, ofuscado)
         run: |

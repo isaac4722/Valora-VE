@@ -9,3 +9,11 @@
 -keep class com.dexterous.** { *; }
 
 # google Nearby (librería nativa del sistema, sin keep necesario).
+
+# home_widget actualiza el widget vía Class.forName("ve.valorave.app.
+# BcvWidgetProvider") (reflexión por nombre); el manifest ya lo conserva,
+# pero el keep explícito garantiza que R8 no lo renombre jamás.
+-keep class ve.valorave.app.BcvWidgetProvider { *; }
+
+# workmanager resuelve nuestros workers y callback por reflexión.
+-keep class ve.valorave.app.** { *; }

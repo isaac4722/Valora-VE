@@ -15,17 +15,25 @@ class WidgetService {
   }
 
   /// Escribe tasas al widget (llamar tras cada fetchBoard OK).
+  /// Degradación honesta: si el canal no está disponible (host de prueba,
+  /// OEM capado), el widget se salta — jamás produce errores async no
+  /// manejados ni afecta al flujo del tablero.
   static Future<void> updateBcv({
     required double? bcv,
     required double? parallel,
   }) async {
     if (bcv == null || bcv <= 0) return;
-    final now = DateTime.now();
-    await HomeWidget.saveWidgetData<String>('widgetBcvRate', bcv.toStringAsFixed(2));
-    await HomeWidget.saveWidgetData<String>(
-        'widgetParallelRate', parallel == null ? '—' : parallel.toStringAsFixed(2));
-    await HomeWidget.saveWidgetData<String>(
-        'widgetBcvUpdated', '${now.hour}:${now.minute.toString().padLeft(2, '0')}');
-    await HomeWidget.updateWidget(name: 'BcvWidgetProvider', androidName: 'BcvWidgetProvider');
+    try {
+      final now = DateTime.now();
+      await HomeWidget.saveWidgetData<String>('widgetBcvRate', bcv.toStringAsFixed(2));
+      await HomeWidget.saveWidgetData<String>(
+          'widgetParallelRate', parallel == null ? '—' : parallel.toStringAsFixed(2));
+      await HomeWidget.saveWidgetData<String>(
+          'widgetBcvUpdated', '${now.hour}:${now.minute.toString().padLeft(2, '0')}');
+      await HomeWidget.updateWidget(name: 'BcvWidgetProvider', androidName: 'BcvWidgetProvider');
+    } catch (_) {
+      // Sin canal home_widget: el widget de escritorio simplemente no se
+      // actualiza; la app sigue normal.
+    }
   }
 }

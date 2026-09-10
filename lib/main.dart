@@ -17,18 +17,32 @@ import 'services/workmanager_service.dart';
 import 'state/app_state.dart';
 import 'widgets/app_router.dart';
 
-Future<void> main() async {
+/// [documentsDir] es un seam de pruebas: null en producción (path_provider
+/// resuelve el directorio); en tests/host se pasa un directorio temporal
+/// para que Hive hidrate sin canales de plataforma.
+Future<void> main({String? documentsDir}) async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   final store = AppStore();
-  await store.hydrate();
+  await store.hydrate(testDir: documentsDir);
   final prefs = await SharedPreferences.getInstance();
   final theme = ThemeController();
   await theme.load(prefs);
   final notifs = NotificationsService();
-  await notifs.init();
-  await WidgetService.init();
+  try {
+    await notifs.init();
+  } catch (_) {
+    // Degradación honesta: sin canal de notificaciones (host de prueba,
+    // OEM capado) la app arranca igual; el centro de notificaciones interno
+    // sigue funcionando. El arranque jamás depende de un plugin.
+  }
+  try {
+    await WidgetService.init();
+  } catch (_) {
+    // Ídem: sin canal home_widget (host de prueba) no hay widgets de
+    // escritorio, pero nada del resto de la app se ve afectado.
+  }
   try {
     await initWorkmanager();
   } catch (_) {
