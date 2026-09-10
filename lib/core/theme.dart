@@ -210,7 +210,7 @@ abstract final class AppTheme {
       ),
       // §8 transición de página firma (slide 18/10 px + fade).
       pageTransitionsTheme: const PageTransitionsTheme(
-        builders: <PageTransitionsBuilder, TargetPlatform>{
+        builders: <TargetPlatform, PageTransitionsBuilder>{
           TargetPlatform.android: VePageTransitionsBuilder(),
           TargetPlatform.iOS: VePageTransitionsBuilder(),
           TargetPlatform.macOS: VePageTransitionsBuilder(),
