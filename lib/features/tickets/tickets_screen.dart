@@ -19,7 +19,6 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../services/sharing.dart';
-import '../../state/app_state.dart';
 import '../../widgets/ui.dart';
 
 /// Extrae los bytes de un data URL 'data:image/...;base64,…' (o base64
