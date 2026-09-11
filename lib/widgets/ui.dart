@@ -1197,7 +1197,7 @@ void showToast(
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: Text(actionLabel!),
+            child: Text(actionLabel),
           ),
       ]),
     ));
