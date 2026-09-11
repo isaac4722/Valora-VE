@@ -301,11 +301,11 @@ class _CotizacionPrincipal extends StatelessWidget {
     // · TODAS las fuentes de la divisa del país con valor (board, derivadas
     //   y manuales — p.ej. VES: BCV · Paralelo · Promedio · Manual);
     // · la fuente SELECCIONADA de las demás divisas del libro (EUR, COP…).
-    final rows = [
+    final rows = {
       ...RateSource.sourcesFor(country.currency).map((s) => s.id),
       for (final e in ctx.selected.entries)
         if (e.key != country.currency) e.value,
-    ].toSet().toList();
+    }.toList(growable: false);
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Cotización principal'),
