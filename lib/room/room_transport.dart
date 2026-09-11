@@ -382,6 +382,9 @@ class RoomProtocol {
         'not_in_room' => 'No estás en ninguna sala',
         'bad_pin' => 'PIN o emoji incorrecto — se canceló la conexión',
         'host_lost' => 'Se perdió al anfitrión',
+        'permissions' =>
+          'La sala necesita permiso de Bluetooth/Nearby (y ubicación en '
+              'Android antiguo). Concédelo cuando lo pida y reintenta',
         _ => 'Error: $reason',
       };
 }

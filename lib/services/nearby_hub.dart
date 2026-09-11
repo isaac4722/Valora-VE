@@ -14,7 +14,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:nearby_connections/nearby_connections.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../room/room_transport.dart';
 
@@ -56,11 +58,45 @@ class NearbyHubImpl {
     _statuses.add(s);
   }
 
+  /// SDK de Android (para pedir solo los permisos que aplican a ESTE nivel).
+  /// Si no se puede leer, asume una API moderna (33) — prudente.
+  Future<int> _androidSdk() async {
+    try {
+      final info = await DeviceInfoPlugin().androidInfo;
+      return info.version.sdkInt;
+    } catch (_) {
+      return 33;
+    }
+  }
+
+  /// Pide los permisos que Nearby necesita en ESTE nivel de Android
+  /// (permission_handler): API 31+ → BLUETOOTH_SCAN/ADVERTISE/CONNECT;
+  /// API 33+ → + NEARBY_WIFI_DEVICES; API ≤30 → ACCESS_FINE_LOCATION
+  /// (Nearby lo exige para el scan). Antes era un stub que devolvía true y
+  /// la sala «no hacía nada»: sin el permiso concedido, advertise/discover
+  /// fallan en silencio. Devuelve true solo si TODO lo necesario quedó OK.
   Future<bool> _granted() async {
-    // permisos: BLUETOOTH_SCAN/ADVERTISE/CONNECT (31+), FINE_LOCATION (<31),
-    // NEARBY_WIFI_DEVICES (33+) — gestionados por permission_handler en la
-    // pantalla de sala (diálogo explicativo antes del permiso).
-    return true;
+    final sdk = await _androidSdk();
+    final perms = <Permission>[
+      if (sdk >= 31) ...[
+        Permission.bluetoothScan,
+        Permission.bluetoothAdvertise,
+        Permission.bluetoothConnect,
+      ],
+      if (sdk >= 33) Permission.nearbyWifiDevices,
+      if (sdk < 31) Permission.locationWhenInUse,
+    ];
+    if (perms.isEmpty) return true;
+    final res = await perms.request();
+    final ok = perms.every((p) {
+      final s = res[p];
+      return s == null || s.isGranted || s.isLimited;
+    });
+    if (!ok) {
+      // Avisa a la sala con un motivo claro (el banner lo muestra).
+      _events.add(const RoomEvent('room_error', {'reason': 'permissions'}));
+    }
+    return ok;
   }
 
   /// Nombre del endpoint anfitrión: identidad + metadata de la sala.
