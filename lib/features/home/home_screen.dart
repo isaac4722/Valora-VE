@@ -319,8 +319,8 @@ class _WeekSpark extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    VeText.labelCaps('Últimos 7 días', size: 9.5,
-                        color: scheme.onSurfaceVariant),
+                    Text('Últimos 7 días',
+                        style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
                     const SizedBox(height: 8),
                     LayoutBuilder(builder: (context, box) {
                       final w = (box.maxWidth - 84).clamp(120.0, 220.0);
@@ -334,8 +334,7 @@ class _WeekSpark extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  VeText.labelCaps('Ayer', size: 9.5,
-                      color: scheme.onSurfaceVariant),
+                  Text('Ayer', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
                   const SizedBox(height: 4),
                   Text(fmtRate(ayer),
                       style: VeText.displayNum(15, color: scheme.onSurfaceVariant)),

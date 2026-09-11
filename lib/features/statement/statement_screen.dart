@@ -21,6 +21,7 @@ import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../services/sharing.dart';
 import '../../widgets/share_menu.dart';
+import '../../widgets/ui.dart';
 
 const kInkPos = Color(0xFF10755A);
 const kInkNeg = Color(0xFFCF4437); // §8: rojo firma de datos (neg) real

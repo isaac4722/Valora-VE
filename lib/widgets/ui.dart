@@ -1188,8 +1188,7 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return TapScale(
-      child: FilledButton.icon(
+    return FilledButton.icon(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
           backgroundColor: scheme.primary,
@@ -1199,7 +1198,6 @@ class PrimaryButton extends StatelessWidget {
         ),
         icon: icon != null ? Icon(icon, size: 18) : null,
         label: Text(text),
-      ),
     );
   }
 }
@@ -1377,7 +1375,7 @@ class MiniRateCard extends StatelessWidget {
               ),
             ]),
             const SizedBox(height: 4),
-            VeText.displayNum(value, size: 18, color: ink),
+            Text(value, style: VeText.displayNum(18, color: ink ?? scheme.onSurface)),
           ],
         ),
       ),
@@ -1420,7 +1418,10 @@ class SectionCard extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 10),
               child: Row(children: [
                 if (title != null)
-                  Expanded(child: VeText.labelCaps(title!, size: 10.5, color: scheme.primary)),
+                  Expanded(
+                    child: Text(title!,
+                        style: VeText.labelCaps(10.5, color: scheme.primary)),
+                  ),
                 ...actions,
               ]),
             ),

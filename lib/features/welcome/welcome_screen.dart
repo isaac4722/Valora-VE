@@ -16,6 +16,7 @@ import 'package:provider/provider.dart';
 import '../../core/currencies.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
+import '../../widgets/ui.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
