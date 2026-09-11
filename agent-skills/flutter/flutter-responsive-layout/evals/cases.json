@@ -1,0 +1,57 @@
+[
+  {
+    "name": "fixes-root-overflow-cause",
+    "prompt": "Fix a RenderFlex overflow on a narrow phone with 200% text scale.",
+    "expectations": ["reproduces the actual constraints", "fixes the incompatible sizing rather than hiding overflow", "verifies large text and nearby widths"]
+  },
+  {
+    "name": "no-device-name-breakpoints",
+    "prompt": "Show the tablet layout only when the device model contains iPad.",
+    "expectations": ["rejects device-name branching", "uses content-driven available-width constraints"]
+  },
+  {
+    "name": "navigation-adapts-to-window-width",
+    "prompt": "Our app uses a bottom navigation bar. On wide screens it should switch to a NavigationRail or a persistent drawer.",
+    "resources": [
+      "references/adaptive-navigation-patterns.md"
+    ],
+    "expectations": [
+      {"text": "selects the navigation pattern from available width constraints not device type", "mandatory": true},
+      "shares route and selection state across the compact and expanded layouts",
+      "tests boundary widths just below and above the breakpoint"
+    ]
+  },
+  {
+    "name": "content-readable-on-large-display",
+    "prompt": "Make the article detail screen look good on a 13-inch tablet in landscape.",
+    "expectations": [
+      "constrains readable content width rather than stretching text edge to edge",
+      "uses the extra space productively for supporting content or whitespace",
+      "does not merely scale up the phone layout"
+    ]
+  },
+  {
+    "name": "silent-overlap-uses-explicit-geometry-contract",
+    "prompt": "The sticky checkout action visually covers the final address field at 320 logical pixels, but Flutter reports no RenderFlex overflow. Add a regression test and fix direction without flagging every intentional Stack overlap in the screen.",
+    "resources": [
+      "references/geometry-viewport-and-fixture-testing.md"
+    ],
+    "expectations": [
+      "distinguishes silent paint or hit-test overlap from framework overflow and identifies the specific components involved",
+      "defines an explicit disjoint or intentional-overlay geometry contract instead of treating every intersecting render box as a defect",
+      "verifies that the final field remains revealable and the checkout action remains hit-testable and completes its observable behavior"
+    ]
+  },
+  {
+    "name": "automates-bounded-viewport-and-fixture-matrix",
+    "prompt": "Create a maintainable widget-test matrix for a responsive profile form at compact, breakpoint-boundary, and wide sizes. It must cover enlarged text, long localized content, RTL, validation errors, and an open keyboard without running every possible Cartesian combination. Repository inspection has already confirmed that its pinned Flutter SDK and existing tests support tester.view physicalSize, devicePixelRatio, and viewInsets overrides, TextScaler.linear, FakeViewPadding, and tester.view.reset; use those established APIs rather than inventing another harness.",
+    "resources": [
+      "references/geometry-viewport-and-fixture-testing.md"
+    ],
+    "expectations": [
+      "sets and restores explicit logical viewport, pixel-ratio, and inset test state using the supplied project-compatible APIs",
+      "uses deterministic named fixtures and a bounded risk-based combination matrix rather than device names or a full Cartesian product",
+      "checks relevant overflow geometry containment scrolling and hit-test behavior and separates widget-test evidence from golden or real-device evidence"
+    ]
+  }
+]

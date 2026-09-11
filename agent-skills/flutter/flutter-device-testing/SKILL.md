@@ -1,0 +1,38 @@
+---
+name: flutter-device-testing
+description: Operate and verify Flutter apps on a concrete emulator, simulator, browser, desktop, or physical device. Use only when a concrete runtime target or device-only behavior is explicit; pair with flutter-navigation for deep-link route or back-stack correctness, and do not select it merely because focused widget or golden tests suffice.
+---
+
+# Flutter Device Testing
+
+Use the smallest target matrix that proves the changed behavior, then state what was and was not exercised. Identify the runtime target separately from the data source used by the flow.
+
+## Discover before acting
+
+Run `flutter devices` and inspect the project's supported platforms. Select targets by stable device identifier when multiple devices are available. Do not erase, reset, or recreate a user's device without explicit need and authorization.
+
+## Workflow
+
+1. Confirm dependencies and generated code are ready.
+2. Launch with the correct flavor, entrypoint, and defines.
+3. Capture build or runtime errors from Flutter and platform logs.
+4. Exercise the exact user flow, including backgrounding, rotation, keyboard, deep link, or permission state when relevant.
+5. Save focused screenshots or test output when visual/runtime evidence matters.
+6. Run integration tests on the chosen target when durable automation is required.
+
+Use running-app inspection from the Dart and Flutter MCP server when it is available and useful. Otherwise use `flutter run`, `flutter logs`, `flutter drive` or `flutter test integration_test`, and native tools such as `adb` or `simctl` only where they add necessary platform control.
+
+## Reliability
+
+Do not assume a successful compilation proves correct runtime behavior. Avoid hardcoded coordinates when semantic finders or integration-test APIs are available. Make test setup explicit and clean up only artifacts created by the test. Report simulator, emulator, browser, desktop, or physical device separately from fixture, mock, local server, development, staging, or production data; neither axis proves the other.
+
+## References
+
+- Read [device discovery and emulators](references/device-discovery-and-emulators.md) when querying connected hardware, capturing platform crash logs, or exercising OS lifecycle states.
+- Read [integration test workflows](references/integration-test-workflows.md) when writing or running `package:integration_test` suites, deep links, or smoke tests on a live target.
+
+## Sources
+
+- [Flutter CLI](https://docs.flutter.dev/reference/flutter-cli)
+- [Integration testing](https://docs.flutter.dev/cookbook/testing/integration/introduction)
+- [Dart and Flutter MCP server](https://docs.flutter.dev/ai/mcp-server)

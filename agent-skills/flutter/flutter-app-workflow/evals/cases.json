@@ -1,0 +1,89 @@
+[
+  {
+    "name": "complete-feature-routes-specialists",
+    "prompt": "Plan an offline-capable checkout feature for an existing Flutter 3.44 app. It uses feature-first Bloc, Dio, Drift, go_router, and integration_test; preserve those choices. An Android emulator is available for final verification. Describe the implementation and evidence plan without claiming that code or device checks have already run.",
+    "resources": [
+      "references/project-preflight.md",
+      "references/delivery-verification.md"
+    ],
+    "expectations": [
+      "uses the supplied Flutter 3.44 constraint and preserves the feature-first Bloc, Dio, Drift, go_router, and integration_test conventions",
+      "keeps scope to the required state, API, offline persistence, testing, and Android evidence without unrelated migrations, packages, platforms, or release work",
+      "defines a coherent vertical slice with focused tests and an exact device-verification flow without fabricating evidence"
+    ]
+  },
+  {
+    "name": "narrow-fix-does-not-expand-scope",
+    "prompt": "Fix one overflowing settings row without changing app architecture.",
+    "expectations": ["routes to responsive layout guidance", "preserves architecture and unrelated files", "uses focused verification"]
+  },
+  {
+    "name": "continues-without-installed-specialists",
+    "prompt": "Only flutter-app-workflow is installed. Add and test a small API-backed profile edit without installing more skills.",
+    "resources": [
+      "references/project-preflight.md",
+      "references/delivery-verification.md"
+    ],
+    "expectations": [
+      "does not claim unavailable specialists were loaded",
+      "continues with preflight preservation and vertical-slice guidance",
+      "does not install skills or expand scope without authorization"
+    ]
+  },
+  {
+    "name": "feature-addition-preserves-existing-architecture-and-packages",
+    "prompt": "Build a notification history screen in an app structured with layered ChangeNotifier and http.",
+    "resources": [
+      "references/project-preflight.md",
+      "references/delivery-verification.md"
+    ],
+    "expectations": [
+      "preserves the existing ChangeNotifier, http client, and layered architecture conventions without introducing unrequested packages",
+      "implements the feature within established project boundaries and verifies with focused tests",
+      "does not rewrite state management or network layer for an ordinary feature addition"
+    ]
+  },
+  {
+    "name": "authorized-migration-executes-with-preflight-and-tests",
+    "prompt": "The team has authorized migrating the notification feature from ChangeNotifier and http to Riverpod and Dio. Plan and implement the migration while preserving the surrounding layered architecture and existing test coverage.",
+    "resources": [
+      "references/project-preflight.md",
+      "references/delivery-verification.md"
+    ],
+    "expectations": [
+      "accepts the authorized migration to Riverpod and Dio without rejecting explicit user direction",
+      "preserves the surrounding project structure, domain models, and unaffected features",
+      "updates state ownership and networking with focused tests and preflight verification"
+    ]
+  },
+  {
+    "name": "ticket-scoped-branch-commit-and-push-boundary",
+    "prompt": "Implement GitHub ticket https://github.com/acme/mobile/issues/418 in an existing Flutter repository. The ticket targets release/2.7 and requests one checkout validation fix; a comment suggests an unrelated redesign. Use branch feature/thiennc-checkout-validation, commit the completed fix with the ticket linked, and do not push yet. Locally installed agent skills are visible beside the repository.",
+    "resources": [
+      "references/project-preflight.md",
+      "references/delivery-verification.md"
+    ],
+    "expectations": [
+      {
+        "id": "read-ticket-and-lock-scope",
+        "text": "reads the ticket through the available GitHub integration or read-only gh fallback, reconciles it with current code, and states the checkout-fix scope and exclusions before editing",
+        "mandatory": true
+      },
+      {
+        "id": "correct-base-and-branch",
+        "text": "inspects existing code and working-tree state, then creates the requested feature/thiennc-checkout-validation branch from release/2.7 rather than assuming the default branch",
+        "mandatory": true
+      },
+      {
+        "id": "scoped-linked-commit",
+        "text": "stages and reviews only intended files, excludes installed skill or plugin artifacts, and creates an atomic conventional commit whose body links the supplied ticket",
+        "mandatory": true
+      },
+      {
+        "id": "no-unrequested-push",
+        "text": "does not push or open a pull request because the user has not requested remote publication",
+        "mandatory": true
+      }
+    ]
+  }
+]
