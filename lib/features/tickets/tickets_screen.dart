@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
+import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../services/sharing.dart';
