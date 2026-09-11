@@ -1,20 +1,23 @@
 /// ─── Sala en vivo · pantalla completa (v17.2, decisión del dueño) ───────────
-/// Lobby con 4 modos (Servidor · Cerca/Nearby · WiFi local · Bluetooth),
-/// servidor propio configurable desde aquí, descubrimiento de salas
-/// públicas (Nearby + UDP) o entrada por código, y verificación PIN+emoji
-/// en TODOS los caminos. Nada de datos móviles para la sala: los transportes
-/// directos (LAN/Nearby/BT) son 100% locales.
+/// Lobby con 5 modos (Servidor · Cerca/Nearby · WiFi local · Hotspot ·
+/// Bluetooth), servidor propio configurable desde aquí, descubrimiento de
+/// salas públicas (Nearby + UDP) o entrada por código, verificación PIN+emoji
+/// en TODOS los caminos y walkthrough propio. Nada de datos móviles para la
+/// sala: los transportes directos (LAN/Hotspot/Nearby/BT) son 100% locales.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../room/room_transport.dart';
 import '../../widgets/ui.dart';
+import '../../widgets/walkthrough.dart';
+import '../../widgets/walkthroughs_content.dart';
 
 /// Pantalla completa de la sala (ruta /sala). Abre con showRoomSheet()
 /// desde la Lista o con context.push('/sala').
@@ -32,6 +35,26 @@ class _RoomScreenState extends State<RoomScreen> {
     final c = RoomController(store);
     c.attachStoreListener();
     return c;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Walkthrough de /sala (ruta fuera del shell: dispara aquí, una vez).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeWalkthrough());
+  }
+
+  void _maybeWalkthrough() {
+    if (!mounted) return;
+    final wt = kWalkthroughs['/sala'];
+    if (wt == null) return;
+    final SharedPreferences prefs;
+    try {
+      prefs = context.read<SharedPreferences>();
+    } on ProviderNotFoundException {
+      return; // tests/previews sin prefs: no-op
+    }
+    maybeRunWalkthrough(context, prefs, '/sala', wt.title, wt.steps);
   }
 
   @override
@@ -87,6 +110,7 @@ class _RoomScreenState extends State<RoomScreen> {
 
 String _modeName(String mode) => switch (mode) {
       'lan' => 'WiFi local',
+      'hotspot' => 'Hotspot',
       'nearby' => 'Cerca',
       'bt' => 'Bluetooth',
       _ => 'Servidor',
@@ -101,6 +125,8 @@ class _ModePicker extends StatelessWidget {
         'WiFi Direct / Bluetooth del teléfono con Nearby Connections. Máximo 10 personas.'),
     ('lan', Icons.wifi_rounded, 'WiFi local (LAN)',
         'Con el router de la casa o del local: todo por la red local, sin internet.'),
+    ('hotspot', Icons.wifi_tethering_rounded, 'Hotspot (sin internet)',
+        'El anfitrión activa su punto de acceso y los invitados se conectan a él: misma red local, cero datos móviles.'),
     ('server', Icons.dns_rounded, 'Servidor (sockets)',
         'Conecta con tu propio servidor socket.io o usa este teléfono como servidor.'),
     ('bt', Icons.bluetooth_rounded, 'Bluetooth',

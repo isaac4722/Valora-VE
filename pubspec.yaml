@@ -3,7 +3,7 @@ description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/parale
 publish_to: 'none'
 
 # v1.0.1-beta+2 · ronda de paridad (router/icono/escáner/sueldo variable).
-version: 1.2.0+7
+version: 1.2.0+8
 
 environment:
   sdk: ^3.9.2

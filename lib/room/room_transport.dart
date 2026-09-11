@@ -459,7 +459,7 @@ class RoomController extends ChangeNotifier {
   RoomStatus _status = RoomStatus.disconnected;
   String _code = '';
   String _myName = 'Comprador';
-  String _mode = 'server'; // server | nearby | lan | bt
+  String _mode = 'server'; // server | nearby | lan | hotspot | bt
   final List<RoomMember> _members = [];
 
   bool _isHost = false;
@@ -524,6 +524,7 @@ class RoomController extends ChangeNotifier {
         'server' => 'Servidor',
         'nearby' => 'Cerca',
         'lan' => 'WiFi local',
+        'hotspot' => 'Hotspot',
         'bt' => 'Bluetooth',
         _ => _mode,
       };
@@ -590,7 +591,7 @@ class RoomController extends ChangeNotifier {
 
   /// «Usar este teléfono como servidor»: IP:puerto del hub LAN activo.
   String get lanAddress {
-    if (_mode != 'lan' || !_isHost) return '';
+    if ((_mode != 'lan' && _mode != 'hotspot') || !_isHost) return '';
     final hub = _transport is LanTransport ? (_transport as LanTransport).hub : null;
     final ip = hub?.hostIp;
     return (ip == null || ip.isEmpty) ? '' : '$ip:${LanHubImpl.kTcpPort}';
@@ -616,7 +617,9 @@ class RoomController extends ChangeNotifier {
   }) async {
     if (_status == RoomStatus.connecting) return 'Ya hay una conexión en curso';
     final m = (mode ?? _mode).toLowerCase();
-    if (!['server', 'nearby', 'lan', 'bt'].contains(m)) return 'Modo desconocido';
+    if (!['server', 'nearby', 'lan', 'hotspot', 'bt'].contains(m)) {
+      return 'Modo desconocido';
+    }
     if (name.trim().isEmpty) return 'Escribe tu nombre';
     // El escaneo debe morir antes de conectar: Nearby no admite discovery
     // doble y el hub LAN cambia de rol.
@@ -643,7 +646,9 @@ class RoomController extends ChangeNotifier {
     switch (m) {
       case 'nearby' || 'bt':
         transport = NearbyTransport(hub: NearbyHubImpl());
-      case 'lan':
+      case 'lan' || 'hotspot':
+        // Hotspot = LAN dentro de la subred del punto de acceso del
+        // anfitrión: mismo transporte TCP+UDP, cero internet.
         transport = LanTransport(hub: LanHubImpl());
       default:
         final url = resolveServerUrl();
@@ -696,7 +701,7 @@ class RoomController extends ChangeNotifier {
       final timeout = Duration(
           seconds: switch ((m, _isHost)) {
                 ('nearby', false) || ('bt', false) => 25,
-                ('lan', false) => 15,
+                ('lan', false) || ('hotspot', false) => 15,
                 _ => 8,
               });
       final linked = await _waitForLink(timeout);

@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.2.0+8 · ronda v17.2-b — auditoría del Review.txt
+
+Cruce punto por punto del Review.txt contra el código. Todo lo pedido ya
+estaba aplicado en v17.2; esta pasada cierra los 2 únicos huecos que
+quedaban y valida el resto con anclas de código.
+
+### Corregido
+- **Sala: modo Hotspot explícito** («HostPost» del dueño): quinto modo en el
+  lobby. El anfitrión activa su punto de acceso y los invitados se conectan
+  a él: mismo transporte TCP+UDP del modo LAN dentro de esa subred, cero
+  internet y cero datos móviles. PIN+emoji y descubrimiento idénticos.
+- **Walkthrough de la Sala en vivo**: /sala era el único módulo sin
+  recorrido (está fuera del shell). Ahora se dispara al entrar la primera
+  vez y es rejugable desde Ajustes → Tutorial.
+
+### Validación
+- 14/14 puntos del Review.txt verificados contra anclas de código reales
+  (skills en repo, welcome, inicio sin «02»/Sueldo, offline+dedupe, 8 reqs
+  del conversor, tarjeta de marca, lista/checkout 7 reqs, historial 4 reqs,
+  productos 6 reqs, finanzas PDF+menú propio, análisis 5 reqs, vuelto
+  multi-divisa, dividir con propina, sala P2P completa).
+
 ## 1.2.0+7 · ronda v17.2 — offline-first real + revisión general de GUI
 
 Ronda guiada por la revisión completa del dueño: el foco es el

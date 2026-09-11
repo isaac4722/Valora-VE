@@ -115,6 +115,23 @@ const kWalkthroughs = <String, ({String title, List<WalkthroughStep> steps})>{
       ),
     ],
   ),
+  '/sala': (
+    title: 'Sala en vivo',
+    steps: [
+      WalkthroughStep(
+        title: 'Elige cómo conectar',
+        body: 'Cinco modos sin internet: Cerca (Nearby), WiFi local, Hotspot, Bluetooth o tu propio servidor. Solo las consultas de tasas usan datos, y tú decides cada cuánto.',
+      ),
+      WalkthroughStep(
+        title: 'Verificación PIN + emoji',
+        body: 'Todo ingreso pide el PIN de 4 dígitos y el emoji coincidente. Si el emoji no es el mismo, la conexión se cancela: nadie entra a una sala que no es.',
+      ),
+      WalkthroughStep(
+        title: 'Descubre o entra por código',
+        body: 'Las salas públicas cercanas aparecen solas; también puedes buscar por código. Al crear, eliges tu nombre, el nombre de la sala y si es pública.',
+      ),
+    ],
+  ),
   '/ajustes': (
     title: 'Ajustes',
     steps: [
@@ -139,5 +156,6 @@ const kWalkthroughLabels = <String, String>{
   '/historial': 'Historial',
   '/finanzas': 'Finanzas',
   '/analisis': 'Análisis',
+  '/sala': 'Sala en vivo',
   '/ajustes': 'Ajustes',
 };
