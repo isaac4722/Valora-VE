@@ -1,8 +1,10 @@
-/// ─── Historial de compras (§9.5) ────────────────────────────────────────────
+/// ─── Historial de compras (§9.5 + v17.2 multitienda/peso) ────────────────────
 /// Asiento por compra (fecha small-caps, tienda, líneas ledger-dots, total
 /// rule-double, stamp de fuente) · filtros periodo/mes/tienda/search/producto ·
-/// paginación 20 · Ver (modal con zoom de ticket) / Editar / Eliminar ·
-/// export: compras CSV · movimientos CSV · JSON backup · constancia.
+/// filtro POR TIENDA que cubre también PurchaseItem.store (multitienda v17.2) ·
+/// peso capturado por ítem cuando existe · paginación 20 · Ver (modal con
+/// zoom de ticket) / Editar / Eliminar · export: compras CSV · movimientos
+/// CSV · JSON backup · constancia.
 library;
 
 import 'dart:convert';
@@ -45,7 +47,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
       list = list.where((p) => p.date.isAfter(from)).toList();
     }
     if (_storeFilter != null) {
-      list = list.where((p) => (p.store ?? '') == _storeFilter).toList();
+      // Multitienda v17.2: la tienda puede vivir en la compra (Purchase.store)
+      // o en cada ítem (PurchaseItem.store) — el filtro cubre ambos niveles.
+      list = list
+          .where((p) =>
+              (p.store ?? '') == _storeFilter ||
+              p.items.any((i) => (i.store ?? '') == _storeFilter))
+          .toList();
     }
     if (_search.trim().isNotEmpty) {
       final q = fold(_search.toLowerCase());
@@ -64,11 +72,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final filtered = _filtered(store);
     final pages = (filtered.length / 20).ceil().clamp(1, 9999);
     final items = filtered.skip(_page * 20).take(20).toList();
-    final storesInPurchases = store.purchases
-        .map((p) => p.store ?? '')
-        .where((s) => s.isNotEmpty)
-        .toSet()
-        .toList()
+    final storesInPurchases = <String>{
+      for (final p in store.purchases) ...[
+        if ((p.store ?? '').trim().isNotEmpty) p.store!.trim(),
+        for (final i in p.items)
+          if ((i.store ?? '').trim().isNotEmpty) i.store!.trim(),
+      ],
+    }.toList()
       ..sort();
 
     return Scaffold(
@@ -98,6 +108,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
           if (storesInPurchases.isNotEmpty) ...[
             const SizedBox(height: 8),
+            // Segmento «por tienda» (requisito I): filtra compras de tienda
+            // única y también ítems dentro de compras multitienda.
+            Text('POR TIENDA',
+                style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 6),
             Wrap(spacing: 6, children: [
               ChipTag('Todas las tiendas', selected: _storeFilter == null,
                   onTap: () => setState(() { _storeFilter = null; _page = 0; })),
@@ -120,6 +135,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
               icon: const Icon(Icons.format_list_numbered, size: 14),
               label: const Text('Movimientos CSV', style: TextStyle(fontSize: 11.5)),
             ),
+            const Spacer(),
+            // Contador honesto: todas las compras son navegables (páginas).
+            Text('${filtered.length} de ${store.purchases.length} compras',
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
           ]),
           const SizedBox(height: 10),
           // Asientos.
@@ -195,14 +214,27 @@ class _Seat extends StatelessWidget {
               Text(purchase.store!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
           ]),
           const SizedBox(height: 8),
-          for (final i in purchase.items)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: LedgerRow(
-                label: '${i.quantity} × ${i.name}',
-                value: fmtUSD(i.priceUSD * i.quantity),
+          // Multitienda (v17.2): si la compra no tiene tienda única, los
+          // ítems se agrupan bajo SU tienda (PurchaseItem.store).
+          for (final g in _itemGroups(purchase)) ...[
+            if (g.$1 != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 2),
+                child: Row(children: [
+                  Icon(Icons.storefront_outlined, size: 12, color: scheme.primary),
+                  const SizedBox(width: 5),
+                  Text(g.$1!, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800)),
+                ]),
               ),
-            ),
+            for (final i in g.$2)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: LedgerRow(
+                  label: _itemLabel(i, purchase),
+                  value: fmtUSD(i.priceUSD * i.quantity),
+                ),
+              ),
+          ],
           const SizedBox(height: 8),
           const RuleDouble(),
           const SizedBox(height: 8),
@@ -276,6 +308,38 @@ class _Seat extends StatelessWidget {
         ]),
       ),
     );
+  }
+
+  /// Etiqueta del ítem con el PESO capturado (si existe) y, en compras de
+  /// tienda única con ítem de otra tienda, el renglón de esa tienda (v17.2).
+  String _itemLabel(PurchaseItem i, Purchase p) {
+    var label = '${i.quantity} × ${i.name}';
+    if ((i.size ?? 0) > 0) {
+      final size = i.size!;
+      final unit = (i.sizeUnit ?? '').trim();
+      label += ' · ${fmtNum(size, decimals: size % 1 == 0 ? 0 : 2)}'
+          '${unit.isEmpty ? '' : ' $unit'}';
+    }
+    if (p.store != null &&
+        (i.store ?? '').trim().isNotEmpty &&
+        i.store!.trim() != p.store!.trim()) {
+      label += ' · ${i.store!.trim()}';
+    }
+    return label;
+  }
+
+  /// Grupos (tienda, ítems) preservando el orden del asiento. Una compra con
+  /// tienda única (store != null) NO agrupa: sale como siempre.
+  List<(String?, List<PurchaseItem>)> _itemGroups(Purchase p) {
+    if (p.store != null) return [(null, p.items)];
+    final map = <String, List<PurchaseItem>>{};
+    final order = <String>[];
+    for (final i in p.items) {
+      final key = (i.store ?? '').trim();
+      if (!map.containsKey(key)) order.add(key);
+      (map[key] ??= []).add(i);
+    }
+    return [for (final k in order) (k.isEmpty ? null : k, map[k]!)];
   }
 
   /// Bytes del ticket (data URL 'data:image/jpeg;base64,…' → JPEG crudo).
@@ -395,9 +459,13 @@ class _Seat extends StatelessWidget {
 String purchaseDetailText(Purchase p, BuildContext context) {
   final lines = <String>[
     'Compra · ${fmtDate(p.date)}',
-    p.store ?? 'Sin tienda',
+    if (p.store != null) p.store!,
     '',
-    for (final i in p.items) '${i.quantity} × ${i.name} — ${fmtUSD(i.priceUSD * i.quantity)}',
+    for (final i in p.items)
+      '${i.quantity} × ${i.name}'
+      '${(i.size ?? 0) > 0 ? ' · ${fmtNum(i.size!, decimals: i.size! % 1 == 0 ? 0 : 2)} ${i.sizeUnit ?? ''}' : ''}'
+      '${(i.store ?? '').trim().isNotEmpty && p.store == null ? ' · ${i.store!.trim()}' : ''}'
+      ' — ${fmtUSD(i.priceUSD * i.quantity)}',
     '',
     'Total: ${fmtUSD(p.totalUSD)}',
     if (p.totalBS > 0) 'Total Bs: ${fmtNum(p.totalBS)}',
