@@ -105,8 +105,14 @@ class VeInk {
 }
 
 /// Temas Material de la app, construidos sobre los tokens del diseño.
+///
+/// Material You (dp6 · mejora 2): [dynamicScheme] llega de DynamicColorBuilder
+/// (Android 12+) ya armonizado. CONTRATO: SOLO pinta primario/onPrimary —
+/// superficies, bordes, texto y la semántica de dinero (error/pos/neg/warn)
+/// son tokens de marca y NUNCA se tocan: la cifra de una compra no cambia de
+/// color porque el usuario eligió otro wallpaper.
 abstract final class AppTheme {
-  static ThemeData light() => _build(
+  static ThemeData light([ColorScheme? dynamicScheme]) => _build(
         bg: VeColors.bgLight,
         card: VeColors.cardLight,
         fg: VeColors.fgLight,
@@ -118,9 +124,10 @@ abstract final class AppTheme {
         border: VeColors.borderLight,
         destructive: VeColors.destructiveLight,
         isDark: false,
+        dynamicScheme: dynamicScheme,
       );
 
-  static ThemeData dark() => _build(
+  static ThemeData dark([ColorScheme? dynamicScheme]) => _build(
         bg: VeColors.bgDark,
         card: VeColors.cardDark,
         fg: VeColors.fgDark,
@@ -132,6 +139,7 @@ abstract final class AppTheme {
         border: VeColors.borderDark,
         destructive: VeColors.destructiveDark,
         isDark: true,
+        dynamicScheme: dynamicScheme,
       );
 
   static ThemeData _build({
@@ -146,15 +154,19 @@ abstract final class AppTheme {
     required Color border,
     required Color destructive,
     required bool isDark,
+    ColorScheme? dynamicScheme,
   }) {
+    // Material You: solo el par primario es dinámico; lo demás queda de marca.
+    final Color effPrimary = dynamicScheme?.primary ?? primary;
+    final Color effOnPrimary = dynamicScheme?.onPrimary ?? onPrimary;
     final ColorScheme scheme = ColorScheme(
       brightness: isDark ? Brightness.dark : Brightness.light,
-      primary: primary,
-      onPrimary: onPrimary,
+      primary: effPrimary,
+      onPrimary: effOnPrimary,
       secondary: mutedFg,
       onSecondary: card,
-      tertiary: primary,
-      onTertiary: onPrimary,
+      tertiary: effPrimary,
+      onTertiary: effOnPrimary,
       error: destructive,
       onError: Colors.white,
       surface: card,
@@ -169,7 +181,7 @@ abstract final class AppTheme {
       outlineVariant: border,
       shadow: const Color(0xFF0C1016),
       scrim: Colors.black,
-      inversePrimary: primary,
+      inversePrimary: effPrimary,
       onInverseSurface: bg,
       inverseSurface: fg,
     );
@@ -234,14 +246,14 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: primary, width: 1.4),
+          borderSide: BorderSide(color: effPrimary, width: 1.4),
         ),
         hintStyle: TextStyle(color: mutedFg.withValues(alpha: 0.75), fontSize: 13.5),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: primary,
-          foregroundColor: onPrimary,
+          backgroundColor: effPrimary,
+          foregroundColor: effOnPrimary,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -267,7 +279,7 @@ abstract final class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: primary,
+          foregroundColor: effPrimary,
           textStyle: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 13,
@@ -308,15 +320,15 @@ abstract final class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
           (Set<WidgetState> states) =>
-              states.contains(WidgetState.selected) ? onPrimary : card,
+              states.contains(WidgetState.selected) ? effOnPrimary : card,
         ),
         trackColor: WidgetStateProperty.resolveWith(
           (Set<WidgetState> states) =>
-              states.contains(WidgetState.selected) ? primary : border,
+              states.contains(WidgetState.selected) ? effPrimary : border,
         ),
         trackOutlineColor: WidgetStateProperty.resolveWith(
           (Set<WidgetState> states) =>
-              states.contains(WidgetState.selected) ? primary : border,
+              states.contains(WidgetState.selected) ? effPrimary : border,
         ),
       ),
       chipTheme: ChipThemeData(

@@ -19,6 +19,7 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/backup.dart';
+import '../../data/board.dart';
 import '../../data/store.dart';
 import '../../services/alerts.dart';
 import '../../services/notifications.dart';
@@ -30,7 +31,7 @@ import '../../widgets/walkthroughs_content.dart';
 
 /// Versión visible de la app (la del marketing); el buildNumber real viene
 /// de PackageInfo en la fila «Acerca de».
-const String kAppVersionVisible = '17.3';
+const String kAppVersionVisible = '17.4';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -50,6 +51,7 @@ class SettingsScreen extends StatelessWidget {
           _DatosConexion(store: store),
           _Personalizacion(store: store),
           _Monedas(store: store),
+          _Diagnostico(),
           _Apariencia(),
           _Alertas(store: store),
           _Respaldo(store: store),
@@ -454,17 +456,112 @@ class _Apariencia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeController>();
+    final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Apariencia'),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: SegmentedChips<ThemeMode>(
-            options: const [ThemeMode.light, ThemeMode.dark, ThemeMode.system],
-            value: theme.mode,
-            onChanged: (v) => theme.setMode(v, context.read<SharedPreferences>()),
-            labelOf: (v) => switch (v) { ThemeMode.light => 'Claro', ThemeMode.dark => 'Grafito', _ => 'Sistema' },
-          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SegmentedChips<ThemeMode>(
+              options: const [ThemeMode.light, ThemeMode.dark, ThemeMode.system],
+              value: theme.mode,
+              onChanged: (v) => theme.setMode(v, context.read<SharedPreferences>()),
+              labelOf: (v) => switch (v) { ThemeMode.light => 'Claro', ThemeMode.dark => 'Grafito', _ => 'Sistema' },
+            ),
+            // Material You (dp6 · mejora 2): opt-in. Solo tiñe acciones y
+            // selección; superficies y semántica de dinero siguen de marca.
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: theme.dynamicColor,
+              onChanged: (v) =>
+                  theme.setDynamicColor(v, context.read<SharedPreferences>()),
+              title: const Text('Color dinámico del sistema (Material You)',
+                  style: TextStyle(fontSize: 13)),
+              subtitle: Text(
+                  'Android 12 o superior · botones y selección toman la paleta del wallpaper; fondos y cifras siguen de marca',
+                  style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+            ),
+          ]),
+        ),
+      ),
+    ]);
+  }
+}
+
+/// Diagnóstico de fuentes (dp6 · mejora 8): consulta cada región en vivo y
+/// mide latencia y fuentes obtenidas. El data layer (diagnoseRegions) ya
+/// vivía en board.dart — aquí solo la vista honesta.
+class _Diagnostico extends StatefulWidget {
+  const _Diagnostico();
+
+  @override
+  State<_Diagnostico> createState() => _DiagnosticoState();
+}
+
+class _DiagnosticoState extends State<_Diagnostico> {
+  bool _running = false;
+  List<RegionHealth>? _result;
+
+  Future<void> _run() async {
+    setState(() => _running = true);
+    try {
+      final r = await diagnoseRegions();
+      if (mounted) setState(() => _result = r);
+    } catch (_) {
+      if (mounted) setState(() => _result = null);
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final ink = VeColors.of(context);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SectionTitle('Diagnóstico de fuentes'),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Consulta cada región y mide su latencia. Si una falla, la app sigue con las demás.',
+                style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 10),
+            if (_running)
+              const Row(children: [
+                SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.2)),
+                SizedBox(width: 12),
+                Text('Consultando regiones…'),
+              ])
+            else
+              GhostButton('Ejecutar diagnóstico',
+                  icon: Icons.network_check_rounded, onPressed: _run),
+            if (_result != null) ...[
+              const SizedBox(height: 12),
+              for (final r in _result!)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(children: [
+                    Stamp(r.ok ? 'OK' : 'Sin respuesta',
+                        color: r.ok ? ink.pos : ink.neg),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(r.label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                        Text('${r.sources} fuentes · ${r.latencyMs} ms',
+                            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                        if (r.error != null)
+                          Text(r.error!,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 10, color: ink.neg.withValues(alpha: 0.8))),
+                      ]),
+                    ),
+                  ]),
+                ),
+            ],
+          ]),
         ),
       ),
     ]);

@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.3.0+10 · ronda v17.4 — dp6 completo: tickets, Material You, matriz y diagnóstico
+
+Tercera pasada de GUI: el dueño pidió «créalo bien todo». Diff completo
+dp6 ↔ árbol v17.3 y cierre de los 4 huecos reales que quedaban (todo lo
+demás ya vivía en el árbol). Skills: taste + flutter-ui-design +
+caveman (moderado), igual que v17.3.
+
+### Añadido
+- **Pantalla Tickets (`/tickets`)** — galería 3× de las fotos de recibos
+  guardadas en las compras (`ticketPhoto`, data URL comprimida ~200 KB).
+  Visor a pantalla completa con zoom 8×, franja de contexto (total pagado,
+  Bs, tasa usada), compartir imagen y «quitar foto» con confirmación (la
+  compra jamás se borra desde aquí). Foto ilegible → estado honesto, nada
+  se rompe. Entradas: Historial (icono galería) y Búsqueda universal.
+- **Material You (dp6 · mejora 2)** — `dynamic_color` ya estaba declarado
+  pero sin usar. Ahora `AppTheme.light/dark([dynamicScheme])` acepta la
+  paleta armonizada de Android 12+ y `ThemeController.dynamicColor`
+  (opt-in, persistido) la activa desde Apariencia. CONTRATO: el esquema
+  dinámico SOLO tiñe primario/onPrimary (botones, selección, foco);
+  superficies, bordes, texto y semántica de dinero siguen de marca.
+- **Diagnóstico de fuentes (dp6 · mejora 8)** — sección nueva en Ajustes:
+  «Ejecutar diagnóstico» consulta las 4 regiones en vivo y muestra
+  OK/Sin respuesta + fuentes obtenidas + latencia ms + error. El data
+  layer (`diagnoseRegions`) ya existía en board.dart; faltaba la vista.
+- **Matriz 6×6 del conversor (dp6 · mejora 9)** — «Tabla de referencia
+  6×6» plegada por defecto: las 6 divisas del foco cruzadas con la tasa
+  vigente (1 A = X B vía el plan activo), scroll horizontal con barra,
+  celdas sin ruta honestas («—») y diagonal «·».
+
+### Cambiado
+- Apariencia ahora agrupa modo de tema + interruptor Material You en una
+  sola tarjeta.
+- Versión visible 17.4.
+
 ## 1.2.0+9 · ronda v17.3 — GUI dp6 integrada (sistema de componentes)
 
 Segunda pasada de GUI guiada por el dueño: «trabaja más la GUI» + adaptación

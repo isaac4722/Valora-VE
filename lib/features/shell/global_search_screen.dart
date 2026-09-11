@@ -192,6 +192,7 @@ const List<(String, String, IconData, String)> _kSearchModules = <(String, Strin
   ('Finanzas', 'Gastos y evolución mensual', Icons.account_balance_wallet_outlined, '/finanzas'),
   ('Análisis', 'Brecha y devaluación', Icons.bar_chart_outlined, '/analisis'),
   ('Historial', 'Compras como asientos', Icons.history, '/historial'),
+  ('Tickets', 'Fotos de tus recibos', Icons.receipt_long_outlined, '/tickets'),
   ('Ajustes', 'País, cinta y apariencia', Icons.settings_outlined, '/ajustes'),
 ];
 

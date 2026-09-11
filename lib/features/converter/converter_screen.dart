@@ -395,6 +395,8 @@ class _ConverterScreenState extends State<ConverterScreen> {
           // REQ 5: fuentes disponibles por divisa implicada en el par.
           _ReferenciaFuentes(ctx: ctx, from: from, to: to, onPick: _pickSource),
           _TablaMontos(ctx: ctx, amount: _amount, from: from),
+          // dp6 · mejora 9: matriz completa de pares a un vistazo (plegada).
+          _Matriz6(ctx: ctx),
           _Recientes(from: from, to: to, amount: _amount, result: result, plan: plan),
           _Notas(ctrl: _notesCtrl),
         ],
@@ -947,6 +949,120 @@ class _TablaMontos extends StatelessWidget {
                 ]),
               ),
           ]),
+        ),
+      ),
+    ]);
+  }
+}
+
+/// Matriz 6×6 plegable (dp6 · mejora 9): las 6 divisas del foco cruzadas con
+/// la tasa vigente de cada una (1 A = X B vía el plan activo). Celdas sin
+/// ruta honestas («—»), scroll horizontal y plegada por defecto para no
+/// robar altura al conversor.
+class _Matriz6 extends StatefulWidget {
+  const _Matriz6({required this.ctx});
+  final RateContext ctx;
+
+  @override
+  State<_Matriz6> createState() => _Matriz6State();
+}
+
+class _Matriz6State extends State<_Matriz6> {
+  bool _open = false;
+  final ScrollController _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final focus = CurrencyX.focus;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Expanded(child: SectionTitle('Tabla de referencia 6×6')),
+        Switch(
+          value: _open,
+          onChanged: (v) => setState(() => _open = v),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ]),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: _open
+              ? Scrollbar(
+                  controller: _scroll,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _scroll,
+                    scrollDirection: Axis.horizontal,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          const SizedBox(width: 42),
+                          for (final c in focus)
+                            SizedBox(
+                              width: 58,
+                              child: Column(children: [
+                                Flag(c, size: 13),
+                                const SizedBox(height: 2),
+                                Text(c.code,
+                                    style: TextStyle(
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.6,
+                                        color: scheme.onSurfaceVariant)),
+                              ]),
+                            ),
+                        ]),
+                        const SizedBox(height: 4),
+                        for (final r in focus)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(children: [
+                              SizedBox(
+                                  width: 42,
+                                  child: Center(child: Flag(r, size: 15))),
+                              for (final c in focus)
+                                SizedBox(
+                                  width: 58,
+                                  child: Center(
+                                    child: r == c
+                                        ? Text('·',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                color: scheme.onSurfaceVariant))
+                                        : () {
+                                            final rate = widget.ctx.convert(1, r, c);
+                                            return rate > 0
+                                                ? Text(fmtRate(rate),
+                                                    style: VeText.displayNum(10,
+                                                        weight: FontWeight.w600,
+                                                        color: scheme.onSurface))
+                                                : Text('—',
+                                                    style: TextStyle(
+                                                        fontSize: 10,
+                                                        color: scheme
+                                                            .onSurfaceVariant));
+                                          }(),
+                                  ),
+                                ),
+                            ]),
+                          ),
+                      ],
+                    ),
+                  ),
+                )
+              : Text(
+                  'Enciende la tabla para cruzar las 6 divisas del foco con la tasa vigente de cada una.',
+                  style: TextStyle(
+                      fontSize: 11.5, color: scheme.onSurfaceVariant),
+                ),
         ),
       ),
     ]);

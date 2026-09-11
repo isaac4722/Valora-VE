@@ -4,6 +4,7 @@
 /// el tablero pinta vacío honesto y refresca cuando haya conectividad.
 library;
 
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -118,14 +119,22 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
     // router creado en build, fabricaba un GoRouter nuevo por ciclo.
     // Las pantallas se suscriben al store individualmente.
     final theme = context.watch<ThemeController>();
-    return MaterialApp.router(
-      title: 'ValoraVE',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: theme.mode,
-      locale: const Locale('es', 'VE'),
-      routerConfig: _router,
+    // Material You (dp6 · mejora 2): DynamicColorBuilder no exige canal —
+    // sin plataforma devuelve null y el tema queda 100 % de marca.
+    return DynamicColorBuilder(
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        return MaterialApp.router(
+          title: 'ValoraVE',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(
+              theme.dynamicColor ? lightDynamic?.harmonized() : null),
+          darkTheme: AppTheme.dark(
+              theme.dynamicColor ? darkDynamic?.harmonized() : null),
+          themeMode: theme.mode,
+          locale: const Locale('es', 'VE'),
+          routerConfig: _router,
+        );
+      },
     );
   }
 }

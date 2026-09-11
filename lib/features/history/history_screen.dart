@@ -87,12 +87,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           PageHeader('Historial de compras', hint: 'Asientos por compra, con ticket y export',
-            action: IconButton(
-              tooltip: 'Constancia mensual',
-              icon: const Icon(Icons.picture_as_pdf_outlined, size: 19),
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const StatementScreen(kind: 'history'))),
-            )),
+            action: Row(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(
+                tooltip: 'Galería de tickets',
+                icon: const Icon(Icons.photo_library_outlined, size: 19),
+                onPressed: () => context.push('/tickets'),
+              ),
+              IconButton(
+                tooltip: 'Constancia mensual',
+                icon: const Icon(Icons.picture_as_pdf_outlined, size: 19),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const StatementScreen(kind: 'history'))),
+              ),
+            ])),
           // Filtros.
           Wrap(spacing: 6, children: [
             for (final p in kPeriods)

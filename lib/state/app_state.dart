@@ -24,9 +24,16 @@ class ThemeController extends ChangeNotifier {
   ThemeMode _mode = ThemeMode.system;
   ThemeMode get mode => _mode;
 
+  /// Material You (dp6 · mejora 2): opt-in. Con true, Android 12+ tiñe
+  /// botones/selección con la paleta del sistema armonizada; superficies y
+  /// semántica de dinero siguen siendo tokens de marca (ver AppTheme).
+  bool _dynamicColor = false;
+  bool get dynamicColor => _dynamicColor;
+
   Future<void> load(SharedPreferences prefs) async {
     final s = prefs.getString('valorave.themeMode') ?? 'system';
     _mode = switch (s) { 'light' => ThemeMode.light, 'dark' => ThemeMode.dark, _ => ThemeMode.system };
+    _dynamicColor = prefs.getBool('valorave.dynamicColor') ?? false;
     notifyListeners();
   }
 
@@ -37,6 +44,12 @@ class ThemeController extends ChangeNotifier {
       ThemeMode.dark => 'dark',
       _ => 'system',
     });
+    notifyListeners();
+  }
+
+  Future<void> setDynamicColor(bool v, SharedPreferences prefs) async {
+    _dynamicColor = v;
+    await prefs.setBool('valorave.dynamicColor', v);
     notifyListeners();
   }
 }

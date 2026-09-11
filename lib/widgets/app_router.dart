@@ -28,6 +28,7 @@ import '../features/products/products_screen.dart';
 import '../features/room/room_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/shell/main_shell.dart';
+import '../features/tickets/tickets_screen.dart';
 import '../features/welcome/welcome_screen.dart';
 
 /// Claves para widget tests (GUI dp4).
@@ -85,6 +86,8 @@ GoRouter buildRouter({required AppStore store}) {
         ],
       ),
       GoRoute(path: '/legal', builder: (_, _) => const LegalScreen()),
+      // Tickets (dp6): galería de fotos de recibos de las compras.
+      GoRoute(path: '/tickets', builder: (_, _) => const TicketsScreen()),
       // Sala en vivo: PANTALLA COMPLETA (v17.2, decisión del dueño — no
       // vuelve a ser un sheet deslizante).
       GoRoute(path: '/sala', builder: (_, _) => const RoomScreen()),
