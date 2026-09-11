@@ -60,10 +60,9 @@ Future<void> showShareMenu(
     ),
   );
   if (picked == null || !context.mounted) return;
-  final messenger = ScaffoldMessenger.of(context);
   final msg = await picked.onRun();
   if (msg != null) {
-    messenger.showSnackBar(SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating));
+    showToast(context, msg);
   }
 }
 

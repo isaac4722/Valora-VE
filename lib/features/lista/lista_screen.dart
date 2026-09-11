@@ -129,9 +129,9 @@ class _ListaScreenState extends State<ListaScreen> {
           barcode: p.barcode,
         ));
         if (_storeName.trim().isNotEmpty) store.addStore(_storeName);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('${p.name} · ${fmtMoneyCode(last.originalPrice, last.currency)} agregado'),
-            behavior: SnackBarBehavior.floating));
+        showToast(context,
+            '${p.name} · ${fmtMoneyCode(last.originalPrice, last.currency)} agregado',
+            kind: ToastKind.ok);
         return;
       }
       // Registrado pero sin precios → editor prellenado (nombre + código).
@@ -144,9 +144,7 @@ class _ListaScreenState extends State<ListaScreen> {
       final c = inCart.first;
       store.updateCartItem(
           c.id, c.copyWith(quantity: (c.quantity + 1).clamp(1, 999)));
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('${c.name} ya está en tu lista — sumé 1'),
-          behavior: SnackBarBehavior.floating));
+      showToast(context, '${c.name} ya está en tu lista — sumé 1');
       return;
     }
     // 3) Código sin registrar → diálogo honesto (requisito E).
@@ -188,9 +186,7 @@ class _ListaScreenState extends State<ListaScreen> {
     );
     if (item == null || !mounted) return;
     if (item.name.trim().isEmpty || item.price <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Nombre y precio válido (> 0) requeridos'),
-          behavior: SnackBarBehavior.floating));
+      showToast(context, 'Nombre y precio válido (> 0) requeridos', kind: ToastKind.warn);
       return;
     }
     store.addToCart(item);
@@ -201,8 +197,7 @@ class _ListaScreenState extends State<ListaScreen> {
     final price = parseLocaleNum(_priceCtrl.text) ?? 0;
     final qty = int.tryParse(_qtyCtrl.text) ?? 1;
     if (name.isEmpty || price <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Escribe nombre y precio válido'), behavior: SnackBarBehavior.floating));
+      showToast(context, 'Escribe nombre y precio válido', kind: ToastKind.warn);
       return;
     }
     store.addToCart(CartItem(
@@ -255,6 +250,9 @@ class _ListaScreenState extends State<ListaScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Text('TOTAL DE LA COMPRA', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
+                const SizedBox(width: 6),
+                // Divisa de cálculo SIEMPRE visible junto a la cifra (v17.5).
+                CurrencyTag(calcCur.code),
                 const Spacer(),
                 LiveBadge(live: false, label: '${store.cart.length} ítems'),
               ]),
@@ -483,8 +481,7 @@ class _ListaScreenState extends State<ListaScreen> {
     final bytes = await captureWidget(_totalsKey);
     if (!mounted) return;
     if (bytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('No pude generar la imagen'), behavior: SnackBarBehavior.floating));
+      showToast(context, 'No pude generar la imagen', kind: ToastKind.error);
       return;
     }
     await sharePng(bytes, 'valorave-totales.png');
@@ -495,9 +492,7 @@ class _ListaScreenState extends State<ListaScreen> {
     final edited = await showItemEditorSheet(context, store: store, initial: item);
     if (edited == null || !mounted) return;
     if (edited.name.trim().isEmpty || edited.price <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Nombre y precio válido (> 0) requeridos'),
-          behavior: SnackBarBehavior.floating));
+      showToast(context, 'Nombre y precio válido (> 0) requeridos', kind: ToastKind.warn);
       return;
     }
     store.updateCartItem(item.id, edited);
@@ -776,9 +771,8 @@ class _Plantillas extends StatelessWidget {
         if (ok == true) {
           final id = store.saveTemplate(nameCtrl.text);
           if (id == null && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('La lista está vacía: no hay nada que guardar'),
-                behavior: SnackBarBehavior.floating));
+            showToast(context, 'La lista está vacía: no hay nada que guardar',
+                kind: ToastKind.warn);
           }
         }
       }),
@@ -797,9 +791,9 @@ class _Plantillas extends StatelessWidget {
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                   TextButton(onPressed: () {
                     final qty = store.applyTemplate(t.id);
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(qty > 0 ? 'Plantilla aplicada: $qty unidades' : 'Plantilla vacía'),
-                        behavior: SnackBarBehavior.floating));
+                    showToast(context,
+                        qty > 0 ? 'Plantilla aplicada: $qty unidades' : 'Plantilla vacía',
+                        kind: qty > 0 ? ToastKind.ok : ToastKind.info);
                   }, child: const Text('Aplicar')),
                   IconButton(
                       icon: const Icon(Icons.close, size: 15),

@@ -294,15 +294,13 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   onPressed: () {
                     final amount = parseLocaleNum(amountCtrl.text);
                     if (amount == null || amount <= 0) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                          content: Text('Ingresa monto válido'), behavior: SnackBarBehavior.floating));
+                      showToast(ctx, 'Ingresa monto válido', kind: ToastKind.warn);
                       return;
                     }
                     final ctx2 = store.contextOf(module: RateModule.finance);
                     final u = ctx2.unitsPerUSD(CurrencyX.from(currency));
                     if (u == null || u <= 0) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-                          content: Text('Sin tasa para esa moneda'), behavior: SnackBarBehavior.floating));
+                      showToast(ctx, 'Sin tasa para esa moneda', kind: ToastKind.warn);
                       return;
                     }
                     final amountUSD = amount / u;

@@ -35,6 +35,8 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
+import '../../services/alerts.dart';
+import '../../services/notifications.dart';
 import '../scanner/scanner_screen.dart';
 import '../../widgets/ui.dart';
 
@@ -271,6 +273,7 @@ class _ProductSheetState extends State<ProductSheet> {
       return;
     }
     final storeName = _newStoreCtrl.text.trim();
+    final prev = p.latestRecord; // ANTES de insertar (base de la alerta).
     store.addRecord(p.id, PriceRecord(
       id: '',
       price: norm.usd, // USD normalizado
@@ -285,6 +288,21 @@ class _ProductSheetState extends State<ProductSheet> {
     _priceCtrl.clear();
     _newStoreCtrl.clear();
     setState(() => _priceError = null);
+    // Alerta de subida de precio (v17.5): engine + sistema + centro.
+    try {
+      context.read<AlertEngine>().checkProductRise(
+            notifs: context.read<NotificationsService>(),
+            persist: (kind, title, body) =>
+                store.pushNotification(kind: kind, title: title, body: body),
+            productId: p.id,
+            productName: p.name,
+            oldPrice: prev?.price ?? 0,
+            newPrice: norm.usd,
+            storeName: storeName.isEmpty ? null : storeName,
+          );
+    } catch (_) {
+      // Sin Provider (previews/tests): la alerta es no-op, el registro sigue.
+    }
     // Aviso «¡bajo tu meta!» (patrón §9.4 TARGET_EPS) — banner temporal.
     final t = p.targetPrice;
     if (t != null && t > 0 && norm.usd < t * (1 - an.kTargetEps)) {
@@ -382,9 +400,7 @@ class _ProductSheetState extends State<ProductSheet> {
     if (ok != true || !context.mounted) return;
     final price = parseLocaleNum(priceCtrl.text);
     if (price == null || price <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Precio inválido: debe ser mayor que 0'),
-          behavior: SnackBarBehavior.floating));
+      showToast(context, 'Precio inválido: debe ser mayor que 0', kind: ToastKind.warn);
       return;
     }
     store.updateRecord(p.id, r.id,
@@ -454,6 +470,7 @@ class _ProductSheetState extends State<ProductSheet> {
             ],
             _addPrice(context, store, p),
             _chart(context, p),
+            _tiendas(context, p),
             _history(context, store, p),
             _actions(context, store, p),
           ],
@@ -588,6 +605,9 @@ class _ProductSheetState extends State<ProductSheet> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Text('PRECIO VIGENTE', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
+          const SizedBox(width: 6),
+          // El libro de precios es USD-normalizado: divisa explícita (v17.5).
+          const CurrencyTag('USD'),
           const Spacer(),
           if (varPct != null) ...[
             TrendBadge(varPct),
@@ -829,6 +849,48 @@ class _ProductSheetState extends State<ProductSheet> {
                       ),
                   ],
                 ),
+              ),
+          ]),
+        ),
+      ),
+    ]);
+  }
+
+  // ── Tiendas: comparador de precio más bajo (v17.5 · hueco real del
+  // ── consultor: «comparador de tiendas»). Último precio por tienda.
+
+  Widget _tiendas(BuildContext context, Product p) {
+    final sem = VeColors.of(context);
+    final byStore = <String, PriceRecord>{};
+    final count = <String, int>{};
+    for (final r in p.records) {
+      final s = (r.store == null || r.store!.trim().isEmpty)
+          ? 'Sin tienda'
+          : r.store!.trim();
+      count[s] = (count[s] ?? 0) + 1;
+      final cur = byStore[s];
+      if (cur == null || r.date.isAfter(cur.date)) byStore[s] = r;
+    }
+    if (byStore.length < 2) return const SizedBox.shrink(); // sin comparación no hay sección
+
+    final rows = byStore.entries.toList()
+      ..sort((a, b) => a.value.price.compareTo(b.value.price));
+    final cheapest = rows.first.value.price;
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SectionTitle('Tiendas', icon: Icons.storefront_outlined),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Column(children: [
+            for (final (i, e) in rows.indexed)
+              LedgerRow(
+                leading: StoreAvatar(e.key),
+                label: '${e.key} · ${timeAgo(e.value.date)}'
+                    ' · ${count[e.key]} reg.${i == 0 ? ' · MÁS BARATO' : ''}',
+                dots: true,
+                value: fmtUSD(e.value.price),
+                valueColor: i == 0 ? sem.pos : null,
               ),
           ]),
         ),
@@ -1145,9 +1207,9 @@ class _NewProductSheetState extends State<NewProductSheet> {
       first,
     );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(first == null ? 'Producto creado' : 'Producto creado con primer precio'),
-        behavior: SnackBarBehavior.floating));
+    showToast(context,
+        first == null ? 'Producto creado' : 'Producto creado con primer precio',
+        kind: ToastKind.ok);
     Navigator.of(context).pop();
   }
 

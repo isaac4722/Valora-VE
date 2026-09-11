@@ -29,12 +29,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
   void _go(String location) {
     // dp5: aviso discreto único (no bloquea el contenido).
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(
-        duration: Duration(milliseconds: 1400),
-        content: Text('Abriendo…'),
-      ));
+    showToast(context, 'Abriendo…');
     Navigator.of(context).pop();
     if (location == '/historial' || location == '/ajustes') {
       context.push(location);

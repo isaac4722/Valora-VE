@@ -248,8 +248,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void _addToCart(BuildContext context, AppStore store, Product p) {
     final last = p.latestRecord;
     if (last == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Regístrale precio primero'), behavior: SnackBarBehavior.floating));
+      showToast(context, 'Regístrale precio primero', kind: ToastKind.warn);
       return;
     }
     store.addToCart(CartItem(
@@ -261,8 +260,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       currency: last.currency,
       barcode: p.barcode,
     ));
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('${p.name} agregado a la lista'), behavior: SnackBarBehavior.floating));
+    showToast(context, '${p.name} agregado a la lista', kind: ToastKind.ok);
   }
 
   /// Importa productos desde CSV (columnas «Codigo,Nombre,Fecha»; delimitador
@@ -275,10 +273,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final rows = parseCSV(raw);
     if (rows.length < 2) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('El CSV no trae filas de datos '
-                '(se espera encabezado + filas, ej.: Codigo,Nombre,Fecha)'),
-            behavior: SnackBarBehavior.floating));
+        showToast(context, 'El CSV no trae filas de datos '
+            '(se espera encabezado + filas, ej.: Codigo,Nombre,Fecha)', kind: ToastKind.warn);
       }
       return;
     }
@@ -293,9 +289,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final iName = findCol(['nombre', 'producto', 'name']);
     if (iName < 0) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Falta la columna «Nombre» en el CSV'),
-            behavior: SnackBarBehavior.floating));
+        showToast(context, 'Falta la columna «Nombre» en el CSV', kind: ToastKind.warn);
       }
       return;
     }
@@ -315,20 +309,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
     if (valid.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Sin filas válidas: la columna «Nombre» no trae datos'),
-            behavior: SnackBarBehavior.floating));
+        showToast(context, 'Sin filas válidas: la columna «Nombre» no trae datos',
+            kind: ToastKind.warn);
       }
       return;
     }
     final added = store.importProducts(valid);
     final dedupe = valid.length - added;
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(added > 0
+    showToast(context,
+        added > 0
             ? (dedupe > 0 ? '$added importados · Ya están en libro: $dedupe' : '$added importados')
-            : 'Ya están en libro: $dedupe'),
-        behavior: SnackBarBehavior.floating));
+            : 'Ya están en libro: $dedupe',
+        kind: added > 0 ? ToastKind.ok : ToastKind.info);
   }
 
   void _exportCsv(BuildContext context, AppStore store) {

@@ -346,7 +346,7 @@ class _HostOptions extends StatelessWidget {
               onPressed: () async {
                 final err = await ctrl.join(name: ctrl.myName, code: '');
                 if (err != null && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), behavior: SnackBarBehavior.floating));
+                  showToast(context, err, kind: ToastKind.error);
                 }
               },
               icon: const Icon(Icons.add_circle_outline),
@@ -402,7 +402,7 @@ class _JoinByCodeState extends State<_JoinByCode> {
                 final err = await widget.ctrl
                     .join(name: widget.ctrl.myName, code: _code.text.trim().toUpperCase());
                 if (err != null && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), behavior: SnackBarBehavior.floating));
+                  showToast(context, err, kind: ToastKind.error);
                 }
               },
               child: const Text('Entrar'),
@@ -455,7 +455,7 @@ class _NearbyRooms extends StatelessWidget {
               onTap: () async {
                 final err = await ctrl.joinAd(r, ctrl.myName);
                 if (err != null && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), behavior: SnackBarBehavior.floating));
+                  showToast(context, err, kind: ToastKind.error);
                 }
               },
             ),
@@ -614,9 +614,7 @@ class _ActiveRoom extends StatelessWidget {
                     TextButton.icon(
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: ctrl.code));
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                            content: Text('Código copiado'),
-                            behavior: SnackBarBehavior.floating));
+                        showToast(context, 'Código copiado', kind: ToastKind.ok);
                       },
                       icon: const Icon(Icons.copy_rounded, size: 16),
                       label: const Text('Copiar'),

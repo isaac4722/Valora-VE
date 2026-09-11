@@ -12,8 +12,8 @@
 ///   (addProduct con PriceRecord USD-normalizado, patrón de products_screen).
 /// · Pagado (ajustado) con moneda, nota, FOTO DEL TICKET (picker JPEG 1024
 ///   .72 + re-aseguro con photo_compress) y botón final «Guardar compra».
-/// Tras guardar: SnackBar con acción «Ver historial» → /historial, y una
-/// pasada fire-and-forget de compresión de tickets viejos (requisito J).
+/// Tras guardar: toast unificado con acción «Ver historial» → /historial, y
+/// una pasada fire-and-forget de compresión de tickets viejos (requisito J).
 library;
 
 import 'dart:async';
@@ -30,6 +30,8 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
+import '../../services/alerts.dart';
+import '../../services/notifications.dart';
 import '../../services/photo_compress.dart';
 import '../../widgets/ui.dart';
 import 'item_editor.dart';
@@ -42,14 +44,10 @@ Future<void> showCheckoutSheet(BuildContext context) async {
     builder: (_) => const CheckoutModal(),
   );
   if (saved == true && context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Compra guardada en el historial'),
-      behavior: SnackBarBehavior.floating,
-      action: SnackBarAction(
-        label: 'Ver historial',
-        onPressed: () => context.push('/historial'),
-      ),
-    ));
+    showToast(context, 'Compra guardada en el historial',
+        kind: ToastKind.ok,
+        actionLabel: 'Ver historial',
+        onAction: () => context.push('/historial'));
   }
 }
 
@@ -237,9 +235,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       var bytes = await photo.readAsBytes();
       if (bytes.length > 12 * 1024 * 1024) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('La foto pesa más de 12 MB'),
-              behavior: SnackBarBehavior.floating));
+          showToast(context, 'La foto pesa más de 12 MB', kind: ToastKind.warn);
         }
         return;
       }
@@ -293,7 +289,26 @@ class _CheckoutModalState extends State<CheckoutModal> {
       final pid = it.productId;
       if (pid != null && pid.isNotEmpty) {
         // Vinculado (de origen o por «Vincular»): el precio entra al libro.
+        // Alerta de subida de precio (v17.5): base = último registro previo.
+        final prev = _store.products
+            .where((x) => x.id == pid)
+            .firstOrNull
+            ?.latestRecord;
         _store.recordPurchaseItemOnProduct(pid, purchaseItem, store: itemStore);
+        try {
+          context.read<AlertEngine>().checkProductRise(
+                notifs: context.read<NotificationsService>(),
+                persist: (kind, title, body) => _store.pushNotification(
+                    kind: kind, title: title, body: body),
+                productId: pid,
+                productName: purchaseItem.name,
+                oldPrice: prev?.price ?? 0,
+                newPrice: purchaseItem.priceUSD,
+                storeName: itemStore,
+              );
+        } catch (_) {
+          // Sin Provider (previews/tests): la alerta es no-op, la compra sigue.
+        }
         continue;
       }
       // Producto nuevo: reutiliza el creado en esta misma compra si ya pasó.

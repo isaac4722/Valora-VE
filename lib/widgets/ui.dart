@@ -1133,12 +1133,106 @@ class LogoMark extends StatelessWidget {
   }
 }
 
-/// Copia al portapapeles con SnackBar accesible.
+/// Copia al portapapeles con toast unificado (v17.5).
 void copiarAlPortapapeles(BuildContext context, String text, String aviso) {
   Clipboard.setData(ClipboardData(text: text));
+  showToast(context, aviso, kind: ToastKind.ok);
+}
+
+/// Tipos del aviso unificado (v17.5 · sugerencia del modelo de apoyo:
+/// «banners/snackbars unificados»): un solo lenguaje de feedback efímero
+/// para TODA la app — cero SnackBars crudos sueltos con estilos distintos.
+enum ToastKind { info, ok, warn, error }
+
+/// Aviso unificado «toast-papel»: flotante, esquina 12, superficie de tinta
+/// invertida, icono semántico por tipo y acción opcional. Siempre reemplaza
+/// al aviso anterior (hideCurrentSnackBar) para no encolar ruido.
+void showToast(
+  BuildContext context,
+  String msg, {
+  ToastKind kind = ToastKind.info,
+  String? actionLabel,
+  VoidCallback? onAction,
+}) {
+  // El toast vive sobre superficie INVERTIDA (fg): en claro es tinta oscura
+  // → usamos las semánticas dark; en grafito es superficie clara → claras.
+  final bool inv = Theme.of(context).brightness == Brightness.light;
+  final VeInk sem = inv ? const VeInk.dark() : const VeInk.light();
+  final Color infoInk = inv ? VeColors.primaryDark : VeColors.primaryLight;
+  final (IconData icon, Color ink) = switch (kind) {
+    ToastKind.info => (Icons.info_outline_rounded, infoInk),
+    ToastKind.ok => (Icons.check_circle_outline, sem.pos),
+    ToastKind.warn => (Icons.warning_amber_rounded, sem.warn),
+    ToastKind.error => (Icons.error_outline, sem.neg),
+  };
+  final Color toastBg = inv ? VeColors.fgDark : VeColors.fgLight;
+  final Color toastFg = inv ? VeColors.fgLight : VeColors.fgDark;
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(aviso), behavior: SnackBarBehavior.floating));
+    ..showSnackBar(SnackBar(
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      elevation: 0,
+      backgroundColor: toastBg,
+      actionTextColor: infoInk,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      content: Row(children: [
+        Icon(icon, size: 17, color: ink),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(msg,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 1.35,
+                  color: toastFg)),
+        ),
+      ]),
+      action: (actionLabel != null && onAction != null)
+          ? SnackBarAction(label: actionLabel, onPressed: onAction)
+          : null,
+    ));
+}
+
+/// Etiqueta de divisa (v17.5 · sugerencia «USD vs Bs indistinguibles»):
+/// píldora caps con tinta por divisa — USD con tinta primaria (protagonista),
+/// Bs neutra, el resto con la semántica VeInk (COP oliva · BRL verde ·
+/// MXN magenta · EUR violeta). El color NUNCA dice oficial/paralelo (eso es
+/// de datos); solo identifica la divisa junto a la cifra.
+class CurrencyTag extends StatelessWidget {
+  const CurrencyTag(this.code, {super.key});
+
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final VeInk sem = VeColors.of(context);
+    final String c = code.toUpperCase();
+    final (Color ink, String label) = switch (c) {
+      'USD' => (scheme.primary, 'USD'),
+      'VES' => (scheme.onSurfaceVariant, 'Bs'),
+      'COP' => (sem.cop, 'COP'),
+      'BRL' => (sem.brl, 'BRL'),
+      'MXN' => (sem.mxn, 'MXN'),
+      'EUR' => (sem.manual, 'EUR'),
+      _ => (scheme.onSurfaceVariant, c),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: ink.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: ink.withValues(alpha: 0.32)),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+              color: ink)),
+    );
+  }
 }
 
 /// Genera un color estable a partir de un hash (para gráficas/tiendas).

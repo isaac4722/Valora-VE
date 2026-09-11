@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.4.0+11 · ronda v17.5 — GUI con consultoría externa: toast unificado, divisas explícitas y alertas de producto
+
+Cuarta pasada de GUI, ahora con las sugerencias del modelo de apoyo que el
+dueño trajo (consulta con acceso web). Antes de tocar código se auditó cada
+punto contra el árbol real: la mayoría ya vivía (tabular figures, FittedBox,
+scanWindow, checkout modal, editor de peso, Syncfusion, tickets, CSV,
+presupuesto, alerts de tasa, skeleton, pull-to-refresh, ThemeMode.system).
+Solo se integraron los HUECOS REALES. Skills: taste + flutter-ui-design +
+caveman (moderado).
+
+### Añadido
+- **Toast unificado (`showToast`)** — un solo lenguaje de feedback efímero
+  para toda la app: flotante, esquina 12, superficie de tinta invertida,
+  icono semántico por tipo (info/ok/warn/error con la semántica VeInk) y
+  acción opcional. Migrados los 34 SnackBars crudos de 12 archivos; cero
+  estilos sueltos. La acción «Ver historial» tras guardar compra se conserva.
+- **Etiqueta de divisa (`CurrencyTag`)** — píldora caps junto a la cifra:
+  USD con tinta primaria (protagonista), Bs neutra, COP/BRL/MXN/EUR con su
+  semántica. El color identifica la divisa, nunca oficial/paralelo (eso
+  sigue siendo de datos). Aplicada en Conversor (entrada y salida), héroe
+  de Lista y «Precio vigente» de la ficha.
+- **Alertas de subida de precio por producto** — hueco real del consultor
+  (prioridad alta): `AlertEngine.checkProductRise` avisa cuando un producto
+  sube ≥ umbral (slider nuevo en Ajustes, default 10 %) vs su último
+  registro, con dedupe por producto+día. Se dispara al registrar precio en
+  la ficha y al guardar una compra con producto vinculado. Notificación del
+  sistema + centro de notificaciones (kind «umbral»).
+- **Comparador de tiendas en la ficha** — sección «Tiendas»: último precio
+  por tienda ordenado de más barato a más caro; el más barato va en tinta
+  verde con «MÁS BARATO», cada fila con antigüedad y nº de registros. Solo
+  aparece con ≥ 2 tiendas (honestidad: sin comparación no hay sección).
+
+### Descartado (con razón documentada)
+- Migrar a flutter-starter-app/Riverpod/GoRouter o cambiar paquetes de
+  sync/nearby/gráficas: la app ya usa provider + go_router + Syncfusion y
+  tiene su propio offline-first con dedupe — el consultor evaluó una
+  versión vieja/imaginada del árbol. Evolución, no reescritura.
+- AnimatedSwitcher sobre la cifra del Conversor: `AnimatedNumber` (odómetro
+  tabular) ya anima la salida; añadir otro animador sería doble motion.
+
 ## 1.3.0+10 · ronda v17.4 — dp6 completo: tickets, Material You, matriz y diagnóstico
 
 Tercera pasada de GUI: el dueño pidió «créalo bien todo». Diff completo

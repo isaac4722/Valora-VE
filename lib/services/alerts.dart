@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/currencies.dart';
+import '../core/fmt.dart';
 import '../core/models.dart';
 import '../data/store.dart';
 import 'notifications.dart';
@@ -65,6 +66,11 @@ class AlertEngine {
 
   double get gapThreshold => _prefs.getDouble('$_kThresholds.gap') ?? 15;
   double get dailyThreshold => _prefs.getDouble('$_kThresholds.daily') ?? 5;
+
+  /// Umbral de subida de precio por PRODUCTO (v17.5): % mínimo de alza
+  /// vs el último registro anterior para avisar. Default 10 %.
+  double get productRiseThreshold =>
+      _prefs.getDouble('$_kThresholds.product') ?? 10;
 
   void setThreshold(String key, double value) =>
       _prefs.setDouble('$_kThresholds.$key', value);
@@ -191,6 +197,41 @@ class AlertEngine {
 
     // ── Recordatorio diario (app abierta) ──
     reminderCheck(notifs, now: now, persist: persist);
+  }
+
+  /// Subida de precio por producto (v17.5 · hueco real del consultor:
+  /// «alertas de subida de precio»). Se llama tras registrar un precio
+  /// nuevo (ficha de producto o checkout con producto vinculado): si el
+  /// precio USD sube ≥ [productRiseThreshold] % vs el registro anterior,
+  /// avisa por canal del sistema + centro de notificaciones. Dedupe por
+  /// producto+day (claim 60 s del engine) para no molestar dos veces.
+  void checkProductRise({
+    required NotificationsService notifs,
+    AlertPersist? persist,
+    required String productId,
+    required String productName,
+    required double oldPrice,
+    required double newPrice,
+    String? storeName,
+  }) {
+    if (oldPrice <= 0 || newPrice <= 0) return;
+    final pct = (newPrice / oldPrice - 1) * 100;
+    if (pct < productRiseThreshold) return;
+    if (!_claim(
+        'product-rise.$productId.${SnapshotPoint.dayKey(DateTime.now())}')) {
+      return;
+    }
+    final donde =
+        (storeName == null || storeName.isEmpty) ? '' : ' en $storeName';
+    _notify(
+      notifs,
+      kind: NotifKind.threshold,
+      channelId: 'rate_alerts',
+      title: 'Subió $productName',
+      body: 'Nuevo precio ${fmtUSD(newPrice)}$donde · '
+          '${fmtPct(pct)} vs el anterior (${fmtUSD(oldPrice)}).',
+      persist: persist,
+    );
   }
 
   /// Histéresis de metas: avisa una vez al cruzar, rearma al bajar.

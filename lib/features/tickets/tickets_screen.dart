@@ -170,8 +170,7 @@ class _TicketViewerState extends State<_TicketViewer> {
   Future<void> _share() async {
     final bytes = ticketBytes(widget.purchase.ticketPhoto);
     if (bytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('La foto no se puede leer para compartir.')));
+      showToast(context, 'La foto no se puede leer para compartir.', kind: ToastKind.error);
       return;
     }
     await sharePng(
@@ -201,8 +200,7 @@ class _TicketViewerState extends State<_TicketViewer> {
         widget.purchase.id, widget.purchase.copyWith(clearTicket: true));
     if (!mounted) return;
     setState(() => _removed = true);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Foto quitada. La compra sigue intacta.')));
+    showToast(context, 'Foto quitada. La compra sigue intacta.', kind: ToastKind.ok);
     Navigator.of(context).pop();
   }
 

@@ -31,7 +31,7 @@ import '../../widgets/walkthroughs_content.dart';
 
 /// Versión visible de la app (la del marketing); el buildNumber real viene
 /// de PackageInfo en la fila «Acerca de».
-const String kAppVersionVisible = '17.4';
+const String kAppVersionVisible = '17.5';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -726,6 +726,23 @@ class _AlertasState extends State<_Alertas> {
                 },
               ),
             ]),
+            Row(children: [
+              Expanded(
+                child: Text('Subida de producto > ${fmtNum(alerts.productRiseThreshold, decimals: 0)} %',
+                    style: const TextStyle(fontSize: 12.5)),
+              ),
+              Slider(
+                value: alerts.productRiseThreshold,
+                min: 5,
+                max: 50,
+                divisions: 9,
+                label: '${alerts.productRiseThreshold.toStringAsFixed(0)} %',
+                onChanged: (v) {
+                  alerts.setThreshold('product', v);
+                  setState(() {});
+                },
+              ),
+            ]),
             TextButton.icon(
               // Prueba REAL de la tubería Android: pide POST_NOTIFICATIONS si
               // falta y dispara por flutter_local_notifications (canal
@@ -748,12 +765,11 @@ class _AlertasState extends State<_Alertas> {
                 );
                 store.pushNotification(kind: NotifKind.test, title: 'Aviso de prueba', body: body);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context)
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(SnackBar(
-                        content: Text(granted
-                            ? 'Notificación enviada a la bandeja del sistema'
-                            : 'Permiso de notificaciones denegado')));
+                  showToast(context,
+                      granted
+                          ? 'Notificación enviada a la bandeja del sistema'
+                          : 'Permiso de notificaciones denegado',
+                      kind: granted ? ToastKind.ok : ToastKind.warn);
                 }
               },
               icon: const Icon(Icons.science_outlined, size: 15),
@@ -875,9 +891,7 @@ class _Respaldo extends StatelessWidget {
     final result = importBackup(store.data, raw, merge: merge);
     if (!result.ok) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(result.error ?? 'Archivo respaldo inválido'),
-            behavior: SnackBarBehavior.floating));
+        showToast(context, result.error ?? 'Archivo respaldo inválido', kind: ToastKind.error);
       }
       return;
     }
@@ -887,10 +901,10 @@ class _Respaldo extends StatelessWidget {
       store.replaceAll(r.data);
       if (context.mounted) {
         final c = r.counts;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Fusión: ${c.products} productos nuevos, '
-                '${c.records} registros, ${c.transactions} movimientos, ${c.purchases} compras'),
-            behavior: SnackBarBehavior.floating));
+        showToast(context,
+            'Fusión: ${c.products} productos nuevos, '
+            '${c.records} registros, ${c.transactions} movimientos, ${c.purchases} compras',
+            kind: ToastKind.ok);
       }
     } else {
       final incoming = AppData.fromJson(Map<String, dynamic>.from((jsonDecode(raw) as Map)['data'] as Map));
@@ -915,10 +929,10 @@ class _Respaldo extends StatelessWidget {
       );
       store.replaceAll(replaced);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Reemplazo: ${incoming.products.length} productos, '
-                '${incoming.purchases.length} compras'),
-            behavior: SnackBarBehavior.floating));
+        showToast(context,
+            'Reemplazo: ${incoming.products.length} productos, '
+            '${incoming.purchases.length} compras',
+            kind: ToastKind.ok);
       }
     }
   }

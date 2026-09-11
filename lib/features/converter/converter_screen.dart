@@ -644,11 +644,19 @@ class _DualInputState extends State<_DualInput> {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text('${widget.from.code} · toca para escribir',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 10.5, color: scheme.onSurfaceVariant)),
+                  // Divisa SIEMPRE visible junto a la cifra (v17.5).
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    CurrencyTag(widget.from.code),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text('toca para escribir',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 10.5,
+                              color: scheme.onSurfaceVariant)),
+                    ),
+                  ]),
                 ],
               ),
             ),
@@ -678,12 +686,18 @@ class _DualInputState extends State<_DualInput> {
                       VeText.displayNum(56, color: scheme.onSurfaceVariant)),
         ),
         const SizedBox(height: 2),
-        Text(
-          ok ? fmtCurrency(widget.result, widget.to) : 'sin tasa para este par',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
-        ),
+        // Divisa SIEMPRE visible junto a la cifra (v17.5).
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          if (ok) ...[CurrencyTag(widget.to.code), const SizedBox(width: 6)],
+          Flexible(
+            child: Text(
+              ok ? fmtCurrency(widget.result, widget.to) : 'sin tasa para este par',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
+            ),
+          ),
+        ]),
       ]),
     );
   }

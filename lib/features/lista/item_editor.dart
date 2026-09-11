@@ -226,9 +226,7 @@ class _ItemEditorState extends State<_ItemEditor> {
     final name = _nameCtrl.text.trim();
     final qty = _qty.clamp(1, 999);
     if (name.isEmpty || _price <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Escribe nombre y precio válido (> 0)'),
-          behavior: SnackBarBehavior.floating));
+      showToast(context, 'Escribe nombre y precio válido (> 0)', kind: ToastKind.warn);
       return;
     }
     final base = widget.initial;
