@@ -1174,7 +1174,6 @@ void showToast(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       elevation: 0,
       backgroundColor: toastBg,
-      actionTextColor: infoInk,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       content: Row(children: [
         Icon(icon, size: 17, color: ink),
@@ -1187,10 +1186,20 @@ void showToast(
                   height: 1.35,
                   color: toastFg)),
         ),
+        // Acción integrada (SnackBarAction no permite tinta propia en este
+        // Flutter): TextButton con la tinta de info sobre el fondo invertido.
+        if (actionLabel != null && onAction != null)
+          TextButton(
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              foregroundColor: infoInk,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(actionLabel!),
+          ),
       ]),
-      action: (actionLabel != null && onAction != null)
-          ? SnackBarAction(label: actionLabel, onPressed: onAction)
-          : null,
     ));
 }
 

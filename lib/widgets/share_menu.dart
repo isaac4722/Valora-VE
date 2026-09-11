@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../services/sharing.dart';
+import 'ui.dart';
 
 /// Opción del menú: formato + modo. [onRun] ejecuta la acción y devuelve un
 /// mensaje de resultado (null = silencio, éxito sin detalle).

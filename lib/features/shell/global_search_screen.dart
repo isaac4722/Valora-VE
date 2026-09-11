@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../data/store.dart';
+import '../../widgets/ui.dart';
 
 class GlobalSearchScreen extends StatefulWidget {
   const GlobalSearchScreen({super.key});

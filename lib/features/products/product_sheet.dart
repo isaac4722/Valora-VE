@@ -875,7 +875,6 @@ class _ProductSheetState extends State<ProductSheet> {
 
     final rows = byStore.entries.toList()
       ..sort((a, b) => a.value.price.compareTo(b.value.price));
-    final cheapest = rows.first.value.price;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Tiendas', icon: Icons.storefront_outlined),
