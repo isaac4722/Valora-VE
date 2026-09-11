@@ -185,16 +185,25 @@ class AppStore extends ChangeNotifier {
   void reopenTutorial() => _patchSettings(onboarded: false);
   void finishOnboarding() => _patchSettings(onboarded: true);
 
-  void _patchSettings({String? country, bool? onboarded, Map<String, String>? rateSourcesByModule}) {
+  void _patchSettings({String? country, bool? onboarded, Map<String, String>? rateSourcesByModule, bool? offlineMode, int? pollMinutes}) {
     final s = _data.settings;
     final patched = s.copyWith(
       country: country != null ? CountryX.from(country).code : null,
       onboarded: onboarded,
       rateSourcesByModule: rateSourcesByModule,
+      offlineMode: offlineMode,
+      pollMinutes: pollMinutes,
     );
     _data = AppData.fromJson(_data.toJson()..['settings'] = patched.toJson());
     _persist();
   }
+
+  /// Modo offline total (v17.2): la app NO consulta ninguna API; todo lo que
+  /// se ve sale del libro local (board/snapshots) + tasas manuales.
+  void setOfflineMode(bool v) => _patchSettings(offlineMode: v);
+
+  /// Cada cuánto consulta la app las APIs de tasas, en minutos (1..60).
+  void setPollMinutes(int m) => _patchSettings(pollMinutes: m.clamp(1, 60));
 
   /// setSetting genérico (§2.5) — camelCase de los campos v12/v13.
   void setSetting(String key, Object? value) {
@@ -205,6 +214,10 @@ class AppStore extends ChangeNotifier {
         patched = s.copyWith(country: CountryX.from('$value').code);
       case 'autoRefresh':
         patched = s.copyWith(autoRefresh: value == true);
+      case 'offlineMode':
+        patched = s.copyWith(offlineMode: value == true);
+      case 'pollMinutes':
+        patched = s.copyWith(pollMinutes: (value is num ? value.toInt() : int.tryParse('$value') ?? 1).clamp(1, 60));
       case 'tickerMode':
         patched = s.copyWith(tickerMode: '$value');
       case 'onboarded':
@@ -492,6 +505,12 @@ class AppStore extends ChangeNotifier {
         checkedBy: patch.checkedBy,
         clearProduct: patch.productId == null,
         clearCheckedBy: clearCheckedBy || patch.checkedBy == null,
+        store: patch.store,
+        clearStore: patch.store == null,
+        size: patch.size,
+        clearSize: patch.size == null,
+        sizeUnit: patch.sizeUnit,
+        clearSizeUnit: patch.sizeUnit == null,
       );
     }).toList();
     _data = AppData.fromJson(_data.toJson()..['cart'] = list.map((e) => e.toJson()).toList());
@@ -553,6 +572,47 @@ class AppStore extends ChangeNotifier {
     final list = _data.purchases.where((p) => p.id != id).toList();
     _data = AppData.fromJson(_data.toJson()..['purchases'] = list.map((e) => e.toJson()).toList());
     _persist();
+  }
+
+  /// findSimilarProduct (v17.2): detecta un producto YA registrado que
+  /// coincida por (a) mismo código de barras, o (b) mismo nombre en la
+  /// MISMA tienda. Criterios de identidad SOLO nombre/código/tienda —
+  /// nunca peso ni precio. Null = sin parecido razonable.
+  Product? findSimilarProduct({required String name, String? barcode, String? store}) {
+    final b = (barcode ?? '').trim();
+    final n = name.trim().toLowerCase();
+    final s = (store ?? '').trim().toLowerCase();
+    for (final p in _data.products) {
+      final sameBarcode = b.isNotEmpty && (p.barcode ?? '').trim() == b;
+      final sameStoreName = n.isNotEmpty &&
+          p.name.trim().toLowerCase() == n &&
+          s.isNotEmpty &&
+          p.records.any((r) => (r.store ?? '').trim().toLowerCase() == s);
+      if (sameBarcode || sameStoreName) return p;
+    }
+    return null;
+  }
+
+  /// recordPurchaseItemOnProduct (v17.2): añade el precio del ítem comprado
+  /// como nuevo PriceRecord del producto (USD normalizado, patrón del
+  /// editor de Productos) y devuelve el producto actualizado. La UI llama
+  /// esto tras el «ya existe → vincular» o tras crear el producto nuevo.
+  void recordPurchaseItemOnProduct(String productId, PurchaseItem item, {String? store}) {
+    final p = _data.products.where((e) => e.id == productId).firstOrNull;
+    if (p == null) return;
+    final sCtx = contextOf(module: RateModule.finance);
+    final usdRate = sCtx.unitsPerUSD(Currency.usd) ?? 1;
+    addRecord(productId, PriceRecord(
+      id: '',
+      price: item.priceUSD,
+      originalPrice: item.originalPrice,
+      currency: 'USD',
+      quantity: item.quantity,
+      store: (store ?? item.store)?.trim().isEmpty == false ? (store ?? item.store)!.trim() : null,
+      rate: usdRate,
+      sourceId: sCtx.sel(Currency.ves),
+      date: DateTime.now(),
+    ));
   }
 
   void addTransaction(Transaction t) {

@@ -473,6 +473,9 @@ class CartItem {
   final String? barcode;
   final bool checked; // comprado (local o sala, v13.4)
   final String? checkedBy; // «Comprador 88»
+  final String? store; // tienda del ítem (multitienda v17.2; null = única de la compra)
+  final double? size; // tamaño de la presentación (p.ej. 600)
+  final String? sizeUnit; // g | kg | ml | l | pzas
 
   const CartItem({
     required this.id,
@@ -484,6 +487,9 @@ class CartItem {
     this.barcode,
     this.checked = false,
     this.checkedBy,
+    this.store,
+    this.size,
+    this.sizeUnit,
   });
 
   CartItem copyWith({
@@ -498,6 +504,12 @@ class CartItem {
     String? checkedBy,
     bool clearCheckedBy = false,
     bool clearProduct = false,
+    String? store,
+    bool clearStore = false,
+    double? size,
+    bool clearSize = false,
+    String? sizeUnit,
+    bool clearSizeUnit = false,
   }) =>
       CartItem(
         id: id ?? this.id,
@@ -509,6 +521,9 @@ class CartItem {
         barcode: barcode ?? this.barcode,
         checked: checked ?? this.checked,
         checkedBy: clearCheckedBy ? null : (checkedBy ?? this.checkedBy),
+        store: clearStore ? null : (store ?? this.store),
+        size: clearSize ? null : (size ?? this.size),
+        sizeUnit: clearSizeUnit ? null : (sizeUnit ?? this.sizeUnit),
       );
 
   Map<String, dynamic> toJson() => {
@@ -521,6 +536,9 @@ class CartItem {
         'barcode': barcode,
         'checked': checked,
         'checkedBy': checkedBy,
+        'store': store,
+        'size': size,
+        'sizeUnit': sizeUnit,
       };
 
   factory CartItem.fromJson(Map<String, dynamic> j) => CartItem(
@@ -533,6 +551,9 @@ class CartItem {
         barcode: j['barcode'] as String?,
         checked: j['checked'] == true,
         checkedBy: j['checkedBy'] as String?,
+        store: j['store'] as String?,
+        size: j['size'] == null ? null : dOf(j['size']),
+        sizeUnit: j['sizeUnit'] as String?,
       );
 }
 
@@ -545,6 +566,9 @@ class PurchaseItem {
   final double originalPrice; // unitario tal cual
   final String currency;
   final String? productId; // vínculo catálogo
+  final String? store; // tienda de ESTE ítem (multitienda v17.2)
+  final double? size; // tamaño capturado en la lista (peso/volumen)
+  final String? sizeUnit; // g | kg | ml | l | pzas
 
   const PurchaseItem({
     required this.name,
@@ -553,6 +577,9 @@ class PurchaseItem {
     required this.originalPrice,
     required this.currency,
     this.productId,
+    this.store,
+    this.size,
+    this.sizeUnit,
   });
 
   PurchaseItem copyWith({
@@ -562,6 +589,9 @@ class PurchaseItem {
     double? originalPrice,
     String? currency,
     String? productId,
+    String? store,
+    double? size,
+    String? sizeUnit,
   }) =>
       PurchaseItem(
         name: name ?? this.name,
@@ -570,6 +600,9 @@ class PurchaseItem {
         originalPrice: originalPrice ?? this.originalPrice,
         currency: currency ?? this.currency,
         productId: productId ?? this.productId,
+        store: store ?? this.store,
+        size: size ?? this.size,
+        sizeUnit: sizeUnit ?? this.sizeUnit,
       );
 
   Map<String, dynamic> toJson() => {
@@ -579,6 +612,9 @@ class PurchaseItem {
         'originalPrice': originalPrice,
         'currency': currency,
         'productId': productId,
+        'store': store,
+        'size': size,
+        'sizeUnit': sizeUnit,
       };
 
   factory PurchaseItem.fromJson(Map<String, dynamic> j) => PurchaseItem(
@@ -588,6 +624,9 @@ class PurchaseItem {
         originalPrice: dOf(j['originalPrice']),
         currency: sOf(j['currency'], 'USD'),
         productId: j['productId'] as String?,
+        store: j['store'] as String?,
+        size: j['size'] == null ? null : dOf(j['size']),
+        sizeUnit: j['sizeUnit'] as String?,
       );
 }
 
@@ -825,10 +864,14 @@ class Settings {
   final String tickerSize; // v13 'compact' | 'normal' | 'large'
   final int tickerSpeed; // v13 90 | 120 | 180 (segundos por vuelta)
   final List<String> currencyOrder; // v13 (vacío = canónico, se purga)
+  final bool offlineMode; // v17.2: sin NINGUNA consulta a APIs (solo guardadas)
+  final int pollMinutes; // v17.2: cada cuánto consulta la app las APIs (1..60)
 
   const Settings({
     this.country = 'VE',
     this.autoRefresh = true,
+    this.offlineMode = false,
+    this.pollMinutes = 1,
     this.tickerMode = 'featured',
     this.onboarded = false,
     this.calcCurrency = 'VES',
@@ -855,6 +898,8 @@ class Settings {
   const Settings._defaultC()
       : country = 'VE',
         autoRefresh = true,
+        offlineMode = false,
+        pollMinutes = 1,
         tickerMode = 'featured',
         onboarded = false,
         calcCurrency = 'VES',
@@ -878,6 +923,8 @@ class Settings {
   Settings copyWith({
     String? country,
     bool? autoRefresh,
+    bool? offlineMode,
+    int? pollMinutes,
     String? tickerMode,
     bool? onboarded,
     String? calcCurrency,
@@ -908,6 +955,8 @@ class Settings {
       Settings(
         country: country ?? this.country,
         autoRefresh: autoRefresh ?? this.autoRefresh,
+        offlineMode: offlineMode ?? this.offlineMode,
+        pollMinutes: pollMinutes ?? this.pollMinutes,
         tickerMode: tickerMode ?? this.tickerMode,
         onboarded: onboarded ?? this.onboarded,
         calcCurrency: calcCurrency ?? this.calcCurrency,
@@ -934,6 +983,8 @@ class Settings {
   Map<String, dynamic> toJson() => {
         'country': country,
         'autoRefresh': autoRefresh,
+        'offlineMode': offlineMode,
+        'pollMinutes': pollMinutes,
         'tickerMode': tickerMode,
         'onboarded': onboarded,
         'calcCurrency': calcCurrency,
@@ -993,6 +1044,8 @@ class Settings {
     return Settings(
       country: CountryX.from(sOf(j['country'], 'VE')).code,
       autoRefresh: j['autoRefresh'] != false,
+      offlineMode: j['offlineMode'] == true,
+      pollMinutes: (iOf(j['pollMinutes'], 1)).clamp(1, 60),
       tickerMode: switch (sOf(j['tickerMode'], 'featured')) {
         'focus' => 'focus',
         'off' => 'off',

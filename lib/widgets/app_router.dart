@@ -25,6 +25,7 @@ import '../features/insights/insights_screen.dart';
 import '../features/legal/legal_screen.dart';
 import '../features/lista/lista_screen.dart';
 import '../features/products/products_screen.dart';
+import '../features/room/room_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/shell/main_shell.dart';
 import '../features/welcome/welcome_screen.dart';
@@ -84,6 +85,9 @@ GoRouter buildRouter({required AppStore store}) {
         ],
       ),
       GoRoute(path: '/legal', builder: (_, _) => const LegalScreen()),
+      // Sala en vivo: PANTALLA COMPLETA (v17.2, decisión del dueño — no
+      // vuelve a ser un sheet deslizante).
+      GoRoute(path: '/sala', builder: (_, _) => const RoomScreen()),
     ],
   );
 }

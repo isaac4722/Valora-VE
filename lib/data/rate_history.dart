@@ -8,7 +8,11 @@ import '../core/models.dart';
 
 const int kMaxDays = 180;
 
-/// Añade snapshots del board (dedupe día, última gana).
+/// Añade snapshots del board. Regla sin-duplicados (v17.2, pedido del dueño):
+/// · mismo (fuente, día) con el MISMO valor → no se toca (nada nuevo);
+/// · mismo (fuente, día) con valor distinto → última gana (un punto por día);
+/// · (fuente, día) nuevo → se añade. Así el libro es una hoja de ruta
+///   compacta: nunca hay dos filas idénticas para la misma fecha/fuente.
 void appendSnapshots(List<SnapshotPoint> store, RateBoard board, {DateTime? now}) {
   now ??= DateTime.now();
   final day = SnapshotPoint.dayKey(now);
@@ -16,7 +20,7 @@ void appendSnapshots(List<SnapshotPoint> store, RateBoard board, {DateTime? now}
     final idx = store.indexWhere((p) => p.sourceId == e.key && p.day == day);
     final point = SnapshotPoint(sourceId: e.key, day: day, rate: e.value.rate);
     if (idx >= 0) {
-      store[idx] = point; // última gana
+      if (store[idx].rate != point.rate) store[idx] = point; // última gana
     } else {
       store.add(point);
     }

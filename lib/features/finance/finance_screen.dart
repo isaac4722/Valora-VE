@@ -85,7 +85,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   MaterialPageRoute(builder: (_) => const StatementScreen(kind: 'finance'))),
             )),
           // 01 Resumen.
-          SectionTitle('Resumen', index: 1),
+          SectionTitle('Resumen'),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -119,7 +119,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
             ),
           ),
           // 02 Movimientos.
-          SectionTitle('Movimientos', index: 2, actionLabel: 'Exportar CSV', onAction: () => _export(context, filtered)),
+          SectionTitle('Movimientos', actionLabel: 'Exportar CSV', onAction: () => _export(context, filtered)),
           Wrap(spacing: 6, children: [
             for (final p in _periods)
               ChipTag(p, selected: _period == p, onTap: () => setState(() { _period = p; _page = 0; })),
@@ -200,7 +200,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 ]),
               ),
           // 03 Análisis (donut + barras).
-          SectionTitle('Análisis', index: 3),
+          SectionTitle('Análisis'),
           _DonutChart(transactions: store.transactions),
           _BarsChart(transactions: store.transactions),
         ],

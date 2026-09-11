@@ -72,8 +72,15 @@ class RatesPoller extends ChangeNotifier {
   /// Última lista de fuentes cambiadas (para flashes del tablero).
   List<String> lastChanged = [];
 
+  bool get offlineActive => _store.settings.offlineMode;
+
   Future<void> refreshNow() async {
     if (_loading) return;
+    if (_store.settings.offlineMode) {
+      // Modo offline total: ninguna consulta a APIs. Lo visible sale del
+      // libro local + tasas manuales (v17.2, decisión del dueño).
+      return;
+    }
     _loading = true;
     _stale = false;
     notifyListeners();
@@ -108,18 +115,35 @@ class RatesPoller extends ChangeNotifier {
       // OK envejece >15 min — NUNCA antes de haber visto el tablero.
       if (_store.board.isEmpty) _networkBlocked = true;
       _stale = true;
+      // Reintento rápido: aunque el intervalo sea de 15/30 min, si el
+      // fallo fue por red lo sensato es volver a intentar en 60 s.
+      _scheduleNext(fast: true);
     } finally {
       _loading = false;
       notifyListeners();
     }
   }
 
-  void startAuto() {
+  /// Temporizador AUTO-reprogramado: lee el intervalo real de settings en
+  /// cada ciclo (v17.2 «consultas esporádicas» configurables por el dueño).
+  /// En fallo de red reintenta a los 60 s como máximo (no espera 30 min) y
+  /// en éxito espera el intervalo elegido.
+  void _scheduleNext({bool fast = false}) {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 60), (_) {
-      if (!_store.settings.autoRefresh) return;
-      refreshNow();
+    if (!_store.settings.autoRefresh || _store.settings.offlineMode) return;
+    final mins = _store.settings.pollMinutes.clamp(1, 60);
+    final delay = fast || mins == 1
+        ? const Duration(seconds: 60)
+        : Duration(minutes: mins);
+    _timer = Timer(delay, () async {
+      await refreshNow();
+      _scheduleNext();
     });
+  }
+
+  void startAuto() {
+    if (_store.settings.offlineMode) return;
+    _scheduleNext();
   }
 
   void stopAuto() {

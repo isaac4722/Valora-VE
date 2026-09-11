@@ -28,7 +28,7 @@ import '../../widgets/ui.dart';
 
 /// Versión visible de la app (la del marketing); el buildNumber real viene
 /// de PackageInfo en la fila «Acerca de».
-const String kAppVersionVisible = '17.1';
+const String kAppVersionVisible = '17.2';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -45,6 +45,7 @@ class SettingsScreen extends StatelessWidget {
         children: [
           const PageHeader('Ajustes', hint: 'Todo lo que la app decide contigo'),
           _Pais(store: store),
+          _DatosConexion(store: store),
           _Personalizacion(store: store),
           _Monedas(store: store),
           _Apariencia(),
@@ -54,6 +55,79 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Datos y conexión (v17.2): modo offline total + cada cuánto se consultan
+/// las APIs. Todo vive en Settings (store) y el poller lo lee en vivo.
+class _DatosConexion extends StatelessWidget {
+  const _DatosConexion({required this.store});
+  final AppStore store;
+
+  static const _intervalos = <int, String>{
+    1: 'Cada minuto (en vivo)',
+    5: 'Cada 5 minutos',
+    15: 'Cada 15 minutos',
+    30: 'Cada 30 minutos',
+    60: 'Cada hora (ahorro máximo)',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final s = store.settings;
+    final poller = context.read<RatesPoller>();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SectionTitle('Datos y conexión'),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: s.offlineMode,
+              onChanged: (v) {
+                store.setOfflineMode(v);
+                if (v) {
+                  poller.stopAuto(); // offline total: sin más consultas
+                } else {
+                  poller.markActive(); // reanuda el ciclo ya
+                  poller.refreshNow();
+                }
+              },
+              title: const Text('Modo offline total',
+                  style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800)),
+              subtitle: Text(
+                s.offlineMode
+                    ? 'Activo: la app NO consulta ninguna API. Todo se lee de tu libro local y tus tasas manuales.'
+                    : 'Desactivado: la app consulta las APIs de tasas según el intervalo de abajo.',
+                style: TextStyle(fontSize: 12, height: 1.4, color: scheme.onSurfaceVariant),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text('Intervalo de consulta de tasas',
+                style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 8),
+            Wrap(spacing: 6, runSpacing: 6, children: [
+              for (final e in _intervalos.entries)
+                ChipTag(e.value,
+                    selected: !s.offlineMode && s.pollMinutes == e.key,
+                    onTap: s.offlineMode
+                        ? null
+                        : () {
+                            store.setPollMinutes(e.key);
+                            poller.markActive(); // reprograma el ciclo
+                          }),
+            ]),
+            const SizedBox(height: 10),
+            Text(
+              'Las tasas descargadas se guardan en tu teléfono (una fila por fecha y fuente, sin duplicados) y siguen disponibles sin conexión.',
+              style: TextStyle(fontSize: 11.5, height: 1.45, color: scheme.onSurfaceVariant),
+            ),
+          ]),
+        ),
+      ),
+    ]);
   }
 }
 
@@ -68,7 +142,7 @@ class _Pais extends StatelessWidget {
     final country = CountryX.from(store.settings.country);
     final order = CurrencyX.focusOrder(store.settings.currencyOrder);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('País', index: 1),
+      SectionTitle('País'),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -157,7 +231,7 @@ class _Personalizacion extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Personalización', index: 2),
+      SectionTitle('Personalización'),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -226,7 +300,7 @@ class _Monedas extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final ctx = store.contextOf();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Monedas y tasas', index: 3),
+      SectionTitle('Monedas y tasas'),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -375,7 +449,7 @@ class _Apariencia extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeController>();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Apariencia', index: 4),
+      SectionTitle('Apariencia'),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -422,7 +496,7 @@ class _AlertasState extends State<_Alertas> {
     final notifs = context.read<NotificationsService>();
     final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Alertas', index: 5),
+      SectionTitle('Alertas'),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -617,7 +691,7 @@ class _Respaldo extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Respaldo', index: 6),
+      SectionTitle('Respaldo'),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -756,7 +830,7 @@ class _TutorialLegal extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Tutorial y legal', index: 7),
+      SectionTitle('Tutorial y legal'),
       Card(
         child: Column(children: [
           ListTile(
