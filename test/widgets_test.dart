@@ -201,12 +201,20 @@ void main() {
       await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
       await tester.pumpAndSettle();
       expect(find.text('Conversor'), findsOneWidget);
-      expect(find.text('RUTA DEL CÁLCULO'), findsOneWidget);
-      // swap invierte el par
+      // swap invierte el par (está arriba, visible en el viewport de prueba)
       final fromBefore = store.data.converter.from;
       await tester.tap(find.byIcon(Icons.swap_vert));
       await tester.pumpAndSettle();
       expect(store.data.converter.from, isNot(fromBefore));
+      // La ruta del cálculo quedó MÁS ABAJO (v17.2 añade fecha de tasas +
+      // fuente encima): baja hasta ella antes de afirmar.
+      await tester.dragUntilVisible(
+        find.text('RUTA DEL CÁLCULO'),
+        find.byType(ListView).first,
+        const Offset(0, -250),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('RUTA DEL CÁLCULO'), findsOneWidget);
     });
 
     testWidgets('Lista: agregar producto, plantilla, vuelto, dividir', (tester) async {
