@@ -13,6 +13,8 @@ import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../state/app_state.dart';
 import '../../widgets/ui.dart';
+import '../../widgets/walkthrough.dart';
+import '../../widgets/walkthroughs_content.dart';
 import 'notifs_center.dart';
 import 'global_search_screen.dart';
 import '../../widgets/app_router.dart' show kNavBarKey, kHeaderActionsKey;
@@ -93,6 +95,7 @@ class MainShell extends StatelessWidget {
           _Header(activeIndex: current),
           RateHealthBanner(stale: poller.rateStale, onRetry: () => poller.refreshNow()),
           if (current == 0) _HomeTicker(),
+          _WalkthroughTrigger(current: current),
           Expanded(child: navigationShell),
         ],
       ),
@@ -126,6 +129,56 @@ class MainShell extends StatelessWidget {
     final store = context.watch<AppStore>();
     return store.cart.fold<int>(0, (acc, c) => acc + c.quantity);
   }
+}
+
+/// Dispara el walkthrough del módulo al entrar a su pestaña (UNA vez por
+/// instalación; replay manual en Ajustes). Widget de cero píxeles.
+class _WalkthroughTrigger extends StatefulWidget {
+  const _WalkthroughTrigger({required this.current});
+  final int current;
+
+  @override
+  State<_WalkthroughTrigger> createState() => _WalkthroughTriggerState();
+}
+
+class _WalkthroughTriggerState extends State<_WalkthroughTrigger> {
+  int? _last;
+
+  static const _locations = ['/', '/conversor', '/lista', '/productos', '/finanzas', '/analisis'];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShow());
+  }
+
+  @override
+  void didUpdateWidget(_WalkthroughTrigger old) {
+    super.didUpdateWidget(old);
+    if (old.current != widget.current) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShow());
+    }
+  }
+
+  void _maybeShow() {
+    if (!mounted || _last == widget.current) return;
+    _last = widget.current;
+    if (widget.current < 0 || widget.current >= _locations.length) return;
+    final location = _locations[widget.current];
+    final wt = kWalkthroughs[location];
+    if (wt == null) return;
+    // Tolerante: sin Provider<SharedPreferences> (tests, previews) se salta.
+    final SharedPreferences prefs;
+    try {
+      prefs = context.read<SharedPreferences>();
+    } on ProviderNotFoundException {
+      return;
+    }
+    maybeRunWalkthrough(context, prefs, location, wt.title, wt.steps);
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 class _TabSpec {

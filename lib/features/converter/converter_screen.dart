@@ -10,9 +10,11 @@
 library;
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
@@ -23,6 +25,7 @@ import '../../data/rate_history.dart';
 import '../../data/store.dart';
 import '../../services/sharing.dart';
 import '../../widgets/share_card.dart';
+import '../../widgets/share_menu.dart';
 import '../../widgets/ui.dart';
 
 class ConverterScreen extends StatefulWidget {
@@ -211,20 +214,21 @@ class _ConverterScreenState extends State<ConverterScreen> {
 
   /// Comparte la conversión con la TARJETA DE MARCA (1080×1080) compuesta
   /// offstage — solo memoria, sin archivo intermedio (regla del dueño).
-  Future<void> _shareCard() async {
+  /// Bytes de la tarjeta de marca (sin compartir aún).
+  Future<Uint8List?> _renderCard() async {
     final store = context.read<AppStore>();
     final ctx = _context(store);
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
     final plan = ctx.plan(from, to);
-    if (plan == null || _amount <= 0) return;
+    if (plan == null || _amount <= 0) return null;
     final result = _amount * plan.rate;
     final primaryId =
         plan.sourceIds.isNotEmpty ? plan.sourceIds.first : ctx.sel(from);
     final src = RateSource.of(primaryId);
     final label = convSourceNames[primaryId] ?? src?.label ?? primaryId;
     final cat = src?.category.label ?? '';
-    final png = await renderConversionSharePng(
+    return renderConversionSharePng(
       context,
       from: from,
       to: to,
@@ -235,14 +239,53 @@ class _ConverterScreenState extends State<ConverterScreen> {
       // Fecha de la tasa mostrada (hoy o la histórica elegida).
       date: _dateMode == 'today' ? DateTime.now() : (_customDate ?? DateTime.now()),
     );
-    if (!mounted) return;
-    if (png == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('No pude generar la tarjeta'),
-          behavior: SnackBarBehavior.floating));
-      return;
-    }
-    await sharePng(png, 'conversion-valorave.png');
+  }
+
+  /// Compartir SIEMPRE vía menú propio (v17.2): texto · imagen · guardar.
+  /// Nunca el share nativo directo con un PNG.
+  Future<void> _shareCard() async {
+    final store = context.read<AppStore>();
+    final ctx = _context(store);
+    final from = CurrencyX.from(store.data.converter.from);
+    final to = CurrencyX.from(store.data.converter.to);
+    final plan = ctx.plan(from, to);
+    if (plan == null || _amount <= 0) return;
+    final result = _amount * plan.rate;
+    final text =
+        '${fmtPlain(_amount, 2)} ${from.code} = ${fmtMoney(result, to)} · '
+        '1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} — ValoraVE';
+    await showShareMenu(context, title: 'Resultado ${from.code} → ${to.code}', actions: [
+      ShareMenuAction(
+        icon: Icons.subject_rounded,
+        label: 'Texto',
+        hint: 'Cifra y tasa listas para pegar en un chat',
+        onRun: () async {
+          await SharePlus.instance.share(ShareParams(text: text));
+          return null;
+        },
+      ),
+      ShareMenuAction(
+        icon: Icons.image_outlined,
+        label: 'Compartir imagen',
+        hint: 'Tarjeta de ValoraVE con la conversión',
+        onRun: () async {
+          final png = await _renderCard();
+          if (png == null) return 'No pude generar la tarjeta';
+          await sharePng(png, 'conversion-valorave.png');
+          return null;
+        },
+      ),
+      ShareMenuAction(
+        icon: Icons.download_rounded,
+        label: 'Descargar imagen',
+        hint: 'Guarda la tarjeta sin abrir el share',
+        onRun: () async {
+          final png = await _renderCard();
+          if (png == null) return 'No pude generar la tarjeta';
+          return runDownloadBytes(png, 'conversion-valorave.png');
+        },
+      ),
+    ]);
   }
 
   /// Texto del resultado al portapapeles (acompaña a la tarjeta).

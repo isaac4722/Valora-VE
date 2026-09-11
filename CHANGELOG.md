@@ -1,5 +1,109 @@
 # Changelog
 
+## 1.2.0+7 · ronda v17.2 — offline-first real + revisión general de GUI
+
+Ronda guiada por la revisión completa del dueño: el foco es el
+**funcionamiento offline real con persistencia sin duplicados**, los
+**walkthroughs por módulo** y una pasada de calidad GUI en TODOS los
+módulos (conversor, lista/checkout, productos, finanzas, análisis, sala).
+Sigue en rama de prueba: se compila, el dueño prueba y solo entonces va a
+main. Skills de agentes incluidas en el repo (`agent-skills/`).
+
+### Añadido — Offline y persistencia (la queja #1)
+- **Modo offline total elegible** (Ajustes → Datos y conexión): la app NO
+  consulta ninguna API; todo se lee del libro local + tasas manuales.
+- **Intervalo de consulta configurable** (1/5/15/30/60 min): «consultas
+  esporádicas» por decisión del dueño; el poller se reprograma solo y en
+  fallo de red reintenta a los 60 s como máximo.
+- **Snapshots sin duplicados**: regla (fuente, día, valor) — un valor
+  idéntico en la misma fecha/fuente no vuelve a escribirse; el libro es
+  una hoja de ruta compacta por fecha.
+- **Estado vacío honesto** en Inicio: distingue «modo offline activo» /
+  «sin conexión · sin tasas guardadas todavía» / «buscando tasas» — ya no
+  sugiere configuración errónea cuando solo faltó red. Con tasas guardadas
+  en Hive, sin red se SIGUE viendo todo (cache-first).
+
+### Añadido — Walkthroughs («app walkthroughs»)
+- Recorrido guiado por módulo (Inicio, Conversor, Lista, Productos,
+  Historial, Finanzas, Análisis, Ajustes): overlay con foco, pasos
+  progresivos, se muestra una vez por instalación y **se repliega desde
+  Ajustes → Tutorial → Recorridos por módulo**.
+
+### Añadido — Compartir y descargar (menú propio)
+- **Menú propio antes del share nativo** (regla: nunca PNG/PDF directo):
+  texto · imagen · PDF, cada uno con «compartir» y «descargar» (guardar en
+  carpeta ValoraVE sin abrir el share).
+- **Tarjeta de conversión de marca** (1080×1080, compuesta offstage, solo
+  memoria): «de esta divisa a esta divisa es tanto» con banderas, fecha y
+  fuente — ya no es una captura del cuadro.
+- **PDF de constancia reconstruido**: encabezado de marca, cajas de
+  totales en color, tabla de desglose por categoría/tienda, pie honesto.
+
+### Mejorado — Inicio
+- «Cotización principal» muestra TODAS las tasas de la moneda del país
+  (BCV · Paralelo · Promedio · Manual) + la fuente activa de las demás
+  divisas, con valores manuales incluidos.
+- Retirado el bloque «Tu sueldo» y los índices numéricos «01/02/…» de los
+  títulos de sección (decisión del dueño).
+
+### Mejorado — Conversor
+- Números largos no rompen el cuadro (FittedBox + lectura/escritura dual).
+- Selector de fuente de tasa accesible, oficial por defecto, override por
+  módulo con «seguir global».
+- Fecha de las tasas bajo el título con presets y **calendario histórico
+  funcional** (solo días con snapshot guardados; fin de la pantalla gris).
+- Tabla de referencia con ≥2 tasas por divisa identificando moneda y
+  fuente («EUR Oficial a Bs», «COP Mercado»…), tap para activar.
+- Ajustes rápidos (+100/−100/+10 %/−10 %) junto al campo de entrada.
+
+### Mejorado — Lista y checkout
+- Selector de fuente de tasa junto al de moneda del cálculo.
+- Escáner procesa SOLO el recuadro de apuntado (scanWindow/ROI).
+- Editor de ítems completo: nombre, precio, cantidad, **peso/volumen con
+  precio por kg/l**, tienda y código de barras.
+- Escaneo sin resultado → «repetir escaneo» o «agregar manualmente» con el
+  código prellenado.
+- Multitienda: tienda única capturada una vez (editable) o por ítem; la
+  compra registra cada producto según su tienda.
+- **Checkout como modal** (tiendas, cuenta ajustada, nota, foto de ticket)
+  con acceso directo al historial tras guardar.
+- Aviso «ya existe» al vincular compras con productos registrados (match
+  por código o nombre+tienda, nunca por precio/peso).
+- **Compresión automática de tickets antiguos** (>30 días, re-encode JPEG
+  solo si reduce >20 %; sin dependencias nuevas).
+- Vuelto con **pagos multi-divisa** y dividir cuenta con personas y
+  propina.
+
+### Mejorado — Productos
+- Ficha como menú completo: gráfica de evolución, variación del último
+  registro, historial editable, cambio de código de barras (con escáner)
+  y tienda, meta de precio, alta con primer precio en un paso.
+- Iconos de importar/exportar escaneo claros y consistentes.
+
+### Mejorado — Análisis
+- Gráficas interactivas (tooltip + trackball/crosshair al tap).
+- Selector de brecha con cursor en el punto exacto y brecha por día.
+- Etiquetas de cobertura REAL («1 Año · N días con datos»).
+- Inflación personal con canasta y desglose, históricos sin errores.
+
+### Mejorado — Sala en vivo
+- **Pantalla completa** (ruta /sala, adiós al sheet deslizante).
+- Cuatro modos: Servidor (sockets) · Cerca (Nearby WiFi-Direct/BT/BLE) ·
+  WiFi local (LAN, sin internet) · Bluetooth, cada uno pidiendo SU permiso.
+- **Verificación PIN de 4 dígitos + emoji coincidente** en todos los
+  caminos; si el emoji no coincide se cancela.
+- Descubrimiento de salas públicas cercanas (Nearby + UDP) o entrada por
+  código; pública/privada; máximo 10 miembros.
+- Servidor propio configurable desde la sala (host:puerto + token, probar
+  conexión, guía) y «este teléfono como servidor» con IP:puerto.
+
+### Otros
+- `agent-skills/` con la familia taste-skill (Leonxlnx) + skills
+  flutter/dart para agentes que trabajen en el repo.
+- Modelos: CartItem y PurchaseItem con tienda/tamaño (JSON tolerante).
+- Store: findSimilarProduct + recordPurchaseItemOnProduct para el flujo
+  compra→catálogo.
+
 ## 1.1.0-dp4+6 · rama fix/v1.1.0-dp4-paridad
 
 Ronda de CALIDAD VISUAL guiada por el prototipo de referencia **dp4**

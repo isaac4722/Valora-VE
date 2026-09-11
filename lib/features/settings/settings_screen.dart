@@ -25,6 +25,8 @@ import '../../services/notifications.dart';
 import '../../services/sharing.dart';
 import '../../state/app_state.dart';
 import '../../widgets/ui.dart';
+import '../../widgets/walkthrough.dart';
+import '../../widgets/walkthroughs_content.dart';
 
 /// Versión visible de la app (la del marketing); el buildNumber real viene
 /// de PackageInfo en la fila «Acerca de».
@@ -831,11 +833,37 @@ class _TutorialLegal extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Tutorial y legal'),
+      // Walkthroughs por módulo (v17.2): replay manual de cada recorrido.
+      Card(
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Recorridos por módulo',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: scheme.onSurface)),
+            ),
+          ),
+          for (final e in kWalkthroughLabels.entries)
+            ListTile(
+              dense: true,
+              leading: Icon(Icons.map_outlined, size: 19, color: scheme.primary),
+              title: Text(e.value, style: const TextStyle(fontSize: 13)),
+              trailing: const Icon(Icons.play_arrow_rounded, size: 20),
+              onTap: () {
+                final wt = kWalkthroughs[e.key];
+                if (wt == null) return;
+                runWalkthrough(context, wt.title, wt.steps);
+              },
+            ),
+        ]),
+      ),
+      const SizedBox(height: 8),
       Card(
         child: Column(children: [
           ListTile(
             leading: Icon(Icons.school_outlined, color: scheme.primary),
-            title: const Text('Volver a ver el tutorial', style: TextStyle(fontSize: 13.5)),
+            title: const Text('Volver a ver la bienvenida', style: TextStyle(fontSize: 13.5)),
             onTap: () {
               store.reopenTutorial();
               context.go('/bienvenida');

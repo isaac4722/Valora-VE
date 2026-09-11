@@ -6,6 +6,7 @@
 library;
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
@@ -19,6 +20,7 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../services/sharing.dart';
+import '../../widgets/share_menu.dart';
 
 const kInkPos = Color(0xFF10755A);
 const kInkNeg = Color(0xFFCF4437); // §8: rojo firma de datos (neg) real
@@ -152,22 +154,18 @@ class _StatementScreenState extends State<StatementScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          // Tres caminos: nunca auto-print.
+          // Camino ÚNICO de salida: menú propio texto/imagen/PDF con
+          // compartir o descargar por formato (v17.2). Nunca auto-print ni
+          // share directo.
           FilledButton.icon(
-            icon: const Icon(Icons.image_outlined, size: 17),
-            label: const Text('Generar PNG (1080×1350)'),
-            onPressed: () => unawaited(_sharePng(context)),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.share_outlined, size: 17),
-            label: const Text('Compartir'),
-            onPressed: () => _sharePdf(context, store, range, label, tx, purchases),
+            icon: const Icon(Icons.ios_share, size: 17),
+            label: const Text('Compartir o guardar…'),
+            onPressed: () => unawaited(_shareMenu(context, store, range, label, tx, purchases)),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             icon: const Icon(Icons.print_outlined, size: 17),
-            label: const Text('Imprimir / PDF'),
+            label: const Text('Imprimir'),
             onPressed: () => _printPdf(context, store, range, label, tx, purchases),
           ),
         ],
@@ -218,31 +216,81 @@ class _StatementScreenState extends State<StatementScreen> {
     ];
   }
 
-  /// PNG REAL (1080×1350 aprox, §9.9): captura el RepaintBoundary del
-  /// documento con captureWidget (pixelRatio 3 → ~1080 px de ancho en
-  /// pantallas típicas) y lo comparte vía share_plus. Si la captura falla
-  /// → SnackBar de error honesto. NUNCA auto-print.
-  Future<void> _sharePng(BuildContext context) async {
-    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-    try {
-      final bytes = await captureWidget(_docKey, targetWidth: 1080);
-      if (!mounted) return;
-      if (bytes == null) {
-        messenger.showSnackBar(const SnackBar(
-            content: Text('No se pudo capturar la constancia. Intenta de nuevo.'),
-            behavior: SnackBarBehavior.floating));
-        return;
-      }
-      await sharePng(bytes, _pngName);
-    } catch (_) {
-      // Degradación honesta: sin share_plus/captura disponible se avisa,
-      // jamás se simula éxito ni se imprime solo.
-      if (mounted) {
-        messenger.showSnackBar(const SnackBar(
-            content: Text('No se pudo compartir el PNG de la constancia.'),
-            behavior: SnackBarBehavior.floating));
-      }
+  /// Menú propio (v17.2): texto · imagen · PDF, cada uno con compartir o
+  /// descargar. Genera los bytes solo cuando toca (sin descargar archivos).
+  Future<void> _shareMenu(BuildContext context, AppStore store, DateTimeRange range,
+      String label, List<Transaction> tx, List<Purchase> purchases) async {
+    await showShareMenu(context, title: 'Constancia $_scopeLabel · $label', actions: [
+      ShareMenuAction(
+        icon: Icons.subject_rounded,
+        label: 'Texto',
+        hint: 'Resumen legible para pegar o enviar por chat',
+        onRun: () async {
+          await SharePlus.instance.share(ShareParams(text: _plainText(range, label, tx, purchases)));
+          return null;
+        },
+      ),
+      ShareMenuAction(
+        icon: Icons.image_outlined,
+        label: 'Compartir imagen',
+        hint: 'PNG de la constancia (1080 px) para redes o chat',
+        onRun: () async {
+          final bytes = await captureWidget(_docKey, targetWidth: 1080);
+          if (bytes == null) return 'No se pudo generar la imagen. Intenta de nuevo.';
+          await sharePng(bytes, _pngName);
+          return null;
+        },
+      ),
+      ShareMenuAction(
+        icon: Icons.download_rounded,
+        label: 'Descargar imagen',
+        hint: 'Guarda el PNG sin abrir el share',
+        onRun: () async {
+          final bytes = await captureWidget(_docKey, targetWidth: 1080);
+          if (bytes == null) return 'No se pudo generar la imagen. Intenta de nuevo.';
+          return runDownloadBytes(bytes, _pngName);
+        },
+      ),
+      ShareMenuAction(
+        icon: Icons.picture_as_pdf_outlined,
+        label: 'Compartir PDF',
+        hint: 'PDF con la tabla del período',
+        onRun: () async {
+          final bytes = await _buildPdf(store, range, label, tx, purchases).save();
+          await SharePlus.instance.share(ShareParams(
+              files: [XFile.fromData(Uint8List.fromList(bytes), name: 'constancia-valorave.pdf', mimeType: 'application/pdf')]));
+          return null;
+        },
+      ),
+      ShareMenuAction(
+        icon: Icons.save_alt_rounded,
+        label: 'Descargar PDF',
+        hint: 'Guarda el PDF en la carpeta ValoraVE',
+        onRun: () async {
+          final bytes = await _buildPdf(store, range, label, tx, purchases).save();
+          return runDownloadBytes(Uint8List.fromList(bytes), 'constancia-valorave.pdf');
+        },
+      ),
+    ]);
+  }
+
+  /// Texto plano del período (opción «Texto» del menú).
+  String _plainText(DateTimeRange range, String label, List<Transaction> tx, List<Purchase> purchases) {
+    final income = tx.where((t) => t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
+    final expense = tx.where((t) => !t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
+    final b = StringBuffer('Constancia $_scopeLabel · $label — ValoraVE\n\n');
+    if (widget.kind == 'finance') {
+      b
+        ..writeln('Ingresos: ${fmtUSD(income)}')
+        ..writeln('Gastos: ${fmtUSD(expense)}')
+        ..writeln('Balance: ${fmtUSD(income - expense)}');
+    } else {
+      b
+        ..writeln('Compras: ${purchases.length}')
+        ..writeln('Total USD: ${fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD))}')
+        ..writeln('Total Bs ponderado: Bs ${fmtNum(purchases.fold<double>(0, (a, p) => a + p.totalBS))}');
     }
+    return b.toString();
   }
 
   Future<void> _printPdf(BuildContext context, AppStore store, DateTimeRange range, String label,
@@ -251,35 +299,129 @@ class _StatementScreenState extends State<StatementScreen> {
     await Printing.layoutPdf(onLayout: (_) async => await doc.save());
   }
 
-  Future<void> _sharePdf(BuildContext context, AppStore store, DateTimeRange range, String label,
-      List<Transaction> tx, List<Purchase> purchases) async {
-    final doc = _buildPdf(store, range, label, tx, purchases);
-    final bytes = await doc.save();
-    await SharePlus.instance.share(ShareParams(files: [XFile.fromData(bytes, name: 'constancia-valorave.pdf', mimeType: 'application/pdf')]));
-  }
-
+  /// PDF de calidad (v17.2): encabezado de marca, cajas de totales con color,
+  /// tablas de desglose por categoría/tienda y pie honesto. Antes era un
+  /// puñado de líneas de texto sin identidad.
   pw.Document _buildPdf(AppStore store, DateTimeRange range, String label,
       List<Transaction> tx, List<Purchase> purchases) {
     final doc = pw.Document();
     final income = tx.where((t) => t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
     final expense = tx.where((t) => !t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
-    doc.addPage(pw.Page(
+    final kindLabel = widget.kind == 'finance' ? 'de finanzas' : 'de compras';
+
+    final rows = widget.kind == 'finance'
+        ? _pdfCategoryRows(tx)
+        : _pdfStoreRows(purchases);
+    final breakdownTitle = widget.kind == 'finance' ? 'Gastos por categoría' : 'Gastos por tienda';
+
+    doc.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
-      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        pw.Text('ValoraVE — Constancia ${widget.kind}', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
-        pw.Text(label, style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700)),
-        pw.Divider(),
-        if (widget.kind == 'finance') ...[
-          pw.Text('Ingresos: ${fmtUSD(income)}'),
-          pw.Text('Gastos: ${fmtUSD(expense)}'),
-          pw.Text('Balance: ${fmtUSD(income - expense)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-        ] else ...[
-          pw.Text('Compras: ${purchases.length}'),
-          pw.Text('Total USD: ${fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD))}'),
-        ],
-      ]),
+      margin: const pw.EdgeInsets.fromLTRB(36, 40, 36, 36),
+      build: (ctx) => [
+        // Encabezado de marca.
+        pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
+          pw.Container(
+            width: 34,
+            height: 34,
+            decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFF22354E), borderRadius: pw.BorderRadius.all(pw.Radius.circular(9))),
+            alignment: pw.Alignment.center,
+            child: pw.Text('V', style: pw.TextStyle(fontSize: 17, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+          ),
+          pw.SizedBox(width: 10),
+          pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+            pw.Text('ValoraVE', style: pw.TextStyle(fontSize: 17, fontWeight: pw.FontWeight.bold, color: PdfColor.fromInt(0xFF22354E))),
+            pw.Text('Constancia $kindLabel · $label', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+          ]),
+          pw.Spacer(),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400), borderRadius: pw.BorderRadius.circular(999)),
+            child: pw.Text(_scopeLabel.toUpperCase(), style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
+          ),
+        ]),
+        pw.SizedBox(height: 14),
+        pw.Divider(color: PdfColors.grey400),
+        pw.SizedBox(height: 10),
+        // Totales en cajas con color.
+        pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+          if (widget.kind == 'finance') ...[
+            _pdfTotalBox('Ingresos', fmtUSD(income), 0xFF10755A),
+            pw.SizedBox(width: 10),
+            _pdfTotalBox('Gastos', fmtUSD(expense), 0xFFCF4437),
+            pw.SizedBox(width: 10),
+            _pdfTotalBox('Balance', fmtUSD(income - expense), 0xFF22354E),
+          ] else ...[
+            _pdfTotalBox('Compras', '${purchases.length}', 0xFF22354E),
+            pw.SizedBox(width: 10),
+            _pdfTotalBox('Total USD', fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD)), 0xFF22354E),
+            pw.SizedBox(width: 10),
+            _pdfTotalBox('Total Bs', 'Bs ${fmtNum(purchases.fold<double>(0, (a, p) => a + p.totalBS))}', 0xFF10755A),
+          ],
+        ]),
+        pw.SizedBox(height: 18),
+        // Desglose.
+        pw.Text(breakdownTitle, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColor.fromInt(0xFF22354E))),
+        pw.SizedBox(height: 6),
+        if (rows.isEmpty)
+          pw.Text('Sin movimientos en este período.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600, fontStyle: pw.FontStyle.italic))
+        else
+          pw.Table.fromTextArray(
+            headers: const ['Concepto', 'Monto'],
+            data: rows,
+            headerStyle: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+            headerDecoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFF22354E)),
+            cellStyle: const pw.TextStyle(fontSize: 9.5),
+            cellAlignment: pw.Alignment.centerLeft,
+            columnWidths: const {0: pw.FlexColumnWidth(3), 1: pw.FlexColumnWidth(1.4)},
+            oddRowDecoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFF4F6FB)),
+          ),
+        pw.SizedBox(height: 22),
+        pw.Divider(color: PdfColors.grey400),
+        pw.SizedBox(height: 6),
+        pw.Text('Generado ${fmtDateTime(DateTime.now())} · ValoraVE 17.2',
+            style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey600)),
+      ],
     ));
     return doc;
+  }
+
+  List<List<String>> _pdfCategoryRows(List<Transaction> tx) {
+    final byCat = <FinanceCategory, double>{};
+    for (final t in tx.where((t) => !t.isIncome)) {
+      byCat[t.category] = (byCat[t.category] ?? 0) + t.amountUSD;
+    }
+    final sorted = byCat.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    return [for (final e in sorted) [e.key.label, fmtUSD(e.value)]];
+  }
+
+  List<List<String>> _pdfStoreRows(List<Purchase> purchases) {
+    final byStore = <String, double>{};
+    for (final p in purchases) {
+      final s = p.store ?? 'Sin tienda';
+      byStore[s] = (byStore[s] ?? 0) + p.totalUSD;
+    }
+    final sorted = byStore.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    return [for (final e in sorted) [e.key, fmtUSD(e.value)]];
+  }
+
+  pw.Widget _pdfTotalBox(String label, String value, int color) {
+    final c = PdfColor.fromInt(color);
+    // Tinte suave del color de firma (92% hacia blanco).
+    final tint = PdfColor(1 - (1 - c.red) * 0.08, 1 - (1 - c.green) * 0.08, 1 - (1 - c.blue) * 0.08);
+    return pw.Expanded(
+      child: pw.Container(
+        padding: const pw.EdgeInsets.all(10),
+        decoration: pw.BoxDecoration(
+          color: tint,
+          borderRadius: pw.BorderRadius.circular(8),
+        ),
+        child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+          pw.Text(label.toUpperCase(), style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: c)),
+          pw.SizedBox(height: 3),
+          pw.Text(value, style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: c)),
+        ]),
+      ),
+    );
   }
 }
 
