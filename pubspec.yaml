@@ -34,7 +34,7 @@ dependencies:
   home_widget: ^0.9.4               # widgets BCV/panel
   workmanager: ^0.10.10             # refresco horario + respaldo semanal
   permission_handler: ^11.3.1
-  device_info_plus: ^11.2.0             # nivel SDK Android: pedir solo los permisos Nearby que aplican
+  device_info_plus: ^13.2.0             # nivel SDK Android: pedir solo los permisos Nearby que aplican (13.x para coexistir con package_info_plus 10: win32)
   local_auth: ^2.3.0                # bloqueo biométrico
   package_info_plus: ^10.0.2        # APP_VERSION en Ajustes
   share_plus: ^13.0.0               # compartir PNG/PDF/CSV
