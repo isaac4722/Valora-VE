@@ -62,9 +62,8 @@ Future<void> showShareMenu(
   );
   if (picked == null || !context.mounted) return;
   final msg = await picked.onRun();
-  if (msg != null) {
-    showToast(context, msg);
-  }
+  if (msg == null || !context.mounted) return;
+  showToast(context, msg);
 }
 
 /// Atajos comunes de ejecución (compartir / descargar).
