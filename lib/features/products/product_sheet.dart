@@ -796,13 +796,13 @@ class _ProductSheetState extends State<ProductSheet> {
                   axes: hasUnit
                       ? [
                           NumericAxis(
-                            axisName: 'unit',
+                            name: 'unit',
                             opposedPosition: true,
                             majorGridLines: const MajorGridLines(width: 0),
                             labelStyle: const TextStyle(fontSize: 9.5),
                           ),
                         ]
-                      : null,
+                      : const <ChartAxis>[],
                   tooltipBehavior: TooltipBehavior(enable: true),
                   trackballBehavior: TrackballBehavior(
                       enable: true, activationMode: ActivationMode.singleTap),

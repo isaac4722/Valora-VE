@@ -91,7 +91,7 @@ class _RoiScannerScreenState extends State<RoiScannerScreen> {
       body: LayoutBuilder(builder: (context, box) {
         // Una sola verdad geométrica: el Rect del scanWindow es el mismo que
         // se enmascara y dibuja (centrado, 72 % ancho × 32 % alto).
-        final size = box.size;
+        final size = box.biggest;
         final window = Rect.fromCenter(
           center: size.center(Offset.zero),
           width: size.width * 0.72,

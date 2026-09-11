@@ -54,7 +54,7 @@ Future<void> runWalkthrough(
   String title,
   List<WalkthroughStep> steps,
 ) async {
-  return showGeneralDialog(
+  await showGeneralDialog<void>(
     context: context,
     barrierDismissible: false,
     barrierColor: Colors.black54,

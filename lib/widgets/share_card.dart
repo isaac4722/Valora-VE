@@ -12,7 +12,8 @@ import 'package:flutter/material.dart';
 
 import '../core/currencies.dart';
 import '../core/fmt.dart';
-import 'ui.dart' show captureWidget, Flag;
+import '../services/sharing.dart' show captureWidget;
+import 'ui.dart' show Flag;
 
 /// Tarjeta cuadrada 1080×1080 para el resultado del conversor.
 class ConversionShareCard extends StatelessWidget {

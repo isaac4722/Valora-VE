@@ -488,7 +488,7 @@ class _PairingPanelState extends State<_PairingPanel> {
                 ),
                 child: Text(
                   i < _pin.length ? _pin[i] : '',
-                  style: VeText.displayNum(24, weight: FontWeight.w700),
+                  style: VeText.displayNum(24, color: scheme.onSurface, weight: FontWeight.w700),
                 ),
               ),
           ]),
@@ -503,7 +503,7 @@ class _PairingPanelState extends State<_PairingPanel> {
                   onTap: _pin.length < 4 ? () => setState(() => _pin += d) : null,
                   child: Container(
                     padding: const EdgeInsets.all(10),
-                    child: Text(d, style: VeText.displayNum(17)),
+                    child: Text(d, style: VeText.displayNum(17, color: scheme.onSurface)),
                   ),
                 ),
             ],
@@ -581,7 +581,7 @@ class _ActiveRoom extends StatelessWidget {
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(ctrl.code.isEmpty ? '—' : ctrl.code,
-                        style: VeText.displayNum(38, weight: FontWeight.w700)),
+                        style: VeText.displayNum(38, color: scheme.onSurface, weight: FontWeight.w700)),
                   ),
                   const SizedBox(height: 6),
                   Row(children: [
@@ -660,10 +660,13 @@ class _ActiveRoom extends StatelessWidget {
       const SizedBox(height: 10),
       Row(children: [
         Expanded(
-          child: FilledButton.tonal.icon(
+          child: FilledButton.tonal(
             onPressed: ctrl.sendTyping,
-            icon: const Icon(Icons.edit_note_rounded),
-            label: const Text('Avisar que escribo'),
+            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.edit_note_rounded, size: 18),
+              SizedBox(width: 6),
+              Text('Avisar que escribo'),
+            ]),
           ),
         ),
         const SizedBox(width: 8),

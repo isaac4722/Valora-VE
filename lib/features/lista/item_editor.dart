@@ -183,10 +183,10 @@ class _ItemEditorState extends State<_ItemEditor> {
     final su = it?.sizeUnit;
     if (su == 'g' || su == 'kg') {
       _mode = _SizeMode.weight;
-      _unit = su;
+      _unit = su!;
     } else if (su == 'ml' || su == 'l') {
       _mode = _SizeMode.volume;
-      _unit = su;
+      _unit = su!;
     }
     _qtyCtrl.text = '${it?.quantity ?? 1}';
   }

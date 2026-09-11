@@ -1,6 +1,6 @@
-/// ─── Compresión de fotos de ticket (sin paquetes nuevos) ────────────────────
-/// Re-encode JPEG en memoria con dart:ui: decode (instantiateImageCodec) →
-/// escala a máx [maxDim] px → toByteData(format: jpeg, quality).
+/// ─── Compresión de fotos de ticket ──────────────────────────────────
+/// Re-encode JPEG en memoria con flutter_image_compress (dart:ui NO tiene
+/// encoder JPEG: solo PNG — por eso el paquete).
 ///
 /// Reglas del dueño (v17.2):
 /// · Las fotos NUEVAS ya salen de image_picker a 1024 px JPEG .72 — aquí solo
@@ -13,9 +13,9 @@
 library;
 
 import 'dart:convert';
-import 'dart:math' as math;
 import 'dart:typed_data';
-import 'dart:ui' as ui;
+
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import '../data/store.dart';
 
@@ -39,59 +39,31 @@ Uint8List? decodeDataUrl(String? raw) {
   }
 }
 
-/// Comprime un JPEG en memoria: decode → escala a [maxDim] px (por el lado
-/// mayor, sin upscale) → re-encode a [quality]. Devuelve null si no logra
-/// comprimir (fallo de decode O el resultado no es menor que el original):
-/// en ambos casos el caller debe conservar los bytes de entrada.
+/// Comprime un JPEG en memoria: re-encode a [quality] con tope de [maxDim]
+/// px por el lado mayor (sin upscale). Devuelve null si no logra comprimir
+/// (fallo de plataforma O el resultado no es menor que el original): en
+/// ambos casos el caller debe conservar los bytes de entrada.
 Future<Uint8List?> compressJpeg(
   Uint8List bytes, {
   int quality = 60,
   int maxDim = 1024,
 }) async {
   if (bytes.isEmpty) return null;
-  ui.Codec? codec;
-  ui.Image? image;
   try {
-    codec = await ui.instantiateImageCodec(bytes);
-    final frame = await codec.getNextFrame();
-    image = frame.image;
-    final w = image.width, h = image.height;
-    final longest = math.max(w, h).toDouble();
-    final scale = (maxDim > 0 && longest > maxDim) ? maxDim / longest : 1.0;
-
-    Uint8List? out;
-    if (scale < 1) {
-      // Escala con canvas (FilterQuality.medium) y encodea el reducido.
-      final tw = (w * scale).round().clamp(1, 4096);
-      final th = (h * scale).round().clamp(1, 4096);
-      final recorder = ui.PictureRecorder();
-      final canvas = ui.Canvas(recorder)
-        ..drawImageRect(
-          image,
-          ui.Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()),
-          ui.Rect.fromLTWH(0, 0, tw.toDouble(), th.toDouble()),
-          ui.Paint()..filterQuality = ui.FilterQuality.medium,
-        );
-      final scaled = await recorder.endRecording().toImage(tw, th);
-      final data = await scaled.toByteData(
-          format: ui.ImageByteFormat.jpeg, quality: quality.clamp(1, 100));
-      scaled.dispose();
-      out = data?.buffer.asUint8List();
-    } else {
-      // Sin cambio de tamaño: solo re-encode con la calidad pedida.
-      final data = await image.toByteData(
-          format: ui.ImageByteFormat.jpeg, quality: quality.clamp(1, 100));
-      out = data?.buffer.asUint8List();
-    }
-    if (out == null || out.isEmpty) return null;
+    final out = await FlutterImageCompress.compressWithList(
+      bytes,
+      quality: quality.clamp(1, 100),
+      format: CompressFormat.jpeg,
+      minWidth: maxDim,
+      minHeight: maxDim,
+      keepExif: false,
+    );
+    if (out.isEmpty) return null;
     // Honestidad: si el re-encode NO reduce, no compensa — null = conservar.
     if (out.lengthInBytes >= bytes.lengthInBytes) return null;
     return out;
   } catch (_) {
-    return null; // decode/encode falló → caller conserva el original.
-  } finally {
-    image?.dispose();
-    codec?.dispose();
+    return null; // fallo de plataforma → caller conserva el original.
   }
 }
 

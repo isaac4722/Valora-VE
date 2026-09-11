@@ -4,7 +4,7 @@
 /// (personal PONDERADA por la canasta + promedio simple de productos + serie
 /// de costo + curva de devaluación BCV) · Productos (rankings en el rango) ·
 /// Canasta (CRUD) · Tasa histórica (fuente seleccionable + gráfica + CSV).
-/// Gráficas tap-friendly (ActivationMode.tap): tooltip con formato es-VE,
+/// Gráficas tap-friendly (ActivationMode.singleTap): tooltip con formato es-VE,
 /// crosshair vertical y trackball flotante; cobertura REAL anunciada con
 /// snapshotSeries/snapshotDepth (nunca «365 días» sin datos — § honesto).
 library;
@@ -131,12 +131,12 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
   // burbujas de ambas series + marcador en el punto tocado (§ interactivas).
   final TrackballBehavior _trackball = TrackballBehavior(
     enable: true,
-    activationMode: ActivationMode.tap,
+    activationMode: ActivationMode.singleTap,
     lineType: TrackballLineType.vertical,
     lineDashArray: const <double>[4, 3],
     tooltipDisplayMode: TrackballDisplayMode.floatAllPoints,
     tooltipSettings: const InteractiveTooltip(enable: true),
-    markerSettings: const TrackballMarkerSettings(isEnabled: true),
+    markerSettings: const TrackballMarkerSettings(markerVisibility: TrackballVisibilityMode.visible),
   );
 
   @override
@@ -178,10 +178,11 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
   }
 
   // Guarda el punto tocado para el panel de brecha diaria (feedback visible).
-  void _onTrackball(TrackballParams details) {
-    final infos = details.chartPointInfo;
-    if (infos.isEmpty) return;
-    final idx = infos.first.pointIndex;
+  // API real de syncfusion 27: onTrackballPositionChanging entrega
+  // TrackballArgs con UN ChartPointInfo (dataPointIndex del punto tocado).
+  void _onTrackball(TrackballArgs details) {
+    final idx = details.chartPointInfo.dataPointIndex;
+    if (idx == null || idx < 0) return;
     if (idx != _gapIdx) setState(() => _gapIdx = idx);
   }
 
@@ -557,8 +558,8 @@ class _InflacionAnchor extends StatelessWidget {
                   primaryXAxis: DateTimeAxis(dateFormat: DateFormat('dd/MM'), majorGridLines: const MajorGridLines(width: 0)),
                   tooltipBehavior: TooltipBehavior(
                     enable: true,
-                    activationMode: ActivationMode.tap,
-                    builder: (dynamic s, dynamic point, int i, int si) {
+                    activationMode: ActivationMode.singleTap,
+                    builder: (dynamic s, dynamic point, dynamic series, int i, int si) {
                       if (i < 0 || i >= costSeries.length) return const SizedBox.shrink();
                       final p = costSeries[i];
                       return _TipBox(main: fmtUSD(p.cost), sub: fmtDayLabel(p.day),
@@ -569,7 +570,7 @@ class _InflacionAnchor extends StatelessWidget {
                     enable: true,
                     lineType: CrosshairLineType.vertical,
                     lineDashArray: const <double>[4, 3],
-                    activationMode: ActivationMode.tap,
+                    activationMode: ActivationMode.singleTap,
                   ),
                   series: [
                     AreaSeries<({DateTime day, double cost, int items}), DateTime>(
@@ -635,8 +636,8 @@ class _InflacionAnchor extends StatelessWidget {
                   primaryXAxis: DateTimeAxis(dateFormat: DateFormat('dd/MM'), majorGridLines: const MajorGridLines(width: 0)),
                   tooltipBehavior: TooltipBehavior(
                     enable: true,
-                    activationMode: ActivationMode.tap,
-                    builder: (dynamic s, dynamic point, int i, int si) {
+                    activationMode: ActivationMode.singleTap,
+                    builder: (dynamic s, dynamic point, dynamic series, int i, int si) {
                       if (i < 0 || i >= devalPoints.length) return const SizedBox.shrink();
                       final p = devalPoints[i];
                       return _TipBox(main: 'BCV ${fmtRate(p.rate)}', sub: fmtDayLabel(DateTime.parse(p.date)),
@@ -647,7 +648,7 @@ class _InflacionAnchor extends StatelessWidget {
                     enable: true,
                     lineType: CrosshairLineType.vertical,
                     lineDashArray: const <double>[4, 3],
-                    activationMode: ActivationMode.tap,
+                    activationMode: ActivationMode.singleTap,
                   ),
                   series: [
                     AreaSeries<HistPoint, DateTime>(
@@ -875,8 +876,8 @@ class _HistoricaAnchorState extends State<_HistoricaAnchor> {
                   primaryXAxis: DateTimeAxis(dateFormat: DateFormat('dd/MM'), majorGridLines: const MajorGridLines(width: 0)),
                   tooltipBehavior: TooltipBehavior(
                     enable: true,
-                    activationMode: ActivationMode.tap,
-                    builder: (dynamic s, dynamic point, int i, int si) {
+                    activationMode: ActivationMode.singleTap,
+                    builder: (dynamic s, dynamic point, dynamic series, int i, int si) {
                       if (i < 0 || i >= series.length) return const SizedBox.shrink();
                       final p = series[i];
                       return _TipBox(main: fmtRate(p.rate), sub: fmtDayLabel(DateTime.parse(p.day)),
@@ -887,7 +888,7 @@ class _HistoricaAnchorState extends State<_HistoricaAnchor> {
                     enable: true,
                     lineType: CrosshairLineType.vertical,
                     lineDashArray: const <double>[4, 3],
-                    activationMode: ActivationMode.tap,
+                    activationMode: ActivationMode.singleTap,
                   ),
                   series: [
                     LineSeries<SnapshotPoint, DateTime>(

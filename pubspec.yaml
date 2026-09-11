@@ -37,6 +37,7 @@ dependencies:
   local_auth: ^2.3.0                # bloqueo biométrico
   package_info_plus: ^10.0.2        # APP_VERSION en Ajustes
   share_plus: ^13.0.0               # compartir PNG/PDF/CSV
+  flutter_image_compress: ^2.1.0    # re-encode JPEG de tickets viejos (v17.2)
   image_picker: ^1.1.2              # foto de ticket (1024px JPEG .72 nativo)
   mobile_scanner: ^5.2.3            # escáner continuo con zoom
   quick_actions: ^1.1.1             # 4 shortcuts del launcher (manifest PWA)
