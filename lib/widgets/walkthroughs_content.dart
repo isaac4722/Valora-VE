@@ -4,8 +4,6 @@
 /// el replay manual vive en Ajustes → Tutorial.
 library;
 
-import 'package:flutter/material.dart';
-
 import 'walkthrough.dart';
 
 /// Recorridos por ruta (el moduleId coincide con la clave de SharedPreferences).

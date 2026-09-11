@@ -120,7 +120,7 @@ class LanHubImpl {
         await _startHost();
       } else {
         await _startGuestDiscovery();
-        _startProbes('$_kWhoRoom');
+        _startProbes(_kWhoRoom);
       }
     } catch (_) {
       _setStatus(RoomStatus.error);

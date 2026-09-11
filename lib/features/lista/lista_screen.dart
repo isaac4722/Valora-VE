@@ -222,7 +222,6 @@ class _ListaScreenState extends State<ListaScreen> {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    final scheme = Theme.of(context).colorScheme;
     final ctx = store.contextOf(module: RateModule.calculator);
     final calcCur = CurrencyX.from(store.settings.calcCurrency);
     final totals = cartTotals(store.cart, ctx);

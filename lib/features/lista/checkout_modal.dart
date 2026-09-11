@@ -567,7 +567,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       items.fold(0.0, (acc, it) => acc + _itemUsd(it));
 }
 
-/// Aviso ««Arroz» ya existe en <tienda>» con Vincular / Crear nuevo (H).
+/// Aviso ««Arroz» ya existe en `tienda`» con Vincular / Crear nuevo (H).
 class _MatchRow extends StatelessWidget {
   const _MatchRow({
     required this.item,

@@ -405,7 +405,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
 
 /// Fila de fecha de las tasas (entre el encabezado y el conversor): tasa
 /// activa con su frescura (timeAgo de updatedAt/fetchedAt) + presets +
-/// botón de calendario histórico + banner «tasa del <fecha>».
+/// botón de calendario histórico + banner «tasa del `fecha`».
 class _FechaTasas extends StatelessWidget {
   const _FechaTasas({
     required this.store,

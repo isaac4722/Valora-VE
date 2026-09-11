@@ -365,7 +365,7 @@ class _StatementScreenState extends State<StatementScreen> {
         if (rows.isEmpty)
           pw.Text('Sin movimientos en este período.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600, fontStyle: pw.FontStyle.italic))
         else
-          pw.Table.fromTextArray(
+          pw.TableHelper.fromTextArray(
             headers: const ['Concepto', 'Monto'],
             data: rows,
             headerStyle: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
