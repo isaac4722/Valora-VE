@@ -157,9 +157,9 @@ class _StatementScreenState extends State<StatementScreen> {
           // Camino ÚNICO de salida: menú propio texto/imagen/PDF con
           // compartir o descargar por formato (v17.2). Nunca auto-print ni
           // share directo.
-          FilledButton.icon(
-            icon: const Icon(Icons.ios_share, size: 17),
-            label: const Text('Compartir o guardar…'),
+          PrimaryButton(
+            'Compartir o guardar…',
+            icon: Icons.ios_share,
             onPressed: () => unawaited(_shareMenu(context, store, range, label, tx, purchases)),
           ),
           const SizedBox(height: 8),

@@ -149,14 +149,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
           else
             for (final p in items)
               _Seat(purchase: p, onChanged: () => setState(() => _page = 0)),
-          if (pages > 1)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                IconButton(onPressed: _page > 0 ? () => setState(() => _page--) : null, icon: const Icon(Icons.chevron_left)),
-                Text('Página ${_page + 1} de $pages', style: const TextStyle(fontSize: 12)),
-                IconButton(onPressed: _page < pages - 1 ? () => setState(() => _page++) : null, icon: const Icon(Icons.chevron_right)),
-              ]),
+            Paginator(
+              page: _page + 1,
+              totalPages: pages,
+              onPage: (p) => setState(() => _page = p - 1),
             ),
         ],
       ),

@@ -17,6 +17,7 @@ import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
+import '../../data/rate_history.dart' show snapshotSeries;
 import '../../data/store.dart';
 import '../../state/app_state.dart';
 import '../../widgets/app_router.dart' show kHeroRateKey;
@@ -39,6 +40,7 @@ class HomeScreen extends StatelessWidget {
           children: [
             _Hero(poller: poller),
             _RateHero(),
+            _WeekSpark(),
             _CotizacionPrincipal(),
             _DivisasFoco(),
             _ResumenMes(),
@@ -214,7 +216,8 @@ class _RateHero extends StatelessWidget {
           const SizedBox(height: 14),
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Expanded(
-              child: ReadWindow(
+              child: Settle(
+                child: ReadWindow(
                 semanticLabel: '1 dólar igual a ${fmtRate(e.rate)} bolívares',
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -231,6 +234,7 @@ class _RateHero extends StatelessWidget {
                     Text('USD', style: VeText.displayNum(20, color: scheme.onSurfaceVariant, weight: FontWeight.w600)),
                   ],
                 ),
+              ),
               ),
             ),
             const SizedBox(width: 10),
@@ -287,6 +291,64 @@ class _RateHero extends StatelessWidget {
   }
 }
 
+/// Sparkline de 7 días de la fuente VES activa (patrón dp6): honesta, solo
+/// aparece con ≥ 2 snapshots guardados; muestra «Ayer» como referencia.
+class _WeekSpark extends StatelessWidget {
+  const _WeekSpark();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final scheme = Theme.of(context).colorScheme;
+    final activeId = store.sourceFor(Currency.ves);
+    if (activeId.isEmpty) return const SizedBox.shrink();
+    final pts = snapshotSeries(store.snapshots, activeId, 7);
+    if (pts.length < 2) return const SizedBox.shrink();
+    final values = pts.map((p) => p.rate).toList();
+    final ayer = pts[pts.length - 2].rate;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 2),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    VeText.labelCaps('Últimos 7 días', size: 9.5,
+                        color: scheme.onSurfaceVariant),
+                    const SizedBox(height: 8),
+                    LayoutBuilder(builder: (context, box) {
+                      final w = (box.maxWidth - 84).clamp(120.0, 220.0);
+                      return Sparkline(
+                          values: values, width: w.toDouble(), height: 30);
+                    }),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  VeText.labelCaps('Ayer', size: 9.5,
+                      color: scheme.onSurfaceVariant),
+                  const SizedBox(height: 4),
+                  Text(fmtRate(ayer),
+                      style: VeText.displayNum(15, color: scheme.onSurfaceVariant)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CotizacionPrincipal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -338,14 +400,14 @@ class _CotizacionPrincipal extends StatelessWidget {
               const SizedBox(height: 12),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 if (!poller.offlineActive)
-                  FilledButton.tonal(
+                  GhostButton(
+                    poller.loading ? 'Consultando…' : 'Reintentar',
                     onPressed: poller.loading ? null : () => poller.refreshNow(),
-                    child: Text(poller.loading ? 'Consultando…' : 'Reintentar'),
                   ),
                 if (!poller.offlineActive) const SizedBox(width: 8),
-                FilledButton.tonal(
+                GhostButton(
+                  'Tasa manual',
                   onPressed: () => GoRouter.of(context).go('/ajustes'),
-                  child: const Text('Tasa manual'),
                 ),
               ]),
             ]),
@@ -421,78 +483,165 @@ class _RateRow extends StatelessWidget {
   }
 }
 
-/// «Divisas del foco»: las 6 divisas con flag + code + tasa activa (fuente
-/// seleccionada para esa moneda). Tap → abre el Conversor con ese par
-/// montado. Acento con currencyInk (tinta firma por divisa).
+/// «Divisas del foco» (patrón dp6): grid 2-col de MiniRateCard con bandera,
+/// tasa activa y tinte por categoría. Tap → HOJA DE FUENTES de esa divisa
+/// (nueva: radio de fuente con monto «1 {base} = X»; la manual lleva a
+/// Ajustes). «Ir al conversor» queda en el encabezado de la sección.
 class _DivisasFoco extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final ctx = store.contextOf();
 
+    final list = CurrencyX.focus.toList(growable: false);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Divisas del foco',
           actionLabel: 'Ir al conversor', onAction: () => context.go('/conversor')),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final c in CurrencyX.focus)
-                _DivisaTile(currency: c, rate: ctx.activeRate(c)),
-            ],
-          ),
-        ),
+      Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Column(children: [
+          for (int i = 0; i < list.length; i += 2)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(children: [
+                Expanded(
+                    child: _MiniCard(
+                        currency: list[i], rate: ctx.activeRate(list[i]))),
+                if (i + 1 < list.length) ...[
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: _MiniCard(
+                          currency: list[i + 1],
+                          rate: ctx.activeRate(list[i + 1]))),
+                ] else
+                  const Expanded(child: SizedBox.shrink()),
+              ]),
+            ),
+        ]),
       ),
     ]);
   }
 }
 
-class _DivisaTile extends StatelessWidget {
-  const _DivisaTile({required this.currency, required this.rate});
+class _MiniCard extends StatelessWidget {
+  const _MiniCard({required this.currency, required this.rate});
 
   final Currency currency;
   final double rate;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final ink = currencyInk(currency);
-    final hasRate = rate > 0;
-    return TapScale(
-      onTap: () {
-        // Par del foco: USD → divisa (o EUR → USD si la divisa es el dólar).
-        final from = currency == Currency.usd ? Currency.eur : Currency.usd;
-        context.read<AppStore>().setConverterPair(from.code, currency.code);
-        context.go('/conversor');
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.7)),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 3,
-            height: 26,
-            decoration: BoxDecoration(
-                color: ink, borderRadius: BorderRadius.circular(2)),
+    final store = context.watch<AppStore>();
+    final s = RateSource.of(store.sourceFor(currency));
+    final VeInk sem = VeColors.of(context);
+    final Color catInk = switch (s?.category ?? SourceCategory.official) {
+      SourceCategory.official => sem.pos,
+      SourceCategory.mixed => sem.warn,
+      SourceCategory.parallel => sem.neg,
+      SourceCategory.manual => sem.manual,
+    };
+    return MiniRateCard(
+      label: s == null ? currency.code : '${currency.code} · ${s.category.label}',
+      value: rate > 0 ? fmtRate(rate) : '—',
+      ink: rate > 0 ? catInk : null,
+      leading: Flag(currency, size: 14),
+      onTap: () => _openCurrencySources(context, currency),
+    );
+  }
+}
+
+/// Hoja «Fuentes de {divisa}» (dp6): sello de categoría, radio de la activa
+/// y monto «1 {base} = X {quote}». Elegir fuente la activa GLOBALMENTE
+/// (setRateSource, mismo camino de la cotización principal); la manual
+/// lleva a Ajustes → Monedas y tasas donde vive el editor.
+Future<void> _openCurrencySources(BuildContext context, Currency c) {
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (bctx) => SafeArea(
+      child: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(bctx).viewInsets.bottom),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          SheetHeader('Fuentes de ${c.code}'),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
+              child: _FuentesSheetContent(currency: c),
+            ),
           ),
-          const SizedBox(width: 8),
-          Flag(currency, size: 18),
-          const SizedBox(width: 6),
-          Text(currency.code,
-              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800)),
-          const SizedBox(width: 10),
-          Text(hasRate ? fmtRate(rate) : '—',
-              style: VeText.displayNum(14.5, color: scheme.onSurface)),
         ]),
       ),
-    );
+    ),
+  );
+}
+
+class _FuentesSheetContent extends StatelessWidget {
+  const _FuentesSheetContent({required this.currency});
+
+  final Currency currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final ctx = store.contextOf();
+    final activeId = store.sourceFor(currency);
+    final scheme = Theme.of(context).colorScheme;
+    final VeInk sem = VeColors.of(context);
+
+    final fuentes = RateSource.sourcesFor(currency);
+    if (fuentes.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: Text('Sin fuentes registradas para esta divisa.'),
+      );
+    }
+
+    return Column(children: [
+      for (final s in fuentes)
+        ListTile(
+          selected: s.id == activeId,
+          leading: SourceDot(s.category),
+          title: Text(s.edgeName,
+              style: const TextStyle(
+                  fontSize: 13.5, fontWeight: FontWeight.w700)),
+          subtitle: Text(s.detail,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          trailing: Builder(builder: (context) {
+            final rate = ctx.rates[s.id] ?? (s.id == 'usd' ? 1.0 : null);
+            final Color ink = switch (s.category) {
+              SourceCategory.official => sem.pos,
+              SourceCategory.mixed => sem.warn,
+              SourceCategory.parallel => sem.neg,
+              SourceCategory.manual => sem.manual,
+            };
+            return Text(
+              rate != null && rate > 0
+                  ? '${s.base.code} → ${fmtRate(rate)} ${s.quote.code}'
+                  : '—',
+              style: VeText.displayNum(12.5,
+                  color: rate != null ? ink : scheme.onSurfaceVariant),
+            );
+          }),
+          // Manual: se edita en Ajustes (no es una fuente del tablero).
+          onTap: s.category == SourceCategory.manual
+              ? () {
+                  Navigator.of(context).pop();
+                  context.go('/ajustes');
+                }
+              : () {
+                  store.setRateSource(s.currency, s.id);
+                  Navigator.of(context).pop();
+                },
+        ),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
+        child: CategoryLegend(),
+      ),
+    ]);
   }
 }
 

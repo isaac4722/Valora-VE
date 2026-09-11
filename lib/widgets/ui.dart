@@ -1167,3 +1167,433 @@ double clamp01(double v) => math.min(1, math.max(0, v));
 
 /// Fecha corta local (intl para robustez en meses raros).
 String fmtMesAno(DateTime d) => DateFormat.MMMM('es').format(d).substring(0, 3);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// dp6 · Componentes adoptados del motor v17 «Consolidación nativa» (GUI dp6,
+// decisión del dueño: el actual manda, se integra lo que faltaba). Adaptados
+// a los tokens de ESTA rama (VeText/VeColors/SourceDot) — sin segundas
+// bibliotecas. Botones (Primary/Ghost), Sparkline, MiniRateCard, SectionCard,
+// SheetHeader, Paginator, Settle y CategoryLegend.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Botón primario de la casa: lleno, radio 12, feedback táctil TapScale.
+/// Unifica el FilledButton crudo que quedaba suelto en las pantallas.
+class PrimaryButton extends StatelessWidget {
+  const PrimaryButton(this.text, {super.key, this.onPressed, this.icon});
+
+  final String text;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return TapScale(
+      child: FilledButton.icon(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: scheme.primary,
+          foregroundColor: scheme.onPrimary,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: icon != null ? Icon(icon, size: 18) : null,
+        label: Text(text),
+      ),
+    );
+  }
+}
+
+/// Botón fantasma con borde: acción secundaria visible, sin competir con el
+/// primario. [ink] tiñe texto y borde (para acciones destructivas/alerta).
+class GhostButton extends StatelessWidget {
+  const GhostButton(this.text, {super.key, this.onPressed, this.icon, this.ink});
+
+  final String text;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final Color? ink;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: ink ?? scheme.onSurface,
+        side: BorderSide(color: ink?.withValues(alpha: 0.35) ?? scheme.outline),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      icon: icon != null ? Icon(icon, size: 18) : null,
+      label: Text(text),
+    );
+  }
+}
+
+/// Sparkline editorial: mini-tendencia teñida por dirección. Sube → neg (una
+/// tasa que sube es devaluación), baja → pos; meta punteada si cae en rango.
+/// Sin datos suficientes (menos de 2 puntos) no pinta nada — honesto.
+class Sparkline extends StatelessWidget {
+  const Sparkline({
+    super.key,
+    required this.values,
+    this.height = 28,
+    this.width = 84,
+    this.target,
+    this.up,
+    this.down,
+  });
+
+  final List<double> values;
+  final double height;
+  final double? target;
+  final double width;
+  final Color? up;
+  final Color? down;
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.length < 2) return SizedBox(height: height, width: width);
+    final VeInk sem = VeColors.of(context);
+    final bool rising = values.last >= values.first;
+    final Color ink = rising ? (up ?? sem.neg) : (down ?? sem.pos);
+    return SizedBox(
+      width: width,
+      height: height,
+      child: CustomPaint(
+        size: Size(width, height),
+        painter: _SparklinePainter(
+          values: values,
+          ink: ink,
+          target: target,
+          targetInk: sem.warn,
+        ),
+      ),
+    );
+  }
+}
+
+class _SparklinePainter extends CustomPainter {
+  _SparklinePainter({
+    required this.values,
+    required this.ink,
+    required this.targetInk,
+    this.target,
+  });
+
+  final List<double> values;
+  final Color ink;
+  final Color targetInk;
+  final double? target;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    double lo = values.reduce(math.min), hi = values.reduce(math.max);
+    if (target != null) {
+      lo = math.min(lo, target!);
+      hi = math.max(hi, target!);
+    }
+    if (hi - lo < 1e-9) hi = lo + 1;
+    Offset pt(int i) => Offset(
+          size.width * i / (values.length - 1),
+          size.height - 3 - (size.height - 6) * (values[i] - lo) / (hi - lo),
+        );
+    final path = Path()..moveTo(pt(0).dx, pt(0).dy);
+    for (var i = 1; i < values.length; i++) {
+      path.lineTo(pt(i).dx, pt(i).dy);
+    }
+    final paint = Paint()
+      ..color = ink
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(path, paint);
+    // Punto «hoy» al final de la serie.
+    canvas.drawCircle(pt(values.length - 1), 2.2, Paint()..color = ink);
+    if (target != null && target! >= lo && target! <= hi) {
+      final y = size.height - 3 - (size.height - 6) * (target! - lo) / (hi - lo);
+      final dash = Paint()
+        ..color = targetInk
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1;
+      var x = 0.0;
+      while (x < size.width) {
+        canvas.drawLine(Offset(x, y), Offset(math.min(x + 3, size.width), y), dash);
+        x += 6;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SparklinePainter old) =>
+      old.values.length != values.length ||
+      (values.length > 1 && old.values.last != values.last) ||
+      old.target != target;
+}
+
+/// Tarjeta compacta de tasa (grid 2-col de «Divisas del foco»): bandera +
+/// etiqueta arriba, cifra displayNum abajo, tinte por categoría de fuente.
+class MiniRateCard extends StatelessWidget {
+  const MiniRateCard({
+    super.key,
+    required this.label,
+    required this.value,
+    this.ink,
+    this.leading,
+    this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final Color? ink;
+  final Widget? leading;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: scheme.outline.withValues(alpha: 0.8)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              if (leading != null) ...[leading!, const SizedBox(width: 5)],
+              Flexible(
+                child: Text(label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+              ),
+            ]),
+            const SizedBox(height: 4),
+            VeText.displayNum(value, size: 18, color: ink),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tarjeta de sección con rótulo técnico y acciones a la derecha: reemplaza
+/// la pareja Card + SectionTitle manual cuando el bloque vive en un borde.
+class SectionCard extends StatelessWidget {
+  const SectionCard({
+    super.key,
+    this.title,
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+    this.actions = const [],
+  });
+
+  final String? title;
+  final EdgeInsets padding;
+  final Widget child;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null || actions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(children: [
+                if (title != null)
+                  Expanded(child: VeText.labelCaps(title!, size: 10.5, color: scheme.primary)),
+                ...actions,
+              ]),
+            ),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// Encabezado estándar de bottom sheet (título SpaceGrotesk + cerrar).
+class SheetHeader extends StatelessWidget {
+  const SheetHeader(this.title, {super.key});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 12, 8),
+      child: Row(children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+                fontFamily: 'SpaceGrotesk',
+                fontSize: 17,
+                fontWeight: FontWeight.w700),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Cerrar',
+          onPressed: () => Navigator.of(context).pop(),
+          icon: Icon(Icons.close_rounded, color: scheme.onSurfaceVariant),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Paginador accesible (Anterior · «Página X de Y» liveRegion · Siguiente).
+/// Se oculta solo si hay una página o menos.
+class Paginator extends StatelessWidget {
+  const Paginator({
+    super.key,
+    required this.page,
+    required this.totalPages,
+    required this.onPage,
+  });
+
+  final int page; // 1-based
+  final int totalPages;
+  final ValueChanged<int> onPage;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (totalPages <= 1) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        IconButton(
+          tooltip: 'Página anterior',
+          onPressed: page > 1 ? () => onPage(page - 1) : null,
+          icon: const Icon(Icons.chevron_left_rounded),
+          style: IconButton.styleFrom(foregroundColor: scheme.primary),
+        ),
+        Semantics(
+          liveRegion: true,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              'Página $page de $totalPages',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurfaceVariant),
+            ),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Página siguiente',
+          onPressed: page < totalPages ? () => onPage(page + 1) : null,
+          icon: const Icon(Icons.chevron_right_rounded),
+          style: IconButton.styleFrom(foregroundColor: scheme.primary),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Cifra que «se asienta»: 4 px de subida + fade 220 ms al montar. Para el
+/// momento en que el número clave aparece ya resuelto (sin odómetro largo).
+class Settle extends StatefulWidget {
+  const Settle({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<Settle> createState() => _SettleState();
+}
+
+class _SettleState extends State<Settle> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 220));
+
+  @override
+  void initState() {
+    super.initState();
+    _c.forward();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _c,
+        builder: (context, child) => Transform.translate(
+          offset: Offset(0, 4 * (1 - Curves.easeOutCubic.transform(_c.value))),
+          child: Opacity(opacity: _c.value, child: child),
+        ),
+        child: widget.child,
+      );
+}
+
+/// Leyenda de categorías de tasa (Oficial/Promedio/Paralelo/Manual) con el
+/// SourceDot de la casa. Usada en Bienvenida y Ajustes para explicar de un
+/// vistazo qué significa cada color del libro.
+class CategoryLegend extends StatelessWidget {
+  const CategoryLegend({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    const rows = <(SourceCategory, String, String)>[
+      (
+        SourceCategory.official,
+        'Oficial',
+        'BCV · TRM · Banxico · Real · EUR oficial'
+      ),
+      (SourceCategory.mixed, 'Promedio', 'Entre oficial y paralelo'),
+      (SourceCategory.parallel, 'Paralelo', 'Mercado VES · COP · EUR'),
+      (SourceCategory.manual, 'Manual', 'Tu propia tasa'),
+    ];
+    return Column(
+      children: [
+        for (final (cat, label, detail) in rows)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(children: [
+              SourceDot(cat),
+              const SizedBox(width: 8),
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w700)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(detail,
+                    style: TextStyle(
+                        fontSize: 11, color: scheme.onSurfaceVariant)),
+              ),
+            ]),
+          ),
+      ],
+    );
+  }
+}

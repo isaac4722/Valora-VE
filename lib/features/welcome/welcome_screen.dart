@@ -397,6 +397,9 @@ class _PageThree extends StatelessWidget {
                 'completo lo puedes relanzar desde Ajustes cuando quieras.',
                 style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
               ),
+              const Divider(height: 22),
+              // Leyenda de categorías (dp6): qué significa cada color del libro.
+              CategoryLegend(),
             ],
           ),
         ),

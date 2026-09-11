@@ -30,7 +30,7 @@ import '../../widgets/walkthroughs_content.dart';
 
 /// Versión visible de la app (la del marketing); el buildNumber real viene
 /// de PackageInfo en la fila «Acerca de».
-const String kAppVersionVisible = '17.2-b';
+const String kAppVersionVisible = '17.3';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -325,6 +325,10 @@ class _Monedas extends StatelessWidget {
             const SizedBox(height: 6),
             for (final module in RateModule.values)
               _ModuleSource(store: store, module: module),
+            const Divider(height: 18),
+            // Leyenda de categorías (dp6): color = tipo de fuente.
+            const CategoryLegend(),
+            const SizedBox(height: 4),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               dense: true,

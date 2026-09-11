@@ -229,18 +229,16 @@ class _ProductsScreenState extends State<ProductsScreen> {
               ),
             if (pages > 1)
               Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  IconButton(
-                      onPressed: _page > 0 ? () => setState(() => _page--) : null,
-                      icon: const Icon(Icons.chevron_left)),
-                  Text('Página ${_page + 1} de $pages · ${list.length} productos',
-                      style: const TextStyle(fontSize: 12)),
-                  IconButton(
-                      onPressed: _page < pages - 1 ? () => setState(() => _page++) : null,
-                      icon: const Icon(Icons.chevron_right)),
-                ]),
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('${list.length} productos',
+                    style: TextStyle(
+                        fontSize: 11, color: scheme.onSurfaceVariant)),
               ),
+            Paginator(
+              page: _page + 1,
+              totalPages: pages,
+              onPage: (p) => setState(() => _page = p - 1),
+            ),
           ],
         ],
       ),
@@ -409,7 +407,13 @@ class _ProductCard extends StatelessWidget {
                 Text('Sin precio aún', style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant)),
               const Spacer(),
               if (product.records.length >= 2) ...[
-                Sparkline(records: product.records, up: variation > 0),
+                // Sparkline compartida del sistema (dp6): misma semántica
+                // visual (sube = neg, baja = pos) sin duplicado local.
+                Sparkline(
+                  values: product.records.map((r) => r.price).toList(),
+                  width: 64,
+                  height: 21,
+                ),
                 const SizedBox(width: 10),
                 TrendBadge(variation, dense: true),
               ],
@@ -428,56 +432,4 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-/// Sparkline de precios (64×21, canvas minimal).
-class Sparkline extends StatelessWidget {
-  const Sparkline({super.key, required this.records, required this.up});
 
-  final List<PriceRecord> records;
-  final bool up;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = up ? VeColors.of(context).neg : VeColors.of(context).pos;
-    if (records.length < 2) return const SizedBox(width: 64, height: 21);
-    return CustomPaint(
-      size: const Size(64, 21),
-      painter: _SparkPainter(
-        values: records.map((r) => r.price).toList(),
-        color: c,
-      ),
-    );
-  }
-}
-
-class _SparkPainter extends CustomPainter {
-  const _SparkPainter({required this.values, required this.color});
-  final List<double> values;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (values.length < 2) return;
-    final minV = values.reduce((a, b) => a < b ? a : b);
-    final maxV = values.reduce((a, b) => a > b ? a : b);
-    final range = (maxV - minV).clamp(0.0001, double.infinity);
-    final path = Path();
-    for (var i = 0; i < values.length; i++) {
-      final x = i / (values.length - 1) * size.width;
-      final y = size.height - ((values[i] - minV) / range) * size.height;
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SparkPainter old) => old.values != values;
-}

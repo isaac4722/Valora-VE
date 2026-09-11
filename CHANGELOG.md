@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.2.0+9 · ronda v17.3 — GUI dp6 integrada (sistema de componentes)
+
+Segunda pasada de GUI guiada por el dueño: «trabaja más la GUI» + adaptación
+de dp6 al árbol actual (el actual manda: solo se integra lo que faltaba).
+Skills aplicadas: taste (disciplina visual), flutter-ui-design (jerarquía,
+estados, tokens), caveman (comunicación, nivel moderado). Skill Caveman
+guardada en `agent-skills/caveman/` junto a las familias taste/flutter/dart.
+
+### Añadido — componentes dp6 en ui.dart (adaptados a los tokens VeText/VeColors)
+- **PrimaryButton / GhostButton**: botones del sistema (radio 12, feedback
+  táctil) — unifican los FilledButton crudos dispersos.
+- **Sparkline**: mini-tendencia editorial (sube=neg, baja=pos, meta punteada);
+  reemplaza la copia privada de Productos (menos duplicación).
+- **MiniRateCard**, **SectionCard**, **SheetHeader**, **Paginator**
+  (accesible, liveRegion), **Settle** (cifra que se asienta) y
+  **CategoryLegend** (leyenda Oficial/Promedio/Paralelo/Manual).
+
+### Añadido — integración en pantallas
+- **Inicio · Sparkline de 7 días** bajo el héroe de tasa: honesta, solo con
+  ≥ 2 snapshots reales; muestra «Ayer» de referencia.
+- **Inicio · Divisas del foco** rediseñado: grid 2-col de MiniRateCard con
+  tinte por categoría y HOJA DE FUENTES por divisa (radio de fuente con
+  monto «1 USD = X»; la manual lleva a Ajustes) — patrón dp6 que faltaba.
+- **Paginador accesible** en Historial, Productos y Finanzas (antes filas
+  ad-hoc sin tooltip ni Semantics).
+- **SheetHeader** en la hoja de movimiento de Finanzas.
+- **Settle** en la cifra del héroe; botones del sistema en el CTA del
+  constanciero («Compartir o guardar…»), «Guardar compra» del checkout y
+  estados vacíos de Inicio.
+- **CategoryLegend** en Bienvenida (página 3) y Ajustes → Monedas y tasas.
+
+### Mantenido
+- Nada de dp6 sobreescrito: FeatureTip (coach-mark) NO se porta — 0 usos en
+  dp6 y el sistema de walkthroughs v17.2 ya lo cubre con foco real.
+
 ## 1.2.0+8 · ronda v17.2-b — auditoría del Review.txt
 
 Cruce punto por punto del Review.txt contra el código. Todo lo pedido ya

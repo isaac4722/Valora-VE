@@ -187,17 +187,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   ),
               ])),
             if (pages > 1)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  IconButton(
-                      onPressed: page > 0 ? () => setState(() => _page--) : null,
-                      icon: const Icon(Icons.chevron_left)),
-                  Text('Página ${page + 1} de $pages', style: const TextStyle(fontSize: 12)),
-                  IconButton(
-                      onPressed: page < lastPage ? () => setState(() => _page++) : null,
-                      icon: const Icon(Icons.chevron_right)),
-                ]),
+              Paginator(
+                page: page + 1,
+                totalPages: pages,
+                onPage: (p) => setState(() => _page = p - 1),
               ),
           // 03 Análisis (donut + barras).
           SectionTitle('Análisis'),
@@ -242,11 +235,10 @@ class _FinanceScreenState extends State<FinanceScreen> {
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: ListView(
             shrinkWrap: true,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
             children: [
-              Text(existing == null ? 'Registrar movimiento' : 'Editar movimiento',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 14),
+              SheetHeader(existing == null ? 'Registrar movimiento' : 'Editar movimiento'),
+              const SizedBox(height: 10),
               SegmentedChips<String>(
                 options: const ['expense', 'income'],
                 value: type,

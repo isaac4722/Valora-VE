@@ -537,9 +537,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
               // Acción final única.
               SizedBox(
                 width: double.infinity,
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.save_outlined, size: 16),
-                  label: const Text('Guardar compra'),
+                child: PrimaryButton(
+                  'Guardar compra',
+                  icon: Icons.save_outlined,
                   onPressed: _cart.isEmpty
                       ? null
                       : () async {
