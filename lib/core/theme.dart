@@ -54,15 +54,30 @@ class VeColors {
   static const Color mxnLight = Color(0xFFB03D90);
   static const Color mxnDark = Color(0xFFE391CB);
 
-  /// Devuelve el set de semánticas según el brillo del tema actual.
-  static VeInk of(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-          ? const VeInk.dark()
-          : const VeInk.light();
+  /// Devuelve el set de semánticas del TEMA ACTIVO (v17.6 R1-1).
+  ///
+  /// Las semánticas viven ahora en [VeInk] como `ThemeExtension` registrado
+  /// en `AppTheme.light()/dark()` — viajan DENTRO de ThemeData (lerp suave
+  /// entre temas, visibles para tests dorados y Material You). El fallback
+  /// por brillo queda como red de seguridad (pantallas sin tema registrado,
+  /// tests). API pública intacta: ninguna llamada del repo cambia.
+  static VeInk of(BuildContext context) {
+    final ext = Theme.of(context).extension<VeInk>();
+    if (ext != null) return ext;
+    return Theme.of(context).brightness == Brightness.dark
+        ? const VeInk.dark()
+        : const VeInk.light();
+  }
 }
 
 /// Semánticas de datos para el tema activo.
-class VeInk {
+///
+/// v17.6 (RECHECK R1-1): [VeInk] ES ahora un `ThemeExtension<VeInk>` —
+/// el registro vive en `AppTheme._build` (`extensions:`), así el set viaja
+/// con el ThemeData (requirement «ThemeExtension creado y aplicado en
+/// MaterialApp»). Evolución, no reescritura: los 7 campos y los constructores
+/// light/dark son EXACTAMENTE los mismos tokens de siempre.
+class VeInk extends ThemeExtension<VeInk> {
   const VeInk({
     required this.pos,
     required this.neg,
@@ -102,6 +117,40 @@ class VeInk {
   final Color cop; // oliva
   final Color brl; // verde Brasil
   final Color mxn; // magenta
+
+  @override
+  VeInk copyWith({
+    Color? pos,
+    Color? neg,
+    Color? warn,
+    Color? manual,
+    Color? cop,
+    Color? brl,
+    Color? mxn,
+  }) =>
+      VeInk(
+        pos: pos ?? this.pos,
+        neg: neg ?? this.neg,
+        warn: warn ?? this.warn,
+        manual: manual ?? this.manual,
+        cop: cop ?? this.cop,
+        brl: brl ?? this.brl,
+        mxn: mxn ?? this.mxn,
+      );
+
+  @override
+  VeInk lerp(VeInk? other, double t) {
+    if (other == null) return this;
+    return VeInk(
+      pos: Color.lerp(pos, other.pos, t)!,
+      neg: Color.lerp(neg, other.neg, t)!,
+      warn: Color.lerp(warn, other.warn, t)!,
+      manual: Color.lerp(manual, other.manual, t)!,
+      cop: Color.lerp(cop, other.cop, t)!,
+      brl: Color.lerp(brl, other.brl, t)!,
+      mxn: Color.lerp(mxn, other.mxn, t)!,
+    );
+  }
 }
 
 /// Temas Material de la app, construidos sobre los tokens del diseño.
@@ -189,6 +238,11 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
+      // RECHECK R1-1 (v17.6): las semánticas de dinero viajan EN el tema —
+      // una sola verdad: Theme.of(context).extension<VeInk>().
+      extensions: <ThemeExtension<dynamic>>{
+        VeInk: isDark ? const VeInk.dark() : const VeInk.light(),
+      },
       scaffoldBackgroundColor: bg,
       fontFamily: 'Inter',
       splashFactory: InkSparkle.splashFactory,
