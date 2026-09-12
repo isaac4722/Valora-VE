@@ -31,10 +31,11 @@ jobs:
       - name: pub get
         run: flutter pub get
 
-      - name: Gates (analyze + test)
-        run: |
-          flutter analyze
-          flutter test
+      # Guardia rápida: analyze. La suite completa corre en el workflow CI
+      # sobre el MISMO SHA (duplicarla aquí alarga el job ~13 min y el
+      # runner hosted nos canceló 2 builds con SIGTERM a mitad de Gradle).
+      - name: flutter analyze (0 issues)
+        run: flutter analyze
 
       - name: Decodificar keystore desde secrets
         env:
