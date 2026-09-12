@@ -173,6 +173,28 @@ class _ConverterScreenState extends State<ConverterScreen> {
     }
   }
 
+  /// FIX date-picker (v17.6): los días del calendario ya no salen SOLO de los
+  /// snapshots locales (un teléfono nuevo veía 1-2 días = «no aparece nada»).
+  /// La hoja abre al instante con lo local y fusiona la serie REMOTA de las
+  /// fuentes del par (180 días por fuente, seriesForSource). Offline → los
+  /// locales cubren y el error se ignora en silencio.
+  Future<Set<String>> _diasRemotos(List<String> ids) async {
+    final probes = <String>{
+      for (final id in ids)
+        ...(id == 'ves-avg' ? const ['ves-bcv', 'ves-parallel'] : [id]),
+    };
+    final out = <String>{};
+    for (final id in probes) {
+      final def = RateSource.of(id);
+      if (def == null || def.category == SourceCategory.manual) continue;
+      try {
+        final res = await seriesForSource(id, 180);
+        out.addAll(res.points.map((p) => p.date));
+      } catch (_) {/* sin red: cubren los locales */}
+    }
+    return out;
+  }
+
   /// Calendario histórico (REQ 4): días con snapshot guardado de las fuentes
   /// del par (primarias del plan + seleccionadas). Solo esos días son
   /// seleccionables; al elegir se carga la tasa de ese día.
@@ -198,8 +220,15 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final picked = await showModalBottomSheet<DateTime>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
+      // Hoja blindada (v17.6): esquinas propias y fondo opaco del tema —
+      // nunca una hoja transparente/rectangular que parezca «no aparece».
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => _CalendarioHistorico(
         days: days,
+        futureDays: _diasRemotos(ids.toList()),
         initial: _dateMode == 'custom' ? _customDate : null,
         sourceLabel: label,
       ),
@@ -618,8 +647,10 @@ class _DualInputState extends State<_DualInput> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               maxLines: 1,
               textAlign: TextAlign.end,
-              // Héroe del par: cifra grande tabular (firma de la app).
-              style: VeText.displayNum(56, color: scheme.onSurface),
+              // Entrada SECUNDARIA (v17.6): la cifra héroe del par es la
+              // salida; el monto editable baja a 40 y se apoya en mutedFg
+              // para no competir por el ojo.
+              style: VeText.displayNum(40, color: scheme.onSurface),
               decoration: const InputDecoration(
                 hintText: 'Monto',
                 border: InputBorder.none,
@@ -640,7 +671,8 @@ class _DualInputState extends State<_DualInput> {
                       fmtNum(widget.amount,
                           decimals: smartDecimals(widget.amount, widget.from)),
                       maxLines: 1,
-                      style: VeText.displayNum(56, color: scheme.onSurface),
+                      // Entrada secundaria: 40 vs héroe 56 de la salida.
+                      style: VeText.displayNum(40, color: scheme.onSurface),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -676,7 +708,8 @@ class _DualInputState extends State<_DualInput> {
           child: ok
               ? AnimatedNumber(
                   widget.result,
-                  // Héroe del par: cifra grande tabular (firma de la app).
+                  // HÉROE del par (v17.6): la salida manda — 56 tabular,
+                  // entrada a 40. Única cifra displayLarge de la pantalla.
                   style: VeText.displayNum(56, color: scheme.onSurface),
                   decimals: smartDecimals(widget.result, widget.to),
                 )
@@ -691,7 +724,10 @@ class _DualInputState extends State<_DualInput> {
           if (ok) ...[CurrencyTag(widget.to.code), const SizedBox(width: 6)],
           Flexible(
             child: Text(
-              ok ? fmtCurrency(widget.result, widget.to) : 'sin tasa para este par',
+              // FIX «Bs Bs» (v17.6): el TAG ya dice la divisa; el subtítulo
+              // lleva SOLO el número (fmtMoney sin símbolo). Antes:
+              // [Bs] Bs 832,49 — duplicado.
+              ok ? fmtMoney(widget.result, widget.to) : 'sin tasa para este par',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
@@ -758,10 +794,12 @@ class _DualInputState extends State<_DualInput> {
               ],
             ),
           ),
+          // FIX swap (v17.6): centrado REAL entre las dos filas. Antes:
+          // SizedBox(44) + Spacer → botón pegado a la izquierda.
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(children: [
-              const SizedBox(width: 44),
+              const Expanded(child: SizedBox()),
               TapScale(
                 onTap: widget.onSwap,
                 child: Container(
@@ -773,7 +811,7 @@ class _DualInputState extends State<_DualInput> {
                   child: Icon(Icons.swap_vert, size: 18, color: scheme.primary),
                 ),
               ),
-              const Spacer(),
+              const Expanded(child: SizedBox()),
             ]),
           ),
           // Fila de salida.
@@ -1182,12 +1220,21 @@ class _CalendarioHistorico extends StatefulWidget {
     required this.days,
     required this.sourceLabel,
     this.initial,
+    this.futureDays,
   });
 
-  /// Días disponibles YYYY-MM-DD (solo con datos — REQ 8: nunca días vacíos).
+  /// Días disponibles YYYY-MM-DD al abrir (snapshots locales — REQ 8: nunca
+  /// días vacíos). v17.6 FIX: el calendario ya NO depende solo del dispositivo:
+  /// [futureDays] trae los días de la serie REMOTA (180 días por fuente,
+  /// seriesForSource) y se fusionan en vivo — así un teléfono recién instalado
+  /// ve un calendario real, no «no aparece nada».
   final Set<String> days;
   final DateTime? initial;
   final String sourceLabel;
+
+  /// Días remotos en camino (null = no consultar). Se fusionan con [days]
+  /// al completar; errores se ignoran (los locales cubren).
+  final Future<Set<String>>? futureDays;
 
   @override
   State<_CalendarioHistorico> createState() => _CalendarioHistoricoState();
@@ -1195,24 +1242,41 @@ class _CalendarioHistorico extends StatefulWidget {
 
 class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
   late DateTime _month;
+  late Set<String> _days;
+  bool _remotosPendientes = false;
 
   @override
   void initState() {
     super.initState();
+    _days = {...widget.days};
+    _remotosPendientes = widget.futureDays != null;
     final anchor = widget.initial ?? _ultimoDia() ?? DateTime.now();
     _month = DateTime(anchor.year, anchor.month, 1);
+    // FIX (v17.6): fusiona los días de la API cuando llegan. Si el equipo
+    // apenas se instaló, el calendario pasa de 1-2 días locales a la serie
+    // completa sin cerrar ni reabrir la hoja.
+    widget.futureDays?.then((extra) {
+      if (!mounted) return;
+      setState(() {
+        _days.addAll(extra);
+        _remotosPendientes = false;
+      });
+    }).catchError((_) {
+      if (!mounted) return;
+      setState(() => _remotosPendientes = false);
+    });
   }
 
   DateTime? _ultimoDia() {
-    if (widget.days.isEmpty) return null;
-    final last = widget.days.reduce((a, b) => a.compareTo(b) >= 0 ? a : b);
+    if (_days.isEmpty) return null;
+    final last = _days.reduce((a, b) => a.compareTo(b) >= 0 ? a : b);
     final d = DateTime.parse(last);
     return DateTime(d.year, d.month, 1);
   }
 
   DateTime? get _minMonth {
-    if (widget.days.isEmpty) return null;
-    final first = widget.days.reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
+    if (_days.isEmpty) return null;
+    final first = _days.reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
     final d = DateTime.parse(first);
     return DateTime(d.year, d.month, 1);
   }
@@ -1253,15 +1317,31 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
           const SizedBox(height: 12),
-          if (widget.days.isEmpty)
+          if (_days.isEmpty && _remotosPendientes)
+            // FIX (v17.6): mientras la API responde NUNCA se muestra un
+            // calendario vacío — estado de carga explícito.
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 28),
+              child: Column(children: [
+                SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.4)),
+                SizedBox(height: 12),
+                Text('Consultando los días disponibles…',
+                    style: TextStyle(fontSize: 12.5)),
+              ]),
+            )
+          else if (_days.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: EmptyState(
                 'Aún no hay fechas guardadas',
                 icon: Icons.calendar_month,
-                hint: 'La app guarda un snapshot por día cada vez que se '
-                    'refrescan las tasas. Vuelve mañana y el calendario '
-                    'tendrá su primer día.',
+                hint: 'Sin conexión y sin snapshots locales todavía. La app '
+                    'guarda un snapshot por día cada vez que se refrescan '
+                    'las tasas; con internet este calendario llena sus 180 '
+                    'días al instante.',
               ),
             )
           else ...[
@@ -1303,8 +1383,10 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
             ..._semanas(scheme),
             const SizedBox(height: 10),
             Text(
-              'Solo son tocables los días con snapshot guardado en este '
-              'dispositivo.',
+              _remotosPendientes
+                  ? 'Llegando más días desde la API…'
+                  : 'Los días sombreados vienen de la API y de tus '
+                      'snapshots guardados.',
               style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
             ),
           ],
@@ -1337,7 +1419,7 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
     if (day == null) return const SizedBox(height: 42);
     final date = DateTime(_month.year, _month.month, day);
     final key = SnapshotPoint.dayKey(date);
-    final disponible = widget.days.contains(key);
+    final disponible = _days.contains(key);
     final esHoy = key == SnapshotPoint.dayKey(DateTime.now());
     final elegido = widget.initial != null && SnapshotPoint.dayKey(widget.initial!) == key;
     final fondo = elegido
