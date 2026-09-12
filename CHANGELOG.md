@@ -1,5 +1,61 @@
 # Changelog
 
+## 1.5.0+12 · ronda v17.6 — RECHECK: los fallos confirmados del dueño, resueltos antes de las olas
+
+Quinta pasada. El dueño trajo protocolo v2 (RECHECK + 12 olas): nada de código
+nuevo hasta verificar los puntos pendientes CON EVIDENCIA. Se activaron las
+skills del protocolo (taste-skill en modo redesign-preserve,
+flutter-architecture/ui-design/persistence/testing/platform-integration,
+syncfusion-flutter-cartesian-charts; `impeccable` y
+`antigravity-bundle-mobile-developer` NO existen en este entorno — reportado).
+Resultado del RECHECK: 7 puntos ya cumplidos (dedupe rate-history, héroe con
+sparkline y badge «activa», cero bloque 02/Sueldo, banderas locales con
+errorBuilder, bienvenida vs walkthrough separados, Trackball+Crosshair,
+cobertura real), 3 parciales y 5 fallos confirmados. Esta ronda resuelve los
+fallos. Validación local: scripts/validate_v176.py (lexer balance 5 archivos +
+28 anclas) ALL OK.
+
+### Corregido
+- **«Bs Bs» duplicado en el Conversor** — causa raíz: la salida mostraba la
+  píldora `CurrencyTag('Bs')` Y `fmtCurrency()` que ya pinta el prefijo
+  `Bs 832,49`. El subtítulo lleva ahora SOLO el número (`fmtMoney`); la
+  divisa la dice el tag una sola vez.
+- **Swap del Conversor descentrado** — estaba anclado con `SizedBox(width:44)`
+  + `Spacer()` (pegado a la izquierda); ahora centrado real con dos
+  `Expanded` simétricos entre la fila de entrada y la de salida.
+- **Jerarquía héroe del Conversor** — la SALIDA es la cifra héroe (56
+  tabular); la entrada editable baja a 40 (secundaria). Una sola cifra
+  displayLarge por pantalla.
+- **Date picker «no aparece nada»** — el calendario solo contaba días de
+  snapshots LOCALES: en un teléfono recién instalado veía 1-2 días y parecía
+  roto. Ahora la hoja abre al instante con lo local y fusiona EN VIVO la
+  serie remota de 180 días de las fuentes del par (`seriesForSource`),
+  con estado «Consultando los días disponibles…» mientras llega, hoja con
+  esquinas propias + `useSafeArea`, y mensaje honesto si no hay red NI
+  snapshots. Al elegir, la tasa sigue cargando remoto-primero con respaldo
+  local (`rateOn`).
+- **Pantalla negra del escáner global** — `ScannerScreen` (Productos) era
+  full-frame sin estado de cámara: permiso denegado / cámara ocupada = negro
+  mudo. Paridad total con RoiScanner: `scanWindow` (recuadro 72 % × 32 %,
+  una sola verdad geométrica, sin pinch-zoom que descuadraría el ROI),
+  máscara α .55 y marco de apuntado; `errorBuilder` distingue permiso vs
+  hardware y ofrece «Abrir ajustes» (`openAppSettings`) y «Escribir a mano».
+  Debounce + bandera `_done` anti doble pop.
+- **«Buscando tasas…» con icono wifi-off (Inicio)** — el combo mentiroso
+  prohibido por el dueño. Ahora la carga usa SPINNER; wifi_off solo en la
+  rama de red bloqueada sin datos; cloud_off solo en modo offline elegido.
+
+### Añadido
+- **`VeInk` es `ThemeExtension<VeInk>`** (RECHECK R1-1) — las 7 semánticas de
+  dinero (pos/neg/warn/manual/cop/brl/mxn) viajan DENTRO del ThemeData
+  (`extensions:` en `AppTheme.light()/dark()`, con `copyWith` y `lerp`).
+  API pública intacta: `VeColors.of(context)` lee la extensión con fallback
+  por brillo; cero llamadas migradas.
+- **Estados reutilizables (RECHECK R1-4)** — `LoadingState` (spinner, jamás
+  iconografía de red), `ErrorState` (tinta neg + CTA de recuperación) y
+  `OfflineState` (cloud_off + copy honesto es-VE + hasta 2 salidas) en
+  ui.dart, con la gramática visual de `EmptyState`. Inicio ya los usa.
+
 ## 1.4.0+11 · ronda v17.5 — GUI con consultoría externa: toast unificado, divisas explícitas y alertas de producto
 
 Cuarta pasada de GUI, ahora con las sugerencias del modelo de apoyo que el
