@@ -548,6 +548,174 @@ class EmptyState extends StatelessWidget {
   }
 }
 
+/// Estado de CARGA (v17.6 · RECHECK R1-4/R2-6): spinner + título + pista.
+///
+/// REGLA DURA: la carga NUNCA lleva icono wifi-off — ese icono es de
+/// [OfflineState]. «Buscando tasas…» con señal cortada era exactamente el
+/// combo mentiroso que el dueño prohibió. Para skeletons de layout completo
+/// existe SkeletonPaper; este tile cubre bloques dentro de una pantalla.
+class LoadingState extends StatelessWidget {
+  const LoadingState(this.title,
+      {super.key, this.hint, this.actionLabel, this.onAction});
+
+  final String title;
+  final String? hint;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
+        child: Column(children: [
+          SizedBox(
+            width: 26,
+            height: 26,
+            child: CircularProgressIndicator(
+                strokeWidth: 2.6, color: scheme.primary),
+          ),
+          const SizedBox(height: 14),
+          Text(title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+          if (hint != null) ...[
+            const SizedBox(height: 6),
+            Text(hint!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.45,
+                    color: scheme.onSurfaceVariant)),
+          ],
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 14),
+            GhostButton(actionLabel!, onPressed: onAction),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
+/// Estado de ERROR (v17.6 · RECHECK R1-4): tile en tinta neg + pista + CTA
+/// de recuperación SIEMPRE visible (un error sin salida no es un estado).
+class ErrorState extends StatelessWidget {
+  const ErrorState(this.title,
+      {super.key, required this.hint, this.actionLabel, this.onAction, this.icon = Icons.error_outline});
+
+  final String title;
+  final String hint;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final Color neg = VeColors.of(context).neg;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
+        child: Column(children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: neg.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, size: 24, color: neg),
+          ),
+          const SizedBox(height: 14),
+          Text(title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text(hint,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.45,
+                  color: scheme.onSurfaceVariant)),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 14),
+            GhostButton(actionLabel!, onPressed: onAction),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
+/// Estado OFFLINE (v17.6 · RECHECK R1-4/R2-6): cloud_off + copy honesto
+/// es-VE + salidas reales (reintentar · tasa manual). Solo este estado dice
+/// «sin conexión»; carga y datos guardados jamás lo mencionan.
+class OfflineState extends StatelessWidget {
+  const OfflineState(this.title,
+      {super.key,
+      required this.hint,
+      this.actionLabel,
+      this.onAction,
+      this.secondaryLabel,
+      this.onSecondary,
+      this.icon = Icons.cloud_off});
+
+  final String title;
+  final String hint;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final String? secondaryLabel;
+  final VoidCallback? onSecondary;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
+        child: Column(children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: scheme.onSurfaceVariant.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, size: 24, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 14),
+          Text(title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          Text(hint,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.45,
+                  color: scheme.onSurfaceVariant)),
+          if ((actionLabel != null && onAction != null) ||
+              (secondaryLabel != null && onSecondary != null)) ...[
+            const SizedBox(height: 14),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              if (actionLabel != null && onAction != null) ...[
+                GhostButton(actionLabel!, onPressed: onAction),
+                if (secondaryLabel != null && onSecondary != null)
+                  const SizedBox(width: 8),
+              ],
+              if (secondaryLabel != null && onSecondary != null)
+                GhostButton(secondaryLabel!, onPressed: onSecondary),
+            ]),
+          ],
+        ]),
+      ),
+    );
+  }
+}
+
 /// Tile de icono de categoría con tinta semántica (producto o finanzas).
 class CategoryIcon extends StatelessWidget {
   const CategoryIcon({super.key, this.cat, this.finCat, this.size = 36});
