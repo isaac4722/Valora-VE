@@ -187,7 +187,10 @@ void main() {
           category: FinanceCategory.alimentacion, amount: 100, currency: 'VES',
           amountUSD: 2.5, date: DateTime.now()));
       await tester.pumpWidget(_wrap(const HomeScreen(), store: store));
-      await tester.pumpAndSettle();
+      // v17.6: con tablero vacío Home muestra LoadingState (spinner
+      // INDEFINIDO) — pumpAndSettle nunca terminaría. Bombeo acotado.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('COTIZACIÓN PRINCIPAL'), findsOneWidget);
     });
 
@@ -330,7 +333,10 @@ void main() {
           routerConfig: router,
         ),
       ));
-      await tester.pumpAndSettle();
+      // v17.6: la rama Home del shell tiene board vacío → LoadingState
+      // (spinner indefinido). Bombeo acotado en lugar de pumpAndSettle.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.byKey(kNavBarKey), findsOneWidget);
       expect(find.text('3'), findsOneWidget); // badge carrito
       // navega a Lista
