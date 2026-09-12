@@ -42,12 +42,9 @@ jobs:
 
       - name: pub get
         run: flutter pub get
-
-      # Guardia rápida: analyze. La suite completa corre en el workflow CI
-      # sobre el MISMO SHA (duplicarla aquí alarga el job ~13 min y el
-      # runner hosted nos canceló 2 builds con SIGTERM a mitad de Gradle).
-      - name: flutter analyze (0 issues)
-        run: flutter analyze
+      # SIN analyze ni test aquí: el workflow CI los corre sobre el MISMO
+      # SHA y ya está VERDE. Cada minuto cuenta — el runner hosted mata los
+      # jobs ~16-17 min dentro (5 SIGTERMs seguidos, mismo reloj).
 
       - name: Decodificar keystore desde secrets
         env:
@@ -64,7 +61,18 @@ jobs:
             echo "keyPassword=$KS_KEY_PASS"
           } > android/keystore.properties
 
-      - name: flutter build apk (release, split-per-abi, ofuscado)
+      - name: flutter build apk (rama: arm64+v7a · ofuscado)
+        if: startsWith(github.ref, 'refs/heads/')
+        run: |
+          flutter build apk --release --split-per-abi \
+            --target-platform android-arm,android-arm64 \
+            --obfuscate --split-debug-info=build/symbols/apk
+
+      # Builds de rama: SOLO los 2 ABI de teléfono real (gama baja incluida
+      # es armv7/arm64; x86_64 es emulador) — recorta ~4 min de Gradle frío
+      # para caber en la ventana del runner. En tags van los 3 + AAB.
+      - name: flutter build apk (tags: 3 ABI · ofuscado)
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           flutter build apk --release --split-per-abi \
             --obfuscate --split-debug-info=build/symbols/apk
