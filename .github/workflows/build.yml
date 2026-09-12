@@ -24,6 +24,18 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # Caché de Gradle (v17.6): el runner hosted nos mató 3 builds con
+      # SIGTERM ~16-19 min dentro. Con caché caliente assembleRelease baja
+      # de ~12-14 min a ~4-6 — el job cabe holgado en la ventana.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.android/build-cache
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
