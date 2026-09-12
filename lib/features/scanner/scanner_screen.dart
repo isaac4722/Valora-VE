@@ -106,7 +106,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
               scanWindow: window,
               // FIX pantalla negra (v17.6): permiso denegado / cámara
               // ocupada muestra estado con SALIDAS — nunca negro mudo.
-              errorBuilder: (ctx, error) {
+              // Firma 5.x: (context, error, child).
+              errorBuilder: (ctx, error, _) {
                 final permiso =
                     error.errorCode == MobileScannerErrorCode.permissionDenied;
                 return _DarkState(
