@@ -61,7 +61,7 @@ jobs:
             echo "keyPassword=$KS_KEY_PASS"
           } > android/keystore.properties
 
-      - name: flutter build apk (rama: arm64+v7a · ofuscado)
+      - name: flutter build apk (rama arm64+v7a · ofuscado)
         if: startsWith(github.ref, 'refs/heads/')
         run: |
           flutter build apk --release --split-per-abi \
@@ -71,7 +71,7 @@ jobs:
       # Builds de rama: SOLO los 2 ABI de teléfono real (gama baja incluida
       # es armv7/arm64; x86_64 es emulador) — recorta ~4 min de Gradle frío
       # para caber en la ventana del runner. En tags van los 3 + AAB.
-      - name: flutter build apk (tags: 3 ABI · ofuscado)
+      - name: flutter build apk (tags 3 ABI · ofuscado)
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
           flutter build apk --release --split-per-abi \
