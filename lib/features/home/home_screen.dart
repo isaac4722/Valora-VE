@@ -353,7 +353,6 @@ class _CotizacionPrincipal extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final poller = context.watch<RatesPoller>();
-    final scheme = Theme.of(context).colorScheme;
     final country = CountryX.from(store.settings.country);
     final ctx = store.contextOf();
     final featured = country.featured.toSet();
@@ -370,48 +369,42 @@ class _CotizacionPrincipal extends StatelessWidget {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Cotización principal'),
+      // v17.6 (RECHECK R2-6): tres estados HONESTOS con los widgets
+      // reutilizables de ui.dart — y la CARGA con spinner: NUNCA «Buscando
+      // tasas…» con wifi-off (el combo mentiroso que el dueño prohibió).
       if (store.board.isEmpty && !ctx.rates.containsKey('${country.currency.code.toLowerCase()}-manual'))
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(children: [
-              Icon(poller.offlineActive ? Icons.cloud_off : Icons.wifi_off,
-                  size: 30, color: scheme.onSurfaceVariant),
-              const SizedBox(height: 10),
-              Text(
-                poller.offlineActive
-                    ? 'Modo offline activo'
-                    : poller.networkBlocked
-                        ? 'Sin conexión · sin tasas guardadas todavía'
-                        : 'Buscando tasas…',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                poller.offlineActive
-                    ? 'ValoraVE funciona 100% local. Agrega tu tasa manual en Ajustes → Monedas y tasas, o desactiva el modo offline cuando quieras volver a consultar las APIs.'
-                    : poller.networkBlocked
-                        ? 'No pierdes nada: en cuanto vuelva la red la app descarga las tasas sola. Si prefieres, agrega una tasa manual ahora y sigue trabajando.'
-                        : 'Primera carga de tasas en curso. También puedes agregar una tasa manual en Ajustes → Monedas y tasas.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12.5, height: 1.45, color: scheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 12),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                if (!poller.offlineActive)
-                  GhostButton(
-                    poller.loading ? 'Consultando…' : 'Reintentar',
-                    onPressed: poller.loading ? null : () => poller.refreshNow(),
-                  ),
-                if (!poller.offlineActive) const SizedBox(width: 8),
-                GhostButton(
-                  'Tasa manual',
-                  onPressed: () => GoRouter.of(context).go('/ajustes'),
-                ),
-              ]),
-            ]),
-          ),
-        )
+        if (poller.offlineActive)
+          // Desconexión ELEGIDA (modo offline): cloud_off + guía local.
+          OfflineState(
+            'Modo offline activo',
+            hint: 'ValoraVE funciona 100% local. Agrega tu tasa manual en '
+                'Ajustes → Monedas y tasas, o desactiva el modo offline '
+                'cuando quieras volver a consultar las APIs.',
+            actionLabel: 'Tasa manual',
+            onAction: () => GoRouter.of(context).go('/ajustes'),
+          )
+        else if (poller.networkBlocked)
+          // Red bloqueada SIN datos guardados: wifi_off + salidas reales.
+          OfflineState(
+            'Sin conexión · sin tasas guardadas todavía',
+            hint: 'No pierdes nada: en cuanto vuelva la red la app descarga '
+                'las tasas sola. Si prefieres, agrega una tasa manual ahora '
+                'y sigue trabajando.',
+            icon: Icons.wifi_off,
+            actionLabel: poller.loading ? 'Consultando…' : 'Reintentar',
+            onAction: poller.loading ? null : () => poller.refreshNow(),
+            secondaryLabel: 'Tasa manual',
+            onSecondary: () => GoRouter.of(context).go('/ajustes'),
+          )
+        else
+          // PRIMERA CARGA: spinner, cero iconografía de red.
+          LoadingState(
+            'Buscando tasas…',
+            hint: 'Primera carga de tasas en curso. También puedes agregar '
+                'una tasa manual en Ajustes → Monedas y tasas.',
+            actionLabel: 'Tasa manual',
+            onAction: () => GoRouter.of(context).go('/ajustes'),
+          )
       else
         Card(
           child: Column(children: [
