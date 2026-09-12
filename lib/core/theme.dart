@@ -239,11 +239,12 @@ abstract final class AppTheme {
       useMaterial3: true,
       colorScheme: scheme,
       // RECHECK R1-1 (v17.6): las semánticas de dinero viajan EN el tema —
-      // una sola verdad: Theme.of(context).extension<VeInk>(). Map explícito
-      // (2 params de tipo): con uno solo {…} sería un SET, no un mapa.
-      extensions: <Object, ThemeExtension<dynamic>>{
-        VeInk: isDark ? const VeInk.dark() : const VeInk.light(),
-      },
+      // una sola verdad: Theme.of(context).extension<VeInk>(). En esta
+      // versión de Flutter extensions es Iterable: la clave la pone el
+      // framework con runtimeType.
+      extensions: <ThemeExtension<dynamic>>[
+        isDark ? const VeInk.dark() : const VeInk.light(),
+      ],
       scaffoldBackgroundColor: bg,
       fontFamily: 'Inter',
       splashFactory: InkSparkle.splashFactory,
