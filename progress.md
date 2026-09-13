@@ -379,3 +379,77 @@ con la plantilla de `AGENT.md`.
   runner, como en turnos anteriores; conteo extraído de los logs reales).
 - Siguiente: Ola 1 del protocolo v2 (walkthroughs coach-marks + país en
   bienvenida), sujeto a orden del dueño — igual que quedó en DOC-AGENT-V2.
+
+---
+## [TASK-16] v17.7 · cambios pendientes + Ola 1 + reestructura · 2026-09-13 UTC
+- Agente: Super Z (GLM)
+- Encargo del dueño: «mejores la app en reestructura optimizar ect. Y
+  realizar los cambios pendientes. Cuando yo te mencione que lo pase a
+  la MAIN lo haces por ahora No» — TODO en fix/v1.1.0-dp4-paridad,
+  main intacta.
+- Hecho (7 commits, uno por pieza, gates locales ANTES de cada uno):
+  - **Motor**: `ConversionPlan` como clase propia con `direct` (true solo
+    en arista directa) + ruta EUR de 4 tramos COMPLETA en «Ruta del
+    cálculo» (EUR→local→USD→destino con sello por tramo y rótulo del tipo
+    de ruta) + `resolveEur().pairId` expuesto. 5 tests.
+  - **Análisis 9.7**: rankings de compras por día de semana (barra + día
+    fuerte) y por divisa (original + ≈USD) · proyección PUNTEADA DAMP
+    (φ 0.85, semántica de predictPrice) sobre el costo de la canasta ·
+    heatmap de devaluación 6 meses (cierra D2) · exportGapCsv · histórico
+    multi-divisa (hasta 3 fuentes + CSV por columnas). 11 tests de
+    helpers puros.
+  - **Biometría con toggle** (pendiente «biometría sin toggle»): puerta
+    de marca al abrir en main.dart, canCheck verificado antes de activar,
+    degradación honesta sin canal. Settings 17.7: biometricLock/sseUrl.
+  - **SSE vivo** (pendiente «cliente sin instanciar»): RatesPoller
+    conecta RatesStream a /api/rates/stream del despliegue configurado,
+    ingesta COMÚN _ingestBoard (mismo camino que el poll, regla
+    changeEps, alertas, snapshots, widget), polling como latido,
+    reintento 60 s/5 min, apagado en idle, punto de estado + diálogo.
+  - **price_targets de producto en 2º plano** (pendiente):
+    AlertEngine.checkProductTargets — cruce FRESCO (metSince de hoy o
+    meta recién fijada) → canal price_targets + centro, claim por día,
+    rearme al subir; cableado in-app (ficha) y workmanager (el
+    comentario del dispatcher ya lo prometía). 2 tests del ciclo.
+  - **Familia de widgets BCV** (plan subclassing documentado):
+    BaseRatesWidget Kotlin + ParallelWidgetProvider + GapWidgetProvider
+    (layouts, receivers con etiqueta, brecha en Dart + respaldo Kotlin),
+    widget_service refresca los tres.
+  - **Ola 1 del protocolo v2**: país EN la bienvenida (página 3 con
+    chips; paso obligatorio preseleccionado) + coach-marks por feature
+    (cierra D3): valorave.tips-dismissed, puntas ancladas con aro de
+    foco, SOLO tras el walkthrough del módulo, 5 cableadas
+    (Inicio/Conversor/Lista/Productos/Análisis). Test del ciclo completo
+    + test de bienvenida reescrito (CO por chips).
+  - **Reestructura**: converter_screen 1515→845 + converter_reference +
+    converter_history (parts); settings_screen 1102→211 +
+    settings_sections + settings_alertas + settings_system (parts).
+    Cero renombres (privacidad de biblioteca compartida), analyze 0,
+    suite verde.
+  - **Docs**: CHANGELOG 1.6.0-beta+14 · PARIDAD-MVP-CRUD (scorecard
+    ~92-94 % global, §3 con los cierres) · PARIDAD (D2/D3/D4 cerradas +
+    extras v17.7) · DESIGN-SYSTEM (accentDark #242A32 documentado) ·
+    pubspec 1.6.0-beta+14 · kAppVersionVisible 17.7.
+- Decisiones:
+  - Gates LOCALES por primera vez: SDK Flutter 3.47.4 instalado en el
+    entorno (9.3 GB libres) — analyze + suite antes de CADA commit; el
+    runner re-verifica (paso 8).
+  - Coach-marks disparan SOLO tras el walkthrough del módulo (los
+    recorridos v17.2 van primero; 900 ms de respiro) — nunca se apilan.
+  - checkProductTargets respeta el ciclo de metSince de addRecord (v13.2):
+    anuncia cruces frescos una vez al día; el 2º plano cubre metas fijadas
+    sobre precios ya existentes.
+  - Parts (no librerías separadas) para la reestructura: movimiento
+    mecánico sin renombres, riesgo mínimo, mismo comportamiento.
+  - SIN tocar main (orden explícita del dueño) y sin renumerar fuera de
+    1.x.y-beta+z: 1.5.0-beta+13 → 1.6.0-beta+14.
+- Gates: analyze=0 issues · test=126/126 local (Flutter 3.47.4; 19 tests
+  nuevos) · build=Actions tras el push (verificado hasta verde, paso 8).
+- Bloqueos: ninguno. Falsos positivos resueltos por el camino: cambios de
+  modo 644→755 del clon (core.fileMode off), heredoc que se comió un
+  nombre de campo, barrierLabel obligatorio en diálogo descartable.
+- Siguiente: decidir si se fusiona a main (SOLO con orden explícita del
+  dueño) o se continúa con las olas 2+ del protocolo v2; quedan como
+  pendiente honesto: migración v1→v12 como cadena real, canvas
+  pixel-perfect de la constancia (D5), split de ui.dart/home/lista,
+  medición de rendimiento en dispositivo.

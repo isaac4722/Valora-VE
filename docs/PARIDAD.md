@@ -43,20 +43,36 @@ Leyenda: ✅ completo · ✅* completo con desviación consciente documentada.
   rango min–máx con sueldo efectivo (promedio del rango) alimentando tiles y
   LOTTT. El mapa JSON `salary` gana mode/base/variable/min/max tolerantes
   (respaldos viejos siguen cargando).
-- **D2 · Heatmap de devaluación**: el calendario 6m del web se porta como
-  serie de área diaria con el mismo dato (vesRateTimeline/vesDevaluation);
-  el heatmap pictórico exacto queda pendiente de píxel.
-- **D3 · Coach-marks**: el flujo de onboarding 0+país+7+done con «Saltar» y
-  re-apertura está completo; los coach-marks por feature con
-  `valorave.tips-dismissed` quedan como iteración de pulido.
-- **D4 · 4 shortcuts nativos**: el widget BCV y el intent `valorave://sala`
-  están registrados; los shortcuts de launcher (quick_actions) quedan como
-  iteración siguiente.
+- **D2 · Heatmap de devaluación — CERRADA en v17.7**: calendario pictórico
+  de 6 meses en Análisis → Inflación, un cuadro por día (rojo=subida de la
+  tasa, verde=baja, intensidad=magnitud vs el día anterior con datos),
+  leyenda y día con mayor subida. La serie de área se conserva junto al
+  calendario (dos vistas del mismo dato honesto).
+- **D3 · Coach-marks — CERRADA en v17.7 (Ola 1)**: puntas por feature con
+  `valorave.tips-dismissed` (StringList en SharedPreferences), ancladas al
+  widget real (aro de foco + tarjeta), una vez por instalación y SOLO tras
+  el walkthrough del módulo. 5 cableadas: Inicio · Conversor · Lista ·
+  Productos · Análisis. Además, el país se elige EN la bienvenida (página 3
+  con chips) y el paso obligatorio llega preseleccionado.
+- **D4 · 4 shortcuts nativos — CERRADA en 1.1.0-dp4**: quick_actions 4/4 en
+  el launcher (Lista · Conversor · Escanear · Tasa BCV) + el intent
+  `valorave://sala` registrado.
 - **D5 · PNG 1080×1080/1350 dibujado a canvas pixel-perfect**: el flujo
   Compartir/PDF/Imprimir está completo vía share_plus/printing; el canvas
   exacto del web (fitText + rows punteados) queda como iteración de píxel.
   En v1.0.1 el Conversor ya comparte su cálculo como PNG 1080 (monto + ruta
   + fuentes) con `captureWidget`.
+
+## Extras de la rama v17.7 (1.6.0-beta+14)
+- Ruta EUR de 4 tramos VISIBLE en «Ruta del cálculo» + `ConversionPlan.direct`
+  (clase propia del motor, tests ida/vuelta).
+- Análisis: rankings por día de semana y por divisa · proyección DAMP
+  punteada · exportGapCsv · histórico multi-divisa (3 fuentes + CSV).
+- Biometría con toggle (puerta de marca al abrir; sin soporte no bloquea) ·
+  SSE en vivo opcional (ingesta común con el polling) · `price_targets` de
+  producto en 2º plano (canal propio + workmanager) · familia de widgets
+  BCV/Paralelo/Brecha por subclassing Kotlin.
+- Reestructura: converter 1515→845 + 2 parts; settings 1102→211 + 3 parts.
 
 ## Sala multi-transporte (decisión §4.10)
 - **Servidor**: `SocketIoTransport` con URL configurable (Ajustes → Sala en

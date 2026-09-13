@@ -27,6 +27,7 @@ mandatoria). Archivo canónico: `lib/core/theme.dart` + `lib/widgets/ui.dart`.
 | muted | `#202429` |
 | muted-fg | `#9AA1AB` |
 | primary | `#8FA7C4` (fg sobre primary `#0E1622`) |
+| accent | `#242A32` (propio del tema oscuro — superficie elevada alta) |
 | border | `#3A4048` |
 | destructive | `#F07A6C` |
 

@@ -1,5 +1,63 @@
 # Changelog
 
+## 1.6.0-beta+14 · ronda v17.7 — cambios pendientes + Ola 1 + reestructura
+
+Orden del dueño: «mejores la app en reestructura optimizar ect. Y realizar
+los cambios pendientes» (todo en la rama, NADA se pasa a main hasta orden
+explícita). Ciclo 9P completo con gates LOCALES por primera vez (SDK
+Flutter 3.47.4 instalado en el entorno del agente: analyze + suite antes
+de CADA commit, además del runner).
+
+### Añadido · pendientes del scorecard (docs/PARIDAD-MVP-CRUD.md §3)
+- **`ConversionPlan.direct` + ruta EUR de 4 tramos visible**: el plan del
+  motor es clase propia con bandera de arista directa; el puente EUR se
+  pinta COMPLETO (EUR → local → USD → destino) con sello por tramo y
+  rótulo del tipo de ruta — antes colapsaba a 2 banderas.
+- **Análisis 9.7 (cierre casi total)**: rankings de compras por día de
+  semana y por divisa · proyección PUNTEADA DAMP (φ 0.85, la misma
+  semántica de predictPrice) sobre el costo de la canasta · **heatmap de
+  devaluación 6 meses** (cierra la desviación D2: calendario pictórico,
+  un cuadro por día, rojo/verde/intensidad) · **exportGapCsv** (brecha
+  por día en CSV) · **histórico multi-divisa** (hasta 3 fuentes
+  superpuestas + CSV por columnas).
+- **Biometría con toggle** (cierra el pendiente): puerta de marca al
+  abrir (main.dart) con verificación de soporte real antes de activar;
+  sin soporte o sin canal NUNCA bloquea.
+- **SSE en vivo** (cierra el pendiente): `RatesStream` (el cliente ya
+  existía sin instanciar) se conecta a `/api/rates/stream` del
+  despliegue web que el dueño configure en Ajustes; ingesta común con el
+  polling (que sigue como latido), reintento 60 s / 5 min, apagado en
+  idle, punto de estado con diálogo de URL.
+- **`price_targets` de producto en 2º plano** (cierra el pendiente):
+  `AlertEngine.checkProductTargets` anuncia cruces frescos por el canal
+  `price_targets` (in-app y en la tarea horaria de workmanager — el
+  dispatcher ya lo prometía en su comentario), con rearme y claim por
+  día. `metSince` (v13.2) como guarda durable.
+- **Familia de widgets BCV** (§12.2 · plan subclassing):
+  `BaseRatesWidget` Kotlin + `ParallelWidgetProvider` y `GapWidgetProvider`
+  (misma celda 4×1), layouts/receivers con etiqueta, brecha escrita por
+  Dart y recalculada de respaldo en Kotlin.
+- **Ola 1 del protocolo v2**: el país vive EN la bienvenida (página 3 con
+  chips; el paso obligatorio llega preseleccionado) + **coach-marks por
+  feature** (cierra D3): `valorave.tips-dismissed`, puntas ancladas al
+  widget real, disparadas SOLO tras el walkthrough del módulo — 5
+  cableadas (Inicio · Conversor · Lista · Productos · Análisis).
+
+### Cambiado
+- **Reestructura**: `converter_screen.dart` 1515 → 845 + 2 parts
+  (referencia del par · histórico/notas); `settings_screen.dart` 1102 →
+  211 + 3 parts (secciones · alertas · sistema). Parts de la misma
+  biblioteca: cero renombres, mismo comportamiento.
+- `NotificationsService.show` endurecido (degradación honesta sin canal
+  — el centro interno sigue), lo que además hizo el engine testeable.
+- README: «Descarga actual» apunta a v1.0.2-beta (corregido en el
+  recheck anterior, se mantiene).
+
+### Gates
+- analyze=0 issues · **test=126/126** (19 nuevos: motor 5 · análisis 11 ·
+  settings 1 · metas 2 · coach-marks 1 · bienvenida reescrito) · build
+  en Actions tras el push (matriz APK arm64/v7a).
+
 ## 1.5.0-beta+13 · recheck de auditoría — el versionado vuelve al patrón del contrato
 
 El dueño ordenó un recheck completo de `progress.md` y la documentación
