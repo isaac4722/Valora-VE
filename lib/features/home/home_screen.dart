@@ -21,10 +21,14 @@ import '../../data/rate_history.dart' show snapshotSeries;
 import '../../data/store.dart';
 import '../../state/app_state.dart';
 import '../../widgets/app_router.dart' show kHeroRateKey;
+import '../../widgets/coach_mark.dart';
 import '../../widgets/ui.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  /// Ancla del coach-mark de cotización (Ola 1 · tips-dismissed).
+  static final GlobalKey _tipCotizacion = GlobalKey(debugLabel: 'tip-home-cotizacion');
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +45,7 @@ class HomeScreen extends StatelessWidget {
             _Hero(poller: poller),
             _RateHero(),
             _WeekSpark(),
-            _CotizacionPrincipal(),
+            KeyedSubtree(key: _tipCotizacion, child: _CotizacionPrincipal()),
             _DivisasFoco(),
             _ResumenMes(),
             _AlertasPrecios(),
@@ -73,6 +77,20 @@ class _HeroState extends State<_Hero> {
     // Hora viva del héroe: refresco cada 30 s (dispose correcto abajo).
     _clock = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() => _now = DateTime.now());
+    });
+    // Coach-mark (Ola 1): la tasa activa se elige en «Cotización principal».
+    // Va tras el walkthrough de Inicio y solo si el tablero ya tiene datos.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final store = context.read<AppStore>();
+      final activa = store.board.sources[store.sourceFor(Currency.ves)];
+      if (activa == null) return; // sin tablero no hay qué explicar
+      scheduleFeatureTip(context, '/', 'home.cotizacion',
+          anchor: HomeScreen._tipCotizacion,
+          title: 'Elige tu tasa activa',
+          body: 'Cada fila de «Cotización principal» cambia la fuente con un '
+              'toque: BCV, paralelo, promedio o tu manual. La tarjeta del '
+              'dólar de arriba usa la que actives aquí.');
     });
   }
 

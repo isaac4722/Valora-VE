@@ -24,6 +24,7 @@ import '../../data/history_api.dart';
 import '../../data/rate_history.dart';
 import '../../data/store.dart';
 import '../../services/sharing.dart';
+import '../../widgets/coach_mark.dart';
 import '../../widgets/share_card.dart';
 import '../../widgets/share_menu.dart';
 import '../../widgets/ui.dart';
@@ -46,6 +47,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
   Timer? _notesSave; // debounce 600 ms de las notas
   AppStore? _storeRef; // para el flush en dispose (sin context)
 
+  /// Ancla del coach-mark de fecha histórica (Ola 1 · tips-dismissed).
+  static final GlobalKey _tipFecha = GlobalKey(debugLabel: 'tip-converter-fecha');
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +57,13 @@ class _ConverterScreenState extends State<ConverterScreen> {
     _storeRef = store;
     _notesCtrl.text = store.readConversionNotes();
     _notesCtrl.addListener(_onNotesChanged);
+    // Coach-mark (Ola 1): fecha histórica — tras el walkthrough del módulo.
+    scheduleFeatureTip(context, '/conversor', 'converter.fecha',
+        anchor: _tipFecha,
+        title: 'Ponle fecha al cálculo',
+        body: '«Elegir fecha» abre el calendario con los días guardados (los '
+            'remotos de 180 días se suman en vivo) y la tasa de ESE día entra '
+            'al cálculo, con su ruta y su fuente a la vista.');
   }
 
   /// Debounce de notas: reprograma el guardado a 600 ms de la última tecla.
@@ -360,7 +371,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
         children: [
           const PageHeader('Conversor', hint: 'Puente USD · EUR visible · ruta honesta'),
           // Fecha de la tasa activa + selector histórico (calendario real).
-          _FechaTasas(
+          KeyedSubtree(
+            key: _tipFecha,
+            child: _FechaTasas(
             store: store,
             ctx: ctx,
             from: from,
@@ -374,6 +387,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
               _applyRateContext();
             },
             onOpenCalendar: _openHistoricCalendar,
+          ),
           ),
           const SizedBox(height: 14),
           _DualInput(

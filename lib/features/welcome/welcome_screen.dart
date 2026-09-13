@@ -94,7 +94,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         children: <Widget>[
                           _PageOne(scheme: scheme),
                           _PageTwo(scheme: scheme, sem: VeColors.of(context)),
-                          _PageThree(scheme: scheme),
+                          _PageThree(
+                            scheme: scheme,
+                            country: _country,
+                            onPickCountry: (c) => setState(() => _country = c),
+                          ),
                         ],
                       )
                     : _buildStep(context),
@@ -352,59 +356,122 @@ class _PageTwo extends StatelessWidget {
 
 /// Página 3 · datos reales de APIs y todo local (adaptación del aviso
 /// «prototipo» del dp4 a la app real: nada de demo, sin cuentas, sin nube).
+/// Ola 1 (protocolo v2): el PAÍS se elige aquí — la bienvenida completa al
+/// paso obligatorio con la selección ya hecha (confirmación, no sorpresa).
 class _PageThree extends StatelessWidget {
-  const _PageThree({required this.scheme});
+  const _PageThree({required this.scheme, required this.country, required this.onPickCountry});
 
   final ColorScheme scheme;
+  final Country country;
+  final ValueChanged<Country> onPickCountry;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        const _PageKicker('Antes de empezar'),
-        const SizedBox(height: 18),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: scheme.outlineVariant),
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          const _PageKicker('Antes de empezar'),
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Icon(Icons.cloud_done_outlined, size: 20, color: scheme.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Tasas en vivo, datos tuyos',
+                      style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: scheme.onSurface),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Las cotizaciones llegan de APIs públicas (BCV, paralelo, TRM, '
+                  'Banxico, Banco Central de Brasil). Tus registros, listas y '
+                  'finanzas viven solo en este teléfono: sin cuentas ni claves.',
+                  style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Si te quedas sin conexión, la app sigue funcionando con el '
+                  'último tablero guardado y acepta tasas manuales. El tutorial '
+                  'completo lo puedes relanzar desde Ajustes cuando quieras.',
+                  style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
+                ),
+                const Divider(height: 22),
+                // Leyenda de categorías (dp6): qué significa cada color del libro.
+                CategoryLegend(),
+              ],
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Icon(Icons.cloud_done_outlined, size: 20, color: scheme.primary),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Tasas en vivo, datos tuyos',
-                    style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: scheme.onSurface),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Las cotizaciones llegan de APIs públicas (BCV, paralelo, TRM, '
-                'Banxico, Banco Central de Brasil). Tus registros, listas y '
-                'finanzas viven solo en este teléfono: sin cuentas ni claves.',
-                style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Si te quedas sin conexión, la app sigue funcionando con el '
-                'último tablero guardado y acepta tasas manuales. El tutorial '
-                'completo lo puedes relanzar desde Ajustes cuando quieras.',
-                style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
-              ),
-              const Divider(height: 22),
-              // Leyenda de categorías (dp6): qué significa cada color del libro.
-              CategoryLegend(),
+          const SizedBox(height: 14),
+          // Ola 1: el país EN la bienvenida — chips compactos que preseleccionan
+          // el paso obligatorio siguiente.
+          Text('¿DESDE DÓNDE MIRAS LAS TASAS?',
+              style: VeText.labelCaps(9.5, color: scheme.primary)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final c in Country.values)
+                _CountryChip(
+                  country: c,
+                  selected: country == c,
+                  onTap: () => onPickCountry(c),
+                ),
             ],
           ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+}
+
+/// Chip compacto de país para la página 3 de la bienvenida (Ola 1).
+class _CountryChip extends StatelessWidget {
+  const _CountryChip({required this.country, required this.selected, required this.onTap});
+
+  final Country country;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: selected ? scheme.primary : scheme.outlineVariant,
+              width: selected ? 1.4 : 1),
+          color: selected ? scheme.primary.withValues(alpha: 0.07) : scheme.surface,
         ),
-      ],
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(country.currency == Currency.usd ? Icons.public : Icons.flag_outlined,
+              size: 14, color: scheme.primary),
+          const SizedBox(width: 6),
+          Text(country.label,
+              style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500)),
+        ]),
+      ),
     );
   }
 }

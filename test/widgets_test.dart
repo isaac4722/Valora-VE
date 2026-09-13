@@ -2,6 +2,8 @@
 /// (MVP Fase 7 · todas las pantallas y componentes).
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +23,7 @@ import 'package:valorave/features/products/products_screen.dart';
 import 'package:valorave/features/shell/main_shell.dart';
 import 'package:valorave/features/shell/notifs_center.dart';
 import 'package:valorave/widgets/app_router.dart';
+import 'package:valorave/widgets/coach_mark.dart';
 import 'package:valorave/features/welcome/welcome_screen.dart';
 import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
@@ -161,13 +164,19 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Siguiente'));
       await tester.pumpAndSettle();
+      // Ola 1: el país vive EN la bienvenida (página 3, chips compactos).
+      expect(find.text('¿DESDE DÓNDE MIRAS LAS TASAS?'), findsOneWidget);
+      await tester.tap(find.text('Colombia'));
+      await tester.pumpAndSettle();
       expect(find.text('Comenzar'), findsOneWidget);
       await tester.tap(find.text('Comenzar'));
       await tester.pumpAndSettle();
       expect(find.text('¿Desde dónde miras las tasas?'), findsOneWidget);
-      await tester.tap(find.text('Elegir Venezuela'));
+      // La selección de la bienvenida preselecciona el paso obligatorio.
+      expect(find.text('Elegir Colombia'), findsOneWidget);
+      await tester.tap(find.text('Elegir Colombia'));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(store.settings.country, 'VE');
+      expect(store.settings.country, 'CO');
       // 7 slides + done
       for (int i = 0; i < 6; i++) {
         await tester.tap(find.text('Siguiente'));
@@ -343,6 +352,52 @@ void main() {
       await tester.tap(find.text('Lista'));
       await tester.pumpAndSettle();
       expect(find.text('Lista de compras'), findsOneWidget);
+    });
+  });
+
+  group('Coach-marks por feature (Ola 1 · valorave.tips-dismissed)', () {
+    testWidgets('se muestra una vez, se descarta y no vuelve', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final anchor = GlobalKey(debugLabel: 'anchor');
+
+      Future<void> pumpHost() async {
+        await tester.pumpWidget(MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(width: 120, height: 40, key: anchor),
+            ),
+          ),
+        ));
+      }
+
+      await pumpHost();
+      // Primera vez: la punta aparece anclada.
+      unawaited(maybeShowTip(tester.element(find.byType(Scaffold)), prefs,
+          'test.tip',
+          anchor: anchor,
+          title: 'Punta de prueba',
+          body: 'Cuerpo de la punta de prueba.'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Punta de prueba'), findsOneWidget);
+      expect(find.text('Entendido'), findsOneWidget);
+      // Se descartó ANTES de mostrarse (una oportunidad, no un bucle).
+      expect(dismissedTips(prefs), contains('test.tip'));
+      await tester.tap(find.text('Entendido'));
+      await tester.pumpAndSettle();
+
+      // Segunda vez: silencio (id ya en tips-dismissed).
+      await pumpHost();
+      await maybeShowTip(tester.element(find.byType(Scaffold)), prefs,
+          'test.tip',
+          anchor: anchor,
+          title: 'Punta de prueba',
+          body: 'Cuerpo de la punta de prueba.');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Punta de prueba'), findsNothing);
     });
   });
 }

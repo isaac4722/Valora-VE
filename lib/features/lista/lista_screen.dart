@@ -21,6 +21,7 @@ import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../services/quick_actions.dart' show scanRequest;
 import '../../services/sharing.dart';
+import '../../widgets/coach_mark.dart';
 import '../../widgets/ui.dart';
 import 'checkout_modal.dart';
 import 'item_editor.dart';
@@ -43,6 +44,9 @@ class _ListaScreenState extends State<ListaScreen> {
   String _addCurrency = 'VES';
   String _storeName = '';
 
+  /// Ancla del coach-mark de la sala (Ola 1 · tips-dismissed).
+  static final GlobalKey _tipSala = GlobalKey(debugLabel: 'tip-lista-sala');
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +60,13 @@ class _ListaScreenState extends State<ListaScreen> {
       }
     });
     scanRequest.addListener(_onScanRequest);
+    // Coach-mark (Ola 1): la sala en vivo — tras el walkthrough del módulo.
+    scheduleFeatureTip(context, '/lista', 'lista.sala',
+        anchor: _tipSala,
+        title: 'Comparte la lista en vivo',
+        body: '«Sala en vivo» crea un código de 6 letras: quien lo tenga ve '
+            'tu lista y sus cambios al instante, por servidor, Cerca (sin '
+            'datos) o WiFi local. Sin conexión, todo queda en la cola.');
   }
 
   void _onScanRequest() {
@@ -392,12 +403,15 @@ class _ListaScreenState extends State<ListaScreen> {
           // Compra en grupo.
           SectionTitle('Compra en grupo'),
           Card(
-            child: ListTile(
+            child: KeyedSubtree(
+              key: _tipSala,
+              child: ListTile(
               leading: Icon(Icons.groups_outlined, color: scheme.primary),
               title: const Text('Sala en vivo', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
               subtitle: const Text('Comparte tu lista por código de 6 letras, QR, WiFi directo o servidor', style: TextStyle(fontSize: 12)),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => showRoomSheet(context),
+            ),
             ),
           ),
           // Totales por moneda + compartir (texto y PNG).
