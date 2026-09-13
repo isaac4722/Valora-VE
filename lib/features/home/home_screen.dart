@@ -385,16 +385,17 @@ class _CotizacionPrincipal extends StatelessWidget {
             actionLabel: 'Tasa manual',
             onAction: () => GoRouter.of(context).go('/ajustes'),
           )
-        else if (poller.networkBlocked)
-          // Red bloqueada SIN datos guardados: wifi_off + salidas reales.
+        else if (poller.networkBlocked || poller.offlineNet)
+          // Sin red (señal viva v17.8) o red bloqueada SIN datos guardados:
+          // wifi_off + salidas reales — NUNCA spinner de 7 s que va a fallar.
           OfflineState(
             'Sin conexión · sin tasas guardadas todavía',
-            hint: 'No pierdes nada: en cuanto vuelva la red la app descarga '
-                'las tasas sola. Si prefieres, agrega una tasa manual ahora '
-                'y sigue trabajando.',
+            hint: 'No pierdes nada: todo lo demás de la app funciona igual '
+                'con los datos de tu teléfono. Cuando vuelva la red, las '
+                'tasas se descargan solas; o agrega una tasa manual ahora.',
             icon: Icons.wifi_off,
             actionLabel: poller.loading ? 'Consultando…' : 'Reintentar',
-            onAction: poller.loading ? null : () => poller.refreshNow(),
+            onAction: poller.loading ? null : () => poller.retryNow(),
             secondaryLabel: 'Tasa manual',
             onSecondary: () => GoRouter.of(context).go('/ajustes'),
           )

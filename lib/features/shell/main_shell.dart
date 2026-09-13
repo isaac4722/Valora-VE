@@ -93,7 +93,10 @@ class MainShell extends StatelessWidget {
       body: Column(
         children: [
           _Header(activeIndex: current),
-          RateHealthBanner(stale: poller.rateStale, onRetry: () => poller.refreshNow()),
+          RateHealthBanner(
+              stale: poller.rateStale,
+              offline: poller.offlineNet,
+              onRetry: poller.offlineNet ? null : () => poller.refreshNow()),
           if (current == 0) _HomeTicker(),
           const _TourTrigger(),
           Expanded(child: navigationShell),

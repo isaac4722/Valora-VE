@@ -18,6 +18,7 @@ import '../data/rate_history.dart';
 import '../data/sse_stream.dart';
 import '../data/store.dart';
 import '../services/alerts.dart';
+import '../services/connectivity.dart';
 import '../services/widget_service.dart';
 import '../services/notifications.dart';
 
@@ -59,18 +60,28 @@ class ThemeController extends ChangeNotifier {
 
 /// Ciclo de tasas: poll 60 s (respetando ahorro de datos), apagado idle 10
 /// min, primero al arrancar. Emite flashes de cambios al AlertEngine.
-/// SSE EN VIVO opcional (17.7): si settings.sseUrl apunta a un despliegue
-/// web ValoraVE, el tablero también se empuja por `/api/rates/stream`
-/// (push del servidor); el polling SIGUE como latido y respaldo — si el
-/// stream muere, la app no se entera de nada malo.
+/// OFFLINE REAL (v17.8): con [ConnectivityService] la señal de red manda —
+/// sin red NO se consulta (cero timeouts de 7 s fingiendo carga), NO se
+/// reintenta en bucle (se detiene el martilleo) y al volver la red se
+/// refresca solo. SSE EN VIVO opcional (17.7): si settings.sseUrl apunta a
+/// un despliegue web ValoraVE, el tablero también se empuja por
+/// `/api/rates/stream` (push del servidor); el polling SIGUE como latido y
+/// respaldo — si el stream muere, la app no se entera de nada malo.
 class RatesPoller extends ChangeNotifier {
-  RatesPoller(this._store, this._notifs, this._alerts) {
+  RatesPoller(this._store, this._notifs, this._alerts, {ConnectivityService? connectivity}) {
     _store.addListener(_onStoreChanged);
+    _connectivity = connectivity;
+    // Estado INICIAL de red (v17.8): si la app arranca SIN red no habrá
+    // transición que escuchar — el flag nace con la verdad del día uno.
+    _offlineNet = !(connectivity?.isOnline ?? true);
+    _netSub = connectivity?.onLineChanged.listen(_onNetChanged);
   }
 
   final AppStore _store;
   final NotificationsService _notifs;
   final AlertEngine _alerts;
+  ConnectivityService? _connectivity;
+  StreamSubscription<bool>? _netSub;
 
   Timer? _timer;
   Timer? _idleTimer;
@@ -81,6 +92,35 @@ class RatesPoller extends ChangeNotifier {
   bool get loading => _loading;
   bool get stale => _stale;
   bool get networkBlocked => _networkBlocked;
+
+  /// SIN red según connectivity_plus (v17.8). La app sigue funcionando con
+  /// los datos guardados — esto solo calma las consultas y los estados.
+  bool _offlineNet = false;
+  bool get offlineNet => _offlineNet;
+
+  /// Cambio de red (v17.8): sin red → se detiene el ciclo (nada de
+  /// martillar 60 s contra un muro); con red → refresco inmediato si el
+  /// usuario permite las consultas.
+  void _onNetChanged(bool online) {
+    if (_disposed) return;
+    final changed = _offlineNet == online;
+    _offlineNet = !online;
+    if (online) {
+      // Volvió la red: solo si el ciclo está permitido (modo offline ELEGIDO
+      // y autoRefresh respetados — el dueño manda, no la red).
+      if (!_store.settings.offlineMode && _store.settings.autoRefresh) {
+        unawaited(refreshNow());
+        startAuto();
+      }
+    } else {
+      // Sin red: se cancela el latido (el stream SSE también se apaga —
+      // _syncSse lo respeta).
+      _timer?.cancel();
+      _timer = null;
+      _stopSse();
+    }
+    if (changed) notifyListeners();
+  }
 
   // ── SSE en vivo (opcional) ──
   RatesStream? _sse;
@@ -177,7 +217,8 @@ class RatesPoller extends ChangeNotifier {
         : '${base.replaceAll(RegExp(r'/+$'), '')}/api/rates/stream';
     if (url == _sseLiveUrl) return;
     _stopSse();
-    if (url.isEmpty || _store.settings.offlineMode) return;
+    // v17.8: sin red no se abre el stream (reintenta al volver la red).
+    if (url.isEmpty || _store.settings.offlineMode || _offlineNet) return;
     _sseLiveUrl = url;
     _sse = RatesStream(dio: Dio(), url: url);
     _sseSub = _sse!.boards.listen((board) {
@@ -249,11 +290,34 @@ class RatesPoller extends ChangeNotifier {
     _sseLiveUrl = null;
   }
 
+  /// Reintento MANUAL (v17.8): el botón «Reintentar» nunca queda mudo —
+  /// re-consulta la red AHORA y solo consulta las APIs si de verdad hay
+  /// señal. Si la red volvió, la transición ya disparó el refresco solo.
+  Future<void> retryNow() async {
+    final c = _connectivity;
+    if (c == null) return refreshNow(); // sin señal: ciclo clásico
+    final wasOffline = _offlineNet;
+    final online = await c.recheck();
+    if (!online) {
+      _offlineNet = true;
+      notifyListeners(); // reconfirmado sin red: estado honesto al día
+      return;
+    }
+    if (wasOffline) return; // la señal de transición ya refrescó
+    return refreshNow();
+  }
+
   Future<void> refreshNow() async {
     if (_loading) return;
     if (_store.settings.offlineMode) {
       // Modo offline total: ninguna consulta a APIs. Lo visible sale del
       // libro local + tasas manuales (v17.2, decisión del dueño).
+      return;
+    }
+    if (_offlineNet) {
+      // SIN red (v17.8): no se finge una carga de 7 s que va a fallar.
+      // La UI muestra el estado offline honesto; la reconexión dispara
+      // el refresco sola (_onNetChanged).
       return;
     }
     _loading = true;
@@ -268,9 +332,9 @@ class RatesPoller extends ChangeNotifier {
       // OK envejece >15 min — NUNCA antes de haber visto el tablero.
       if (_store.board.isEmpty) _networkBlocked = true;
       _stale = true;
-      // Reintento rápido: aunque el intervalo sea de 15/30 min, si el
-      // fallo fue por red lo sensato es volver a intentar en 60 s.
-      _scheduleNext(fast: true);
+      // Reintento rápido SOLO si hay red (si la red se fue, la señal de
+      // conectividad reposiciona el ciclo — no martillamos a ciegas).
+      if (!_offlineNet) _scheduleNext(fast: true);
     } finally {
       _loading = false;
       notifyListeners();
@@ -321,6 +385,7 @@ class RatesPoller extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _store.removeListener(_onStoreChanged);
+    _netSub?.cancel();
     _timer?.cancel();
     _idleTimer?.cancel();
     _stopSse();
@@ -334,6 +399,7 @@ List<SingleChildWidget> appProviders({
   required ThemeController theme,
   required NotificationsService notifs,
   required SharedPreferences prefs,
+  ConnectivityService? connectivity,
 }) {
   final alerts = AlertEngine(prefs);
   return [
@@ -341,7 +407,9 @@ List<SingleChildWidget> appProviders({
     ChangeNotifierProvider.value(value: theme),
     Provider.value(value: notifs),
     Provider<SharedPreferences>.value(value: prefs),
-    ChangeNotifierProvider(create: (_) => RatesPoller(store, notifs, alerts)),
+    if (connectivity != null) Provider<ConnectivityService>.value(value: connectivity),
+    ChangeNotifierProvider(
+        create: (_) => RatesPoller(store, notifs, alerts, connectivity: connectivity)),
     Provider<AlertEngine>.value(value: alerts),
   ];
 }

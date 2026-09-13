@@ -1065,33 +1065,48 @@ class CurrencySelect extends StatelessWidget {
   }
 }
 
-/// Banner de salud de tasas (>15 min sin fresca — §9 ui-bits).
+/// Banner de salud de tasas (§9 ui-bits). Dos causas, dos copys:
+/// · SIN RED (v17.8, señal viva de connectivity_plus): calmado — las
+///   tasas guardadas siguen siendo la verdad y la red vuelve sola.
+/// · TASAS VIEJAS (>15 min con red): aviso con reintentar.
 class RateHealthBanner extends StatelessWidget {
-  const RateHealthBanner({super.key, required this.stale, this.onRetry});
+  const RateHealthBanner({super.key, required this.stale, this.offline = false, this.onRetry});
 
   final bool stale;
+  final bool offline;
   final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
-    if (!stale) return const SizedBox.shrink();
+    if (!stale && !offline) return const SizedBox.shrink();
     final VeInk sem = VeColors.of(context);
+    final bool netDown = offline && stale;
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: sem.warn.withValues(alpha: 0.09),
+        color: netDown
+            ? sem.manual.withValues(alpha: 0.09)
+            : sem.warn.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: sem.warn.withValues(alpha: 0.35)),
+        border: Border.all(
+            color: netDown ? sem.manual.withValues(alpha: 0.35) : sem.warn.withValues(alpha: 0.35)),
       ),
       child: Row(children: [
-        Icon(Icons.hourglass_top, size: 14, color: sem.warn),
+        Icon(netDown ? Icons.wifi_off : Icons.hourglass_top,
+            size: 14, color: netDown ? sem.manual : sem.warn),
         const SizedBox(width: 8),
         Expanded(
-          child: Text('Las tasas no se actualizan hace más de 15 min',
-              style: TextStyle(fontSize: 12, color: sem.warn, fontWeight: FontWeight.w600)),
+          child: Text(
+              netDown
+                  ? 'Sin conexión — tasas guardadas a la vista'
+                  : 'Las tasas no se actualizan hace más de 15 min',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: netDown ? sem.manual : sem.warn,
+                  fontWeight: FontWeight.w600)),
         ),
-        if (onRetry != null)
+        if (!netDown && onRetry != null)
           TextButton(
             onPressed: onRetry,
             style: TextButton.styleFrom(

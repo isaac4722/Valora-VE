@@ -59,6 +59,7 @@ dependencies:
   decimal: ^3.0.2                   # dinero exacto (decimal.js del web → Decimal Dart)
 
 dev_dependencies:
+  connectivity_plus_platform_interface: ^2.1.0  # seam de tests (v17.8): fake de plataforma
   flutter_test:
     sdk: flutter
   integration_test:

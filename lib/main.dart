@@ -2,6 +2,10 @@
 /// Offline-first: Hive + SharedPreferences hidratan ANTES del primer frame;
 /// fuentes empaquetadas (Inter + Space Grotesk) tipografían igual sin red;
 /// el tablero pinta vacío honesto y refresca cuando haya conectividad.
+/// v17.8: la señal de red (connectivity_plus) se conoce desde el arranque —
+/// sin red NO se finge «Buscando tasas…» ni se martillea cada 60 s: la app
+/// client-side funciona completa con lo guardado y se actualiza sola al
+/// volver la conexión.
 library;
 
 import 'package:dynamic_color/dynamic_color.dart';
@@ -14,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme.dart';
 import 'data/store.dart';
 import 'services/biometric.dart';
+import 'services/connectivity.dart';
 import 'services/notifications.dart';
 import 'services/quick_actions.dart';
 import 'services/widget_service.dart';
@@ -33,6 +38,15 @@ Future<void> main({String? documentsDir}) async {
   final prefs = await SharedPreferences.getInstance();
   final theme = ThemeController();
   await theme.load(prefs);
+  // Señal de red (v17.8): tolerante — si el canal no existe (host de
+  // pruebas) queda «online» y nada de la app se bloquea.
+  final connectivity = ConnectivityService();
+  try {
+    await connectivity.init();
+  } catch (_) {
+    // Degradación honesta: sin señal de conectividad la app funciona igual
+    // con el ciclo clásico de reintentos.
+  }
   final notifs = NotificationsService();
   try {
     await notifs.init();
@@ -54,7 +68,8 @@ Future<void> main({String? documentsDir}) async {
   }
 
   runApp(MultiProvider(
-    providers: appProviders(store: store, theme: theme, notifs: notifs, prefs: prefs),
+    providers: appProviders(
+        store: store, theme: theme, notifs: notifs, prefs: prefs, connectivity: connectivity),
     child: ValoraApp(store: store),
   ));
 }
