@@ -185,7 +185,7 @@ class AppStore extends ChangeNotifier {
   void reopenTutorial() => _patchSettings(onboarded: false);
   void finishOnboarding() => _patchSettings(onboarded: true);
 
-  void _patchSettings({String? country, bool? onboarded, Map<String, String>? rateSourcesByModule, bool? offlineMode, int? pollMinutes}) {
+  void _patchSettings({String? country, bool? onboarded, Map<String, String>? rateSourcesByModule, bool? offlineMode, int? pollMinutes, bool? biometricLock, String? sseUrl}) {
     final s = _data.settings;
     final patched = s.copyWith(
       country: country != null ? CountryX.from(country).code : null,
@@ -193,6 +193,8 @@ class AppStore extends ChangeNotifier {
       rateSourcesByModule: rateSourcesByModule,
       offlineMode: offlineMode,
       pollMinutes: pollMinutes,
+      biometricLock: biometricLock,
+      sseUrl: sseUrl,
     );
     _data = AppData.fromJson(_data.toJson()..['settings'] = patched.toJson());
     _persist();
@@ -204,6 +206,12 @@ class AppStore extends ChangeNotifier {
 
   /// Cada cuánto consulta la app las APIs de tasas, en minutos (1..60).
   void setPollMinutes(int m) => _patchSettings(pollMinutes: m.clamp(1, 60));
+
+  /// Bloqueo biométrico al abrir la app (17.7 — local_auth ya estaba).
+  void setBiometricLock(bool v) => _patchSettings(biometricLock: v);
+
+  /// URL del despliegue web con SSE en vivo (17.7): '' apaga el stream.
+  void setSseUrl(String v) => _patchSettings(sseUrl: v.trim());
 
   /// setSetting genérico (§2.5) — camelCase de los campos v12/v13.
   void setSetting(String key, Object? value) {
@@ -218,6 +226,10 @@ class AppStore extends ChangeNotifier {
         patched = s.copyWith(offlineMode: value == true);
       case 'pollMinutes':
         patched = s.copyWith(pollMinutes: (value is num ? value.toInt() : int.tryParse('$value') ?? 1).clamp(1, 60));
+      case 'biometricLock':
+        patched = s.copyWith(biometricLock: value == true);
+      case 'sseUrl':
+        patched = s.copyWith(sseUrl: '$value'.trim());
       case 'tickerMode':
         patched = s.copyWith(tickerMode: '$value');
       case 'onboarded':

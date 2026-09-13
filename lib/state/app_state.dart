@@ -6,13 +6,16 @@ library;
 
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:nested/nested.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/models.dart';
 import '../data/board.dart';
 import '../data/rate_history.dart';
+import '../data/sse_stream.dart';
 import '../data/store.dart';
 import '../services/alerts.dart';
 import '../services/widget_service.dart';
@@ -56,8 +59,14 @@ class ThemeController extends ChangeNotifier {
 
 /// Ciclo de tasas: poll 60 s (respetando ahorro de datos), apagado idle 10
 /// min, primero al arrancar. Emite flashes de cambios al AlertEngine.
+/// SSE EN VIVO opcional (17.7): si settings.sseUrl apunta a un despliegue
+/// web ValoraVE, el tablero también se empuja por `/api/rates/stream`
+/// (push del servidor); el polling SIGUE como latido y respaldo — si el
+/// stream muere, la app no se entera de nada malo.
 class RatesPoller extends ChangeNotifier {
-  RatesPoller(this._store, this._notifs, this._alerts);
+  RatesPoller(this._store, this._notifs, this._alerts) {
+    _store.addListener(_onStoreChanged);
+  }
 
   final AppStore _store;
   final NotificationsService _notifs;
@@ -68,9 +77,32 @@ class RatesPoller extends ChangeNotifier {
   bool _loading = false;
   bool _stale = false;
   bool _networkBlocked = false;
+  bool _disposed = false;
   bool get loading => _loading;
   bool get stale => _stale;
   bool get networkBlocked => _networkBlocked;
+
+  // ── SSE en vivo (opcional) ──
+  RatesStream? _sse;
+  StreamSubscription<Map<String, dynamic>>? _sseSub;
+  Timer? _sseRetry;
+  String? _sseLiveUrl; // URL con la que el stream actual se abrió
+  String? _sseSeenUrl; // última configuración vista (detecta cambios)
+  bool _sseConnected = false;
+
+  /// ¿El stream SSE está recibiendo tableros? (punto de estado en Ajustes)
+  bool get sseConnected => _sseConnected;
+
+  /// Reacciona a cambios de settings relevantes (sseUrl/offlineMode) sin
+  /// reaccionar a cada mutación de productos/compras (comparación barata).
+  void _onStoreChanged() {
+    if (_disposed) return;
+    final s = _store.settings;
+    if (s.sseUrl != _sseSeenUrl) {
+      _sseSeenUrl = s.sseUrl;
+      _syncSse();
+    }
+  }
 
   /// Último fetch OK (§5 rate-health): null = jamás se vio el tablero vivo.
   DateTime? _lastBoardOk;
@@ -87,6 +119,136 @@ class RatesPoller extends ChangeNotifier {
 
   bool get offlineActive => _store.settings.offlineMode;
 
+  /// Ingesta común de un tablero nuevo (poll o SSE): store + snapshots +
+  /// alertas + widget BCV + reloj de frescura. Un solo camino, una sola
+  /// verdad — el SSE nunca escribe por detrás del motor.
+  void _ingestBoard(RateBoard board, List<String> changed) {
+    _store.setRateBoard(board);
+    lastChanged = changed;
+    // Rate-health: fetch OK → reloj de frescura al día (§5).
+    _lastBoardOk = DateTime.now();
+    // Snapshots 180 días.
+    appendSnapshots(_store.snapshots, board);
+    _store.persistSnapshots();
+    // Motor de alertas (spikes, metas, brecha, daily). El callback
+    // persist escribe cada aviso al centro de notificaciones del store
+    // (sin import ciclos: el engine solo recibe la función).
+    _alerts.evaluate(
+      store: _store,
+      changed: changed,
+      notifs: _notifs,
+      persist: (kind, title, body) =>
+          _store.pushNotification(kind: kind, title: title, body: body),
+    );
+    // Widget BCV 4×1 (home_widget).
+    unawaited(WidgetService.updateBcv(
+      bcv: board.sources['ves-bcv']?.rate,
+      parallel: board.sources['ves-parallel']?.rate,
+    ));
+    _networkBlocked = false;
+  }
+
+  /// Cambios vs el tablero vigente (misma regla changeEps del fetch).
+  List<String> _changedVs(Map<String, RateEntry> next) {
+    final prev = _store.board.sources;
+    if (prev.isEmpty) return next.keys.toList();
+    final out = <String>[];
+    for (final e in next.entries) {
+      final before = prev[e.key];
+      if (before == null) {
+        out.add(e.key);
+      } else if (before.rate > 0 &&
+          (e.value.rate - before.rate).abs() / before.rate > changeEps) {
+        out.add(e.key);
+      }
+    }
+    for (final id in prev.keys) {
+      if (!next.containsKey(id)) out.add(id);
+    }
+    return out;
+  }
+
+  /// Abre/cierra el stream SSE según settings (idempotente).
+  void _syncSse() {
+    if (_disposed) return;
+    final base = _store.settings.sseUrl;
+    final url = base.isEmpty
+        ? ''
+        : '${base.replaceAll(RegExp(r'/+$'), '')}/api/rates/stream';
+    if (url == _sseLiveUrl) return;
+    _stopSse();
+    if (url.isEmpty || _store.settings.offlineMode) return;
+    _sseLiveUrl = url;
+    _sse = RatesStream(dio: Dio(), url: url);
+    _sseSub = _sse!.boards.listen((board) {
+      if (_disposed) return;
+      // Payload del servidor web: {sources, providers, degraded}. Se
+      // normaliza con el MISMO parser del store (ids desconocidos fuera,
+      // tasas ≤ 0 fuera) y entra por la ingesta común.
+      final sources = <String, RateEntry>{};
+      final raw = board['sources'];
+      if (raw is Map) {
+        for (final e in raw.entries) {
+          final v = e.value;
+          if (v is Map) {
+            final entry =
+                RateEntry.tryParse(Map<String, dynamic>.from(v));
+            if (entry != null) sources['$e.key'] = entry;
+          }
+        }
+      }
+      if (sources.isEmpty) return; // payload vacío: nada que ingerir
+      final changed = _changedVs(sources);
+      final now = DateTime.now();
+      _ingestBoard(
+        RateBoard(
+          sources: sources,
+          providers: const ['sse'],
+          degraded: const [],
+          lastUpdate: now,
+          fetchedAt: now,
+        ),
+        changed,
+      );
+      if (!_sseConnected) {
+        _sseConnected = true;
+        notifyListeners();
+      }
+    }, onDone: _sseDown, onError: (_) => _sseDown());
+    _sse!.start();
+  }
+
+  /// El stream cayó: se apaga limpio y se reintenta más tarde mientras la
+  /// URL siga configurada (el polling nunca dejó de correr). Reintento a
+  /// 60 s si llegó a conectar; a 5 min si nunca conectó (no martilla un
+  /// endpoint roto).
+  void _sseDown() {
+    if (_disposed) return;
+    final wasConnected = _sseConnected;
+    _stopSse();
+    _sseConnected = false;
+    if (wasConnected) notifyListeners();
+    if (_store.settings.sseUrl.isEmpty || _store.settings.offlineMode) return;
+    _sseRetry?.cancel();
+    _sseRetry = Timer(
+      wasConnected ? const Duration(seconds: 60) : const Duration(minutes: 5),
+      () {
+        _sseLiveUrl = null; // fuerza reapertura en _syncSse
+        _syncSse();
+      },
+    );
+  }
+
+  void _stopSse() {
+    _sseSub?.cancel();
+    _sseSub = null;
+    _sse?.stop();
+    _sse = null;
+    _sseRetry?.cancel();
+    _sseRetry = null;
+    _sseLiveUrl = null;
+  }
+
   Future<void> refreshNow() async {
     if (_loading) return;
     if (_store.settings.offlineMode) {
@@ -99,29 +261,7 @@ class RatesPoller extends ChangeNotifier {
     notifyListeners();
     try {
       final result = await fetchBoard(_store.board);
-      _store.setRateBoard(result.board);
-      lastChanged = result.changed;
-      // Rate-health: fetch OK → reloj de frescura al día (§5).
-      _lastBoardOk = DateTime.now();
-      // Snapshots 180 días.
-      appendSnapshots(_store.snapshots, result.board);
-      _store.persistSnapshots();
-      // Motor de alertas (spikes, metas, brecha, daily). El callback
-      // persist escribe cada aviso al centro de notificaciones del store
-      // (sin import ciclos: el engine solo recibe la función).
-      _alerts.evaluate(
-        store: _store,
-        changed: result.changed,
-        notifs: _notifs,
-        persist: (kind, title, body) =>
-            _store.pushNotification(kind: kind, title: title, body: body),
-      );
-      // Widget BCV 4×1 (home_widget).
-      unawaited(WidgetService.updateBcv(
-        bcv: result.board.sources['ves-bcv']?.rate,
-        parallel: result.board.sources['ves-parallel']?.rate,
-      ));
-      _networkBlocked = false;
+      _ingestBoard(result.board, result.changed);
     } catch (_) {
       // Sin red o fuente caída: la UI cae al tablero vivo + manuales,
       // y el banner de salud (rateStale) aparece cuando la última vista
@@ -157,11 +297,13 @@ class RatesPoller extends ChangeNotifier {
   void startAuto() {
     if (_store.settings.offlineMode) return;
     _scheduleNext();
+    _syncSse(); // SSE en vivo cuando hay URL configurada (17.7)
   }
 
   void stopAuto() {
     _timer?.cancel();
     _idleTimer?.cancel();
+    _stopSse(); // idle/background: ni poll ni stream gastan batería
   }
 
   /// App en background: 10 min sin tocar → pausa (§5 pipeline).
@@ -177,8 +319,11 @@ class RatesPoller extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    _store.removeListener(_onStoreChanged);
     _timer?.cancel();
     _idleTimer?.cancel();
+    _stopSse();
     super.dispose();
   }
 }

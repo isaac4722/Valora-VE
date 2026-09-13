@@ -22,6 +22,7 @@ import '../../data/backup.dart';
 import '../../data/board.dart';
 import '../../data/store.dart';
 import '../../services/alerts.dart';
+import '../../services/biometric.dart';
 import '../../services/notifications.dart';
 import '../../services/sharing.dart';
 import '../../state/app_state.dart';
@@ -124,6 +125,36 @@ class _DatosConexion extends StatelessWidget {
                           }),
             ]),
             const SizedBox(height: 10),
+            // SSE en vivo (17.7): push opcional del despliegue web ValoraVE.
+            // El polling SIEMPRE sigue como latido — esto lo acelera.
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              leading: Container(
+                width: 10,
+                height: 10,
+                margin: const EdgeInsets.only(top: 4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: s.sseUrl.isEmpty
+                      ? scheme.outlineVariant
+                      : (poller.sseConnected
+                          ? VeColors.of(context).pos
+                          : VeColors.of(context).warn),
+                ),
+              ),
+              title: const Text('SSE en vivo (opcional)',
+                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+              subtitle: Text(
+                  s.sseUrl.isEmpty
+                      ? 'Desactivado. Si despliegas el servidor web ValoraVE, pega su URL: el tablero llega por push sin esperar el intervalo'
+                      : '${s.sseUrl} · ${poller.sseConnected ? 'stream conectado' : 'sin conexión — el ciclo normal sigue'}',
+                  style: TextStyle(fontSize: 11, height: 1.35, color: scheme.onSurfaceVariant)),
+              trailing: Text(s.sseUrl.isEmpty ? 'Añadir' : 'Editar',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+              onTap: s.offlineMode ? null : () => _askSseUrl(context, store),
+            ),
+            const SizedBox(height: 4),
             Text(
               'Las tasas descargadas se guardan en tu teléfono (una fila por fecha y fuente, sin duplicados) y siguen disponibles sin conexión.',
               style: TextStyle(fontSize: 11.5, height: 1.45, color: scheme.onSurfaceVariant),
@@ -132,6 +163,45 @@ class _DatosConexion extends StatelessWidget {
         ),
       ),
     ]);
+  }
+
+  /// Diálogo de URL del servidor SSE (17.7): vacío = desactivar. El poller
+  /// detecta el cambio de settings solo (listener del store).
+  Future<void> _askSseUrl(BuildContext context, AppStore store) async {
+    final ctrl = TextEditingController(text: store.settings.sseUrl);
+    final url = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Servidor SSE en vivo'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: ctrl,
+            autofocus: true,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              hintText: 'https://tu-despliegue.valorave.app',
+              labelText: 'URL base del despliegue web',
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+              'La app se suscribe a /api/rates/stream de ese servidor. Si falla '
+              'o lo dejas vacío, el ciclo de consulta normal sigue igual.',
+              style: TextStyle(fontSize: 11.5)),
+        ]),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    if (url != null) store.setSseUrl(url);
   }
 }
 
@@ -456,6 +526,7 @@ class _Apariencia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeController>();
+    final store = context.watch<AppStore>();
     final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Apariencia'),
@@ -480,6 +551,31 @@ class _Apariencia extends StatelessWidget {
                   style: TextStyle(fontSize: 13)),
               subtitle: Text(
                   'Android 12 o superior · botones y selección toman la paleta del wallpaper; fondos y cifras siguen de marca',
+                  style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+            ),
+            // Bloqueo biométrico (17.7): local_auth ya vivía como servicio;
+            // ahora con toggle. Al activar verifica soporte real primero.
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: store.settings.biometricLock,
+              onChanged: (v) async {
+                if (v) {
+                  final ok = await BiometricService().canCheck;
+                  if (!ok) {
+                    if (context.mounted) {
+                      showToast(context,
+                          'Este equipo no tiene biometría ni PIN de bloqueo configurados',
+                          kind: ToastKind.warn);
+                    }
+                    return; // no se activa sin soporte real
+                  }
+                }
+                store.setBiometricLock(v);
+              },
+              title: const Text('Bloqueo biométrico al abrir',
+                  style: TextStyle(fontSize: 13)),
+              subtitle: Text(
+                  'Huella, rostro o PIN del dispositivo. Se pregunta una vez al abrir la app; sin soporte nunca se activa',
                   style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
             ),
           ]),

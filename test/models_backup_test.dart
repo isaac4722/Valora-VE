@@ -118,6 +118,24 @@ void main() {
       });
       expect(board.sources, isEmpty); // purga ids desconocidos y basura
     });
+
+    test('Settings 17.7: biometricLock + sseUrl round-trip y default off', () {
+      // Default: apagados (respaldos viejos cargan igual).
+      final d = Settings.fromJson(const {});
+      expect(d.biometricLock, isFalse);
+      expect(d.sseUrl, '');
+      // Round-trip con valores.
+      final s = Settings(biometricLock: true, sseUrl: 'https://ve.app/');
+      final back = Settings.fromJson(s.toJson());
+      expect(back.biometricLock, isTrue);
+      // La URL se guarda tal cual la normaliza el fromJson (trim).
+      expect(back.sseUrl, 'https://ve.app/');
+      // JSON corrupto → default/tolerante sin lanzar (sOf stringifica,
+      // igual que calcCurrency; una URL '5' jamás conecta y es inofensiva).
+      final bad = Settings.fromJson(const {'biometricLock': 'si', 'sseUrl': 5});
+      expect(bad.biometricLock, isFalse);
+      expect(bad.sseUrl, '5');
+    });
   });
 
   group('Backup · mergeBackupData (§4)', () {

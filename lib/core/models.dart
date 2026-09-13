@@ -866,12 +866,16 @@ class Settings {
   final List<String> currencyOrder; // v13 (vacío = canónico, se purga)
   final bool offlineMode; // v17.2: sin NINGUNA consulta a APIs (solo guardadas)
   final int pollMinutes; // v17.2: cada cuánto consulta la app las APIs (1..60)
+  final bool biometricLock; // 17.7: pedir huella/rostro al abrir la app
+  final String sseUrl; // 17.7: SSE en vivo opcional de un despliegue web ('' = off)
 
   const Settings({
     this.country = 'VE',
     this.autoRefresh = true,
     this.offlineMode = false,
     this.pollMinutes = 1,
+    this.biometricLock = false,
+    this.sseUrl = '',
     this.tickerMode = 'featured',
     this.onboarded = false,
     this.calcCurrency = 'VES',
@@ -900,6 +904,8 @@ class Settings {
         autoRefresh = true,
         offlineMode = false,
         pollMinutes = 1,
+        biometricLock = false,
+        sseUrl = '',
         tickerMode = 'featured',
         onboarded = false,
         calcCurrency = 'VES',
@@ -951,6 +957,8 @@ class Settings {
     String? tickerSize,
     int? tickerSpeed,
     List<String>? currencyOrder,
+    bool? biometricLock,
+    String? sseUrl,
   }) =>
       Settings(
         country: country ?? this.country,
@@ -978,6 +986,8 @@ class Settings {
         tickerSize: tickerSize ?? this.tickerSize,
         tickerSpeed: tickerSpeed ?? this.tickerSpeed,
         currencyOrder: currencyOrder ?? this.currencyOrder,
+        biometricLock: biometricLock ?? this.biometricLock,
+        sseUrl: sseUrl ?? this.sseUrl,
       );
 
   Map<String, dynamic> toJson() => {
@@ -999,6 +1009,8 @@ class Settings {
         'tickerSize': tickerSize,
         'tickerSpeed': tickerSpeed,
         'currencyOrder': currencyOrder,
+        'biometricLock': biometricLock,
+        'sseUrl': sseUrl,
       };
 
   /// Mapa de sueldo tolerante: el modo fijo usa amount; los modos variables
@@ -1046,6 +1058,8 @@ class Settings {
       autoRefresh: j['autoRefresh'] != false,
       offlineMode: j['offlineMode'] == true,
       pollMinutes: (iOf(j['pollMinutes'], 1)).clamp(1, 60),
+      biometricLock: j['biometricLock'] == true,
+      sseUrl: sOf(j['sseUrl'], '').trim(),
       tickerMode: switch (sOf(j['tickerMode'], 'featured')) {
         'focus' => 'focus',
         'off' => 'off',
