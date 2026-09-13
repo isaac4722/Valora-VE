@@ -1,6 +1,6 @@
 /// ─── ValoraVE · Analítica pura (§3.2 + §4) ─────────────────────────────────
 /// Proyección de precios, inflación personal, timeline de tasas, devaluación,
-/// totales de carrito sin IGTF, vuelto y estadísticas de tiendas.
+/// totales de carrito, vuelto y estadísticas de tiendas.
 /// Todo puro: sin IO, testeable sin red ni Hive.
 library;
 
@@ -18,7 +18,7 @@ double toUSD(double amount, double rate) {
   return amount / rate;
 }
 
-/// cartTotals del web (§3.2): SIN IGTF — total == subtotal siempre en
+/// cartTotals del web (§3.2): total == subtotal siempre en
 /// compras nuevas. [usdOf] normaliza cada moneda a USD (motor activo).
 /// Dinero exacto (§3.2 decimal.js): la suma se hace con Decimal y se
 /// redondea a 6 decimales solo al salir (los USD normalizados pueden

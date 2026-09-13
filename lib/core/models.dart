@@ -644,7 +644,9 @@ class Purchase {
   final double totalBS; // VES con tasa del momento
   final double rate; // VES/USD usada
   final String? rateSourceId;
-  final bool igtf; // v14 histórico: solo display, motor nunca lo aplica
+  // v17.8: el campo booleano histórico de impuesto (v14, solo display —
+  // el motor nunca lo aplicó) se retiró por orden del dueño. Los respaldos
+  // viejos que lo traen simplemente lo ignoran al parsear: nada se pierde.
   final double? paidTotal; // si ajustó total
   final String? paidCurrency; // default 1ª moneda del carrito
   final String? ticketPhoto; // data URL comprimida ~200KB
@@ -659,14 +661,13 @@ class Purchase {
     required this.totalBS,
     required this.rate,
     this.rateSourceId,
-    this.igtf = false,
     this.paidTotal,
     this.paidCurrency,
     this.ticketPhoto,
     this.notes,
   });
 
-  /// Total pagado efectivo (ajustado o total); IGTF solo display histórico.
+  /// Total pagado efectivo (ajustado o total).
   double get paidUSD => paidTotal ?? totalUSD;
 
   Purchase copyWith({
@@ -693,7 +694,6 @@ class Purchase {
         totalBS: totalBS ?? this.totalBS,
         rate: rate ?? this.rate,
         rateSourceId: rateSourceId ?? this.rateSourceId,
-        igtf: igtf,
         paidTotal: paidTotal ?? this.paidTotal,
         paidCurrency: paidCurrency ?? this.paidCurrency,
         ticketPhoto: clearTicket ? null : (ticketPhoto ?? this.ticketPhoto),
@@ -709,7 +709,6 @@ class Purchase {
         'totalBS': totalBS,
         'rate': rate,
         'rateSourceId': rateSourceId,
-        'igtf': igtf,
         'paidTotal': paidTotal,
         'paidCurrency': paidCurrency,
         'ticketPhoto': ticketPhoto,
@@ -730,7 +729,6 @@ class Purchase {
         totalBS: dOf(j['totalBS']),
         rate: dOf(j['rate']),
         rateSourceId: j['rateSourceId'] as String?,
-        igtf: j['igtf'] == true,
         paidTotal: (j['paidTotal'] as num?)?.toDouble(),
         paidCurrency: j['paidCurrency'] as String?,
         ticketPhoto: j['ticketPhoto'] as String?,

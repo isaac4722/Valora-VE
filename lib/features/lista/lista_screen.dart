@@ -239,7 +239,7 @@ class _ListaScreenState extends State<ListaScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          PageHeader('Lista de compras', hint: 'Presupuesto, vuelto y dividir — sin IGTF',
+          PageHeader('Lista de compras', hint: 'Presupuesto, vuelto y dividir la cuenta',
             action: IconButton(
               tooltip: 'Historial',
               icon: const Icon(Icons.receipt_long, size: 20),

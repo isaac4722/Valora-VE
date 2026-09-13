@@ -108,7 +108,6 @@ Purchase buildPurchase({
     totalBS: rate > 0 ? totals.usd * rate : 0,
     rate: rate,
     rateSourceId: ctx.sel(Currency.ves),
-    igtf: false, // v14+: retirado del motor, solo display histórico
     paidTotal: paidTotal,
     paidCurrency: paidCurrency ?? (cart.isNotEmpty ? cart.first.currency : 'VES'),
     ticketPhoto: ticketDataUrl,

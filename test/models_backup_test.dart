@@ -55,7 +55,6 @@ void main() {
         totalBS: 80,
         rate: 40,
         rateSourceId: 'ves-parallel',
-        igtf: false, // v14: retirado del motor
         paidTotal: 2.5,
         paidCurrency: 'USD',
         notes: 'prueba',
@@ -64,8 +63,31 @@ void main() {
       expect(back.items.first.priceUSD, 1.0);
       expect(back.items.first.originalPrice, 40);
       expect(back.paidTotal, 2.5);
-      expect(back.igtf, isFalse);
       expect(back.rateSourceId, 'ves-parallel');
+    });
+
+    test('respaldo VIEJO con clave de impuesto extinta (v17.8): parsea y descarta', () {
+      // Los backups pre-v17.8 traían un booleano de impuesto que el motor
+      // jamás aplicó. fromJson lo ignora: nada se rompe, nada se pierde.
+      final back = Purchase.fromJson({
+        'id': 'vieja',
+        'date': '2025-11-02T10:00:00.000',
+        'store': 'Bodega',
+        'items': <Map<String, dynamic>>[
+          {'name': 'Café', 'quantity': 1, 'priceUSD': 3.0,
+           'originalPrice': 120, 'currency': 'VES'},
+        ],
+        'totalUSD': 3.0,
+        'totalBS': 120,
+        'rate': 40,
+        'igtf': true, // clave extinta: debe sobrar sin romper nada
+        'notes': 'respaldo viejo',
+      });
+      expect(back.totalUSD, 3.0);
+      expect(back.paidUSD, 3.0);
+      expect(back.notes, 'respaldo viejo');
+      // Round-trip v17.8: la clave extinta no se re-escribe.
+      expect(back.toJson().containsKey('igtf'), isFalse);
     });
 
     test('Transaction con amountUSD (§12.1)', () {
@@ -258,7 +280,7 @@ void main() {
   });
 
   group('Analítica (§3.2)', () {
-    test('cartTotals SIN IGTF + conversión a USD', () {
+    test('cartTotals + conversión a USD', () {
       final cart = [
         const CartItem(id: 'a', name: 'Arroz', quantity: 2, price: 40, currency: 'VES'),
         const CartItem(id: 'b', name: 'Café', quantity: 1, price: 5, currency: 'USD'),
@@ -266,7 +288,7 @@ void main() {
       final r = an.cartTotals(cart, (c) => c == Currency.ves ? 40 : 1);
       expect(r.byCurrency['VES'], 80);
       expect(r.byCurrency['USD'], 5);
-      expect(r.totalUSD, 7); // 80/40 + 5 — SIN IGTF
+      expect(r.totalUSD, 7); // 80/40 + 5
       expect(r.units, 3);
     });
 
