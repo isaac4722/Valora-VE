@@ -10,6 +10,8 @@ import 'package:valorave/core/models.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:valorave/data/rate_history.dart';
 import 'package:valorave/data/store.dart';
+import 'package:valorave/services/alerts.dart';
+import 'package:valorave/services/notifications.dart';
 
 void main() {
   late Directory tmp;
@@ -303,6 +305,68 @@ void main() {
       expect(store.cart.first.id, 'i2');
       store.applyRemoteRoomEvent('list_clear', {});
       expect(store.cart, isEmpty);
+    });
+  });
+
+  group('Metas de precio · checkProductTargets (17.7 · price_targets)', () {
+    test('anuncia el cruce fresco una vez, fija metSince y rearma al subir', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final engine = AlertEngine(prefs);
+      final notifs = NotificationsService();
+      final anunciados = <String>[];
+
+      void eval() => engine.checkProductTargets(
+            store: store,
+            notifs: notifs,
+            persist: (kind, title, body) => anunciados.add(title),
+          );
+
+      // Producto SIN meta, precio alto.
+      final p = store.addProduct(
+        Product(id: '', name: 'Aceite', category: ProductCategory.alimentos,
+            presentation: Presentation.unit, size: 1, createdAt: DateTime(2026), records: const []),
+        null,
+      );
+      store.addRecord(p.id, PriceRecord(id: '', price: 5, originalPrice: 5,
+          currency: 'USD', quantity: 1, rate: 1, sourceId: 'usd', date: DateTime(2026)));
+
+      // Meta fijada SOBRE el precio ya existente (2º plano): anuncia + fija metSince.
+      store.setTarget(p.id, 6);
+      eval();
+      expect(anunciados, hasLength(1));
+      expect(anunciados.first, contains('Aceite'));
+      expect(store.products.firstWhere((x) => x.id == p.id).metSince, isNotNull);
+
+      // Segunda pasada el mismo día: claim por día → silencio.
+      anunciados.clear();
+      eval();
+      expect(anunciados, isEmpty);
+
+      // Precio sube sobre la meta → rearma (metSince a null).
+      store.addRecord(p.id, PriceRecord(id: '', price: 6, originalPrice: 6,
+          currency: 'USD', quantity: 1, rate: 1, sourceId: 'usd', date: DateTime.now()));
+      eval();
+      expect(store.products.firstWhere((x) => x.id == p.id).metSince, isNull);
+      expect(anunciados, isEmpty);
+    });
+
+    test('sin meta o sin registros: silencio absoluto', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final engine = AlertEngine(prefs);
+      final p = store.addProduct(
+        Product(id: '', name: 'Sal', category: ProductCategory.otros,
+            presentation: Presentation.unit, size: 1, createdAt: DateTime(2026), records: const []),
+        null,
+      );
+      var llamadas = 0;
+      void contar(_, _, _) => llamadas++;
+      engine.checkProductTargets(
+          store: store, notifs: NotificationsService(), persist: contar);
+      expect(llamadas, 0); // sin meta → nada
+      store.setTarget(p.id, 1); // meta pero SIN registros
+      engine.checkProductTargets(
+          store: store, notifs: NotificationsService(), persist: contar);
+      expect(llamadas, 0);
     });
   });
 }

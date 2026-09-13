@@ -1,8 +1,9 @@
 /// ─── Widgets de escritorio (home_widget) + shortcuts ────────────────────────
-/// Widget BCV 4×1: escribe la última tasa del tablero en el grupo
-/// «valorave_widgets» cada vez que el tablero se actualiza. Los 4 shortcuts
-/// (Lista · Conversor · Escanear · Tasa BCV) viven en quick_actions nativo
-/// de Flutter 3.47 (androidx shortcuts) — aquí se mapean las acciones.
+/// Familia de widgets 4×1 (§12.2 · subclassing en Kotlin): Tasa BCV ·
+/// Paralelo · Brecha — los tres leen las mismas claves que esta servicio
+/// escribe tras cada fetchBoard OK. Los 4 shortcuts (Lista · Conversor ·
+/// Escanear · Tasa BCV) viven en quick_actions nativo de Flutter 3.47
+/// (androidx shortcuts) — aquí se mapean las acciones.
 library;
 
 import 'package:home_widget/home_widget.dart';
@@ -14,10 +15,10 @@ class WidgetService {
     await HomeWidget.setAppGroupId(_kAndroidGroup);
   }
 
-  /// Escribe tasas al widget (llamar tras cada fetchBoard OK).
-  /// Degradación honesta: si el canal no está disponible (host de prueba,
-  /// OEM capado), el widget se salta — jamás produce errores async no
-  /// manejados ni afecta al flujo del tablero.
+  /// Escribe tasas + brecha a la familia de widgets (llamar tras cada
+  /// fetchBoard OK). Degradación honesta: si el canal no está disponible
+  /// (host de prueba, OEM capado), el widget se salta — jamás produce
+  /// errores async no manejados ni afecta al flujo del tablero.
   static Future<void> updateBcv({
     required double? bcv,
     required double? parallel,
@@ -30,10 +31,22 @@ class WidgetService {
           'widgetParallelRate', parallel == null ? '—' : parallel.toStringAsFixed(2));
       await HomeWidget.saveWidgetData<String>(
           'widgetBcvUpdated', '${now.hour}:${now.minute.toString().padLeft(2, '0')}');
-      await HomeWidget.updateWidget(name: 'BcvWidgetProvider', androidName: 'BcvWidgetProvider');
+      // Brecha para el widget «Brecha» (respaldo recalculado también en Kotlin).
+      final gap = (parallel != null && parallel > 0)
+          ? '${parallel > bcv ? '+' : ''}${((parallel / bcv - 1) * 100).toStringAsFixed(1)} %'
+          : '—';
+      await HomeWidget.saveWidgetData<String>('widgetGapPct', gap);
+      // La familia completa se refresca con las mismas claves.
+      for (final name in const [
+        'BcvWidgetProvider',
+        'ParallelWidgetProvider',
+        'GapWidgetProvider',
+      ]) {
+        await HomeWidget.updateWidget(name: name, androidName: name);
+      }
     } catch (_) {
-      // Sin canal home_widget: el widget de escritorio simplemente no se
-      // actualiza; la app sigue normal.
+      // Sin canal home_widget: los widgets de escritorio simplemente no se
+      // actualizan; la app sigue normal.
     }
   }
 }

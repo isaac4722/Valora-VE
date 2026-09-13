@@ -38,11 +38,21 @@ void callbackDispatcher() {
           }
         } catch (_) {/* sin red: nada */}
         // Recordatorio diario con app cerrada (precisión horaria; el claim
-        // por día en AlertEngine evita duplicar con el camino in-app).
+        // por día en AlertEngine evita duplicar con el camino in-app) +
+        // METAS DE PRECIO de producto en 2º plano (17.7 · price_targets):
+        // evalúa contra el último registro guardado y avisa por el canal
+        // price_targets; el persist escribe al centro (Hive) y se ve al
+        // abrir la app.
         try {
           final prefs = await SharedPreferences.getInstance();
           final engine = AlertEngine(prefs);
           engine.reminderCheck(NotificationsService(), now: DateTime.now());
+          engine.checkProductTargets(
+            store: store,
+            notifs: NotificationsService(),
+            persist: (kind, title, body) =>
+                store.pushNotification(kind: kind, title: title, body: body),
+          );
         } catch (_) {/* sin canal de notifs: no bloquea */}
         return true;
       case kBackupTask:

@@ -448,6 +448,27 @@ class AppStore extends ChangeNotifier {
     _persist();
   }
 
+  /// Marca que el producto quedó bajo su meta en [at] (§9.4 metSince auto —
+  /// lo fija AlertEngine.checkProductTargets al anunciar).
+  void setMetSince(String productId, DateTime at) {
+    final list = _data.products.map((p) {
+      if (p.id != productId) return p;
+      return p.copyWith(metSince: at);
+    }).toList();
+    _data = AppData.fromJson(_data.toJson()..['products'] = list.map((e) => e.toJson()).toList());
+    _persist();
+  }
+
+  /// Rearma el aviso de meta (el precio volvió a subir por encima).
+  void clearMetSince(String productId) {
+    final list = _data.products.map((p) {
+      if (p.id != productId) return p;
+      return p.copyWith(clearMetSince: true);
+    }).toList();
+    _data = AppData.fromJson(_data.toJson()..['products'] = list.map((e) => e.toJson()).toList());
+    _persist();
+  }
+
   /// importProducts CSV: dedupe por barcode PRIMERO (si la fila lo trae);
   /// solo filas SIN barcode dedupean por nombre case-insensitive (§2.2).
   /// Crea {category:'otros', presentation:'unit', size:1, records:[]}.

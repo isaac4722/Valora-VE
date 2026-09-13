@@ -54,16 +54,40 @@
                 <data android:scheme="valorave" android:host="sala"/>
             </intent-filter>
         </activity>
-        <!-- Widget 4×1 de tasa BCV (datos escritos por home_widget): -->
+        <!-- Familia de widgets de tasa (§12.2 · subclassing de BaseRatesWidget):
+             BCV · Paralelo · Brecha — datos escritos por home_widget. -->
         <receiver
             android:name=".BcvWidgetProvider"
-            android:exported="false">
+            android:exported="false"
+            android:label="ValoraVE · Tasa BCV">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_bcv_info" />
+        </receiver>
+        <receiver
+            android:name=".ParallelWidgetProvider"
+            android:exported="false"
+            android:label="ValoraVE · Paralelo">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_parallel_info" />
+        </receiver>
+        <receiver
+            android:name=".GapWidgetProvider"
+            android:exported="false"
+            android:label="ValoraVE · Brecha">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_gap_info" />
         </receiver>
 
         <!-- Don't delete the meta-data below.

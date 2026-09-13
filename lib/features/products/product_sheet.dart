@@ -288,7 +288,8 @@ class _ProductSheetState extends State<ProductSheet> {
     _priceCtrl.clear();
     _newStoreCtrl.clear();
     setState(() => _priceError = null);
-    // Alerta de subida de precio (v17.5): engine + sistema + centro.
+    // Alerta de subida de precio (v17.5) + metas de producto (17.7 · el
+    // mismo camino del 2º plano): engine + sistema + centro + metSince.
     try {
       context.read<AlertEngine>().checkProductRise(
             notifs: context.read<NotificationsService>(),
@@ -299,6 +300,15 @@ class _ProductSheetState extends State<ProductSheet> {
             oldPrice: prev?.price ?? 0,
             newPrice: norm.usd,
             storeName: storeName.isEmpty ? null : storeName,
+          );
+      // Metas de precio (17.7 · price_targets): anuncia «bajo tu meta» por
+      // el canal del sistema + centro y fija metSince — mismo camino que el
+      // 2º plano de workmanager.
+      context.read<AlertEngine>().checkProductTargets(
+            store: store,
+            notifs: context.read<NotificationsService>(),
+            persist: (kind, title, body) =>
+                store.pushNotification(kind: kind, title: title, body: body),
           );
     } catch (_) {
       // Sin Provider (previews/tests): la alerta es no-op, el registro sigue.

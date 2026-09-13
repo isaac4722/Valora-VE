@@ -56,18 +56,24 @@ class NotificationsService {
     required String body,
     String? tag,
   }) async {
-    if (!_inited) await init();
-    final details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        channelId,
-        _kChannels.firstWhere((c) => c.id == channelId, orElse: () => _kChannels.last).name,
-        channelDescription: 'ValoraVE',
-        importance: Importance.high,
-        priority: Priority.high,
-        styleInformation: BigTextStyleInformation(body),
-      ),
-    );
-    await _plugin.show(tag?.hashCode ?? title.hashCode, title, body, details,
-        payload: tag);
+    try {
+      if (!_inited) await init();
+      final details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          channelId,
+          _kChannels.firstWhere((c) => c.id == channelId, orElse: () => _kChannels.last).name,
+          channelDescription: 'ValoraVE',
+          importance: Importance.high,
+          priority: Priority.high,
+          styleInformation: BigTextStyleInformation(body),
+        ),
+      );
+      await _plugin.show(tag?.hashCode ?? title.hashCode, title, body, details,
+          payload: tag);
+    } catch (_) {
+      // Sin canal de notificaciones (host de pruebas, OEM capado, motor en
+      // 2º plano sin plugins): el aviso del sistema se salta — el centro
+      // interno (persist) sigue funcionando. Nunca rompe el flujo.
+    }
   }
 }

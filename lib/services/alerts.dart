@@ -11,6 +11,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/analytics.dart' as an;
 import '../core/currencies.dart';
 import '../core/fmt.dart';
 import '../core/models.dart';
@@ -232,6 +233,49 @@ class AlertEngine {
           '${fmtPct(pct)} vs el anterior (${fmtUSD(oldPrice)}).',
       persist: persist,
     );
+  }
+
+  /// Metas de precio por PRODUCTO en 2º plano (§9.4/§12.2 price_targets):
+  /// recorre los productos con meta; si el último precio quedó por debajo
+  /// (target×(1−EPS)) y el cruce es FRESCO (metSince de HOY — lo estampa
+  /// addRecord v13.2 — o null, meta recién fijada sobre precios viejos),
+  /// avisa por el canal `price_targets` una vez al día (claim). Si volvió
+  /// a subir, rearma (metSince a null). Se llama al registrar un precio
+  /// (in-app) y desde la tarea horaria de workmanager (app cerrada).
+  void checkProductTargets({
+    required AppStore store,
+    required NotificationsService notifs,
+    AlertPersist? persist,
+  }) {
+    final today = SnapshotPoint.dayKey(DateTime.now());
+    for (final p in store.products) {
+      final t = p.targetPrice;
+      if (t == null || t <= 0) continue;
+      final last = p.latestRecord;
+      if (last == null || last.price <= 0) continue;
+      final met = last.price <= t * (1 - an.kTargetEps);
+      if (met) {
+        final fresh = p.metSince == null ||
+            SnapshotPoint.dayKey(p.metSince!) == today;
+        if (fresh && _claim('price-target.${p.id}.$today')) {
+          _notify(
+            notifs,
+            kind: NotifKind.threshold,
+            channelId: 'price_targets',
+            title: '¡${p.name} bajo tu meta!',
+            body: 'Último precio ${fmtUSD(last.price)} · meta ${fmtUSD(t)}. '
+                'Momento de comprar si lo tenías vigilado.',
+            persist: persist,
+          );
+        }
+        // addRecord ya estampa metSince al registrar; aquí solo cubre el
+        // caso «meta fijada sobre precios ya existentes» (setTarget limpia).
+        if (p.metSince == null) store.setMetSince(p.id, DateTime.now());
+      } else if (p.metSince != null) {
+        // Volvió a subir por encima de la meta: rearma el aviso.
+        store.clearMetSince(p.id);
+      }
+    }
   }
 
   /// Histéresis de metas: avisa una vez al cruzar, rearma al bajar.
