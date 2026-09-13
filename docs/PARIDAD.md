@@ -38,7 +38,7 @@ Leyenda: ✅ completo · ✅* completo con desviación consciente documentada.
 - Respaldo semanal automático con retención 4 → `workmanager_service.dart`.
 - SSE opcional de un despliegue web (rates-stream) → `lib/data/sse_stream.dart`.
 
-## Desviaciones conscientes (mandadas por AGENT.md §5.4)
+## Desviaciones conscientes (mandadas por AGENT.md · Regla 4)
 - **D1 · Sueldo variable — CERRADA en v1.0.1**: modos fijo · base+variable ·
   rango min–máx con sueldo efectivo (promedio del rango) alimentando tiles y
   LOTTT. El mapa JSON `salary` gana mode/base/variable/min/max tolerantes
