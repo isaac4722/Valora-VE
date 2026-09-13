@@ -211,3 +211,140 @@ String coverageText({
       : ' (${sinceSubject == null ? 'desde' : '$sinceSubject desde'} ${fmtDayShort(first)})';
   return '$rangeLabel · $points días con datos$paren$partial';
 }
+
+// ── Rankings de compras (§9.7): por día de semana y por moneda ─────────────
+
+/// Días de la semana es-VE (índice = DateTime.weekday − 1, lunes primero).
+const List<String> kWeekdayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+/// Gasto por día de la semana (USD efectivo pagado, [Purchase.paidUSD]):
+/// distribución Lun→Dom con total y número de compras. Orden cronológico;
+/// el UI destaca el día con más gasto (el «ranking» honesto).
+List<({String day, double totalUSD, int count})> weekdaySpend(
+    List<Purchase> purchases) {
+  final totals = List<double>.filled(7, 0);
+  final counts = List<int>.filled(7, 0);
+  for (final p in purchases) {
+    final i = p.date.weekday - 1;
+    if (i < 0 || i > 6) continue;
+    totals[i] += p.paidUSD;
+    counts[i]++;
+  }
+  return [
+    for (var i = 0; i < 7; i++)
+      (day: kWeekdayLabels[i], totalUSD: totals[i], count: counts[i]),
+  ];
+}
+
+/// Gasto por moneda (lo que pagaste en CADA divisa, §9.7): suma de los
+/// ítems del historial en su moneda original (precio original × cantidad)
+/// con su equivalente USD (precio normalizado) para el ORDEN del ranking.
+/// Devuelve [] si no hay ítems.
+List<({String currency, double totalOriginal, double totalUSD, int items})>
+    currencySpend(List<Purchase> purchases) {
+  final map = <String, ({double original, double usd, int items})>{};
+  for (final p in purchases) {
+    for (final it in p.items) {
+      final cur = it.currency.toUpperCase();
+      final prev = map[cur] ?? (original: 0.0, usd: 0.0, items: 0);
+      map[cur] = (
+        original: prev.original + it.originalPrice * it.quantity,
+        usd: prev.usd + it.priceUSD * it.quantity,
+        items: prev.items + 1,
+      );
+    }
+  }
+  final out = map.entries
+      .map((e) => (
+            currency: e.key,
+            totalOriginal: e.value.original,
+            totalUSD: e.value.usd,
+            items: e.value.items,
+          ))
+      .toList()
+    ..sort((a, b) => b.totalUSD.compareTo(a.totalUSD));
+  return out;
+}
+
+// ── Proyección DAMP (§3.2/§9.7 · misma semántica que an.predictPrice) ──────
+
+/// Proyección amortiguada sobre una serie diaria genérica (canasta, costo,
+/// tasa): media por tramos entre puntos consecutivos amortiguada por
+/// dampPhi (0.85) y acumulación LINEAL (v_k = último × (1 + diario × k)),
+/// exactamente como el motor predictPrice de productos. <2 puntos o <4 días
+/// de historia → null (estable, no se inventa tendencia).
+({List<({DateTime day, double value})> points, double dailyPct})? dampProjection(
+    List<({DateTime day, double value})> series,
+    {int days = 30}) {
+  if (series.length < 2) return null;
+  final sorted = [...series]..sort((a, b) => a.day.compareTo(b.day));
+  final last = sorted.last;
+  final first = sorted.first;
+  if (last.day.difference(first.day).inDays < 4) return null;
+  var sumDaily = 0.0;
+  var segments = 0;
+  for (var i = 1; i < sorted.length; i++) {
+    final gap = sorted[i].day.difference(sorted[i - 1].day).inDays;
+    if (gap <= 0 || sorted[i - 1].value <= 0) continue;
+    final pct = (sorted[i].value / sorted[i - 1].value - 1);
+    sumDaily += pct * an.dampPhi; // amortigua el momentum
+    segments++;
+  }
+  if (segments == 0 || last.value <= 0) return null;
+  final daily = sumDaily / segments;
+  final points = <({DateTime day, double value})>[
+    for (var k = 1; k <= days; k++)
+      (
+        day: last.day.add(Duration(days: k)),
+        value: last.value * (1 + daily * k),
+      ),
+  ];
+  return (points: points, dailyPct: daily * 100);
+}
+
+// ── Heatmap de devaluación (§9.7 · calendario 6 m) ─────────────────────────
+
+/// % de devaluación DIARIA del BCV (subida de la tasa vs el día anterior
+/// con datos). Serie asc por día; el primer punto no tiene anterior.
+/// NUNCA divide por cero: días con tasa ≤ 0 se saltan.
+List<({String day, double pct})> devaluationDaily(
+    List<SnapshotPoint> bcvSeries) {
+  final sorted = [...bcvSeries]..sort((a, b) => a.day.compareTo(b.day));
+  final out = <({String day, double pct})>[];
+  for (var i = 1; i < sorted.length; i++) {
+    if (sorted[i - 1].rate <= 0 || sorted[i].rate <= 0) continue;
+    out.add((
+      day: sorted[i].day,
+      pct: (sorted[i].rate / sorted[i - 1].rate - 1) * 100,
+    ));
+  }
+  return out;
+}
+
+// ── CSV de brecha (§9.7 exportGapCsv) ──────────────────────────────────────
+
+/// Filas de la brecha BCV↔paralelo por día (solo días con AMBAS tasas > 0;
+/// brecha = paralelo/BCV − 1). Encabezado es-VE con ';' como el histórico.
+List<List<String>> gapCsvRows(List<HistPoint> bcv, List<HistPoint> parallel) {
+  final byDay = <String, ({double b, double p})>{};
+  for (final h in bcv) {
+    if (h.rate > 0) byDay[h.date] = (b: h.rate, p: byDay[h.date]?.p ?? 0);
+  }
+  for (final h in parallel) {
+    if (h.rate > 0) {
+      byDay[h.date] = (b: byDay[h.date]?.b ?? 0, p: h.rate);
+    }
+  }
+  final rows = <List<String>>[['Dia', 'BCV', 'Paralelo', 'Brecha %']];
+  final days = byDay.entries.where((e) => e.value.b > 0 && e.value.p > 0).toList()
+    ..sort((a, b) => a.key.compareTo(b.key));
+  for (final e in days) {
+    rows.add([
+      e.key,
+      e.value.b.toStringAsFixed(4),
+      e.value.p.toStringAsFixed(4),
+      ((e.value.p / e.value.b - 1) * 100).toStringAsFixed(2),
+    ]);
+  }
+  return rows;
+}

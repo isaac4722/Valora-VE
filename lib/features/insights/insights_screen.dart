@@ -286,6 +286,21 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
               ),
               const SizedBox(height: 6),
               _GapPanel(bcv: bcv, parallel: par, index: _gapIdx),
+              // exportGapCsv (§9.7): la brecha por día en CSV es-VE.
+              if (bcv.isNotEmpty && par.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.table_view, size: 14),
+                    label: const Text('Exportar brecha CSV'),
+                    onPressed: () => showShareFile(
+                        context,
+                        'valorave-brecha-${SnapshotPoint.dayKey(DateTime.now())}.csv',
+                        toCSV(gapCsvRows(bcv, par), delimiter: ';')),
+                  ),
+                ),
+              ],
             ]),
           ),
         )
@@ -460,6 +475,10 @@ class _InflacionAnchor extends StatelessWidget {
     final prod = productsInflation(store.products, days: days);
     // Serie de costo de la canasta (forward-fill desde el común más antiguo).
     final costSeries = basketCostSeries(store.basket, store.products, days: days);
+    // Proyección punteada DAMP (§9.7 · φ 0.85, misma semántica de predictPrice):
+    // 30 días de canasta al momentum amortiguado — memoria, no promesa.
+    final costProj = dampProjection(
+        [for (final e in costSeries) (day: e.day, value: e.cost)]);
     // Devaluación BCV (curva) — reutiliza an.vesRateTimeline + an.vesDevaluation.
     final timeline = an.vesRateTimeline(store.snapshots
         .where((p) => p.sourceId == 'ves-bcv')
@@ -582,9 +601,30 @@ class _InflacionAnchor extends StatelessWidget {
                       borderColor: ink.manual,
                       borderWidth: 2,
                     ),
+                    // Proyección PUNTEADA (DAMP φ 0.85): se distingue a la
+                    // vista de la serie real — nunca se pinta sólida.
+                    if (costProj != null)
+                      LineSeries<({DateTime day, double value}), DateTime>(
+                        dataSource: costProj.points,
+                        xValueMapper: (p, _) => p.day,
+                        yValueMapper: (p, _) => p.value,
+                        name: 'Proyección 30 d',
+                        color: ink.warn,
+                        width: 1.6,
+                        dashArray: const <double>[6, 4],
+                      ),
                   ],
                 ),
               ),
+              if (costProj != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                      'Línea punteada: proyección 30 días con memoria amortiguada '
+                      '(φ 0,85 · ${costProj.dailyPct >= 0 ? '+' : ''}${costProj.dailyPct.toStringAsFixed(2)} %/día). '
+                      'Es una lectura del momentum, no una promesa.',
+                      style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
+                ),
             ]),
           ),
         ),
@@ -672,6 +712,12 @@ class _InflacionAnchor extends StatelessWidget {
                   'que la app consulta tasas (máx 180 días).',
               style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
         ),
+      // Heatmap de devaluación (§9.7 · calendario 6 m pictórico — cierra D2):
+      // % diario del BCV en calendario; rojo=subida (devaluación), verde=baja.
+      _HeatmapCalendar(
+          data: devaluationDaily(store.snapshots
+              .where((p) => p.sourceId == 'ves-bcv')
+              .toList())),
       if (prod == null && b == null)
         Padding(
           padding: const EdgeInsets.only(top: 6),
@@ -739,7 +785,120 @@ class _ProductosAnchor extends StatelessWidget {
           subtitle: Text('${s.count} compras', style: const TextStyle(fontSize: 11)),
           trailing: Text(fmtUSD(s.totalUSD), style: VeText.displayNum(13, color: scheme.onSurface)),
         ),
+      // ── Rankings de compras (§9.7): por día de semana y por moneda ──
+      if (store.purchases.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        Text('Compras por día de la semana',
+            style: VeText.labelCaps(10, color: scheme.onSurfaceVariant)),
+        _WeekdayRanking(purchases: store.purchases),
+        const SizedBox(height: 10),
+        Text('Compras por divisa',
+            style: VeText.labelCaps(10, color: scheme.onSurfaceVariant)),
+        _CurrencyRanking(purchases: store.purchases),
+      ],
     ]);
+  }
+}
+
+/// Distribución del gasto por día de la semana (Lun→Dom) con el día fuerte
+/// señalado — el «ranking» honesto: total USD efectivo + nº de compras.
+class _WeekdayRanking extends StatelessWidget {
+  const _WeekdayRanking({required this.purchases});
+  final List<Purchase> purchases;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final rows = weekdaySpend(purchases);
+    final maxTotal = rows.fold<double>(0, (m, e) => e.totalUSD > m ? e.totalUSD : m);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(children: [
+          for (final r in rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(children: [
+                SizedBox(
+                  width: 34,
+                  child: Text(r.day,
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: r.totalUSD == maxTotal && maxTotal > 0
+                              ? FontWeight.w800
+                              : FontWeight.w500,
+                          color: scheme.onSurface)),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: maxTotal > 0 ? r.totalUSD / maxTotal : 0,
+                      minHeight: 6,
+                      backgroundColor: scheme.surfaceContainerHighest,
+                      color: scheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 74,
+                  child: Text(r.totalUSD > 0 ? fmtUSD(r.totalUSD) : '—',
+                      textAlign: TextAlign.right,
+                      style: VeText.displayNum(11.5, color: scheme.onSurface)),
+                ),
+                SizedBox(
+                  width: 30,
+                  child: Text('${r.count}',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
+                ),
+              ]),
+            ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Gasto por divisa: lo pagado en CADA moneda (precio original de los ítems)
+/// con su equivalente USD — el orden del ranking es por USD (comparable).
+class _CurrencyRanking extends StatelessWidget {
+  const _CurrencyRanking({required this.purchases});
+  final List<Purchase> purchases;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final rows = currencySpend(purchases);
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Column(children: [
+          for (final r in rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(children: [
+                SizedBox(
+                  width: 44,
+                  child: Text(r.currency,
+                      style: VeText.displayNum(12, color: scheme.onSurface)),
+                ),
+                Expanded(
+                  child: Text(
+                      '${fmtMoney(r.totalOriginal, CurrencyX.from(r.currency))} · '
+                      '${r.items} ítem${r.items == 1 ? '' : 's'}',
+                      style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                ),
+                Text('≈ ${fmtUSD(r.totalUSD)}',
+                    style: VeText.displayNum(12, color: scheme.onSurface)),
+              ]),
+            ),
+        ]),
+      ),
+    );
   }
 }
 
@@ -802,7 +961,8 @@ class _CanastaAnchor extends StatelessWidget {
   }
 }
 
-/// Ancla 5: registros propios por fuente (selector) + gráfica interactiva + export.
+/// Ancla 5: registros propios por fuente (selector MULTI-DIVISA: hasta 3
+/// fuentes superpuestas) + gráfica interactiva + tabla + export por columnas.
 class _HistoricaAnchor extends StatefulWidget {
   const _HistoricaAnchor({required this.days});
   final int days;
@@ -812,7 +972,8 @@ class _HistoricaAnchor extends StatefulWidget {
 }
 
 class _HistoricaAnchorState extends State<_HistoricaAnchor> {
-  String? _sourceId;
+  /// Selección múltiple (historial multi-divisa, §9.7): hasta 3 fuentes.
+  final Set<String> _selected = {};
 
   /// Fuentes CON snapshots locales (sin manuales ni USD: no tienen historial).
   List<String> _sources(AppStore store) {
@@ -824,20 +985,49 @@ class _HistoricaAnchorState extends State<_HistoricaAnchor> {
     ];
   }
 
+  void _toggle(String id, List<String> sources) {
+    setState(() {
+      if (_selected.contains(id)) {
+        // Nunca queda vacío: la última fuente no se desmarca.
+        if (_selected.length > 1) _selected.remove(id);
+      } else {
+        if (_selected.length >= 3) return; // tope legible de 3 series
+        _selected.add(id);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final scheme = Theme.of(context).colorScheme;
+    final ink = VeColors.of(context);
     final sources = _sources(store);
-    final sourceId = (_sourceId != null && sources.contains(_sourceId))
-        ? _sourceId!
-        : (sources.contains('ves-bcv')
-            ? 'ves-bcv'
-            : (sources.isNotEmpty ? sources.first : ''));
-    final label = sourceId.isEmpty ? '' : (RateSource.of(sourceId)?.label ?? sourceId);
-    final series =
-        sourceId.isEmpty ? <SnapshotPoint>[] : snapshotSeries(store.snapshots, sourceId, widget.days);
-    final firstDay = series.isEmpty ? null : DateTime.tryParse(series.first.day);
+    // Selección efectiva: la guardada (válida) o el default honesto.
+    final selected = <String>[
+      for (final id in _selected.where(sources.contains))
+        if (sources.contains(id)) id,
+    ];
+    if (selected.isEmpty) {
+      final def = sources.contains('ves-bcv')
+          ? 'ves-bcv'
+          : (sources.isNotEmpty ? sources.first : '');
+      if (def.isNotEmpty) selected.add(def);
+    }
+    final multi = selected.length > 1;
+    // Serie por fuente seleccionada.
+    final seriesById = <String, List<SnapshotPoint>>{
+      for (final id in selected)
+        id: snapshotSeries(store.snapshots, id, widget.days),
+    };
+    final allSeries = seriesById.values.expand((s) => s).toList();
+    final firstDay = allSeries.isEmpty
+        ? null
+        : DateTime.tryParse(
+            (allSeries.map((p) => p.day).toList()..sort()).first);
+    final covPoints = allSeries.map((p) => p.day).toSet().length;
+    // Paleta por índice (máx 3): las divisas se distinguen por curva.
+    final palette = [scheme.primary, ink.neg, ink.warn];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const SizedBox(height: 10),
@@ -849,37 +1039,48 @@ class _HistoricaAnchorState extends State<_HistoricaAnchor> {
             actionLabel: 'Ir a Inicio',
             onAction: () => context.go('/'))
       else ...[
-        // Selector de fuente (solo las que tienen snapshots: nada vacío fingido).
+        // Selector MULTI (hasta 3): toca para sumar/quitar fuente de la gráfica.
         Wrap(spacing: 6, runSpacing: 6, children: [
           for (final id in sources)
             ChipTag(RateSource.of(id)?.label ?? id,
-                selected: id == sourceId, onTap: () => setState(() => _sourceId = id)),
+                selected: selected.contains(id),
+                onTap: () => _toggle(id, sources)),
         ]),
+        if (multi)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text('Multi-divisa: hasta 3 fuentes superpuestas; la última no se quita.',
+                style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
+          ),
         const SizedBox(height: 8),
         Text(
           coverageText(
               rangeLabel: rangeName(widget.days),
               requestedDays: widget.days,
-              points: series.length,
+              points: covPoints,
               first: firstDay,
-              sinceSubject: label.isEmpty ? null : label),
+              sinceSubject: null),
           style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 8),
-        if (series.length >= 2)
+        if (allSeries.length >= 2)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(10),
               child: SizedBox(
                 height: 210,
                 child: SfCartesianChart(
+                  legend: Legend(
+                      isVisible: multi,
+                      position: LegendPosition.bottom,
+                      textStyle: const TextStyle(fontSize: 10)),
                   primaryXAxis: DateTimeAxis(dateFormat: DateFormat('dd/MM'), majorGridLines: const MajorGridLines(width: 0)),
                   tooltipBehavior: TooltipBehavior(
                     enable: true,
                     activationMode: ActivationMode.singleTap,
                     builder: (dynamic s, dynamic point, dynamic series, int i, int si) {
-                      if (i < 0 || i >= series.length) return const SizedBox.shrink();
-                      final p = series[i];
+                      if (i < 0 || s is! List || i >= s.length) return const SizedBox.shrink();
+                      final p = s[i] as SnapshotPoint;
                       return _TipBox(main: fmtRate(p.rate), sub: fmtDayLabel(DateTime.parse(p.day)),
                           bg: scheme.primary, fg: scheme.onPrimary);
                     },
@@ -891,24 +1092,25 @@ class _HistoricaAnchorState extends State<_HistoricaAnchor> {
                     activationMode: ActivationMode.singleTap,
                   ),
                   series: [
-                    LineSeries<SnapshotPoint, DateTime>(
-                      dataSource: series,
-                      xValueMapper: (p, _) => DateTime.parse(p.day),
-                      yValueMapper: (p, _) => p.rate,
-                      name: label,
-                      color: scheme.primary,
-                      width: 1.8,
-                    ),
+                    for (var k = 0; k < selected.length; k++)
+                      LineSeries<SnapshotPoint, DateTime>(
+                        dataSource: seriesById[selected[k]]!,
+                        xValueMapper: (p, _) => DateTime.parse(p.day),
+                        yValueMapper: (p, _) => p.rate,
+                        name: RateSource.of(selected[k])?.label ?? selected[k],
+                        color: palette[k % palette.length],
+                        width: 1.8,
+                      ),
                   ],
                 ),
               ),
             ),
           )
-        else if (series.length == 1)
+        else if (allSeries.length == 1)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-                'Solo 1 punto con datos (${fmtDate(DateTime.parse(series.first.day))}): '
+                'Solo 1 punto con datos (${fmtDate(DateTime.parse(allSeries.first.day))}): '
                 'se necesitan al menos 2 fechas para mostrar variación.',
                 style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
           )
@@ -916,19 +1118,34 @@ class _HistoricaAnchorState extends State<_HistoricaAnchor> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-                'Aún no hay snapshots de $label. Profundidad local en otras fuentes: '
+                'Aún no hay snapshots de las fuentes elegidas. Profundidad local total: '
                 '${snapshotDepth(store.snapshots)} días (máx 180).',
                 style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
           ),
-        if (series.isNotEmpty) ...[
+        if (allSeries.isNotEmpty) ...[
           const SizedBox(height: 8),
           Card(
             child: Column(children: [
-              for (final s in series.reversed.take(10))
+              // Tabla por día: una columna por fuente (multi-divisa real).
+              for (final day in (allSeries.map((p) => p.day).toSet().toList()..sort())
+                  .reversed
+                  .take(10))
                 ListTile(
                   dense: true,
-                  title: Text(fmtDate(DateTime.parse(s.day)), style: const TextStyle(fontSize: 12.5)),
-                  trailing: Text(fmtRate(s.rate), style: VeText.displayNum(13, color: scheme.onSurface)),
+                  title: Text(fmtDate(DateTime.parse(day)), style: const TextStyle(fontSize: 12.5)),
+                  trailing: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      for (var k = 0; k < selected.length; k++)
+                        Padding(
+                          padding: EdgeInsets.only(left: k == 0 ? 0 : 10),
+                          child: Text(
+                              _rateForDay(seriesById[selected[k]]!, day),
+                              style: VeText.displayNum(13,
+                                  color: multi ? palette[k % palette.length] : scheme.onSurface)),
+                        ),
+                    ]),
+                  ),
                 ),
             ]),
           ),
@@ -936,19 +1153,36 @@ class _HistoricaAnchorState extends State<_HistoricaAnchor> {
         const SizedBox(height: 8),
         OutlinedButton.icon(
           icon: const Icon(Icons.table_view, size: 14),
-          label: const Text('Exportar histórico CSV'),
-          onPressed: series.isEmpty
+          label: Text(multi ? 'Exportar histórico CSV (${selected.length} fuentes)' : 'Exportar histórico CSV'),
+          onPressed: allSeries.isEmpty
               ? null
               : () {
-                  final rows = <List<String>>[['Dia', sourceId]];
-                  for (final s in series) {
-                    rows.add([s.day, s.rate.toStringAsFixed(4)]);
+                  // CSV multi-divisa: Día + una columna por fuente elegida.
+                  final days = allSeries.map((p) => p.day).toSet().toList()..sort();
+                  final rows = <List<String>>[
+                    ['Dia', for (final id in selected) id],
+                  ];
+                  for (final day in days) {
+                    rows.add([
+                      day,
+                      for (final id in selected) _rateForDay(seriesById[id]!, day, raw: true),
+                    ]);
                   }
-                  showShareFile(context, 'valorave-$sourceId-historico.csv', toCSV(rows, delimiter: ';'));
+                  showShareFile(
+                      context,
+                      'valorave-historico${multi ? '-multi' : '-${selected.first}'}.csv',
+                      toCSV(rows, delimiter: ';'));
                 },
         ),
       ],
     ]);
+  }
+
+  /// Tasa de [series] en [day]: formateada o cruda (CSV); '—' si no hay.
+  String _rateForDay(List<SnapshotPoint> series, String day, {bool raw = false}) {
+    final p = series.where((x) => x.day == day).firstOrNull;
+    if (p == null) return raw ? '' : '—';
+    return raw ? p.rate.toStringAsFixed(4) : fmtRate(p.rate);
   }
 }
 
@@ -971,6 +1205,148 @@ class _TipBox extends StatelessWidget {
         const SizedBox(height: 1),
         Text(sub, style: TextStyle(fontSize: 9.5, color: fg.withValues(alpha: 0.85))),
       ]),
+    );
+  }
+}
+
+/// Calendario pictórico de devaluación (§9.7 · el heatmap 6 m del web —
+/// cierra la desviación D2): un cuadro por día, rojo=subida de la tasa
+/// (devaluación), verde=baja, intensidad = magnitud vs el día anterior con
+/// datos. Últimos 6 meses calendario; sin datos → cuadro neutro (nunca
+/// inventa días). Encima del grid: día con mayor subida del período.
+class _HeatmapCalendar extends StatelessWidget {
+  const _HeatmapCalendar({required this.data});
+
+  /// % diario (vs día anterior con datos) por 'YYYY-MM-DD'.
+  final List<({String day, double pct})> data;
+
+  static const int _kMonths = 6;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final ink = VeColors.of(context);
+    final byDay = {for (final e in data) e.day: e.pct};
+    final maxAbs = data.fold<double>(0, (m, e) => e.pct.abs() > m ? e.pct.abs() : m);
+    final worst = data.isEmpty ? null : (data.reduce((a, b) => a.pct >= b.pct ? a : b));
+
+    // Meses calendario: los últimos 6 (incluye el actual), del más viejo al
+    // más reciente.
+    final now = DateTime.now();
+    final months = <DateTime>[
+      for (var i = _kMonths - 1; i >= 0; i--) DateTime(now.year, now.month - i, 1),
+    ];
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('CALENDARIO DE DEVALUACIÓN · 6 MESES',
+              style: VeText.labelCaps(10, color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 2),
+          Text(
+              worst == null
+                  ? 'Sin días comparables aún: cada día que la app consulta '
+                      'tasas llena un cuadro.'
+                  : 'Cuadro por día (BCV vs el día anterior con datos). '
+                      'Día con mayor subida: ${fmtDayLabel(DateTime.parse(worst.day))} '
+                      '(${worst.pct >= 0 ? '+' : ''}${worst.pct.toStringAsFixed(1)} %).',
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 10),
+          for (final m in months)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(
+                    '${fmtMesCorto(m.month).toUpperCase()} ${m.year}',
+                    style: VeText.labelCaps(9.5, color: scheme.primary)),
+                const SizedBox(height: 6),
+                _monthGrid(context, m, byDay, maxAbs, ink),
+              ]),
+            ),
+          // Leyenda: el color SOLO significa dirección del movimiento.
+          Row(children: [
+            _legendBox(ink.pos.withValues(alpha: 0.7)),
+            const SizedBox(width: 4),
+            Text('baja', style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant)),
+            const SizedBox(width: 10),
+            _legendBox(scheme.surfaceContainerHighest),
+            const SizedBox(width: 4),
+            Text('sin datos', style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant)),
+            const SizedBox(width: 10),
+            _legendBox(ink.neg.withValues(alpha: 0.7)),
+            const SizedBox(width: 4),
+            Text('subida · más intenso = mayor cambio',
+                style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant)),
+          ]),
+        ]),
+      ),
+    );
+  }
+
+  Widget _legendBox(Color c) => Container(
+        width: 11,
+        height: 11,
+        decoration: BoxDecoration(
+          color: c,
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(color: Colors.black26, width: 0.5),
+        ),
+      );
+
+  /// Grid de un mes: cuadros cuadrados en 7 columnas (L→D), con blancos de
+  /// encuadre al inicio. GridView sin scroll con altura exacta.
+  Widget _monthGrid(BuildContext context, DateTime month,
+      Map<String, double> byDay, double maxAbs, VeInk ink) {
+    final scheme = Theme.of(context).colorScheme;
+    final leading = DateTime(month.year, month.month, 1).weekday - 1;
+    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+    return LayoutBuilder(builder: (ctx, cons) {
+      const gap = 3.0;
+      final cell = (cons.maxWidth - 6 * gap) / 7;
+      final rows = ((leading + daysInMonth) / 7).ceil();
+      return SizedBox(
+        height: rows * cell + (rows - 1) * gap,
+        child: GridView.count(
+          crossAxisCount: 7,
+          mainAxisSpacing: gap,
+          crossAxisSpacing: gap,
+          childAspectRatio: 1,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          children: [
+            for (var i = 0; i < leading; i++) const SizedBox.shrink(),
+            for (var d = 1; d <= daysInMonth; d++)
+              _cell(context, DateTime(month.year, month.month, d), byDay, maxAbs, ink, scheme),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _cell(BuildContext context, DateTime day, Map<String, double> byDay,
+      double maxAbs, VeInk ink, ColorScheme scheme) {
+    final pct = byDay[SnapshotPoint.dayKey(day)];
+    Color fill = scheme.surfaceContainerHighest;
+    if (pct != null && maxAbs > 0) {
+      final t = (pct.abs() / maxAbs).clamp(0.18, 0.85);
+      fill = pct > 0
+          ? ink.neg.withValues(alpha: t)
+          : (pct < 0 ? ink.pos.withValues(alpha: t) : scheme.surfaceContainerHighest);
+    }
+    final label = pct == null
+        ? '${day.day} ${fmtMesCorto(day.month)} sin datos'
+        : '${day.day} ${fmtMesCorto(day.month)}: '
+            '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)} %';
+    return Semantics(
+      label: label,
+      child: Container(
+        decoration: BoxDecoration(
+          color: fill,
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(color: scheme.outlineVariant, width: 0.5),
+        ),
+      ),
     );
   }
 }
