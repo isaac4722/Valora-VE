@@ -3,7 +3,7 @@
 Antes de crear un tag `v*` (el workflow `build.yml` publica la Release):
 
 ## 1. Gates locales (obligatorios)
-- [ ] `flutter analyze` → **0 issues** (estándar del repo, AGENT.md §5.3).
+- [ ] `flutter analyze` → **0 issues** (estándar del repo, AGENT.md · Regla 3).
 - [ ] `flutter test` → suite verde completa (unit + widget).
 
 ## 2. Integration tests SOLO LOCAL (decisión §4.17)
@@ -20,7 +20,7 @@ flutter test integration_test/app_test.dart -d <emulador>
 - [ ] (opcional) sala local con dos instancias (emulador + host)
 
 ## 3. Numeración
-- [ ] Versión `1.x.y-beta+z` en `pubspec.yaml` (AGENT.md §5.5: prohibido
+- [ ] Versión `1.x.y-beta+z` en `pubspec.yaml` (AGENT.md · Regla 5: prohibido
       salir del formato).
 - [ ] Tag `v<versión-sin-build>`: ej. `v1.0.0-beta` ↔ `1.0.0-beta+1`.
 

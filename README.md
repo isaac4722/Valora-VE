@@ -72,6 +72,8 @@ Nada más. Sin FCM: las notificaciones son locales (canales
 `rate_alerts`, `price_targets`, `reminders`, `room_activity`, `default`).
 
 ## Documentación
+- [AGENT.md](AGENT.md) — contrato de trabajo para agentes: método en 9 pasos
+- [progress.md](progress.md) — bitácora append-only de turnos
 - [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) — tokens «El Instrumento»
 - [docs/DEPENDENCIAS.md](docs/DEPENDENCIAS.md) — plugins oficiales y trampas
 - [docs/PARIDAD.md](docs/PARIDAD.md) — paridad 1:1 contra el spec §14
