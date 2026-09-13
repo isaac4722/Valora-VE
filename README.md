@@ -7,7 +7,7 @@
 
 </div>
 
-> 📦 **Descarga actual:** [Release v1.0.2-beta](https://github.com/isaac4722/Valora-VE/releases/latest) — 3 APK firmados (armeabi-v7a · arm64-v8a · x86_64) + AAB, ofuscados (`--obfuscate --split-debug-info`).
+> 📦 **Descarga actual:** [Release v1.0.2-beta](https://github.com/isaac4722/Valora-VE/releases/latest) — APK firmados por ABI (armeabi-v7a · arm64-v8a · x86_64) + AAB, ofuscados (`--obfuscate --split-debug-info`). Desde v17.9 cada build produce **APK para cualquier dispositivo**: androids viejos (v7a), nuevos (arm64-v8a), **emuladores (x86_64, ya en cada push)** y un **APK universal todo-en-uno** (~45 MB) que instala sin saber la arquitectura.
 >
 > **v1.0.2-beta** cierra la ronda de paridad contra `MVP-CRUD.md` (bug
 > crítico de `addPurchase`, histórico real del conversor, flujos §9) y
@@ -45,11 +45,13 @@ los cambios quedan en outbox y salen al reconectar.
 ```bash
 flutter pub get
 flutter run                 # debug
-flutter test                # unit + widget (104 tests)
+flutter test                # unit + widget (140 tests)
 
 # release (requiere android/keystore.properties — ver example):
 flutter build apk --release --split-per-abi \
-  --obfuscate --split-debug-info=build/symbols/apk
+  --obfuscate --split-debug-info=build/symbols/apk   # 3 APK por ABI
+flutter build apk --release \
+  --obfuscate --split-debug-info=build/symbols/apk   # universal (todo-en-uno)
 flutter build appbundle --release \
   --obfuscate --split-debug-info=build/symbols/aab
 ```
@@ -57,7 +59,8 @@ flutter build appbundle --release \
 ## Cómo hacer una release
 Ver **[docs/RELEASE.md](docs/RELEASE.md)**: gates locales, integration
 tests en emulador, tag `v*` → el workflow `build.yml` publica la GitHub
-Release con 3 APK + AAB firmados con el keystore de secrets y ofuscados.
+Release con 4 APK (armeabi-v7a · arm64-v8a · x86_64 · universal) + AAB
+firmados con el keystore de secrets y ofuscados.
 
 ## Permisos (y por qué)
 | Permiso | Uso |

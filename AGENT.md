@@ -57,6 +57,15 @@ Prohibido saltar pasos o declarar «terminado» antes del 9.
    entre sí (ver docs/DEPENDENCIAS.md).
 8. Si te bloqueas >2 intentos en algo: déjalo registrado en progress.md
    §Bloqueos y continúa con otra pieza; no inventes soluciones mudas.
+9. Los builds de release cubren CUALQUIER dispositivo Android (orden
+   explícita del dueño · v17.9): la matriz de APK de
+   `.github/workflows/build.yml` produce SIEMPRE `armeabi-v7a`
+   (androids viejos), `arm64-v8a` (nuevos), `x86_64` (emuladores e
+   Intel) y `universal` (todo-en-uno, instala sin saber la arquitectura),
+   más el AAB en tags. Prohibido retirar un ABI de la matriz o dejar de
+   publicar sus artefactos sin orden expresa del dueño. Nota técnica:
+   Flutter no distribuye motor para x86 de 32 bits — ese ABI no es
+   construible y no cuenta como cobertura faltante.
 
 ## Definición de hecho (por pieza)
 - Código + test que lo cubre + `analyze`/`test` verdes + entrada en
