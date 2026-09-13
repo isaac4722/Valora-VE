@@ -14,9 +14,8 @@ import '../../core/currencies.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../state/app_state.dart';
+import '../../widgets/app_tour.dart';
 import '../../widgets/ui.dart';
-import '../../widgets/walkthrough.dart';
-import '../../widgets/walkthroughs_content.dart';
 import 'notifs_center.dart';
 import 'global_search_screen.dart';
 import '../../widgets/app_router.dart' show kNavBarKey, kHeaderActionsKey;
@@ -96,7 +95,7 @@ class MainShell extends StatelessWidget {
           _Header(activeIndex: current),
           RateHealthBanner(stale: poller.rateStale, onRetry: () => poller.refreshNow()),
           if (current == 0) _HomeTicker(),
-          _WalkthroughTrigger(current: current),
+          const _TourTrigger(),
           Expanded(child: navigationShell),
         ],
       ),
@@ -132,50 +131,27 @@ class MainShell extends StatelessWidget {
   }
 }
 
-/// Dispara el walkthrough del módulo al entrar a su pestaña (UNA vez por
-/// instalación; replay manual en Ajustes). Widget de cero píxeles.
-class _WalkthroughTrigger extends StatefulWidget {
-  const _WalkthroughTrigger({required this.current});
-  final int current;
+/// Dispara el tour completo UNA vez por instalación (v17.8): al primer
+/// arranque del shell, tras la bienvenida o en la primera apertura tras la
+/// actualización. Replay manual en Ajustes → Tutorial. Widget de cero
+/// píxeles; tolerante sin `Provider<SharedPreferences>` (tests/previews).
+class _TourTrigger extends StatefulWidget {
+  const _TourTrigger();
 
   @override
-  State<_WalkthroughTrigger> createState() => _WalkthroughTriggerState();
+  State<_TourTrigger> createState() => _TourTriggerState();
 }
 
-class _WalkthroughTriggerState extends State<_WalkthroughTrigger> {
-  int? _last;
-
-  static const _locations = ['/', '/conversor', '/lista', '/productos', '/analisis'];
-
+class _TourTriggerState extends State<_TourTrigger> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShow());
-  }
-
-  @override
-  void didUpdateWidget(_WalkthroughTrigger old) {
-    super.didUpdateWidget(old);
-    if (old.current != widget.current) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShow());
-    }
-  }
-
-  void _maybeShow() {
-    if (!mounted || _last == widget.current) return;
-    _last = widget.current;
-    if (widget.current < 0 || widget.current >= _locations.length) return;
-    final location = _locations[widget.current];
-    final wt = kWalkthroughs[location];
-    if (wt == null) return;
-    // Tolerante: sin Provider<SharedPreferences> (tests, previews) se salta.
-    final SharedPreferences prefs;
-    try {
-      prefs = context.read<SharedPreferences>();
-    } on ProviderNotFoundException {
-      return;
-    }
-    maybeRunWalkthrough(context, prefs, location, wt.title, wt.steps);
+    // Post-frame: el layout del shell ya existe — las anclas del primer
+    // segmento se pueden medir.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      maybeRunTourOnce(context);
+    });
   }
 
   @override

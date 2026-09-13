@@ -10,14 +10,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../room/room_transport.dart';
 import '../../widgets/ui.dart';
-import '../../widgets/walkthrough.dart';
-import '../../widgets/walkthroughs_content.dart';
 
 /// Pantalla completa de la sala (ruta /sala). Abre con showRoomSheet()
 /// desde la Lista o con context.push('/sala').
@@ -40,21 +37,9 @@ class _RoomScreenState extends State<RoomScreen> {
   @override
   void initState() {
     super.initState();
-    // Walkthrough de /sala (ruta fuera del shell: dispara aquí, una vez).
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeWalkthrough());
-  }
-
-  void _maybeWalkthrough() {
-    if (!mounted) return;
-    final wt = kWalkthroughs['/sala'];
-    if (wt == null) return;
-    final SharedPreferences prefs;
-    try {
-      prefs = context.read<SharedPreferences>();
-    } on ProviderNotFoundException {
-      return; // tests/previews sin prefs: no-op
-    }
-    maybeRunWalkthrough(context, prefs, '/sala', wt.title, wt.steps);
+    // v17.8: el walkthrough propio de /sala se retiró con el sistema por
+    // módulos — la Sala se explica en el tour completo (segmento LISTA) y
+    // la pantalla sigue explicándose por sí misma (onboarding in-situ).
   }
 
   @override

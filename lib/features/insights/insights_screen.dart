@@ -26,7 +26,7 @@ import '../../data/history_api.dart';
 import '../../data/rate_history.dart';
 import '../../data/store.dart';
 import '../../services/sharing.dart';
-import '../../widgets/coach_mark.dart';
+import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/ui.dart';
 import 'insights_utils.dart';
 
@@ -40,9 +40,6 @@ class InsightsScreen extends StatefulWidget {
 class _InsightsScreenState extends State<InsightsScreen> {
   int _anchor = 0; // 0 divisas · 1 inflación · 2 productos · 3 canasta · 4 gastos · 5 tasa
   int _days = 30; // 1 M · 6 M · 1 Año · Máximo (3650 = todo lo que haya)
-
-  /// Ancla del coach-mark de rango/export (Ola 1 · tips-dismissed).
-  static final GlobalKey _tipRango = GlobalKey(debugLabel: 'tip-insights-rango');
 
   static const _anchors = [
     (Icons.currency_exchange, 'Divisas'),
@@ -61,18 +58,6 @@ class _InsightsScreenState extends State<InsightsScreen> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    // Coach-mark (Ola 1): rango + exportación — tras el walkthrough.
-    scheduleFeatureTip(context, '/analisis', 'insights.rango',
-        anchor: _tipRango,
-        title: 'Rango y exportación',
-        body: 'Los chips cambian la ventana de TODAS las gráficas (la cobertura '
-            'real siempre se anuncia). Divisas exporta la brecha en CSV y Tasa '
-            'histórica superpone hasta 3 divisas.');
-  }
-
-  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
@@ -81,8 +66,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           const PageHeader('Análisis', hint: 'Lo que la inflación no te cuenta de corrido'),
-          // Anclas.
-          Row(children: [
+          // Anclas del tour (v17.8): la fila de anclas y los chips de rango.
+          KeyedSubtree(
+            key: TourKeys.anclas,
+            child: Row(children: [
             for (int i = 0; i < _anchors.length; i++)
               Expanded(
                 child: InkWell(
@@ -108,11 +95,12 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 ),
               ),
           ]),
+          ),
           // Rango: chips piden la ventana; la cobertura REAL la anuncia cada
           // gráfica (§ etiquetas honestas — si falta cobertura, se dice).
           const SizedBox(height: 10),
           KeyedSubtree(
-            key: _tipRango,
+            key: TourKeys.rango,
             child: Wrap(spacing: 6, children: [
               for (final (d, label) in _ranges)
                 ChipTag(label, selected: _days == d, onTap: () => setState(() => _days = d)),

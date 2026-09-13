@@ -2,8 +2,6 @@
 /// (MVP Fase 7 · todas las pantallas y componentes).
 library;
 
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -22,7 +20,7 @@ import 'package:valorave/features/products/products_screen.dart';
 import 'package:valorave/features/shell/main_shell.dart';
 import 'package:valorave/features/shell/notifs_center.dart';
 import 'package:valorave/widgets/app_router.dart';
-import 'package:valorave/widgets/coach_mark.dart';
+import 'package:valorave/widgets/app_tour.dart';
 import 'package:valorave/features/welcome/welcome_screen.dart';
 import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
@@ -176,13 +174,8 @@ void main() {
       await tester.tap(find.text('Elegir Colombia'));
       await tester.pump(const Duration(milliseconds: 300));
       expect(store.settings.country, 'CO');
-      // 7 slides + done
-      for (int i = 0; i < 6; i++) {
-        await tester.tap(find.text('Siguiente'));
-        await tester.pump(const Duration(milliseconds: 300));
-      }
-      await tester.tap(find.text('Listo'));
-      await tester.pump(const Duration(milliseconds: 300));
+      // v17.8: SIN slides PageView — del país se pasa directo al cierre.
+      expect(find.text('Todo listo'), findsOneWidget);
       await tester.tap(find.text('Empezar a usar ValoraVE'));
       await tester.pump(const Duration(milliseconds: 300));
       expect(store.settings.onboarded, isTrue);
@@ -389,49 +382,82 @@ void main() {
     });
   });
 
-  group('Coach-marks por feature (Ola 1 · valorave.tips-dismissed)', () {
-    testWidgets('se muestra una vez, se descarta y no vuelve', (tester) async {
+  group('Tour completo (v17.8 · tutorial_coach_mark, un solo tutorial)', () {
+    test('integridad: 6 segmentos, ids únicos, anclas GlobalKeys', () {
+      // El tour es UNO y cubre toda la app: 5 pestañas + Ajustes.
+      expect(kTourSegments.map((s) => s.location).toList(),
+          ['/', '/conversor', '/lista', '/productos', '/analisis', '/ajustes']);
+      final ids = [for (final s in kTourSegments) for (final st in s.steps) st.id];
+      expect(ids.toSet().length, ids.length, reason: 'ids de pasos únicos');
+      expect(ids.length, greaterThanOrEqualTo(12));
+      // Todo paso lleva ancla (nada flota sin foco — nada fuera de pantalla).
+      for (final s in kTourSegments) {
+        for (final st in s.steps) {
+          expect(st.anchor, isA<GlobalKey>(),
+              reason: '«${st.id}» sin ancla');
+        }
+      }
+      // Las anclas son únicas (un GlobalKey no puede enfocar dos widgets).
+      final anchors = [
+        for (final s in kTourSegments)
+          for (final st in s.steps) st.anchor,
+      ];
+      expect(anchors.toSet().length, anchors.length,
+          reason: 'anclas sin duplicar');
+    });
+
+    test('flag una-sola-vez: marcar hecho y no repetir', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
-      final anchor = GlobalKey(debugLabel: 'anchor');
+      expect(isTourDone(prefs), isFalse);
+      await markTourDone(prefs);
+      expect(isTourDone(prefs), isTrue);
+    });
 
-      Future<void> pumpHost() async {
-        await tester.pumpWidget(MaterialApp(
-          theme: AppTheme.light(),
-          home: Scaffold(
-            body: Center(
-              child: SizedBox(width: 120, height: 40, key: anchor),
-            ),
-          ),
-        ));
+    testWidgets('arranca tras montar el shell, salta y restaura', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final store = _pumpedStore(tester, dir: 'w10');
+      await _initServices(store);
+      // Onboarding YA hecho: el router arranca en '/' y el shell monta con
+      // su _TourTrigger (el tour auto-arranca tras la bienvenida real).
+      store.finishOnboarding();
+      store.setRateBoard(RateBoard(sources: {
+        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
+        'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
+      }));
+      final router = buildRouter(store: store);
+      await tester.pumpWidget(MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: store),
+          ChangeNotifierProvider(create: (_) => ThemeController()),
+          ChangeNotifierProvider.value(value: _poller),
+          Provider<SharedPreferences>.value(value: prefs),
+        ],
+        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+      ));
+      // El shell monta → _TourTrigger dispara el tour. La cadena
+      // (350 ms de respiro → overlay → postFrame → animación de foco
+      // 420 ms → build de la tarjeta) necesita VARIOS frames: se espera por
+      // condición, NUNCA pumpAndSettle (el pulso del foco es infinito).
+      for (var i = 0;
+          i < 30 && find.text('Tu tablero, sin cuentas ni nube').evaluate().isEmpty;
+          i++) {
+        await tester.pump(const Duration(milliseconds: 150));
       }
-
-      await pumpHost();
-      // Primera vez: la punta aparece anclada.
-      unawaited(maybeShowTip(tester.element(find.byType(Scaffold)), prefs,
-          'test.tip',
-          anchor: anchor,
-          title: 'Punta de prueba',
-          body: 'Cuerpo de la punta de prueba.'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Punta de prueba'), findsOneWidget);
-      expect(find.text('Entendido'), findsOneWidget);
-      // Se descartó ANTES de mostrarse (una oportunidad, no un bucle).
-      expect(dismissedTips(prefs), contains('test.tip'));
-      await tester.tap(find.text('Entendido'));
-      await tester.pumpAndSettle();
-
-      // Segunda vez: silencio (id ya en tips-dismissed).
-      await pumpHost();
-      await maybeShowTip(tester.element(find.byType(Scaffold)), prefs,
-          'test.tip',
-          anchor: anchor,
-          title: 'Punta de prueba',
-          body: 'Cuerpo de la punta de prueba.');
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('Punta de prueba'), findsNothing);
+      expect(find.text('Tu tablero, sin cuentas ni nube'), findsOneWidget);
+      expect(find.text('1/13'), findsOneWidget);
+      // Se marcó ANTES de mostrarse (una oportunidad, no un bucle).
+      expect(isTourDone(prefs), isTrue);
+      // Saltar corta TODO el tour y restaura la pestaña de origen.
+      await tester.tap(find.text('Saltar'));
+      for (var i = 0;
+          i < 30 && find.text('Tu tablero, sin cuentas ni nube').evaluate().isNotEmpty;
+          i++) {
+        await tester.pump(const Duration(milliseconds: 150));
+      }
+      expect(find.text('Tu tablero, sin cuentas ni nube'), findsNothing);
+      expect(router.routerDelegate.currentConfiguration.uri.toString(), '/');
     });
   });
 }

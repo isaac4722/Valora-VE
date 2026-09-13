@@ -21,7 +21,7 @@ import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../services/quick_actions.dart' show scanRequest;
 import '../../services/sharing.dart';
-import '../../widgets/coach_mark.dart';
+import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/ui.dart';
 import 'checkout_modal.dart';
 import 'item_editor.dart';
@@ -44,9 +44,6 @@ class _ListaScreenState extends State<ListaScreen> {
   String _addCurrency = 'VES';
   String _storeName = '';
 
-  /// Ancla del coach-mark de la sala (Ola 1 · tips-dismissed).
-  static final GlobalKey _tipSala = GlobalKey(debugLabel: 'tip-lista-sala');
-
   @override
   void initState() {
     super.initState();
@@ -60,13 +57,6 @@ class _ListaScreenState extends State<ListaScreen> {
       }
     });
     scanRequest.addListener(_onScanRequest);
-    // Coach-mark (Ola 1): la sala en vivo — tras el walkthrough del módulo.
-    scheduleFeatureTip(context, '/lista', 'lista.sala',
-        anchor: _tipSala,
-        title: 'Comparte la lista en vivo',
-        body: '«Sala en vivo» crea un código de 6 letras: quien lo tenga ve '
-            'tu lista y sus cambios al instante, por servidor, Cerca (sin '
-            'datos) o WiFi local. Sin conexión, todo queda en la cola.');
   }
 
   void _onScanRequest() {
@@ -294,9 +284,11 @@ class _ListaScreenState extends State<ListaScreen> {
               ],
             ),
           ),
-          // Agregar producto.
+          // Agregar producto. Ancla del tour (v17.8): el card de captura.
           SectionTitle('Agregar producto'),
-          Card(
+          KeyedSubtree(
+            key: TourKeys.listaAgregar,
+            child: Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(children: [
@@ -379,6 +371,7 @@ class _ListaScreenState extends State<ListaScreen> {
               ]),
             ),
           ),
+          ),
           // Lista de compras.
           if (store.cart.isNotEmpty) ...[
             SectionTitle('Lista de compras',
@@ -404,7 +397,7 @@ class _ListaScreenState extends State<ListaScreen> {
           SectionTitle('Compra en grupo'),
           Card(
             child: KeyedSubtree(
-              key: _tipSala,
+              key: TourKeys.listaSala,
               child: ListTile(
               leading: Icon(Icons.groups_outlined, color: scheme.primary),
               title: const Text('Sala en vivo', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),

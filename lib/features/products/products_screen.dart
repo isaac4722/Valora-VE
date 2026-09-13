@@ -20,7 +20,7 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import 'product_sheet.dart';
-import '../../widgets/coach_mark.dart';
+import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/ui.dart';
 import '../../services/sharing.dart';
 
@@ -111,17 +111,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         _seedCatalog(store);
       }
     });
-    // Coach-mark (Ola 1): búsqueda y metas — tras el walkthrough del módulo.
-    scheduleFeatureTip(context, '/productos', 'products.meta',
-        anchor: _tipBusqueda,
-        title: 'Busca y ponle meta',
-        body: 'El buscador filtra por nombre o código de barras. En la ficha de '
-            'cada producto puedes fijar una META de precio: cuando el último '
-            'registro quede por debajo, te avisamos.');
   }
-
-  /// Ancla del coach-mark de búsqueda (Ola 1 · tips-dismissed).
-  static final GlobalKey _tipBusqueda = GlobalKey(debugLabel: 'tip-products-busqueda');
 
   /// Semilla canasta: 21 productos del catálogo (solo si el libro está vacío).
   /// Preserva categoría/presentación/tamaño del CATALOG_VE (§13 Fase A).
@@ -190,7 +180,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           Row(children: [
             Expanded(
               child: KeyedSubtree(
-                key: _tipBusqueda,
+                key: TourKeys.prodBusqueda,
                 child: TextField(
                 controller: _searchCtrl,
                 onChanged: (v) {

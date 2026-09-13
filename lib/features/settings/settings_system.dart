@@ -141,6 +141,9 @@ class _Respaldo extends StatelessWidget {
 }
 
 /// Ancla tutorial + legal + versión.
+/// v17.8: UN solo tutorial completo (rejugable) — la lista de recorridos por
+/// módulo se retiró con el nuevo motor (orden del dueño: no una lista, un
+/// único walkthrough completo).
 class _TutorialLegal extends StatelessWidget {
   const _TutorialLegal({required this.store});
   final AppStore store;
@@ -150,36 +153,35 @@ class _TutorialLegal extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Tutorial y legal'),
-      // Walkthroughs por módulo (v17.2): replay manual de cada recorrido.
-      Card(
-        child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Recorridos por módulo',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: scheme.onSurface)),
+      // Ancla del tour (v17.8): el paso final explica este mismo sitio.
+      KeyedSubtree(
+        key: TourKeys.tutorial,
+        child: Card(
+          child: Column(children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Tutorial de la app',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: scheme.onSurface)),
+              ),
             ),
-          ),
-          for (final e in kWalkthroughLabels.entries)
             ListTile(
               dense: true,
-              leading: Icon(Icons.map_outlined, size: 19, color: scheme.primary),
-              title: Text(e.value, style: const TextStyle(fontSize: 13)),
+              leading: Icon(Icons.school_outlined, size: 19, color: scheme.primary),
+              title: const Text('Ver el tutorial completo', style: TextStyle(fontSize: 13)),
+              subtitle: const Text('13 pasos por toda la app, anclados a cada pantalla', style: TextStyle(fontSize: 11)),
               trailing: const Icon(Icons.play_arrow_rounded, size: 20),
-              onTap: () {
-                final wt = kWalkthroughs[e.key];
-                if (wt == null) return;
-                runWalkthrough(context, wt.title, wt.steps);
-              },
+              onTap: () => runAppTour(context),
             ),
-        ]),
+          ]),
+        ),
       ),
       const SizedBox(height: 8),
       Card(
         child: Column(children: [
           ListTile(
-            leading: Icon(Icons.school_outlined, color: scheme.primary),
+            leading: Icon(Icons.waving_hand_outlined, color: scheme.primary),
             title: const Text('Volver a ver la bienvenida', style: TextStyle(fontSize: 13.5)),
             onTap: () {
               store.reopenTutorial();

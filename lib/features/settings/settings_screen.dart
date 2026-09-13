@@ -26,9 +26,8 @@ import '../../services/biometric.dart';
 import '../../services/notifications.dart';
 import '../../services/sharing.dart';
 import '../../state/app_state.dart';
+import '../../widgets/app_tour.dart';
 import '../../widgets/ui.dart';
-import '../../widgets/walkthrough.dart';
-import '../../widgets/walkthroughs_content.dart';
 
 part 'settings_sections.dart';
 part 'settings_alertas.dart';
@@ -88,7 +87,10 @@ class _DatosConexion extends StatelessWidget {
     final poller = context.read<RatesPoller>();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Datos y conexión'),
-      Card(
+      // Ancla del tour (v17.8): el paso «Modo offline total» enfoca este card.
+      KeyedSubtree(
+        key: TourKeys.conexion,
+        child: Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -165,6 +167,7 @@ class _DatosConexion extends StatelessWidget {
             ),
           ]),
         ),
+      ),
       ),
     ]);
   }

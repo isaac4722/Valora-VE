@@ -1,11 +1,14 @@
-/// ─── Onboarding (§9.9): Paso0 Bienvenida (3 páginas dp4) → Paso1 País
-/// (obligatorio) → Paso2 · 7 slides → Paso3 Done. «Saltar tutorial»
-/// disponible desde el paso 2; el tutorial reabre desde Ajustes
-/// (reopenTutorial). La bienvenida multipantalla del dp4 NO es rejugable
-/// (decisión del dueño): una sola vez en la primera instalación.
+/// ─── Onboarding (§9.9 · v17.8) ─────────────────────────────────────────────
+/// Paso0 Bienvenida (3 páginas dp4) → Paso1 País (obligatorio) → Paso2 Done.
+/// El tutorial de 7 slides (PageView) se RETIRÓ por orden del dueño: la app
+/// tiene ahora UN walkthrough completo (app_tour.dart) que arranca solo al
+/// terminar la bienvenida y se repite desde Ajustes → Tutorial. La
+/// bienvenida multipantalla del dp4 NO es rejugable (decisión del dueño):
+/// una sola vez en la primera instalación; «Volver a ver la bienvenida»
+/// en Ajustes la reabre.
 ///
 /// Página 1 · marca y promesa. Página 2 · lo que hace la app.
-/// Página 3 · datos reales de APIs y offline-first.
+/// Página 3 · datos reales de APIs y offline-first + país con banderas.
 /// Sin logotipo gráfico: la marca es tipografía pura «ValoraVE».
 library;
 
@@ -28,28 +31,10 @@ class WelcomeScreen extends StatefulWidget {
 class _WelcomeScreenState extends State<WelcomeScreen> {
   final PageController _pageCtrl = PageController();
   int _welcomePage = 0;
-  int _step = 0; // 0 bienvenida · 1 país · 2 slides · 3 done
+  int _step = 0; // 0 bienvenida · 1 país · 2 done
   Country _country = Country.VE;
-  int _slideIndex = 0;
 
   static const int _kWelcomePages = 3;
-
-  static const List<(IconData, String, String)> _slides = [
-    (Icons.currency_exchange, 'Las tasas que importan',
-        'BCV, paralelo, promedio y las aristas del euro, con TRM de Colombia, Banxico y el real brasileño. El promedio se calcula aquí mismo: (BCV + paralelo) / 2, sin intermediarios.'),
-    (Icons.calendar_month, 'Conversor con fecha',
-        '¿Cuánto valía tu plata ayer o hace una semana? El conversor acepta fecha histórica y te muestra la ruta del cálculo con las fuentes que usó.'),
-    (Icons.shopping_cart_outlined, 'Lista que comparte en vivo',
-        'Arma tu lista, ponle presupuesto, calcula el vuelto y divide la cuenta. Comparte la sala con un código de 6 letras: los cambios llegan al instante, con o sin internet.'),
-    (Icons.inventory_2_outlined, 'Libro de precios',
-        'Registra los precios que pagas, por tienda y por producto. Fija metas y la app te avisa cuando algo queda por debajo.'),
-    (Icons.analytics_outlined, 'Brecha y devaluación',
-        'Dos curvas para la brecha BCV↔paralelo, calendario de devaluación, inflación personal y proyección con memoria (amortiguada, sin ciencia ficción).'),
-    (Icons.notifications_outlined, 'Avisos con cabeza',
-        'Picos de tasa, metas alcanzadas, brecha grande o cambio diario: tú eliges los umbrales. Nada de ruido.'),
-    (Icons.phone_android, 'Todo en tu teléfono',
-        'Los datos viven en tu equipo, sin cuentas ni nube. Respaldo a JSON con fusión, widgets de tasa y todo funciona sin conexión desde el primer arranque.'),
-  ];
 
   void _nextWelcomePage() {
     if (_welcomePage < _kWelcomePages - 1) {
@@ -128,33 +113,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    if (_step >= 2)
-                      TextButton(
-                        onPressed: () => _finish(context, store),
-                        child: const Text('Saltar tutorial'),
-                      )
-                    else if (_step > 0)
+                    if (_step > 0)
                       TextButton(
                         onPressed: () => setState(() => _step--),
                         child: const Text('Atrás'),
                       )
                     else
                       const SizedBox(width: 80),
-                    if (_step == 2)
-                      Row(
-                        children: [
-                          for (int i = 0; i < _slides.length; i++)
-                            Container(
-                              width: 6,
-                              height: 6,
-                              margin: const EdgeInsets.only(left: 4),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: i <= _slideIndex ? scheme.primary : scheme.outlineVariant,
-                              ),
-                            ),
-                        ],
-                      ),
                     FilledButton(
                       onPressed: () {
                         if (_step == 0) {
@@ -162,12 +127,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         } else if (_step == 1) {
                           store.setCountry(_country);
                           setState(() => _step = 2);
-                        } else if (_step == 2) {
-                          if (_slideIndex < _slides.length - 1) {
-                            setState(() => _slideIndex++);
-                          } else {
-                            setState(() => _step = 3);
-                          }
                         } else {
                           _finish(context, store);
                         }
@@ -177,9 +136,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             ? (_welcomePage < _kWelcomePages - 1 ? 'Siguiente' : 'Comenzar')
                             : _step == 1
                                 ? 'Elegir ${_country.label}'
-                                : _step == 2
-                                    ? (_slideIndex == _slides.length - 1 ? 'Listo' : 'Siguiente')
-                                    : 'Empezar a usar ValoraVE',
+                                : 'Empezar a usar ValoraVE',
                       ),
                     ),
                   ],
@@ -228,8 +185,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           : scheme.surface,
                     ),
                     child: Row(children: [
-                      Icon(c.currency == Currency.usd ? Icons.public : Icons.flag_outlined,
-                          size: 18, color: scheme.primary),
+                      // BANDERA REAL (assets/flags): la selección de país
+                      // nunca más un icono genérico (v17.8, orden del dueño).
+                      Flag(c.currency, size: 22),
                       const SizedBox(width: 10),
                       Expanded(child: Text(c.label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
                       Text(c.currency.code,
@@ -240,26 +198,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
           ]),
         );
-      case 2:
-        final (icon, title, body) = _slides[_slideIndex];
-        return Center(
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                color: scheme.primary.withValues(alpha: 0.09),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, size: 26, color: scheme.primary),
-            ),
-            const SizedBox(height: 20),
-            Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: scheme.onSurface)),
-            const SizedBox(height: 10),
-            Text(body, textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13.5, height: 1.55, color: scheme.onSurfaceVariant)),
-          ]),
-        );
       default:
         return Center(
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -268,7 +206,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             Text('Todo listo', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: scheme.onSurface)),
             const SizedBox(height: 8),
             Text(
-              'Tu tablero queda configurado para ${_country.label}. Sin conexión funciona igual: registra tasas manuales en Ajustes cuando no haya red.',
+              'Tu tablero queda configurado para ${_country.label}. Sin conexión funciona igual: registra tasas manuales en Ajustes cuando no haya red. El tutorial completo de la app arranca ahora — y lo puedes repetir desde Ajustes cuando quieras.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13.5, height: 1.55, color: scheme.onSurfaceVariant),
             ),
@@ -414,8 +352,9 @@ class _PageThree extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          // Ola 1: el país EN la bienvenida — chips compactos que preseleccionan
-          // el paso obligatorio siguiente.
+          // Ola 1 → v17.8: el país EN la bienvenida con BANDERAS reales
+          // (assets/flags) — chips compactos que preseleccionan el paso
+          // obligatorio siguiente.
           Text('¿DESDE DÓNDE MIRAS LAS TASAS?',
               style: VeText.labelCaps(9.5, color: scheme.primary)),
           const SizedBox(height: 8),
@@ -463,8 +402,11 @@ class _CountryChip extends StatelessWidget {
           color: selected ? scheme.primary.withValues(alpha: 0.07) : scheme.surface,
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(country.currency == Currency.usd ? Icons.public : Icons.flag_outlined,
-              size: 14, color: scheme.primary),
+          // BANDERA REAL del país (assets/flags, v17.8): "Global" usa ícono
+          // public porque USD no tiene bandera de país.
+          country == Country.US
+              ? Icon(Icons.public, size: 14, color: scheme.primary)
+              : Flag(country.currency, size: 14),
           const SizedBox(width: 6),
           Text(country.label,
               style: TextStyle(

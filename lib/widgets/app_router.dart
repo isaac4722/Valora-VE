@@ -32,10 +32,11 @@ import '../features/shell/main_shell.dart';
 import '../features/tickets/tickets_screen.dart';
 import '../features/welcome/welcome_screen.dart';
 
-/// Claves para widget tests (GUI dp4).
-const kNavBarKey = Key('nav-bar');
-const kHeaderActionsKey = Key('header-actions');
-const kHeroRateKey = Key('hero-rate');
+/// Claves para widget tests (GUI dp4) y anclas del tour (v17.8: GlobalKeys
+/// reales — el motor del tour mide su rect en pantalla).
+final GlobalKey kNavBarKey = GlobalKey(debugLabel: 'nav-bar');
+final GlobalKey kHeaderActionsKey = GlobalKey(debugLabel: 'header-actions');
+final GlobalKey kHeroRateKey = GlobalKey(debugLabel: 'hero-rate');
 
 GoRouter buildRouter({required AppStore store}) {
   return GoRouter(
