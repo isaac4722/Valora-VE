@@ -740,54 +740,88 @@ class _ResumenMes extends StatelessWidget {
     final store = context.watch<AppStore>();
     final scheme = Theme.of(context).colorScheme;
     final now = DateTime.now();
-    final monthTx = store.transactions
-        .where((t) => t.date.year == now.year && t.date.month == now.month)
+    // v17.8: el resumen se alimenta de las COMPRAS de Lista (automático,
+    // sin registro manual). Finanzas como módulo se retiró por orden del
+    // dueño; lo que gasta el usuario de verdad son sus compras guardadas.
+    final monthPurchases = store.purchases
+        .where((p) => p.date.year == now.year && p.date.month == now.month)
         .toList();
-    final income = monthTx.where((t) => t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
-    final expense = monthTx.where((t) => !t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
-    final balance = income - expense;
+    final spent = monthPurchases.fold<double>(0, (a, p) => a + p.paidUSD);
 
-    // Ledger por categoría (gastos del mes).
-    final byCat = <FinanceCategory, double>{};
-    for (final t in monthTx.where((t) => !t.isIncome)) {
-      byCat[t.category] = (byCat[t.category] ?? 0) + t.amountUSD;
+    // Mes previo para el delta honesto.
+    final prev = DateTime(now.year, now.month - 1, 1);
+    final prevSpent = store.purchases
+        .where((p) => p.date.year == prev.year && p.date.month == prev.month)
+        .fold<double>(0, (a, p) => a + p.paidUSD);
+    final deltaSub = prevSpent <= 0
+        ? 'Mes previo: sin compras'
+        : 'vs mes previo: ${fmtPct((spent / prevSpent - 1) * 100, forceSign: true)}';
+
+    // Ledger por tienda (gastos del mes, top 5).
+    final byStore = <String, double>{};
+    for (final p in monthPurchases) {
+      final k = (p.store ?? '').trim().isEmpty ? 'Sin tienda' : p.store!.trim();
+      byStore[k] = (byStore[k] ?? 0) + p.paidUSD;
     }
-    final sorted = byCat.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final sorted = byStore.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Resumen del mes',
-          actionLabel: 'Ver finanzas', onAction: () => context.go('/finanzas')),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Balance de ${kMeses[now.month - 1]}',
-                style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
-            const SizedBox(height: 6),
-            Text(fmtUSD(balance),
-                style: VeText.displayNum(30, color: balance < 0 ? VeColors.of(context).neg : scheme.onSurface)),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: StatCard(label: 'Ingresos', value: fmtUSD(income), icon: Icons.south_west, tone: StatTone.pos)),
-              const SizedBox(width: 8),
-              Expanded(child: StatCard(label: 'Gastos', value: fmtUSD(expense), icon: Icons.north_east, tone: StatTone.neg)),
-            ]),
-            if (sorted.isNotEmpty) ...[
+          actionLabel: 'Ver en Análisis', onAction: () => context.go('/analisis')),
+      if (monthPurchases.isEmpty)
+        Card(
+          child: EmptyState('Sin compras este mes',
+              icon: Icons.shopping_cart_outlined,
+              hint: 'Finaliza una compra en Lista y este resumen se llena solo: '
+                  'total del mes, tiendas y comparación con el mes anterior.'),
+        )
+      else
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Gastado en ${kMeses[now.month - 1]}',
+                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
+              const SizedBox(height: 6),
+              AnimatedNumber(spent,
+                  style: VeText.displayNum(30, color: scheme.onSurface),
+                  decimals: 2),
+              const SizedBox(height: 4),
+              Text('$deltaSub · ${monthPurchases.length} ${monthPurchases.length == 1 ? 'compra' : 'compras'}',
+                  style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
               const SizedBox(height: 12),
-              for (final e in sorted.take(5))
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: LedgerRow(
-                    label: e.key.label,
-                    value: fmtUSD(e.value),
-                    leading: CategoryIcon(finCat: e.key, size: 24),
-                    dots: true, // cierre del resumen: conserva puntos contables
+              Row(children: [
+                Expanded(child: StatCard(label: 'Compras', value: '${monthPurchases.length}', icon: Icons.receipt_long, tone: StatTone.neutral)),
+                const SizedBox(width: 8),
+                Expanded(child: StatCard(
+                    label: 'Tienda top',
+                    value: sorted.first.key,
+                    sub: sorted.length > 1 ? 'y ${sorted.length - 1} tiendas más' : null,
+                    icon: Icons.storefront_outlined,
+                    tone: StatTone.pos)),
+              ]),
+              if (sorted.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                for (final e in sorted.take(5))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: LedgerRow(
+                      label: e.key,
+                      value: fmtUSD(e.value),
+                      leading: CircleAvatar(
+                        radius: 12,
+                        backgroundColor: scheme.primary.withValues(alpha: 0.10),
+                        child: Text(an.storeInitials(e.key),
+                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: scheme.primary)),
+                      ),
+                      dots: true, // cierre del resumen: conserva puntos contables
+                    ),
                   ),
-                ),
-            ],
-          ]),
+              ],
+            ]),
+          ),
         ),
-      ),
     ]);
   }
 }

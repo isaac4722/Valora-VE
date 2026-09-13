@@ -1,9 +1,11 @@
 /// ─── Análisis (§9.7) ────────────────────────────────────────────────────────
-/// 5 anclas: Divisas (brecha BCV↔Paralelo dual + gráfica interactiva con
+/// 6 anclas: Divisas (brecha BCV↔Paralelo dual + gráfica interactiva con
 /// trackball por día + panel de brecha diaria + lookup por fecha) · Inflación
 /// (personal PONDERADA por la canasta + promedio simple de productos + serie
 /// de costo + curva de devaluación BCV) · Productos (rankings en el rango) ·
-/// Canasta (CRUD) · Tasa histórica (fuente seleccionable + gráfica + CSV).
+/// Canasta (CRUD) · Gastos (v17.8: vista resumida de las compras de Lista,
+/// alimentada automática — sucesora de los gráficos de Finanzas) · Tasa
+/// histórica (fuente seleccionable + gráfica + CSV).
 /// Gráficas tap-friendly (ActivationMode.singleTap): tooltip con formato es-VE,
 /// crosshair vertical y trackball flotante; cobertura REAL anunciada con
 /// snapshotSeries/snapshotDepth (nunca «365 días» sin datos — § honesto).
@@ -36,7 +38,7 @@ class InsightsScreen extends StatefulWidget {
 }
 
 class _InsightsScreenState extends State<InsightsScreen> {
-  int _anchor = 0; // 0 divisas · 1 inflación · 2 productos · 3 canasta · 4 tasa
+  int _anchor = 0; // 0 divisas · 1 inflación · 2 productos · 3 canasta · 4 gastos · 5 tasa
   int _days = 30; // 1 M · 6 M · 1 Año · Máximo (3650 = todo lo que haya)
 
   /// Ancla del coach-mark de rango/export (Ola 1 · tips-dismissed).
@@ -47,7 +49,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
     (Icons.local_fire_department_outlined, 'Inflación'),
     (Icons.inventory_2_outlined, 'Productos'),
     (Icons.shopping_basket_outlined, 'Canasta'),
-    (Icons.history, 'Tasa histórica'),
+    (Icons.payments_outlined, 'Gastos'),
+    (Icons.history, 'Tasa'),
   ];
 
   static const _ranges = <(int, String)>[
@@ -121,6 +124,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             1 => _InflacionAnchor(days: _days, onGoToBasket: () => setState(() => _anchor = 3)),
             2 => _ProductosAnchor(days: _days),
             3 => _CanastaAnchor(),
+            4 => _GastosAnchor(days: _days),
             _ => _HistoricaAnchor(days: _days),
           },
         ],
@@ -976,6 +980,132 @@ class _CanastaAnchor extends StatelessWidget {
           if (!store.basket.any((b) => b.productId == p.id))
             ChipTag(p.name, onTap: () => store.addToBasket(p.id, 1)),
       ]),
+    ]);
+  }
+}
+
+/// Ancla 4 (v17.8): GASTOS de las compras de Lista — vista resumida que
+/// reemplaza los gráficos del módulo Finanzas. Se alimenta AUTOMÁTICA de
+/// las compras guardadas (cero carga manual, cero duplicar datos): total
+/// del rango + donut por tienda + barras por mes, con la cobertura real
+/// de datos siempre a la vista (§ honesto).
+class _GastosAnchor extends StatelessWidget {
+  const _GastosAnchor({required this.days});
+  final int days;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final scheme = Theme.of(context).colorScheme;
+    final sem = VeColors.of(context);
+    final now = DateTime.now();
+    final from = now.subtract(Duration(days: days));
+    final inRange =
+        store.purchases.where((p) => !p.date.isBefore(from)).toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+    final total = inRange.fold<double>(0, (a, p) => a + p.paidUSD);
+    final byStore = storeSpend(inRange);
+    final byMonth = monthSpend(store.purchases,
+        months: days >= 365 ? 12 : (days >= 183 ? 12 : 6));
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: 10),
+      Text(
+          'Lo que gastaste según tus compras guardadas — sin registro manual: '
+          'cada compra finalizada en Lista entra aquí sola.',
+          style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant)),
+      const SizedBox(height: 8),
+      if (inRange.isEmpty)
+        EmptyState('Sin compras en el rango',
+            icon: Icons.payments_outlined,
+            hint: 'Finaliza una compra en Lista (botón «Finalizar compra») y '
+                'este resumen se llena solo: total, tiendas y meses.')
+      else ...[
+        // Resumen del rango.
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                  rangeName(days) == 'Máximo'
+                      ? 'Gastado · todo el historial'
+                      : 'Gastado · ${rangeName(days)}',
+                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
+              const SizedBox(height: 6),
+              AnimatedNumber(total,
+                  style: VeText.displayNum(30, color: scheme.onSurface),
+                  decimals: 2),
+              const SizedBox(height: 4),
+              Text(
+                  '${inRange.length} ${inRange.length == 1 ? 'compra' : 'compras'} · '
+                  '${byStore.where((s) => s.store != 'Otras' && s.store != 'Sin tienda').length} tiendas',
+                  style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+            ]),
+          ),
+        ),
+        // Donut por tienda (top 6 + Otras).
+        if (byStore.length > 1) ...[
+          SectionTitle('Por tienda'),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: SfCircularChart(
+                legend: const Legend(
+                    isVisible: true,
+                    position: LegendPosition.bottom,
+                    textStyle: TextStyle(fontSize: 10)),
+                series: [
+                  DoughnutSeries<({String store, double totalUSD, int count}), String>(
+                    dataSource: byStore,
+                    xValueMapper: (e, _) => e.store,
+                    yValueMapper: (e, _) => e.totalUSD,
+                    pointColorMapper: (e, i) =>
+                        chartPalette(context)[i % chartPalette(context).length],
+                    radius: '70%',
+                    dataLabelSettings: const DataLabelSettings(isVisible: false),
+                    enableTooltip: true,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ] else ...[
+          SectionTitle('Por tienda'),
+          Card(
+            child: ListTile(
+              dense: true,
+              leading: Icon(Icons.storefront_outlined, color: scheme.primary),
+              title: Text(byStore.first.store, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+              trailing: Text(fmtUSD(byStore.first.totalUSD),
+                  style: VeText.displayNum(13.5, color: sem.neg)),
+            ),
+          ),
+        ],
+        // Barras por mes (ventana 6 o 12 meses según el rango).
+        if (byMonth.length > 1) ...[
+          SectionTitle('Gasto por mes'),
+          Card(
+            child: SizedBox(
+              height: 200,
+              child: SfCartesianChart(
+                primaryXAxis: const CategoryAxis(),
+                tooltipBehavior: TooltipBehavior(enable: true),
+                series: [
+                  ColumnSeries<({String month, double totalUSD, int count}), String>(
+                    dataSource: byMonth,
+                    xValueMapper: (e, _) => e.month,
+                    yValueMapper: (e, _) => e.totalUSD,
+                    name: 'Gasto',
+                    color: sem.neg,
+                    dataLabelSettings: const DataLabelSettings(isVisible: false),
+                    enableTooltip: true,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
     ]);
   }
 }

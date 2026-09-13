@@ -89,19 +89,6 @@ const kWalkthroughs = <String, ({String title, List<WalkthroughStep> steps})>{
       ),
     ],
   ),
-  '/finanzas': (
-    title: 'Finanzas',
-    steps: [
-      WalkthroughStep(
-        title: 'Balance del mes',
-        body: 'Ingresos, gastos y balance en USD normalizado, con la comparación contra el mes anterior.',
-      ),
-      WalkthroughStep(
-        title: 'Constancias como quieras',
-        body: 'La constancia se comparte o descarga en texto, imagen o PDF desde el menú propio. También puedes imprimirla.',
-      ),
-    ],
-  ),
   '/analisis': (
     title: 'Análisis',
     steps: [
@@ -154,7 +141,6 @@ const kWalkthroughLabels = <String, String>{
   '/lista': 'Lista de compras',
   '/productos': 'Productos',
   '/historial': 'Historial',
-  '/finanzas': 'Finanzas',
   '/analisis': 'Análisis',
   '/sala': 'Sala en vivo',
   '/ajustes': 'Ajustes',

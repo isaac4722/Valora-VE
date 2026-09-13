@@ -14,7 +14,6 @@ import 'package:valorave/core/models.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/features/converter/converter_screen.dart';
-import 'package:valorave/features/finance/finance_screen.dart';
 import 'package:valorave/features/home/home_screen.dart';
 import 'package:valorave/features/insights/insights_screen.dart';
 import 'package:valorave/features/legal/legal_screen.dart';
@@ -189,12 +188,20 @@ void main() {
       expect(store.settings.onboarded, isTrue);
     });
 
-    testWidgets('Home: héroe + resumen + herramientas', (tester) async {
+    testWidgets('Home: héroe + resumen de compras + herramientas', (tester) async {
       final store = _pumpedStore(tester, dir: 'w2');
       await _initServices(store);
-      store.addTransaction(Transaction(id: 't1', type: 'expense',
-          category: FinanceCategory.alimentacion, amount: 100, currency: 'VES',
-          amountUSD: 2.5, date: DateTime.now()));
+      // v17.8: el resumen del mes se alimenta de COMPRAS (el módulo Finanzas
+      // se retiró) — sin registro manual.
+      store.addPurchase(Purchase(
+        id: 'p1',
+        date: DateTime.now(),
+        store: 'Súper A',
+        items: const [],
+        totalUSD: 25,
+        totalBS: 1000,
+        rate: 40,
+      ));
       await tester.pumpWidget(_wrap(const HomeScreen(), store: store));
       // v17.6: con tablero vacío Home muestra LoadingState (spinner
       // INDEFINIDO) — pumpAndSettle nunca terminaría. Bombeo acotado.
@@ -259,19 +266,37 @@ void main() {
       expect(store.products.where((p) => p.category == ProductCategory.bebidas).length, 4);
     });
 
-    testWidgets('Finanzas: registrar movimiento CRUD', (tester) async {
+    testWidgets('Análisis: Gastos alimentado por compras de Lista', (tester) async {
       final store = _pumpedStore(tester, dir: 'w6');
       await _initServices(store);
-      store.setRateBoard(RateBoard(sources: {
-        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
-        'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
-      }));
-      await tester.pumpWidget(_wrap(const FinanceScreen(), store: store));
+      store.addPurchase(Purchase(
+        id: 'p1',
+        date: DateTime.now(),
+        store: 'Súper A',
+        items: const [],
+        totalUSD: 25,
+        totalBS: 1000,
+        rate: 40,
+      ));
+      store.addPurchase(Purchase(
+        id: 'p2',
+        date: DateTime.now().subtract(const Duration(days: 1)),
+        store: 'Bodega B',
+        items: const [],
+        totalUSD: 10,
+        totalBS: 400,
+        rate: 40,
+      ));
+      await tester.pumpWidget(_wrap(const InsightsScreen(), store: store));
       await tester.pumpAndSettle();
-      expect(find.text('RESUMEN'), findsOneWidget);
+      // Ancla Gastos (v17.8): sin carga manual, con compras entra la vista.
+      await tester.tap(find.text('Gastos'));
+      await tester.pumpAndSettle();
+      expect(find.text('Gastado · 1 M'), findsOneWidget);
+      expect(find.text('POR TIENDA'), findsOneWidget);
     });
 
-    testWidgets('Análisis: 5 anclas conmutan', (tester) async {
+    testWidgets('Análisis: 6 anclas conmutan', (tester) async {
       final store = _pumpedStore(tester, dir: 'w7');
       await _initServices(store);
       await tester.pumpWidget(_wrap(const InsightsScreen(), store: store));
@@ -280,6 +305,16 @@ void main() {
       await tester.tap(find.text('Canasta'));
       await tester.pumpAndSettle();
       expect(find.text('Canasta vacía'), findsOneWidget);
+    });
+
+    testWidgets('Análisis: Gastos vacío honesto sin compras', (tester) async {
+      final store = _pumpedStore(tester, dir: 'w7b');
+      await _initServices(store);
+      await tester.pumpWidget(_wrap(const InsightsScreen(), store: store));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Gastos'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sin compras en el rango'), findsOneWidget);
     });
 
     testWidgets('Centro de notificaciones vacío honesto', (tester) async {
@@ -311,7 +346,7 @@ void main() {
   });
 
   group('Shell', () {
-    testWidgets('navega 6 pestañas y badge de carrito', (tester) async {
+    testWidgets('navega 5 pestañas y badge de carrito', (tester) async {
       final store = _pumpedStore(tester, dir: 'w9');
       await _initServices(store);
       store.addToCart(const CartItem(id: 'k', name: 'X', quantity: 3, price: 1, currency: 'USD'));
@@ -325,7 +360,6 @@ void main() {
               StatefulShellBranch(routes: [GoRoute(path: '/conversor', builder: (_, _) => const ConverterScreen())]),
               StatefulShellBranch(routes: [GoRoute(path: '/lista', builder: (_, _) => const ListaScreen())]),
               StatefulShellBranch(routes: [GoRoute(path: '/productos', builder: (_, _) => const ProductsScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: '/finanzas', builder: (_, _) => const FinanceScreen())]),
               StatefulShellBranch(routes: [GoRoute(path: '/analisis', builder: (_, _) => const InsightsScreen())]),
             ],
           ),

@@ -648,44 +648,10 @@ class AppStore extends ChangeNotifier {
     ));
   }
 
-  void addTransaction(Transaction t) {
-    final tx = Transaction(
-      id: t.id.isEmpty ? newId() : t.id,
-      type: t.type,
-      category: t.category,
-      amount: t.amount,
-      currency: t.currency,
-      amountUSD: t.amountUSD,
-      date: t.date,
-      description: t.description,
-    );
-    final list = [tx, ..._data.transactions]; // unshift
-    _data = AppData.fromJson(_data.toJson()..['transactions'] = list.map((e) => e.toJson()).toList());
-    _persist();
-  }
-
-  void updateTransaction(String id, Transaction patch) {
-    final list = _data.transactions.map((t) {
-      if (t.id != id) return t;
-      return t.copyWith(
-        type: patch.type,
-        category: patch.category,
-        amount: patch.amount,
-        currency: patch.currency,
-        amountUSD: patch.amountUSD,
-        date: patch.date,
-        description: patch.description,
-      );
-    }).toList();
-    _data = AppData.fromJson(_data.toJson()..['transactions'] = list.map((e) => e.toJson()).toList());
-    _persist();
-  }
-
-  void deleteTransaction(String id) {
-    final list = _data.transactions.where((t) => t.id != id).toList();
-    _data = AppData.fromJson(_data.toJson()..['transactions'] = list.map((e) => e.toJson()).toList());
-    _persist();
-  }
+  // v17.8: addTransaction/updateTransaction/deleteTransaction se retiraron
+  // con el módulo Finanzas (ya no hay UI que registre movimientos manuales).
+  // El getter [transactions] y el modelo Transaction SE CONSERVAN: los
+  // respaldos viejos siguen restaurando/round-trip sin perder datos.
 
   /// addToBasket: suma cantidad si ya está.
   void addToBasket(String productId, int qty) {

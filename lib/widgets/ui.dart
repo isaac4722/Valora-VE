@@ -716,39 +716,27 @@ class OfflineState extends StatelessWidget {
   }
 }
 
-/// Tile de icono de categoría con tinta semántica (producto o finanzas).
+/// Tile de icono de categoría de PRODUCTO con tinta semántica.
+/// v17.8: la variante de finanzas (finCat) se retiró con el módulo.
 class CategoryIcon extends StatelessWidget {
-  const CategoryIcon({super.key, this.cat, this.finCat, this.size = 36});
+  const CategoryIcon({super.key, this.cat, this.size = 36});
 
   final ProductCategory? cat;
-  final FinanceCategory? finCat;
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final VeInk sem = VeColors.of(context);
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final (IconData icon, Color color) = finCat != null
-        ? switch (finCat!) {
-            FinanceCategory.salario => (Icons.account_balance, sem.pos),
-            FinanceCategory.otrosIngresos => (Icons.account_balance_outlined, sem.warn),
-            FinanceCategory.alimentacion => (Icons.restaurant, sem.neg),
-            FinanceCategory.transporte => (Icons.directions_car, sem.pos),
-            FinanceCategory.servicios => (Icons.lightbulb_outline, sem.warn),
-            FinanceCategory.entretenimiento => (Icons.movie_outlined, sem.manual),
-            FinanceCategory.salud => (Icons.favorite_border, sem.neg),
-            FinanceCategory.educacion => (Icons.menu_book_outlined, sem.pos),
-            FinanceCategory.otrosGastos => (Icons.more_horiz, scheme.onSurfaceVariant),
-          }
-        : switch (cat!) {
-            ProductCategory.alimentos => (Icons.lunch_dining_outlined, sem.pos),
-            ProductCategory.bebidas => (Icons.local_cafe_outlined, sem.pos),
-            ProductCategory.limpieza => (Icons.cleaning_services_outlined, sem.warn),
-            ProductCategory.higiene => (Icons.soap_outlined, sem.manual),
-            ProductCategory.farmacia => (Icons.medication_outlined, sem.neg),
-            ProductCategory.tecnologia => (Icons.smartphone_outlined, sem.manual),
-            ProductCategory.otros => (Icons.inventory_2_outlined, scheme.onSurfaceVariant),
-          };
+    final (IconData icon, Color color) = switch (cat!) {
+      ProductCategory.alimentos => (Icons.lunch_dining_outlined, sem.pos),
+      ProductCategory.bebidas => (Icons.local_cafe_outlined, sem.pos),
+      ProductCategory.limpieza => (Icons.cleaning_services_outlined, sem.warn),
+      ProductCategory.higiene => (Icons.soap_outlined, sem.manual),
+      ProductCategory.farmacia => (Icons.medication_outlined, sem.neg),
+      ProductCategory.tecnologia => (Icons.smartphone_outlined, sem.manual),
+      ProductCategory.otros => (Icons.inventory_2_outlined, scheme.onSurfaceVariant),
+    };
     return Container(
       width: size,
       height: size,

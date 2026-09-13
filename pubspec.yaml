@@ -29,6 +29,7 @@ dependencies:
 
   # ── Red ──────────────────────────────────────────────────────────────────
   dio: ^5.7.0                       # tablero de tasas + SSE propio (§trap 1)
+  connectivity_plus: ^7.3.1         # offline REAL (v17.8): saber cuándo NO hay red
   socket_io_client: 2.0.3+1         # sala lista-sync (transporte Servidor)
 
   # ── Plataforma Android ───────────────────────────────────────────────────
@@ -50,6 +51,7 @@ dependencies:
   # ── UI / visualización / documentos ──────────────────────────────────────
   syncfusion_flutter_charts: ^27.1.48    # brecha, evolución, histórico
   dynamic_color: ^1.7.0             # Material You opcional
+  tutorial_coach_mark: ^1.3.4       # tour guiado completo (v17.8): anclas, foco y posicionamiento sin salirse
   qr_flutter: ^4.1.0                # QR de sala
   pdf: ^3.11.1                      # constancias PDF
   printing: ^5.13.2

@@ -366,8 +366,13 @@ class Product {
 }
 
 // ─── 1.4 Transaction (8 campos, con amountUSD §12.1) ───────────────────────
+// v17.8: el módulo Finanzas se retiró de la UI (orden del dueño — los
+// gastos ahora viven en Análisis, alimentados por las compras de Lista).
+// El modelo SE CONSERVA: respaldos viejos con movimientos siguen
+// restaurando y haciendo round-trip SIN pérdida de datos (Regla honesta).
 
 /// Categorías de finanzas (§1.10 FINANCE_CATEGORIES, 9).
+/// v17.8: solo para parsear respaldos históricos — sin UI activa.
 enum FinanceCategory {
   salario, otrosIngresos, // income
   alimentacion, transporte, servicios, entretenimiento, salud, educacion, otrosGastos,

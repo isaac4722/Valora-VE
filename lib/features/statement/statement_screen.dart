@@ -1,8 +1,9 @@
 /// ─── Constancia mensual (§9.9 monthly-statement) ────────────────────────────
-/// Scopes Mensual | Trimestral | Anual (flechas ciclan). Finance: ingresos/
-/// gastos/balance + asiento por categoría. History: nº compras + total USD +
-/// total Bs ponderado + asiento. Anexos trim/anual (categoría/tienda, top 6).
-/// Tres caminos NUNCA auto-print: PNG 1080×1350 (4:5) · Compartir · PDF.
+/// Scopes Mensual | Trimestral | Anual (flechas ciclan). v17.8: la
+/// constancia es de COMPRAS (la rama «finanzas» se retiró con el módulo):
+/// nº compras + total USD + total Bs ponderado + asiento por tienda.
+/// Anexos trim/anual (tienda, top 6). Tres caminos NUNCA auto-print:
+/// PNG 1080×1350 (4:5) · Compartir · PDF.
 library;
 
 import 'dart:async';
@@ -23,14 +24,12 @@ import '../../services/sharing.dart';
 import '../../widgets/share_menu.dart';
 import '../../widgets/ui.dart';
 
-const kInkPos = Color(0xFF10755A);
-const kInkNeg = Color(0xFFCF4437); // §8: rojo firma de datos (neg) real
 const kInkAccent = Color(0xFF22354E);
+// v17.8: kInkPos/kInkNeg se retiraron con la constancia de finanzas (la
+// constancia ahora es solo de compras); se conservan en el historial git.
 
 class StatementScreen extends StatefulWidget {
-  const StatementScreen({super.key, required this.kind});
-
-  final String kind; // 'finance' | 'history'
+  const StatementScreen({super.key});
 
   @override
   State<StatementScreen> createState() => _StatementScreenState();
@@ -67,15 +66,10 @@ class _StatementScreenState extends State<StatementScreen> {
     final store = context.watch<AppStore>();
     final scheme = Theme.of(context).colorScheme;
     final range = _range;
-    final tx = store.transactions
-        .where((t) => !t.date.isBefore(range.start) && !t.date.isAfter(range.end))
-        .toList();
     final purchases = store.purchases
         .where((p) => !p.date.isBefore(range.start) && !p.date.isAfter(range.end))
         .toList();
 
-    final income = tx.where((t) => t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
-    final expense = tx.where((t) => !t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
     final totalBs = purchases.fold<double>(0, (a, p) => a + p.totalBS);
 
     final suffix = _scope == 0 ? '' : ' — ${fmtMesCorto(range.end.month)} ${range.end.year}';
@@ -127,20 +121,16 @@ class _StatementScreenState extends State<StatementScreen> {
                   const SizedBox(width: 10),
                   Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('ValoraVE', style: VeText.displayNum(15, color: kInkAccent)),
-                    Text('Constancia ${widget.kind == 'finance' ? 'de finanzas' : 'de compras'}',
+                    Text('Constancia de compras',
                         style: const TextStyle(fontSize: 10.5, color: Colors.black54)),
                   ]),
                   const Spacer(),
                   Text(label.toUpperCase(), style: VeText.labelCaps(9, color: Colors.black54)),
                 ]),
                 const Divider(height: 26),
-                if (widget.kind == 'finance') ...[
-                  _row('Ingresos', fmtUSD(income), kInkPos),
-                  _row('Gastos', fmtUSD(expense), kInkNeg),
-                  const Divider(),
-                  _row('Balance', fmtUSD(income - expense), income >= 0 ? kInkAccent : kInkNeg, big: true),
+                if (purchases.isEmpty) ...[
+                  _row('Compras', '0', kInkAccent),
                   const SizedBox(height: 10),
-                  ..._categoryRows(tx),
                 ] else ...[
                   _row('Compras', '${purchases.length}', kInkAccent, big: true),
                   _row('Total USD', fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD)), kInkAccent),
@@ -161,13 +151,13 @@ class _StatementScreenState extends State<StatementScreen> {
           PrimaryButton(
             'Compartir o guardar…',
             icon: Icons.ios_share,
-            onPressed: () => unawaited(_shareMenu(context, store, range, label, tx, purchases)),
+            onPressed: () => unawaited(_shareMenu(context, store, range, label, purchases)),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             icon: const Icon(Icons.print_outlined, size: 17),
             label: const Text('Imprimir'),
-            onPressed: () => _printPdf(context, store, range, label, tx, purchases),
+            onPressed: () => _printPdf(context, store, range, label, purchases),
           ),
         ],
       ),
@@ -192,18 +182,6 @@ class _StatementScreenState extends State<StatementScreen> {
     );
   }
 
-  List<Widget> _categoryRows(List<Transaction> tx) {
-    final byCat = <FinanceCategory, double>{};
-    for (final t in tx.where((t) => !t.isIncome)) {
-      byCat[t.category] = (byCat[t.category] ?? 0) + t.amountUSD;
-    }
-    final sorted = byCat.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return [
-      for (final e in sorted.take(6))
-        _row(e.key.label, fmtUSD(e.value), Colors.black87),
-    ];
-  }
-
   List<Widget> _storeRows(List<Purchase> purchases) {
     final byStore = <String, double>{};
     for (final p in purchases) {
@@ -220,14 +198,14 @@ class _StatementScreenState extends State<StatementScreen> {
   /// Menú propio (v17.2): texto · imagen · PDF, cada uno con compartir o
   /// descargar. Genera los bytes solo cuando toca (sin descargar archivos).
   Future<void> _shareMenu(BuildContext context, AppStore store, DateTimeRange range,
-      String label, List<Transaction> tx, List<Purchase> purchases) async {
+      String label, List<Purchase> purchases) async {
     await showShareMenu(context, title: 'Constancia $_scopeLabel · $label', actions: [
       ShareMenuAction(
         icon: Icons.subject_rounded,
         label: 'Texto',
         hint: 'Resumen legible para pegar o enviar por chat',
         onRun: () async {
-          await SharePlus.instance.share(ShareParams(text: _plainText(range, label, tx, purchases)));
+          await SharePlus.instance.share(ShareParams(text: _plainText(range, label, purchases)));
           return null;
         },
       ),
@@ -257,7 +235,7 @@ class _StatementScreenState extends State<StatementScreen> {
         label: 'Compartir PDF',
         hint: 'PDF con la tabla del período',
         onRun: () async {
-          final bytes = await _buildPdf(store, range, label, tx, purchases).save();
+          final bytes = await _buildPdf(store, range, label, purchases).save();
           await SharePlus.instance.share(ShareParams(
               files: [XFile.fromData(Uint8List.fromList(bytes), name: 'constancia-valorave.pdf', mimeType: 'application/pdf')]));
           return null;
@@ -268,7 +246,7 @@ class _StatementScreenState extends State<StatementScreen> {
         label: 'Descargar PDF',
         hint: 'Guarda el PDF en la carpeta ValoraVE',
         onRun: () async {
-          final bytes = await _buildPdf(store, range, label, tx, purchases).save();
+          final bytes = await _buildPdf(store, range, label, purchases).save();
           return runDownloadBytes(Uint8List.fromList(bytes), 'constancia-valorave.pdf');
         },
       ),
@@ -276,44 +254,30 @@ class _StatementScreenState extends State<StatementScreen> {
   }
 
   /// Texto plano del período (opción «Texto» del menú).
-  String _plainText(DateTimeRange range, String label, List<Transaction> tx, List<Purchase> purchases) {
-    final income = tx.where((t) => t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
-    final expense = tx.where((t) => !t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
+  String _plainText(DateTimeRange range, String label, List<Purchase> purchases) {
     final b = StringBuffer('Constancia $_scopeLabel · $label — ValoraVE\n\n');
-    if (widget.kind == 'finance') {
-      b
-        ..writeln('Ingresos: ${fmtUSD(income)}')
-        ..writeln('Gastos: ${fmtUSD(expense)}')
-        ..writeln('Balance: ${fmtUSD(income - expense)}');
-    } else {
-      b
-        ..writeln('Compras: ${purchases.length}')
-        ..writeln('Total USD: ${fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD))}')
-        ..writeln('Total Bs ponderado: Bs ${fmtNum(purchases.fold<double>(0, (a, p) => a + p.totalBS))}');
-    }
+    b
+      ..writeln('Compras: ${purchases.length}')
+      ..writeln('Total USD: ${fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD))}')
+      ..writeln('Total Bs ponderado: Bs ${fmtNum(purchases.fold<double>(0, (a, p) => a + p.totalBS))}');
     return b.toString();
   }
 
   Future<void> _printPdf(BuildContext context, AppStore store, DateTimeRange range, String label,
-      List<Transaction> tx, List<Purchase> purchases) async {
-    final doc = _buildPdf(store, range, label, tx, purchases);
+      List<Purchase> purchases) async {
+    final doc = _buildPdf(store, range, label, purchases);
     await Printing.layoutPdf(onLayout: (_) async => await doc.save());
   }
 
   /// PDF de calidad (v17.2): encabezado de marca, cajas de totales con color,
-  /// tablas de desglose por categoría/tienda y pie honesto. Antes era un
+  /// tabla de desglose por tienda y pie honesto. Antes era un
   /// puñado de líneas de texto sin identidad.
   pw.Document _buildPdf(AppStore store, DateTimeRange range, String label,
-      List<Transaction> tx, List<Purchase> purchases) {
+      List<Purchase> purchases) {
     final doc = pw.Document();
-    final income = tx.where((t) => t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
-    final expense = tx.where((t) => !t.isIncome).fold<double>(0, (a, t) => a + t.amountUSD);
-    final kindLabel = widget.kind == 'finance' ? 'de finanzas' : 'de compras';
 
-    final rows = widget.kind == 'finance'
-        ? _pdfCategoryRows(tx)
-        : _pdfStoreRows(purchases);
-    final breakdownTitle = widget.kind == 'finance' ? 'Gastos por categoría' : 'Gastos por tienda';
+    final rows = _pdfStoreRows(purchases);
+    const breakdownTitle = 'Gastos por tienda';
 
     doc.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
@@ -331,7 +295,7 @@ class _StatementScreenState extends State<StatementScreen> {
           pw.SizedBox(width: 10),
           pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
             pw.Text('ValoraVE', style: pw.TextStyle(fontSize: 17, fontWeight: pw.FontWeight.bold, color: PdfColor.fromInt(0xFF22354E))),
-            pw.Text('Constancia $kindLabel · $label', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+            pw.Text('Constancia de compras · $label', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
           ]),
           pw.Spacer(),
           pw.Container(
@@ -345,26 +309,18 @@ class _StatementScreenState extends State<StatementScreen> {
         pw.SizedBox(height: 10),
         // Totales en cajas con color.
         pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-          if (widget.kind == 'finance') ...[
-            _pdfTotalBox('Ingresos', fmtUSD(income), 0xFF10755A),
-            pw.SizedBox(width: 10),
-            _pdfTotalBox('Gastos', fmtUSD(expense), 0xFFCF4437),
-            pw.SizedBox(width: 10),
-            _pdfTotalBox('Balance', fmtUSD(income - expense), 0xFF22354E),
-          ] else ...[
-            _pdfTotalBox('Compras', '${purchases.length}', 0xFF22354E),
-            pw.SizedBox(width: 10),
-            _pdfTotalBox('Total USD', fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD)), 0xFF22354E),
-            pw.SizedBox(width: 10),
-            _pdfTotalBox('Total Bs', 'Bs ${fmtNum(purchases.fold<double>(0, (a, p) => a + p.totalBS))}', 0xFF10755A),
-          ],
+          _pdfTotalBox('Compras', '${purchases.length}', 0xFF22354E),
+          pw.SizedBox(width: 10),
+          _pdfTotalBox('Total USD', fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD)), 0xFF22354E),
+          pw.SizedBox(width: 10),
+          _pdfTotalBox('Total Bs', 'Bs ${fmtNum(purchases.fold<double>(0, (a, p) => a + p.totalBS))}', 0xFF10755A),
         ]),
         pw.SizedBox(height: 18),
         // Desglose.
         pw.Text(breakdownTitle, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColor.fromInt(0xFF22354E))),
         pw.SizedBox(height: 6),
         if (rows.isEmpty)
-          pw.Text('Sin movimientos en este período.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600, fontStyle: pw.FontStyle.italic))
+          pw.Text('Sin compras en este período.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600, fontStyle: pw.FontStyle.italic))
         else
           pw.TableHelper.fromTextArray(
             headers: const ['Concepto', 'Monto'],
@@ -384,15 +340,6 @@ class _StatementScreenState extends State<StatementScreen> {
       ],
     ));
     return doc;
-  }
-
-  List<List<String>> _pdfCategoryRows(List<Transaction> tx) {
-    final byCat = <FinanceCategory, double>{};
-    for (final t in tx.where((t) => !t.isIncome)) {
-      byCat[t.category] = (byCat[t.category] ?? 0) + t.amountUSD;
-    }
-    final sorted = byCat.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return [for (final e in sorted) [e.key.label, fmtUSD(e.value)]];
   }
 
   List<List<String>> _pdfStoreRows(List<Purchase> purchases) {

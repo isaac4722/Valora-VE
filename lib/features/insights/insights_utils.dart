@@ -348,3 +348,80 @@ List<List<String>> gapCsvRows(List<HistPoint> bcv, List<HistPoint> parallel) {
   }
   return rows;
 }
+
+// ── Gastos de compras (v17.8 · ancla «Gastos» de Análisis) ─────────────────
+// Finanzas se retiró como módulo: estos agregados puros alimentan la vista
+// resumida de gastos con las COMPRAS de Lista (cero carga manual).
+
+/// Gasto por mes calendario (USD efectivo pagado, [Purchase.paidUSD]):
+/// buckets 'mmm/aa' de los últimos [months] meses, en ORDEN CRONOLÓGICO
+/// (por fecha del bucket, nunca por la etiqueta — 'abr' < 'ene' alfabético
+/// pero no en el calendario). Devuelve [] si no hay compras en la ventana.
+List<({String month, double totalUSD, int count})> monthSpend(
+    List<Purchase> purchases,
+    {int months = 6}) {
+  final now = DateTime.now();
+  final first = DateTime(now.year, now.month - (months - 1), 1);
+  final map = <String, ({double total, int count, DateTime bucket})>{};
+  for (final p in purchases) {
+    if (p.date.isBefore(first)) continue;
+    final bucket = DateTime(p.date.year, p.date.month, 1);
+    final key = '${fmtMesCorto(bucket.month)}/${bucket.year % 100}';
+    final prev = map[key];
+    map[key] = (
+      total: (prev?.total ?? 0) + p.paidUSD,
+      count: (prev?.count ?? 0) + 1,
+      bucket: bucket,
+    );
+  }
+  final entries = map.entries.toList()
+    ..sort((a, b) => a.value.bucket.compareTo(b.value.bucket));
+  return [
+    for (final e in entries)
+      (month: e.key, totalUSD: e.value.total, count: e.value.count),
+  ];
+}
+
+/// Gasto por tienda dentro de una lista de compras (USD efectivo):
+/// top [limit] tiendas por total; el resto se agrupa en «Otras».
+/// 'Sin tienda' bucket para compras sin nombre. Devuelve [] si no hay compras.
+List<({String store, double totalUSD, int count})> storeSpend(
+    List<Purchase> purchases,
+    {int limit = 6}) {
+  final map = <String, double>{};
+  final counts = <String, int>{};
+  for (final p in purchases) {
+    final raw = (p.store ?? '').trim();
+    // Multitienda: los ítems reparten su tienda cuando la compra no la tiene.
+    if (raw.isEmpty && p.items.any((i) => (i.store ?? '').trim().isNotEmpty)) {
+      for (final it in p.items) {
+        final s = (it.store ?? '').trim();
+        if (s.isEmpty) continue;
+        map[s] = (map[s] ?? 0) + it.priceUSD * it.quantity;
+        counts[s] = (counts[s] ?? 0) + 1;
+      }
+      continue;
+    }
+    final k = raw.isEmpty ? 'Sin tienda' : raw;
+    map[k] = (map[k] ?? 0) + p.paidUSD;
+    counts[k] = (counts[k] ?? 0) + 1;
+  }
+  final entries = map.entries.toList()
+    ..sort((a, b) => b.value.compareTo(a.value));
+  if (entries.length <= limit) {
+    return [
+      for (final e in entries)
+        (store: e.key, totalUSD: e.value, count: counts[e.key] ?? 0),
+    ];
+  }
+  final top = entries.take(limit).toList();
+  final restTotal =
+      entries.skip(limit).fold<double>(0, (a, e) => a + e.value);
+  final restCount =
+      entries.skip(limit).fold<int>(0, (a, e) => a + (counts[e.key] ?? 0));
+  return [
+    for (final e in top)
+      (store: e.key, totalUSD: e.value, count: counts[e.key] ?? 0),
+    (store: 'Otras', totalUSD: restTotal, count: restCount),
+  ];
+}

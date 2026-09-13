@@ -97,7 +97,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 tooltip: 'Constancia mensual',
                 icon: const Icon(Icons.picture_as_pdf_outlined, size: 19),
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const StatementScreen(kind: 'history'))),
+                    builder: (_) => const StatementScreen())),
               ),
             ])),
           // Filtros.

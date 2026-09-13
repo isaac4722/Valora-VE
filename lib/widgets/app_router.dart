@@ -1,7 +1,9 @@
-/// ─── Router declarativo (GUI dp4: shell 6 pestañas móvil + 8 rutas) ─────────
+/// ─── Router declarativo (GUI dp4: shell 5 pestañas móvil + 7 rutas) ─────────
 /// home:/ · conversor:/conversor · lista:/lista · productos:/productos ·
-/// historial:/historial · finanzas:/finanzas · análisis:/analisis ·
-/// ajustes:/ajustes (+ push: sala, constancia, escáner, legal, ticket).
+/// análisis:/analisis · historial:/historial · ajustes:/ajustes
+/// (+ push: sala, constancia, escáner, legal, ticket).
+/// v17.8: la pestaña Finanzas se retiró (orden del dueño) — los gastos
+/// viven en Análisis → «Gastos», alimentados por las compras de Lista.
 ///
 /// ⚠️ CONTRATO DE CICLO DE VIDA: el GoRouter se crea UNA SOLA VEZ por sesión
 /// (desde ValoraApp, nunca dentro de build()) — recrearlo en cada rebuild
@@ -18,7 +20,6 @@ import 'package:go_router/go_router.dart';
 
 import '../data/store.dart';
 import '../features/converter/converter_screen.dart';
-import '../features/finance/finance_screen.dart';
 import '../features/history/history_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/insights/insights_screen.dart';
@@ -69,9 +70,6 @@ GoRouter buildRouter({required AppStore store}) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/productos', builder: (_, _) => const ProductsScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/finanzas', builder: (_, _) => const FinanceScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/analisis', builder: (_, _) => const InsightsScreen()),

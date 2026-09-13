@@ -31,6 +31,7 @@ PurchaseItem _item(String name, double original, String currency,
     );
 
 void main() {
+  _gastosGroup();
   group('weekdaySpend · gasto por día de la semana', () {
     test('agrupa por weekday con total USD efectivo y conteo', () {
       // Lunes 2026-09-07 · viernes 2026-09-11 · lunes 2026-09-14.
@@ -179,6 +180,102 @@ void main() {
       final rows = gapCsvRows([], [const HistPoint(date: '2026-09-01', rate: 45)]);
       expect(rows.length, 1);
       expect(rows.first.first, 'Dia');
+    });
+  });
+}
+
+/// ── Gastos de compras (v17.8): monthSpend + storeSpend ─────────────────────
+/// Ancla «Gastos» de Análisis — agregados puros sobre Purchase.
+void _gastosGroup() {
+  group('monthSpend · gasto por mes (v17.8)', () {
+    test('buckets cronológicos aunque las etiquetas no lo sean alfabético', () {
+      // ene < abr < dic: alfabético daría abr/ene/dic (mal) — cronológico manda.
+      final ps = [
+        _p('a', DateTime(2026, 1, 15), [], totalUSD: 10),
+        _p('b', DateTime(2026, 4, 2), [], totalUSD: 20),
+        _p('c', DateTime(2026, 12, 9), [], totalUSD: 30),
+      ];
+      final out = monthSpend(ps, months: 12);
+      expect(out.length, 3);
+      expect(out.first.month, contains('ene'));
+      expect(out.last.month, contains('dic'));
+      expect(out.map((m) => m.totalUSD), [10, 20, 30]);
+    });
+
+    test('suma varias compras del MISMO mes en un bucket', () {
+      final ps = [
+        _p('a', DateTime(2026, 9, 1), [], totalUSD: 4),
+        _p('b', DateTime(2026, 9, 18), [], totalUSD: 6),
+      ];
+      final out = monthSpend(ps, months: 6);
+      expect(out.length, 1);
+      expect(out.first.totalUSD, 10);
+      expect(out.first.count, 2);
+    });
+
+    test('fuera de la ventana: ni bucket ni suma', () {
+      final ps = [
+        _p('viejo', DateTime(2020, 1, 1), [], totalUSD: 999),
+      ];
+      expect(monthSpend(ps, months: 6), isEmpty);
+    });
+
+    test('usa el total EFECTIVO (paidUSD) cuando se ajustó el pago', () {
+      final p = _p('a', DateTime(2026, 9, 5), [], totalUSD: 100)
+          .copyWith(paidTotal: 90);
+      final out = monthSpend([p], months: 6);
+      expect(out.first.totalUSD, 90);
+    });
+  });
+
+  group('storeSpend · gasto por tienda (v17.8)', () {
+    test('agrupa por tienda con top + «Otras» agrupadas', () {
+      final ps = [
+        _p('a', DateTime(2026, 9, 1), [], totalUSD: 50),
+        _p('b', DateTime(2026, 9, 2), [], totalUSD: 30),
+      ];
+      // _p no lleva store → todos caen en 'Sin tienda' (un solo bucket).
+      var out = storeSpend(ps);
+      expect(out.length, 1);
+      expect(out.first.store, 'Sin tienda');
+      expect(out.first.totalUSD, 80);
+
+      // Ahora sí con tiendas distintas + límite 2 → «Otras» agrupa.
+      final withStores = [
+        _p('a', DateTime(2026, 9, 1), [], totalUSD: 50).copyWith(store: 'A'),
+        _p('b', DateTime(2026, 9, 1), [], totalUSD: 40).copyWith(store: 'B'),
+        _p('c', DateTime(2026, 9, 1), [], totalUSD: 20).copyWith(store: 'C'),
+        _p('d', DateTime(2026, 9, 1), [], totalUSD: 10).copyWith(store: 'D'),
+      ];
+      out = storeSpend(withStores, limit: 2);
+      expect(out.length, 3); // A, B, Otras
+      expect(out.first.store, 'A');
+      expect(out.last.store, 'Otras');
+      expect(out.last.totalUSD, 30); // C + D
+    });
+
+    test('compra multitienda reparte los ítems con SU tienda', () {
+      final items = [
+        _item('café', 10, 'USD', usd: 10, qty: 2),
+        _item('pan', 5, 'USD', usd: 5, qty: 1),
+      ];
+      final multi = Purchase(
+        id: 'm',
+        date: DateTime(2026, 9, 3),
+        items: [
+          items[0].copyWith(store: 'Cafetería'),
+          items[1].copyWith(store: 'Panadería'),
+        ],
+        totalUSD: 25,
+        totalBS: 0,
+        rate: 1,
+      );
+      final out = storeSpend([multi]);
+      expect(out.length, 2);
+      expect(out.first.store, 'Cafetería'); // 20 USD (10×2)
+      expect(out.first.totalUSD, 20);
+      expect(out.last.store, 'Panadería');
+      expect(out.last.totalUSD, 5);
     });
   });
 }

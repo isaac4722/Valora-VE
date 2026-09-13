@@ -230,7 +230,9 @@ class _ModuleSource extends StatelessWidget {
     final label = switch (module) {
       RateModule.converter => 'Conversor',
       RateModule.calculator => 'Lista',
-      RateModule.finance => 'Finanzas',
+      // v17.8: Finanzas ya no es pantalla — esta fuente tasa las compras
+      // y los registros de precio de las fichas de producto.
+      RateModule.finance => 'Compras y fichas',
     };
     final current = store.settings.rateSourcesByModule[moduleRateKey(module.code, 'VES')];
     return Padding(

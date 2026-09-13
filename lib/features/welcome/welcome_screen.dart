@@ -397,7 +397,7 @@ class _PageThree extends StatelessWidget {
                 Text(
                   'Las cotizaciones llegan de APIs públicas (BCV, paralelo, TRM, '
                   'Banxico, Banco Central de Brasil). Tus registros, listas y '
-                  'finanzas viven solo en este teléfono: sin cuentas ni claves.',
+                  'compras viven solo en este teléfono: sin cuentas ni claves.',
                   style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 8),

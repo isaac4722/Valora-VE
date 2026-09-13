@@ -1,6 +1,8 @@
-/// ─── Shell · cabecera + cinta (solo Inicio) + barra inferior 6 pestañas ────
+/// ─── Shell · cabecera + cinta (solo Inicio) + barra inferior 5 pestañas ────
 /// Port del GUI dp4 con estado real: ticker del tablero vivo, campana del
 /// centro de notificaciones persistido, badge carrito, banner de salud.
+/// v17.8: Finanzas se retiró como pestaña (orden del dueño) — sus gráficos
+/// de gastos viven ahora en Análisis, alimentados por las compras.
 library;
 
 import 'package:flutter/material.dart';
@@ -77,7 +79,6 @@ class MainShell extends StatelessWidget {
     _TabSpec(location: '/conversor', icon: Icons.swap_horiz, activeIcon: Icons.swap_horiz, label: 'Divisas'),
     _TabSpec(location: '/lista', icon: Icons.shopping_cart_outlined, activeIcon: Icons.shopping_cart, label: 'Lista'),
     _TabSpec(location: '/productos', icon: Icons.inventory_2_outlined, activeIcon: Icons.inventory_2, label: 'Productos'),
-    _TabSpec(location: '/finanzas', icon: Icons.account_balance_wallet_outlined, activeIcon: Icons.account_balance_wallet, label: 'Finanzas'),
     _TabSpec(location: '/analisis', icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, label: 'Análisis'),
   ];
 
@@ -144,7 +145,7 @@ class _WalkthroughTrigger extends StatefulWidget {
 class _WalkthroughTriggerState extends State<_WalkthroughTrigger> {
   int? _last;
 
-  static const _locations = ['/', '/conversor', '/lista', '/productos', '/finanzas', '/analisis'];
+  static const _locations = ['/', '/conversor', '/lista', '/productos', '/analisis'];
 
   @override
   void initState() {
