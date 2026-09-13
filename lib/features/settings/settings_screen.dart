@@ -35,7 +35,7 @@ part 'settings_system.dart';
 
 /// Versión visible de la app (la del marketing); el buildNumber real viene
 /// de PackageInfo en la fila «Acerca de».
-const String kAppVersionVisible = '17.8';
+const String kAppVersionVisible = '17.9';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});

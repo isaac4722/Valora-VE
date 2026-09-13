@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.7.1-beta+16 · ronda v17.9 — APK para cualquier dispositivo
+
+Orden del dueño: «te faltó crear para los V8, o no sé si es error de
+compilación; debes crear para cualquier dispositivo (androids viejos,
+nuevos o emuladores) — añádelo al agent.md». Diagnóstico: no era error
+de compilación — la matriz de Build solo producía 2 APK de teléfono
+físico por push (arm64-v8a y armeabi-v7a); el x86_64 de emulador solo
+existía en tags y no había APK universal. Quien instala en un emulador
+o no conoce la arquitectura de su equipo, no encontraba binario.
+
+### Arreglado · cobertura total de dispositivos (AGENT.md · Regla 9)
+- **Matriz de 4 APK en cada push**: `armeabi-v7a` (androids viejos),
+  `arm64-v8a` (nuevos), `x86_64` (emuladores e Intel — antes solo en
+  tags) y `universal` (todo-en-uno, ~45 MB, los 3 ABI embebidos:
+  instala en cualquier dispositivo sin saber su arquitectura). Nota
+  técnica documentada: Flutter no distribuye motor para x86 de 32
+  bits, ese ABI no es construible (los emuladores modernos son
+  x86_64/arm64).
+- **Bug latente del job release corregido**: referenciaba los APK
+  v7a/arm64 que jamás existieron en su workspace (los construía la
+  matriz) y `fail_on_unmatched_files: false` los saltaba en silencio —
+  un tag futuro habría publicado una Release con solo 2 de 5 assets.
+  Ahora el job descarga los 4 APK de la matriz del mismo run y exige
+  los 5 archivos (`fail_on_unmatched_files: true`): nada se publica a
+  medias.
+- **AGENT.md gana la Regla 9** (a petición expresa): prohibido retirar
+  un ABI de la matriz o dejar de publicar sus artefactos sin orden del
+  dueño. README y docs/RELEASE.md actualizados (4 APK + universal,
+  conteo real de tests: 140).
+- Riesgo conocido y aceptado: el job `universal` compila 3 ABI (es el
+  más largo de la matriz); si el reaper del runner lo mata (SIGTERM a
+  los ~16-19 min), `fail-fast: false` mantiene el resto verde y
+  `rerun-failed-jobs` lo rescata — procedimiento ya probado en v17.8.
+
 ## 1.7.0-beta+15 · ronda v17.8 — tutorial único, fin de Finanzas, offline real
 
 Orden del dueño: eliminar el tutorial PageView y los walkthroughs por

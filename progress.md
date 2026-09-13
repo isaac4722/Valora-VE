@@ -538,3 +538,54 @@ con la plantilla de `AGENT.md`.
   dueño). Pendientes honestos que quedan: migración v1→v12 como cadena
   real, canvas pixel-perfect de la constancia (D5), split de
   ui.dart/home/lista, medición de rendimiento en dispositivo.
+
+---
+## [TASK-18] v17.9 · APK para cualquier dispositivo · 2026-09-14 (UTC)
+- Agente: Super Z (GLM)
+- Hecho:
+  - Orden del dueño: «te faltó crear para los V8, o no sé si es error de
+    compilación; debes crear para cualquier dispositivo (androids viejos,
+    nuevos o emuladores) — añádelo al agent.md».
+  - Diagnóstico (no era error de compilación): el Build de rama solo
+    producía 2 artefactos (arm64-v8a 16,4 MB · armeabi-v7a 15,5 MB —
+    verificado por API en el run 34786657206); el APK x86_64 solo se
+    compilaba en tags y NO existía APK universal → emuladores y equipos
+    de arquitectura desconocida sin binario.
+  - `build.yml`: matriz de 4 APK por push (arm64-v8a · armeabi-v7a ·
+    x86_64 · universal sin --split-per-abi) + job release (tags) que
+    descarga los APK de la matriz del mismo run, los aplana y los
+    adjunta TODOS con `fail_on_unmatched_files: true`.
+  - Bug latente corregido en el job release: referenciaba
+    app-armeabi-v7a/arm64-release.apk que nunca existieron en su
+    workspace (softprops los saltaba en silencio) → un tag futuro habría
+    publicado una Release mutilada (solo x86_64 + AAB).
+  - AGENT.md: nueva Regla 9 (petición expresa) — cobertura total de
+    dispositivos, prohibido retirar un ABI sin orden del dueño.
+  - README (descarga local, comando universal, 4 APK en release, tests
+    140) y docs/RELEASE.md (checklist de publicación) actualizados.
+  - **Este commit**: versión 1.7.1-beta+16 · kAppVersionVisible 17.9 ·
+    CHANGELOG v17.9 · esta bitácora.
+- Decisiones:
+  - x86 (32 bits) NO se añade: Flutter no distribuye motor para ese ABI
+    desde 2020 — documentado en AGENT.md Regla 9 y en build.yml para
+    que no vuelva a preguntarse.
+  - Universal por `flutter build apk --release` SIN split (3 ABI en un
+    APK ~45 MB): es la respuesta real a «cualquier dispositivo» para
+    quien no sabe qué descargar.
+  - `needs: apk` en release: garantiza que los artefactos existan antes
+    de publicar; si la matriz muere por infra, release se salta (y el
+    rerun-failed-jobs lo revive) — preferible a publicar incompleto.
+  - Riesgo aceptado: el job universal es el más largo (3 compilaciones
+    AOT); reaper del runner ~16-19 min. Mitigado con fail-fast: false +
+    upload if: always() + rerun-failed-jobs (precedente v17.8).
+  - Cuota de artefactos: ~77 MB/push (4 APK) con retención 30 — dentro
+    del límite blando de 500 MB con cadencia actual; a vigilar.
+- Gates: analyze/test SIN SDK local esta sesión (se perdió entre
+  sesiones otra vez) → gates en Actions sobre este push, único cambio en
+  lib/ es la constante de versión (kAppVersionVisible '17.8'→'17.9') ·
+  build=Actions con matriz de 4 APK (paso 8 del ciclo).
+- Bloqueos: ninguno. YAML validado localmente (pyyaml: matriz y needs
+  correctos) antes del commit.
+- Siguiente: esperar el run de Actions (CI + Build) y verificar que los
+  4 APK suben; luego decidir con el dueño el merge a main (SOLO con
+  orden expresa).
