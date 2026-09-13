@@ -259,3 +259,25 @@ con la plantilla de `AGENT.md`.
 - Pendiente (honesto, ver §3 del scorecard): quick_actions (4 shortcuts),
   widgets 2-13, biometría toggle, SSE vivo, heatmap/proyección en
   Análisis, ruta EUR 4 tramos, Decimal exacto, migración v1→v12 en cadena.
+
+---
+## [DOC-AGENT-V2] AGENT.md v2 — método de 9 pasos + propagación a todas las ramas · 2026-09-13
+- Agente: Super Z (GLM)
+- Hecho: AGENT.md v2 con §Método de trabajo (ciclo obligatorio en 9 pasos:
+  analiza → consulta web → aplica → audita → punto de control → documenta →
+  guarda → Actions → cierra); README §Documentación ahora enlaza AGENT.md y
+  progress.md; refs rotas §5.3/§5.4/§5.5 corregidas a Reglas 3/4/5 en
+  docs/RELEASE.md y docs/PARIDAD.md; AGENT.md v2 cherry-pickado a TODAS las
+  ramas (main 05e0e38, v1.0.1 a54bfcf, v1.0.2, test fccd28b).
+- Decisiones: (1) nombre AGENT.md se mantiene — es la convención ya
+  establecida y referenciada por docs; (2) método como lista numerada
+  concisa (mejores prácticas AGENTS.md verificadas en la web: corto,
+  imperativo, específico del repo, con comandos de verificación); (3) en
+  test solo va AGENT.md v2 — su README es de otra era sin docs/ ni sección
+  Documentación, y el commit de enlaces crearía refs rotas (cherry-pick
+  abortado limpiamente); (4) entrada de progress.md solo en la rama
+  activa (la bitácora no se replica en ramas archivadas).
+- Gates: analyze=N/A (solo docs) · test=N/A (solo docs) · build=CI tras push
+- Bloqueos: ninguno
+- Siguiente: Ola 1 del protocolo v2 (walkthroughs coach-marks + país en
+  bienvenida), sujeto a orden del dueño.
