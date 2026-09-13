@@ -144,6 +144,56 @@ void main() {
       expect(plan!.rate, greaterThan(0));
     });
 
+    test('ConversionPlan.direct: true solo en arista directa', () {
+      // VES→USD con BCV: arista directa (inversa).
+      final c1 = ctx(rates: {'ves-bcv': 40}, selected: {Currency.ves: 'ves-bcv'});
+      expect(c1.plan(Currency.ves, Currency.usd)!.direct, isTrue);
+      expect(c1.plan(Currency.usd, Currency.ves)!.direct, isTrue);
+      // COP→BRL: vía dólar → NO directa.
+      final c2 = ctx(
+        rates: {'cop-trm': 4000, 'brl-br': 5},
+        selected: {Currency.cop: 'cop-trm', Currency.brl: 'brl-br'},
+      );
+      expect(c2.plan(Currency.cop, Currency.brl)!.direct, isFalse);
+    });
+
+    test('ruta EUR de 4 tramos COMPLETA (EUR→BRL por VES+USD)', () {
+      final c = ctx(
+        rates: {'eur-ves-oficial': 43.4, 'ves-bcv': 40, 'brl-br': 5},
+        selected: {Currency.eur: 'eur-ves-oficial', Currency.brl: 'brl-br'},
+      );
+      final plan = c.plan(Currency.eur, Currency.brl)!;
+      // 1 EUR = 43.4 Bs → 43.4/40 USD → ×5 BRL = 5.425 BRL.
+      expect(plan.rate, closeTo(5.425, 0.001));
+      expect(plan.direct, isFalse);
+      // La ruta se pinta COMPLETA: EUR → VES → USD → BRL (4 tramos).
+      expect(
+          plan.path, [Currency.eur, Currency.ves, Currency.usd, Currency.brl]);
+      expect(plan.sourceIds, ['eur-ves-oficial', 'ves-bcv', 'brl-br']);
+    });
+
+    test('ruta EUR de 4 tramos inversa (BRL→EUR por USD+VES)', () {
+      final c = ctx(
+        rates: {'eur-ves-oficial': 43.4, 'ves-bcv': 40, 'brl-br': 5},
+        selected: {Currency.eur: 'eur-ves-oficial', Currency.brl: 'brl-br'},
+      );
+      final plan = c.plan(Currency.brl, Currency.eur)!;
+      expect(plan.rate, closeTo(1 / 5.425, 0.001));
+      expect(
+          plan.path, [Currency.brl, Currency.usd, Currency.ves, Currency.eur]);
+      expect(plan.sourceIds, ['brl-br', 'ves-bcv', 'eur-ves-oficial']);
+    });
+
+    test('resolveEur expone pairId del puente (fuente USD emparejada)', () {
+      final c = ctx(
+        rates: {'eur-ves-oficial': 43.4, 'ves-bcv': 40},
+        selected: {Currency.eur: 'eur-ves-oficial', Currency.ves: 'ves-bcv'},
+      );
+      final eur = c.resolveEur()!;
+      expect(eur.pairId, 'ves-bcv');
+      expect(eur.edge.id, 'eur-ves-oficial');
+    });
+
     test('recursivo anti-ciclo no cuelga', () {
       final c = ctx(
         rates: {'ves-bcv': 40},

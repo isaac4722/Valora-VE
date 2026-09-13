@@ -454,7 +454,7 @@ class _FechaTasas extends StatelessWidget {
   final AppStore store;
   final RateContext ctx;
   final Currency from;
-  final ({double rate, List<Currency> path, List<String> sourceIds})? plan;
+  final ConversionPlan? plan;
   final String mode;
   final DateTime? customDate;
   final bool loading;
@@ -604,7 +604,7 @@ class _DualInput extends StatefulWidget {
   final double amount;
   final Currency from, to;
   final double result;
-  final ({double rate, List<Currency> path, List<String> sourceIds})? plan;
+  final ConversionPlan? plan;
   final String activeSourceId;
   final bool hasOverride;
   final ValueChanged<double> onAmount;
@@ -827,9 +827,22 @@ class _DualInputState extends State<_DualInput> {
 }
 
 /// Ruta del cálculo legible (arista directa · puente EUR · vía dólar).
+/// La ruta del puente EUR se pinta COMPLETA (4 tramos: EUR → local → USD →
+/// destino) con las fuentes usadas en cada tramo — nunca colapsada.
 class _RutaCalculo extends StatelessWidget {
   const _RutaCalculo({required this.plan});
-  final ({double rate, List<Currency> path, List<String> sourceIds})? plan;
+  final ConversionPlan? plan;
+
+  /// Etiqueta del tipo de ruta (§1.11 del web): «Tasa directa» solo con
+  /// arista directa; el puente EUR se declara a la vista.
+  String _kindLabel(ConversionPlan p) {
+    if (p.direct) return 'Tasa directa';
+    if (p.path.contains(Currency.eur) &&
+        (p.path.first == Currency.eur || p.path.last == Currency.eur)) {
+      return 'Puente EUR visible';
+    }
+    return 'Vía dólar';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -843,29 +856,49 @@ class _RutaCalculo extends StatelessWidget {
       ]);
     }
     final p = plan!;
-    final labels = p.sourceIds
-        .map((id) => convSourceNames[id] ?? RateSource.of(id)?.label ?? id)
-        .where((s) => s.isNotEmpty)
-        .join(' + ');
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Ruta del cálculo'),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Row(children: [
-            for (int i = 0; i < p.path.length; i++) ...[
-              if (i > 0) ...[
-                Icon(Icons.arrow_forward, size: 13, color: scheme.onSurfaceVariant),
-                const SizedBox(width: 6),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(_kindLabel(p).toUpperCase(),
+                style: VeText.labelCaps(9.5, color: scheme.primary)),
+            const SizedBox(height: 7),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (int i = 0; i < p.path.length; i++) ...[
+                  if (i > 0) ...[
+                    Icon(Icons.arrow_forward,
+                        size: 13, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                  ],
+                  Flag(p.path[i], size: 16),
+                  const SizedBox(width: 4),
+                  Text(p.path[i].code,
+                      style: const TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w800)),
+                  const SizedBox(width: 4),
+                ],
               ],
-              Flag(p.path[i], size: 16),
-              const SizedBox(width: 4),
-              Text(p.path[i].code, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800)),
-              const SizedBox(width: 4),
+            ),
+            if (p.sourceIds.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final id in p.sourceIds)
+                    if (id.isNotEmpty)
+                      Stamp(
+                          convSourceNames[id] ??
+                              RateSource.of(id)?.label ??
+                              id,
+                          color: scheme.primary),
+                ],
+              ),
             ],
-            const Spacer(),
-            if (labels.isNotEmpty)
-              Flexible(child: Stamp(labels, color: scheme.primary))
           ]),
         ),
       ),
@@ -1132,7 +1165,7 @@ class _Recientes extends StatelessWidget {
   final Currency from, to;
   final double amount;
   final double result;
-  final ({double rate, List<Currency> path, List<String> sourceIds})? plan;
+  final ConversionPlan? plan;
 
   @override
   Widget build(BuildContext context) {

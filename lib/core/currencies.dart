@@ -257,6 +257,24 @@ const Map<String, String> convSourceNames = {
   'usd': 'Dólar',
 };
 
+/// Plan de conversión (ConversionPlan del web v15): la tasa efectiva, la
+/// ruta legible (`path` = divisas para las banderas), las fuentes usadas y
+/// [direct] — true SOLO cuando el par tiene arista directa definida (la
+/// «Tasa directa» del conversor); puente EUR y vía dólar son puentes.
+class ConversionPlan {
+  final double rate;
+  final List<Currency> path;
+  final List<String> sourceIds;
+  final bool direct;
+
+  const ConversionPlan({
+    required this.rate,
+    required this.path,
+    required this.sourceIds,
+    this.direct = false,
+  });
+}
+
 /// Contexto de tasas resuelto (vivas + derivadas + manuales) y el motor de
 /// conversión: arista directa · puente USD · EUR VISIBLE con resolveEur.
 class RateContext {
@@ -288,7 +306,9 @@ class RateContext {
 
   /// Resuelve EUR → mejores aristas (familia emparejada EUR↔USD de la misma
   /// fuente: oficial↔BCV, paralelo↔paralelo, cop↔TRM, brl↔oficial).
-  ({double eurPerUSD, RateSource edge})? resolveEur() {
+  /// Devuelve además `pairId`: la fuente USD del puente (para pintar la ruta
+  /// de 4 tramos completa: EUR → local → USD → destino).
+  ({double eurPerUSD, RateSource edge, String pairId})? resolveEur() {
     const fallbackOrder = [
       'eur-ves-oficial',
       'eur-brl',
@@ -315,7 +335,7 @@ class RateContext {
       }
       final q = rate(pairDef.id);
       if (q <= 0) continue;
-      return (eurPerUSD: q / r, edge: def);
+      return (eurPerUSD: q / r, edge: def, pairId: pairDef.id);
     }
     return null;
   }
@@ -343,10 +363,14 @@ class RateContext {
   }
 
   /// Plan de conversión from → to con ruta legible:
-  /// arista directa («Tasa directa») · puente EUR VISIBLE · vía dólar.
-  ({double rate, List<Currency> path, List<String> sourceIds})? plan(
-      Currency from, Currency to) {
-    if (from == to) return (rate: 1, path: [from], sourceIds: <String>[]);
+  /// arista directa («Tasa directa», [ConversionPlan.direct]) · puente EUR
+  /// VISIBLE con su ruta COMPLETA de 4 tramos (EUR → local → USD → destino)
+  /// · vía dólar (puente invisible para no-EUR).
+  ConversionPlan? plan(Currency from, Currency to) {
+    if (from == to) {
+      return ConversionPlan(
+          rate: 1, path: [from], sourceIds: const <String>[], direct: true);
+    }
     // 1) Arista directa definida por la fuente seleccionada de from/to.
     for (final c in [from, to]) {
       final def = RateSource.of(sel(c));
@@ -354,22 +378,25 @@ class RateContext {
       final r = rate(def.id);
       if (r <= 0) continue;
       if (def.base == from && def.quote == to) {
-        return (rate: r, path: [from, to], sourceIds: [def.id]);
+        return ConversionPlan(
+            rate: r, path: [from, to], sourceIds: [def.id], direct: true);
       }
       if (def.base == to && def.quote == from) {
-        return (rate: 1 / r, path: [from, to], sourceIds: [def.id]);
+        return ConversionPlan(
+            rate: 1 / r, path: [from, to], sourceIds: [def.id], direct: true);
       }
     }
-    // 2) Puente EUR VISIBLE: EUR → local → USD → destino (ruta 4 tramos
-    //    se muestra como EUR→destino con la arista EUR protagonista).
+    // 2) Puente EUR VISIBLE con ruta de 4 tramos: el cálculo real pasa
+    //    EUR → local (arista EUR) → USD (fuente emparejada) → destino,
+    //    y ahora se PINTA así (antes colapsaba a 2 banderas).
     if (from == Currency.eur && to != Currency.usd) {
       final eur = resolveEur();
       final tU = unitsPerUSD(to);
       if (eur != null && tU != null && tU > 0) {
-        return (
+        return ConversionPlan(
           rate: tU / eur.eurPerUSD,
-          path: [from, to],
-          sourceIds: [eur.edge.id, sel(to)],
+          path: [from, eur.edge.quote, Currency.usd, to],
+          sourceIds: [eur.edge.id, eur.pairId, sel(to)],
         );
       }
     }
@@ -377,17 +404,17 @@ class RateContext {
       final eur = resolveEur();
       final fU = unitsPerUSD(from);
       if (eur != null && fU != null && fU > 0) {
-        return (
+        return ConversionPlan(
           rate: eur.eurPerUSD / fU,
-          path: [from, to],
-          sourceIds: [sel(from), eur.edge.id],
+          path: [from, Currency.usd, eur.edge.quote, to],
+          sourceIds: [sel(from), eur.pairId, eur.edge.id],
         );
       }
     }
     // 3) Vía dólar (puente invisible para no-EUR).
     final fU = unitsPerUSD(from), tU = unitsPerUSD(to);
     if (fU != null && fU > 0 && tU != null && tU > 0) {
-      return (
+      return ConversionPlan(
         rate: tU / fU,
         path: <Currency>[from, Currency.usd, to],
         sourceIds: [sel(from), sel(to)],
