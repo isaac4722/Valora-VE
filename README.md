@@ -19,19 +19,19 @@
 **ValoraVE** es una app Android nativa (Flutter/Dart puro) para saber
 cuánto vale tu dinero en Venezuela: tasas BCV y paralelo, conversor
 multi-divisa (USD · VES · EUR · COP · BRL · MXN), lista de compras
-compartida en vivo, libro de precios por producto, finanzas personales
-y análisis de devaluación — todo **offline-first**, en tu teléfono.
+compartida en vivo, libro de precios por producto, gastos automáticos
+de tus compras y análisis de devaluación — todo **offline-first**, en tu
+teléfono.
 
 ## Módulos
 | Módulo | Qué hace |
 |---|---|
-| **Inicio** | tablero del país, sueldo pactado con derivadas LOTTT, resumen del mes, tiendas, recientes |
+| **Inicio** | tablero del país, resumen del mes con tus compras, tiendas, recientes |
 | **Conversor** | puente USD + EUR visible, fecha histórica honesta, ruta del cálculo, notas y recientes |
 | **Lista** | presupuesto, plantillas, vuelto, dividir la cuenta, checkout con foto de ticket, **sala en vivo** |
 | **Productos** | libro de precios con tiendas, sparklines, metas con aviso, CSV ⇄, escáner |
-| **Historial** | asientos por compra, filtros, CSV de compras y movimientos, constancias |
-| **Finanzas** | ingresos/gastos normalizados a USD, donut y barras 6/12 m |
-| **Análisis** | brecha BCV↔paralelo, devaluación, inflación personal, rankings, canasta |
+| **Historial** | asientos por compra, filtros, CSV de compras, constancias |
+| **Análisis** | brecha BCV↔paralelo, devaluación, inflación personal, rankings, canasta, **gastos por tienda y por mes (auto, con tus compras)** |
 | **Ajustes** | país, cinta, fuentes por módulo, alertas, respaldos JSON, tema |
 
 La sala en vivo tiene **tres transportes** con el mismo protocolo

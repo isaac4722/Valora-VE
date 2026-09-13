@@ -27,8 +27,8 @@
 | Lista 9.3 | 68 % | **86 %** | héroe 64px, shareTotals PNG, StoreSuggest pasivo, editar ítem |
 | Productos 9.4 | 65 % | **87 %** | Importar CSV (importados/duplicados), editar/eliminar registro, «¡bajo tu meta!» |
 | Historial 9.5 | 75 % | **86 %** | ticket real: miniatura + zoom 1-8× + compartir JPEG |
-| Finanzas 9.6 | 67 % | **87 %** | orden 01→02→03, confirmar borrado, delta mes previo, paginador topeado |
-| Análisis 9.7 | 50 % | **~60 %** | v17.7: heatmap 6 m + proyección DAMP punteada + rankings día/moneda + exportGapCsv + histórico multi-divisa → **~95 %** |
+| Finanzas 9.6 | 67 % | **—** | **v17.8: RETIRADA por orden del dueño** — gastos en Análisis 9.7 (auto por compras); Transaction conservado para respaldos viejos |
+| Análisis 9.7 | 50 % | **~95 %** | v17.7: heatmap 6 m + proyección DAMP + rankings + exportGapCsv + histórico multi-divisa; **v17.8: ancla Gastos (donut por tienda + barras por mes, alimentada por compras)** |
 | Ajustes 9.8 | 76 % | **91 %** | autoRefresh toggle, APP_VERSION «17.1 · build N», «Quitar sueldo» |
 | Soporte 9.9 | 63 % | **78 %** | constancia PNG real (RepaintBoundary→share), scanner zoom+beep+haptic, splash de marca |
 

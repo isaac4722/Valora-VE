@@ -294,7 +294,7 @@ class _PageTwo extends StatelessWidget {
 
 /// Página 3 · datos reales de APIs y todo local (adaptación del aviso
 /// «prototipo» del dp4 a la app real: nada de demo, sin cuentas, sin nube).
-/// Ola 1 (protocolo v2): el PAÍS se elige aquí — la bienvenida completa al
+/// v17.8: el PAÍS se elige aquí (heredado de la Ola 1) — la bienvenida completa al
 /// paso obligatorio con la selección ya hecha (confirmación, no sorpresa).
 class _PageThree extends StatelessWidget {
   const _PageThree({required this.scheme, required this.country, required this.onPickCountry});
@@ -378,7 +378,7 @@ class _PageThree extends StatelessWidget {
   }
 }
 
-/// Chip compacto de país para la página 3 de la bienvenida (Ola 1).
+/// Chip compacto de país para la página 3 de la bienvenida (bandera real).
 class _CountryChip extends StatelessWidget {
   const _CountryChip({required this.country, required this.selected, required this.onTap});
 

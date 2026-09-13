@@ -14,12 +14,12 @@ variable, StoreSheet, share PNG del conversor, barras 6/12, héroe fresco.
 | 5 | CRUD productos/records/disponibilidad/metas (TARGET_EPS, metSince auto) + 21 semillas + CSV ⇄ + pág.20 | ✅ | `store.addRecord/setTarget/setUnavailable` · `products_screen` · `test/store_test.dart` |
 | 6 | CRUD carrito + checked/checkedBy + presupuesto + plantillas (20) + vuelto + dividir + checkout + ticket foto + enlace | ✅ | `lista_screen.dart` (checkout con `image_picker` 1024px .72) · `test/store_test.dart` |
 | 7 | CRUD compras + filtros + pág.20 + 2 CSV + JSON + constancia | ✅ | `history_screen.dart` + `statement_screen.dart` |
-| 8 | CRUD transacciones + resumen + donut + barras 6/12m + constancia | ✅ | `finance_screen.dart` (syncfusion) |
-| 9 | Home (hero/board/sueldo fijo+VARIABLE/tiles/extras/LOTTT/copy/tiendas/alertas/recientes/herramientas) | ✅ | `home_screen.dart` (sueldo variable v15 completo: fijo · base+variable · rango min–máx con promedio, `effectiveSalary()`; héroe con frescura `fetchedAt` + píldora «vs ayer» con snapshots; StoreSheet por tienda) |
-| 10 | Análisis 5 anclas + gap + lookup + proyección + heatmap + rankings + canasta + CSVs | ✅* | `insights_screen.dart` (proyección amortiguada DAMP 0.85; heatmap sustituido por curva de serie diaria — D2) |
+| 8 | CRUD transacciones + resumen + donut + barras 6/12m + constancia | 🔄 | **v17.8: módulo retirado por orden del dueño** — los gráficos de gastos viven en Análisis («Gastos», alimentado por compras); modelo Transaction conservado para round-trip de respaldos viejos |
+| 9 | Home (hero/board/tiles/extras/copy/tiendas/alertas/recientes/herramientas) | ✅* | `home_screen.dart` (héroe con frescura `fetchedAt` + píldora «vs ayer» con snapshots; StoreSheet por tienda; **sueldo retirado v17.2 a pedido del dueño** — modelo/settings conservados; v17.8: «Resumen del mes» alimentado por compras) |
+| 10 | Análisis 6 anclas + gap + lookup + proyección + heatmap + rankings + canasta + gastos + CSVs | ✅* | `insights_screen.dart` (proyección amortiguada DAMP 0.85; heatmap sustituido por curva de serie diaria — D2; **v17.8: ancla Gastos** con monthSpend/storeSpend) |
 | 11 | Ajustes 8 anclas + respaldo replace/merge + Zona peligro | ✅ | `settings_screen.dart` + `lib/data/backup.dart` · `test/models_backup_test.dart` |
-| 12 | Onboarding 0+país+7+done + Saltar + reopenTutorial | ✅ | `welcome_screen.dart` · `test/widgets_test.dart` (coach-marks → D3) |
-| 13 | Shell 8 rutas / móvil 6 + ticker 3×3×3 solo-home + badge carrito + banner salud | ✅ | `main_shell.dart` + `app_router.dart` · `test/widgets_test.dart` |
+| 12 | Onboarding 0+país+done + tour completo rejugable | ✅ | `welcome_screen.dart` + `widgets/app_tour.dart` (v17.8: UN tutorial de 13 pasos con tutorial_coach_mark; los slides y los recorridos por módulo se retiraron) |
+| 13 | Shell 7 rutas / móvil 5 + ticker 3×3×3 solo-home + badge carrito + banner salud | ✅ | `main_shell.dart` + `app_router.dart` (v17.8: sin pestaña Finanzas) · `test/widgets_test.dart` |
 | 14 | Sala protocolo §6 (granular, LWW, GC, presencia, typing, joiner pierde previa) + share/QR | ✅ | `lib/room/room_transport.dart` + `server/lista-sync/` 1:1 · selector Servidor/Cerca/WiFi · `test/room_protocol_test.dart` |
 | 15 | Alertas: spikes (cooldown 30min) + targets (histéresis) + gap/daily/reminder + centro 9 kinds ring 50 + WorkManager | ✅ | `lib/services/alerts.dart` + `workmanager_service.dart` · recordatorio diario REAL (prefs + claim por día, camino in-app y camino workmanager ±1 h) · `test/store_test.dart` (centro) |
 | 16 | Nativo: 4 shortcuts + widgets + scanner + foto 1024 ≤12MB + constancia PNG/share/print + zoom 1–8× | ✅* | `BcvWidgetProvider.kt` + `widget_service.dart` · **escáner REAL cableado** (`features/scanner/scanner_screen.dart`: continuo + linterna + fallback manual + debounce; Productos abre ficha/alta con código prellenado, Lista agrega con precio vigente) · `InteractiveViewer` zoom · shortcuts nativos parcialmente (D4) |
@@ -48,12 +48,14 @@ Leyenda: ✅ completo · ✅* completo con desviación consciente documentada.
   tasa, verde=baja, intensidad=magnitud vs el día anterior con datos),
   leyenda y día con mayor subida. La serie de área se conserva junto al
   calendario (dos vistas del mismo dato honesto).
-- **D3 · Coach-marks — CERRADA en v17.7 (Ola 1)**: puntas por feature con
-  `valorave.tips-dismissed` (StringList en SharedPreferences), ancladas al
-  widget real (aro de foco + tarjeta), una vez por instalación y SOLO tras
-  el walkthrough del módulo. 5 cableadas: Inicio · Conversor · Lista ·
-  Productos · Análisis. Además, el país se elige EN la bienvenida (página 3
-  con chips) y el paso obligatorio llega preseleccionado.
+- **D3 · Onboarding guiado — EVOLUCIONADA en v17.8**: la Ola 1 (puntas por
+  feature, v17.7) se retiró: sus dos sistemas (recorridos por módulo +
+  puntas con respiro de 900 ms) se apilaban y se salían de pantalla
+  (capturas del dueño). Hoy hay UN tutorial completo rejugable
+  (`widgets/app_tour.dart`, tutorial_coach_mark): 13 pasos anclados que
+  cruzan las 5 pestañas + Ajustes, un overlay a la vez, alineación con el
+  rect real, banderas de assets/flags. El país sigue eligiéndose EN la
+  bienvenida (página 3 con chips + banderas reales).
 - **D4 · 4 shortcuts nativos — CERRADA en 1.1.0-dp4**: quick_actions 4/4 en
   el launcher (Lista · Conversor · Escanear · Tasa BCV) + el intent
   `valorave://sala` registrado.

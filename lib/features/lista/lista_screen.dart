@@ -510,7 +510,7 @@ class _ListaScreenState extends State<ListaScreen> {
 /// A): opciones = RateSource.sourcesFor(moneda); valor = fuente del módulo
 /// Lista (RateModule.calculator — el override por módulo §9.3; sin override
 /// cae a la global, cuyo default es la oficial). Cambia con
-/// setModuleRateSource para no alterar Conversor ni Finanzas.
+/// setModuleRateSource para no alterar el Conversor ni las fichas de producto.
 class _FuenteChip extends StatelessWidget {
   const _FuenteChip({required this.store, required this.currency});
 
