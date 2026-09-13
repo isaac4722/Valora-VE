@@ -4,8 +4,43 @@
 Este archivo define CÓMO se trabaja en este repo. Cualquier agente (IA o
 humano en modo automatizado) DEBE cumplirlo antes de tocar código.
 
+## Método de trabajo — ciclo obligatorio en 9 pasos
+Todo encargo se ejecuta SIEMPRE en este orden. Si la auditoría (paso 5)
+falla, se repite el ciclo (1, 2 opcional, 3, 4, 5) hasta pasarla.
+Prohibido saltar pasos o declarar «terminado» antes del 9.
+
+1. **Analiza lo que se pide** (mínimo 1 minuto): identifica el objetivo
+   real, los módulos tocados y las reglas de este contrato que aplican.
+   Si algo es ambiguo, preguntar antes de escribir código — nunca
+   inventar requisitos.
+2. **Consulta la web** cómo se aplica lo pedido: busca soluciones
+   existentes y mejores prácticas vigentes, selecciona las mejores y
+   combínalas con el conocimiento de base del repo (docs/, progress.md).
+   En reintentos del ciclo este paso es opcional.
+3. **Aplica o crea lo indicado**: una pantalla/pieza por commit; sin
+   features no pedidas; sin cambiar framework, arquitectura ni sistema
+   visual (solo evolucionarlos).
+4. **Audita y verifica** que se aplicó exactamente lo pedido: diff del
+   commit contra el encargo punto por punto + `flutter analyze`
+   (0 issues) + `flutter test` (suite verde).
+5. **Punto de control**: si la auditoría pasa → continúa al paso 6;
+   si falla → VUELVE al paso 1 (paso 2 opcional) y repite 3→4→5 hasta
+   pasarla. Prohibido avanzar con auditoría roja o «casi listo».
+6. **Documenta, declara y detalla**: entrada en progress.md (plantilla
+   abajo), docs actualizados si cambió comportamiento visible, y reporte
+   honesto de qué se hizo, skills usados, qué se verificó y qué falta.
+7. **Guarda en el repo**: commits limpios (conventional commits) y push
+   a la rama de trabajo.
+8. **Compila en Actions y verifica hasta que se logre**: sigue el run de
+   GitHub Actions del push; si el build o los gates fallan, corrige y
+   repite hasta verde antes de dar el encargo por cerrado.
+9. **Termina el trabajo pedido**: repo sincronizado, estado real
+   registrado y encargo cerrado. «Terminado» significa los 9 pasos
+   completos — nunca «casi».
+
 ## Reglas inquebrantables
-1. Lee `AGENT.md` y `progress.md` COMPLETOS antes de empezar tu turno.
+1. Lee `AGENT.md` y `progress.md` COMPLETOS antes de empezar tu turno,
+   y ejecuta cada encargo con el §Método de trabajo (ciclo de 9 pasos).
 2. Al terminar tu turno, AÑADE (nunca reescribas) tu sección en
    `progress.md` con la plantilla del §Plantilla. Sin sección, tu trabajo
    no existe.
@@ -25,7 +60,8 @@ humano en modo automatizado) DEBE cumplirlo antes de tocar código.
 
 ## Definición de hecho (por pieza)
 - Código + test que lo cubre + `analyze`/`test` verdes + entrada en
-  progress.md + actualización de docs si cambia comportamiento visible.
+  progress.md + actualización de docs si cambia comportamiento visible
+  + run de Actions verde (paso 8 del método).
 
 ## Plantilla de entrada en progress.md
     ---
