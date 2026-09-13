@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.5.0-beta+13 · recheck de auditoría — el versionado vuelve al patrón del contrato
+
+El dueño ordenó un recheck completo de `progress.md` y la documentación
+contra el código real de esta rama, aplicando el ciclo de 9 pasos de
+`AGENT.md`. Resultado de la auditoría: **todo lo declarado existe y está
+aplicado** — ronda 1.1.0-dp4 (7/7: quick_actions 4/4, `Decimal` en
+`cartTotals`/`computeChange`, «Probar aviso» con notificación Android
+real, cabecera solo-nombre, héroe con `ReadWindow` 38, búsqueda global a
+pantalla completa con el fix dp5, bienvenida `PageView` de 3 páginas),
+ronda v17.6 RECHECK (6/6), v17.5, v17.4 y v17.2 verificadas con evidencia
+`file:line`; gates CI+Build verdes en el SHA de partida (fb93678); Reglas
+5 y 7 de `AGENT.md` limpias (sin mocks, sin `AppStateScope`, sin patrones
+web, sin tokens; 35 dependencias, todas de pub.dev).
+
+### Corregido
+- **Versionado fuera de patrón (Regla 5 de AGENT.md)** — la escalera de
+  las rondas anteriores (`1.1.0-dp4+6` → `1.2.0+7` → `1.3.0+10` →
+  `1.4.0+11` → `1.5.0+12`) había perdido el prerelease `-beta` exigido
+  por el contrato (`1.x.y-beta+z`). Se restaura como `1.5.0-beta+13`:
+  misma línea 1.5.0 que documenta el CHANGELOG, build siguiente (+13) y
+  patrón del contrato devuelto. La versión visible de marketing
+  (`kAppVersionVisible`, hoy «17.6») NO se toca: es la convención que ya
+  usaba main («17.1» con pubspec `1.0.2-beta+3`), distinta del versionado
+  del paquete.
+- **pubspec con comentario mentiroso** — decía «v1.0.1-beta+2 · ronda de
+  paridad» encima de `1.5.0+12`; ahora documenta la restauración real.
+- **README desactualizado** — «Descarga actual» apuntaba a v1.0.1-beta;
+  el último release real (verificado por API) es **v1.0.2-beta**.
+
+### Documentación
+- **`progress.md`**: entrada `[RECHECK-V17.6]` con el resultado completo
+  de la auditoría y la reconstrucción de bitácora de las 5 rondas
+  (1.1.0-dp4, v17.2, v17.4, v17.5, v17.6) que estaban en git y CHANGELOG
+  pero SIN sección en progress.md — violaban la Regla 2 («sin sección, tu
+  trabajo no existe»). Se registran con su rango de commits real, sin
+  falsificar fechas.
+- Nota honesta: TASK-12 citaba `scripts/verify_apk_sig.py` como evidencia
+  de la verificación de firma de v1.0.0-beta; ese archivo era un artefacto
+  local del entorno de aquel turno y nunca se commiteó al repo.
+
 ## 1.5.0+12 · ronda v17.6 — RECHECK: los fallos confirmados del dueño, resueltos antes de las olas
 
 Quinta pasada. El dueño trajo protocolo v2 (RECHECK + 12 olas): nada de código

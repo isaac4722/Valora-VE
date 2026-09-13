@@ -281,3 +281,101 @@ con la plantilla de `AGENT.md`.
 - Bloqueos: ninguno
 - Siguiente: Ola 1 del protocolo v2 (walkthroughs coach-marks + país en
   bienvenida), sujeto a orden del dueño.
+
+---
+## [RECHECK-V17.6] Recheck ordenado por el dueño · auditoría progress/docs ↔ código · 2026-09-13 UTC
+- Agente: Super Z (GLM)
+- Encargo: auditar progress.md, verificar que TODO lo declarado está
+  aplicado en el código de `fix/v1.1.0-dp4-paridad` (ciclo 9P completo),
+  corregir lo que falle, documentar, compilar y cerrar.
+- Hecho:
+  - **Auditoría completa de progress.md (TASK-0..15 + DOC-AGENT-V2)
+    contra el árbol real, con evidencia file:line. Veredicto: todo lo
+    declarado EXISTE y está aplicado.**
+  - Ronda 1.1.0-dp4 verificada 7/7: quick_actions 4/4
+    (`lib/services/quick_actions.dart` + cableado en `main.dart:86`),
+    `Decimal` exacto en `cartTotals`/`computeChange`
+    (`lib/core/analytics.dart:27/51`), «Probar aviso» con notificación
+    Android real + centro interno (`settings_screen.dart:776`), cabecera
+    solo-nombre dp4 (`main_shell.dart:275`), héroe con `ReadWindow`
+    displayNum 38 (`home_screen.dart:220`), búsqueda global a pantalla
+    completa con fix dp5 (`GlobalSearchScreen` por `main_shell.dart:330`),
+    bienvenida `PageView` 3 páginas (`welcome_screen.dart:91`).
+  - Ronda v17.6 RECHECK verificada 6/6: `VeInk` como
+    `ThemeExtension<VeInk>` registrado (`theme.dart:80/245`),
+    `LoadingState`/`ErrorState`/`OfflineState` (`ui.dart:557/604/655`),
+    escáner con `scanWindow` 72 %×32 % + `errorBuilder`
+    (`scanner_screen.dart:106/110`), héroe salida 56/entrada 40 + swap
+    centrado real (`converter_screen.dart:713/653/797`), date-picker que
+    fusiona serie remota 180 d en vivo (`seriesForSource`,
+    `converter_screen.dart:191`), Inicio con spinner/wifi_off/cloud_off
+    por rama real (`home_screen.dart:377-401`).
+  - v17.5 (showToast unificado en 10+ archivos, `CurrencyTag`
+    `ui.dart:1379`), v17.4 (tickets, `dynamic_color`, diagnóstico de
+    fuentes) y v17.2 (`offlineMode` `store.dart:201`, walkthroughs con
+    replay `settings_screen.dart:951`) verificadas por muestreo con
+    evidencia.
+  - Claims estructurales TASK-11/13/15: router único `late final` +
+    `refreshListenable` (`main.dart:76`, `app_router.dart:45`),
+    `RateHealthBanner` montado (`main_shell.dart:96`), respaldo semanal
+    con retención 4 (`workmanager_service.dart:20/118`),
+    integration_test 5 flujos, protocolo server §6 con límites
+    8/120/16KB + presencia/typing (`server/lista-sync/index.ts`).
+  - Reglas del contrato: R5 LIMPIA (0 mocks en lib/, 0 `AppStateScope`,
+    0 patrones web, 0 tokens/keys) · R7 LIMPIA (35 dependencias, todas
+    de pub.dev, ninguna git:/path:).
+  - Vía API (token del dueño): CI y Build VERDES en fb93678 (2026-09-13);
+    AGENT.md v2 presente en las 5 ramas; latest release = v1.0.2-beta con
+    4 assets. Logs del run verde extraídos: analyze «No issues found!
+    (ran in 19.4s)» · test «🎉 107 tests passed.».
+  - Falso positivo descartado: el trigger «branches: ain,...» de los
+    workflows es el display comiéndose la secuencia `[m` (bug ya
+    documentado en TASK-11); los bytes reales son
+    `[main, 'fix/v1.1.0-dp4-paridad']` — YAML correcto.
+  - Correcciones aplicadas por el recheck: (1) pubspec 1.5.0+12 →
+    **1.5.0-beta+13** — restaurado el patrón `1.x.y-beta+z` de la Regla 5,
+    con comentario honesto (el viejo mentía «v1.0.1-beta+2»); (2) README:
+    «Descarga actual» v1.0.1-beta → v1.0.2-beta (el release real,
+    verificado por API); (3) CHANGELOG: entrada de esta ronda arriba del
+    todo. Cero cambios en lib/ y test/ — la auditoría no halló defectos
+    de código, solo de contrato/documentación.
+  - **Reconstrucción de bitácora (Regla 2)** — estas rondas estaban en
+    git+CHANGELOG pero SIN entrada en progress.md; quedan registradas
+    aquí con su rango real de commits, sin falsificar fechas:
+    - 1.1.0-dp4 (068e89e..ddb4abd, 2026-09-10): paridad visual dp4 +
+      quick_actions + Decimal + «Probar aviso» · CHANGELOG §1.1.0-dp4+6.
+    - v17.2 (72b9799..58c001e, 2026-09-11): offline-first, sala
+      full-screen 4 modos, conversor dp, walkthroughs por módulo ·
+      CHANGELOG §1.2.0+7.
+    - v17.4 (2d00a39..97bae53, 2026-09-11): GUI dp6 — tickets, Material
+      You, diagnóstico de fuentes · CHANGELOG §1.3.0+10.
+    - v17.5 (99756c6..0d71911, 2026-09-11): toast unificado, CurrencyTag,
+      alertas de subida · CHANGELOG §1.4.0+11.
+    - v17.6 RECHECK (6eefaf4..abb6bba, 2026-09-12): los 5 fallos
+      confirmados del dueño resueltos · CHANGELOG §1.5.0+12.
+    - Rework CI (91d8f26..fb93678, 2026-09-12/13): matriz por ABI
+      anti-SIGTERM + cachés (infraestructura, gates ya verdes).
+- Decisiones:
+  - Versionado: la escalera 1.2.0+7→1.5.0+12 violaba la letra de la
+    Regla 5 (perdió el prerelease `-beta`); se restaura como
+    `1.5.0-beta+13` — misma línea 1.5.0 del CHANGELOG, build siguiente,
+    patrón del contrato devuelto (Regla 4: el MD manda).
+  - `kAppVersionVisible` «17.6» se CONSERVA: es la versión visible de
+    marketing, convención que main ya usaba («17.1» con pubspec
+    `1.0.2-beta+3`) — línea distinta del versionado del paquete.
+  - Reconstrucción en UNA entrada de recheck en vez de 5 entradas
+    retro-fechadas: los rangos de commits son la evidencia y no se
+    inventan fechas de turno.
+  - Entradas viejas NO se reescriben (Regla 2, append-only). La evidencia
+    fantasma de TASK-12 (`scripts/verify_apk_sig.py`, nunca commiteado —
+    era artefacto local de aquel entorno) queda anotada aquí, no
+    corregida en el pasado.
+- Gates: analyze=0 issues («No issues found», 19.4 s) · test=107/107
+  («107 tests passed») · build=OK — CI y Build del runner sobre fb93678
+  (lib/ y test/ byte-idénticos a este commit). El push de cierre
+  re-gatea ambos workflows sobre el SHA nuevo; el turno SOLO cierra con
+  verde (paso 8 verificado antes del cierre).
+- Bloqueos: ninguno (sin SDK Flutter local por disco — gates en el
+  runner, como en turnos anteriores; conteo extraído de los logs reales).
+- Siguiente: Ola 1 del protocolo v2 (walkthroughs coach-marks + país en
+  bienvenida), sujeto a orden del dueño — igual que quedó en DOC-AGENT-V2.

@@ -7,9 +7,11 @@
 
 </div>
 
-> 📦 **Descarga actual:** [Release v1.0.1-beta](https://github.com/isaac4722/Valora-VE/releases/latest) — 3 APK firmados (armeabi-v7a · arm64-v8a · x86_64) + AAB, ofuscados (`--obfuscate --split-debug-info`).
+> 📦 **Descarga actual:** [Release v1.0.2-beta](https://github.com/isaac4722/Valora-VE/releases/latest) — 3 APK firmados (armeabi-v7a · arm64-v8a · x86_64) + AAB, ofuscados (`--obfuscate --split-debug-info`).
 >
-> **v1.0.1-beta** arregla el bug que dejaba la app clavada en la pantalla
+> **v1.0.2-beta** cierra la ronda de paridad contra `MVP-CRUD.md` (bug
+> crítico de `addPurchase`, histórico real del conversor, flujos §9) y
+> **v1.0.1-beta** arregló el bug que dejaba la app clavada en la pantalla
 > de bienvenida (router recreado en cada rebuild) y el icono transparente
 > del lanzador; añade escáner de códigos, sueldo variable, recordatorio
 > diario, StoreSheet, compartir PNG del conversor y barras 6/12.

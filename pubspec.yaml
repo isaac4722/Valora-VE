@@ -2,8 +2,11 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y finanzas. Offline-first."
 publish_to: 'none'
 
-# v1.0.1-beta+2 · ronda de paridad (router/icono/escáner/sueldo variable).
-version: 1.5.0+12
+# 1.5.0-beta+13 · recheck de auditoría: el versionado vuelve al patrón del
+# contrato (Regla 5 de AGENT.md · 1.x.y-beta+z). La escalera 1.2.0+7 →
+# 1.5.0+12 de las rondas v17.2–v17.6 se conservó en CHANGELOG.md como
+# historia; a partir de aquí el prerelease «-beta» vuelve a ser obligatorio.
+version: 1.5.0-beta+13
 
 environment:
   sdk: ^3.9.2
