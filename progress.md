@@ -453,3 +453,88 @@ con la plantilla de `AGENT.md`.
   pendiente honesto: migración v1→v12 como cadena real, canvas
   pixel-perfect de la constancia (D5), split de ui.dart/home/lista,
   medición de rendimiento en dispositivo.
+
+## [TASK-17] v17.8 · tutorial único + fin de Finanzas + IGTF fuera + offline real · 2026-09-14 UTC
+- Agente: Super Z (GLM)
+- Encargo del dueño: eliminar el tutorial tipo PageView y dejar UN
+  walkthrough completo rejugable (los actuales se apilan y se salen de
+  pantalla — capturas adjuntas; buscar plugin); incluir los assets de
+  banderas; retirar el módulo de Finanzas y reubicar los gráficos de
+  gastos en Análisis o Historial alimentados por las compras de Lista sin
+  carga manual; eliminar TODA referencia al impuesto histórico; hacer la
+  app realmente client-side + offline («constante no se logra»); y
+  reaplicar el progress.md completo. TODO en fix/v1.1.0-dp4-paridad, main
+  intacta (sin orden explícita de fusión).
+- Hecho (5 commits, uno por pieza, gates locales ANTES de cada uno):
+  - **98d9a3d · Finanzas fuera + Gastos**: pestaña/ruta/pantalla
+    retiradas (shell 6→5); ancla «Gastos» en Análisis (total del rango +
+    donut por tienda top-6+Obras + barras por mes) alimentada SOLO por
+    compras de Lista (monthSpend/storeSpend puros, +6 tests: orden
+    cronológico por bucket —no por etiqueta—, ventana, paidUSD,
+    multitienda repartida); Home «Resumen del mes» por compras con delta
+    honesto; constancia solo de compras; Transaction/FinanceCategory
+    CONSERVADOS para round-trip de respaldos viejos (cero pérdida);
+    CRUD de movimientos retirado por muerto; RateModule.finance vivo
+    (tasa fichas/compras, etiqueta «Compras y fichas»).
+  - **502402d · Tutorial único**: slides PageView de la bienvenida,
+    walkthroughs por módulo (v17.2) y puntas Ola 1 ELIMINADOS (sus 2
+    bugs de las capturas: overlays apilados por postFrames
+    independientes + burbujas con altura estimada 150 px cortadas).
+    Nuevo lib/widgets/app_tour.dart sobre tutorial_coach_mark 1.3.4
+    (pub.dev): 13 pasos / 6 segmentos que CRUZAN pestañas (navega con
+    go_router, espera layout, encadena overlays, restaura pestaña de
+    origen), UN overlay a la vez (guard anti-reentrada), alineación con
+    el rect REAL del ancla + useSafeArea, banderas reales de
+    assets/flags en la tarjeta inicial y en los chips de país de la
+    bienvenida; una oportunidad auto por instalación
+    (valorave.tour-done, marca antes de mostrar) + replay único desde
+    Ajustes; anclas centralizadas en TourKeys + GlobalKeys reales para
+    nav-bar/header/hero. Tests: integridad del registro, flag
+    una-sola-vez, pipeline E2E (arranque → Saltar → restaura '/').
+  - **1f4a295 · Impuesto histórico fuera**: campo v14 de Purchase
+    eliminado (constructor/copyWith/toJson/fromJson); respaldos viejos
+    lo IGNORAN al parsear y el round-trip no lo re-escribe (+test de
+    regresión); hints y comentarios reescritos.
+  - **9ac8817 · Offline REAL**: ConnectivityService (connectivity_plus
+    7.3.1) tolerante sin canal; RatesPoller come la señal: sin red NO
+    consulta (fin de las cargas falsas de 7 s), NO martilla cada 60 s
+    (latido y SSE se apagan), al volver la red refresca solo (modo
+    offline ELEGIDO y autoRefresh mandan); flag inicial tomado del
+    servicio (arranque sin red cubierto); retryNow() con re-consulta
+    real; héroe con wifi_off honesto inmediato; RateHealthBanner con
+    causa (sin conexión calmado vs >15 min con Reintentar). Tests con
+    plataforma falsa inyectada (4: tolerancia, arranque sin red con
+    CERO consultas, reconexión con refresco, modo offline manda).
+  - **cf39e0a · Reaplicación progress.md**: auditoría MD↔código tras la
+    restructura (claims verificados: héroe, quick_actions, Decimal,
+    biometría, SSE, widgets, offlineMode); sueldo LOTTT retirado de
+    README/PARIDAD (obsoleto desde v17.2 — hallazgo de la auditoría);
+    PARIDAD fila 8 🔄, D3 evolucionada, PARIDAD-MVP-CRUD 9.6 RETIRADA.
+  - **Este commit**: versión 1.7.0-beta+15 · kAppVersionVisible 17.8 ·
+    CHANGELOG v17.8 · esta bitácora.
+- Decisiones:
+  - Plugin sobre mano propia (orden del dueño «busca un plugin»):
+    tutorial_coach_mark 1.3.4 (ago-2026, pub.dev) — posicionamiento por
+    ancla real + safe-area; el driver multi-pestaña es nuestro (el
+    paquete no navega solo). connectivity_plus 7.3.1 para la señal de
+    red. Ambos documentados en DEPENDENCIAS.md (Regla 7).
+  - Tour por SEGMENTOS con un overlay por pestaña (no todos los targets
+    en un solo run): las anclas de branches no visitados no existen aún;
+    navegar-entre-segmentos es lo que hace el tour «completo» de verdad.
+  - Desviación de MVP-CRUD §9.6 (Finanzas): la manda la ORDEN EXPLÍCITA
+    del dueño (Regla 4); anotada aquí y en PARIDAD-MVP-CRUD.
+  - kNavBarKey/kHeaderActionsKey/kHeroRateKey pasaron de const Key a
+    GlobalKeys reales (necesarias para medir el rect del tour); los
+    widget tests find.byKey siguen verdes.
+  - SDK Flutter 3.47.4 reinstalado en el entorno (se perdió entre
+    sesiones): gates locales restaurados ANTES de cada commit.
+- Gates: analyze=0 issues · test=140/140 local (Flutter 3.47.4; 14 tests
+  nuevos) · build=Actions tras el push (paso 8 del ciclo).
+- Bloqueos: ninguno. Falsos positivos resueltos: el overlay del tour
+  necesita varios ciclos de bombeo (espera por condición, jamás
+  pumpAndSettle — el pulso del foco es animación infinita); !timersPending
+  corre antes de los tearDown (dispose en el cuerpo del test).
+- Siguiente: decidir si se fusiona a main (SOLO con orden explícita del
+  dueño). Pendientes honestos que quedan: migración v1→v12 como cadena
+  real, canvas pixel-perfect de la constancia (D5), split de
+  ui.dart/home/lista, medición de rendimiento en dispositivo.

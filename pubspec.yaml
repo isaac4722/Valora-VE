@@ -6,7 +6,7 @@ publish_to: 'none'
 # contrato (Regla 5 de AGENT.md · 1.x.y-beta+z). La escalera 1.2.0+7 →
 # 1.5.0+12 de las rondas v17.2–v17.6 se conservó en CHANGELOG.md como
 # historia; a partir de aquí el prerelease «-beta» vuelve a ser obligatorio.
-version: 1.6.0-beta+14
+version: 1.7.0-beta+15
 
 environment:
   sdk: ^3.9.2

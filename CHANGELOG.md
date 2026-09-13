@@ -1,5 +1,74 @@
 # Changelog
 
+## 1.7.0-beta+15 · ronda v17.8 — tutorial único, fin de Finanzas, offline real
+
+Orden del dueño: eliminar el tutorial PageView y los walkthroughs por
+módulo (con sus bugs de apilado y salida de pantalla), dejar UN tutorial
+completo rejugable; retirar el módulo de Finanzas y reubicar los gráficos
+de gastos como vista resumida en Análisis alimentada por las compras de
+Lista; eliminar toda referencia al impuesto histórico; y hacer la app
+realmente client-side + offline. Todo en la rama, NADA a main hasta orden
+explícita.
+
+### Cambiado · un tutorial para toda la app
+- **Fuera los DOS sistemas defectuosos** (capturas del dueño: «2 al mismo
+  tiempo» y «sale fuera de pantalla»): los 7 slides PageView de la
+  bienvenida, los recorridos por módulo (v17.2) y las puntas por feature
+  (Ola 1) — cuyo respiro de 900 ms no evitaba que el diálogo del
+  recorrido y la punta se apilaran, y cuyas burbujas usaban una altura
+  estimada (150 px) que se cortaba fuera de pantalla.
+- **UN tour completo rejugable** (`tutorial_coach_mark` 1.3.4, pub.dev):
+  13 pasos anclados a widgets reales que cruzan las 5 pestañas + Ajustes,
+  un solo overlay a la vez (guard anti-reentrada), alineación calculada
+  con el rect real del ancla + safe-area (nada se estima, nada se sale),
+  navegación automática entre pestañas y retorno a la pestaña de origen.
+  Se dispara una vez por instalación al terminar la bienvenida (o al
+  actualizar) y se repite libre desde Ajustes → «Ver el tutorial
+  completo» (entrada única, no una lista).
+- **Banderas reales** en el tutorial y en la bienvenida: los chips de
+  país usan los assets de `assets/flags` (antes un icono genérico).
+
+### Cambiado · Finanzas fuera, gastos automáticos
+- Pestaña/ruta/pantalla Finanzas retiradas; shell de 6 → 5 pestañas.
+- **Análisis → «Gastos»** (nueva ancla): vista resumida con total del
+  rango, donut por tienda (top 6 + «Otras», multitienda repartida por
+  ítems) y barras por mes — alimentada AUTOMÁTICAMENTE por las compras
+  de Lista, sin registro manual (`monthSpend`/`storeSpend` puros y
+  testeados, orden cronológico garantizado).
+- Home «Resumen del mes» re-alimentado por compras: gastado, nº compras,
+  tienda top, delta vs mes previo y empty state honesto.
+- Constancia solo «de compras» (rama finance retirada).
+- Modelo `Transaction`/`FinanceCategory` conservado para round-trip de
+  respaldos viejos SIN pérdida de datos (Regla honesta); CRUD de
+  movimientos retirado por muerto. Desviación de MVP-CRUD §9.6 anotada
+  en progress.md (Regla 4): la manda la orden explícita del dueño.
+
+### Cambiado · impuesto histórico fuera
+- `Purchase` sin el campo booleano v14 (solo display — el motor jamás lo
+  aplicó); los respaldos viejos que lo traen lo ignoran al parsear y el
+  round-trip no lo re-escribe (test de regresión incluido).
+
+### Cambiado · client-side + offline REAL (`connectivity_plus` 7.3.1)
+- **La señal de red manda**: sin red NO se consulta (fin de los 7 s de
+  «Buscando tasas…» que iban a fallar), NO se martilla el reintento cada
+  60 s contra una red muerta (el latido y el stream SSE se apagan), y al
+  VOLVER la red el tablero se refresca solo — respetando siempre el modo
+  offline ELEGIDO y autoRefresh (el dueño manda, no la red).
+- Arranque sin red contemplado: el flag nace verdadero (no espera una
+  transición que nunca llega).
+- `retryNow()`: el botón «Reintentar» re-consulta la red y nunca queda
+  mudo; el banner de salud distingue «Sin conexión — tasas guardadas a
+  la vista» de «no se actualizan hace >15 min».
+- Tolerante y degradación honesta: sin canal de plataforma la app
+  funciona igual con el ciclo clásico.
+
+### Auditoría
+- Reaplicación completa de progress.md sobre el código tras la
+  restructura (claims verificados uno a uno; sueldo LOTTT retirado de
+  README/PARIDAD — estaba obsoleto desde v17.2).
+- Gates LOCALES antes de cada commit: analyze 0 · suite 126 → **140
+  tests** (14 nuevos: tour, gastos, conectividad, impuesto extinto).
+
 ## 1.6.0-beta+14 · ronda v17.7 — cambios pendientes + Ola 1 + reestructura
 
 Orden del dueño: «mejores la app en reestructura optimizar ect. Y realizar
