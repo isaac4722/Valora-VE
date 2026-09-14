@@ -17,6 +17,7 @@ import '../data/board.dart';
 import '../data/rate_history.dart';
 import '../data/sse_stream.dart';
 import '../data/store.dart';
+import '../room/room_transport.dart';
 import '../services/alerts.dart';
 import '../services/connectivity.dart';
 import '../services/widget_service.dart';
@@ -411,5 +412,8 @@ List<SingleChildWidget> appProviders({
     ChangeNotifierProvider(
         create: (_) => RatesPoller(store, notifs, alerts, connectivity: connectivity)),
     Provider<AlertEngine>.value(value: alerts),
+    // v18.0 · Sala Viva: controlador de APLICACIÓN — la Lista, la
+    // configuración de sala y la Sala Viva comparten el MISMO estado.
+    ChangeNotifierProvider(create: (_) => RoomController(store)),
   ];
 }

@@ -19,6 +19,7 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
+import '../../room/room_transport.dart';
 import '../../services/quick_actions.dart' show scanRequest;
 import '../../services/sharing.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
@@ -245,6 +246,9 @@ class _ListaScreenState extends State<ListaScreen> {
               icon: const Icon(Icons.receipt_long, size: 20),
               onPressed: () => context.push('/historial'),
             )),
+          // v18.0 · Sala Viva: si estás en sala, la lista lo sabe — el strip
+          // vive arriba de TODO y lleva a la pantalla de la sala.
+          const _EnSalaStrip(),
           // Hero total.
           ReadWindow(
             semanticLabel: 'Total de la compra',
@@ -398,13 +402,34 @@ class _ListaScreenState extends State<ListaScreen> {
           Card(
             child: KeyedSubtree(
               key: TourKeys.listaSala,
-              child: ListTile(
-              leading: Icon(Icons.groups_outlined, color: scheme.primary),
-              title: const Text('Sala en vivo', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-              subtitle: const Text('Comparte tu lista por código de 6 letras, QR, WiFi directo o servidor', style: TextStyle(fontSize: 12)),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => showRoomSheet(context),
-            ),
+              child: ListenableBuilder(
+                listenable: context.read<RoomController>(),
+                builder: (context, _) {
+                  final room = context.read<RoomController>();
+                  final inRoom = room.connected;
+                  return ListTile(
+                    leading: Icon(
+                        inRoom ? Icons.groups_2_outlined : Icons.groups_outlined,
+                        color: scheme.primary),
+                    title: const Text('Sala en vivo',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 14)),
+                    subtitle: Text(
+                      inRoom
+                          ? 'En sala ${room.code} · ${room.visibleMembers.length} '
+                              'miembros · toca para ver la sala'
+                          : 'Comparte tu lista por código de 6 letras, QR, WiFi directo o servidor',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    trailing: inRoom
+                        ? const LiveBadge(live: true, label: 'En sala')
+                        : const Icon(Icons.chevron_right),
+                    onTap: () => inRoom
+                        ? context.push('/sala-viva')
+                        : showRoomSheet(context),
+                  );
+                },
+              ),
             ),
           ),
           // Totales por moneda + compartir (texto y PNG).
@@ -1161,5 +1186,46 @@ class _CheckoutLauncher extends StatelessWidget {
         ),
       ),
     ]);
+  }
+}
+
+/// ─── Strip «En sala» (v18.0) ───────────────────────────────────────────────
+/// Arriba de TODO en la Lista cuando hay sala activa: LiveBadge + nombre de
+/// la sala + miembros → abre la Sala Viva (pantalla propia de la sala).
+class _EnSalaStrip extends StatelessWidget {
+  const _EnSalaStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    final room = context.watch<RoomController>();
+    if (!room.connected) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final title = room.roomName.isNotEmpty ? room.roomName : 'Sala ${room.code}';
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => context.push('/sala-viva'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(children: [
+            const LiveBadge(live: true, label: 'En sala'),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '$title · ${room.visibleMembers.length} en la sala',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface),
+              ),
+            ),
+            Icon(Icons.groups_2_outlined, size: 18, color: scheme.primary),
+          ]),
+        ),
+      ),
+    );
   }
 }

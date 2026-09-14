@@ -1,23 +1,23 @@
-/// ─── Sala en vivo · pantalla completa (v17.2, decisión del dueño) ───────────
-/// Lobby con 5 modos (Servidor · Cerca/Nearby · WiFi local · Hotspot ·
-/// Bluetooth), servidor propio configurable desde aquí, descubrimiento de
-/// salas públicas (Nearby + UDP) o entrada por código, verificación PIN+emoji
-/// en TODOS los caminos y walkthrough propio. Nada de datos móviles para la
-/// sala: los transportes directos (LAN/Hotspot/Nearby/BT) son 100% locales.
+/// ─── Sala en vivo · CONFIGURACIÓN de la sala (v18.0) ───────────────────────
+/// Esta pantalla arma la sala: 5 modos (Servidor · Cerca/Nearby · WiFi
+/// local · Hotspot · Bluetooth RFCOMM), servidor propio configurable,
+/// descubrimiento de salas públicas o entrada por código, verificación
+/// PIN+emoji en TODOS los caminos. Al CONECTAR te lleva a la Lista con un
+/// toast «En sala» — la sala se VIVE en su propia pantalla (/sala-viva,
+/// distinta de esta). Nada de datos móviles: los transportes directos
+/// (LAN/Hotspot/Nearby/BT) son 100% locales.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/theme.dart';
-import '../../data/store.dart';
 import '../../room/room_transport.dart';
 import '../../widgets/ui.dart';
 
-/// Pantalla completa de la sala (ruta /sala). Abre con showRoomSheet()
-/// desde la Lista o con context.push('/sala').
+/// Pantalla de configuración de la sala (ruta /sala).
 class RoomScreen extends StatefulWidget {
   const RoomScreen({super.key});
 
@@ -26,66 +26,99 @@ class RoomScreen extends StatefulWidget {
 }
 
 class _RoomScreenState extends State<RoomScreen> {
-  RoomController? _ctrl;
-
-  RoomController _make(AppStore store) {
-    final c = RoomController(store);
-    c.attachStoreListener();
-    return c;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // v17.8: el walkthrough propio de /sala se retiró con el sistema por
-    // módulos — la Sala se explica en el tour completo (segmento LISTA) y
-    // la pantalla sigue explicándose por sí misma (onboarding in-situ).
-  }
-
-  @override
-  void dispose() {
-    _ctrl?.detachStoreListener();
-    _ctrl?.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    _ctrl ??= _make(store);
-    final ctrl = _ctrl!;
+    // Controlador de APLICACIÓN (v18.0): la Sala Viva y la Lista lo comparten.
+    final ctrl = context.watch<RoomController>();
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
-      body: ListenableBuilder(
-        listenable: ctrl,
-        builder: (context, _) {
-          final connected = ctrl.connected;
-          final pairing = ctrl.needsPairing || ctrl.verifying;
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              PageHeader('Sala en vivo',
-                  hint: connected
-                      ? 'Sincronizando en ${ctrl.modeLabel}'
-                      : 'Comparte tu lista sin internet, con quien esté cerca'),
-              if (ctrl.lastError != null) _ErrorBanner(msg: ctrl.lastError!),
-              if (connected) ...[
-                _ActiveRoom(ctrl: ctrl),
-              ] else if (pairing) ...[
-                _PairingPanel(ctrl: ctrl),
-              ] else ...[
-                _ModePicker(ctrl: ctrl),
-                if (ctrl.mode == 'server') _ServerConfig(ctrl: ctrl),
-                _IdentityName(ctrl: ctrl),
-                _HostOptions(ctrl: ctrl),
-                _JoinByCode(ctrl: ctrl),
-                _NearbyRooms(ctrl: ctrl),
-              ],
-            ],
-          );
-        },
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          const PageHeader('Sala en vivo',
+              hint: 'Comparte tu lista sin internet, con quien esté cerca'),
+          if (ctrl.lastError != null) _ErrorBanner(msg: ctrl.lastError!),
+          if (ctrl.connected) ...[
+            _EnSalaBanner(ctrl: ctrl),
+          ] else if (ctrl.needsPairing || ctrl.verifying) ...[
+            _PairingPanel(ctrl: ctrl),
+          ] else ...[
+            _ModePicker(ctrl: ctrl),
+            if (ctrl.mode == 'server') _ServerConfig(ctrl: ctrl),
+            _IdentityName(ctrl: ctrl),
+            _HostOptions(ctrl: ctrl),
+            _JoinByCode(ctrl: ctrl),
+            _NearbyRooms(ctrl: ctrl),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Post-join común (v18.0): toast + a la Lista — la sala se vive aparte.
+Future<void> _afterJoin(BuildContext context, String? err) async {
+  if (err != null) {
+    if (context.mounted) showToast(context, err, kind: ToastKind.error);
+    return;
+  }
+  if (context.mounted) {
+    showToast(context, 'En sala · la lista se sincroniza', kind: ToastKind.ok);
+    context.go('/lista');
+  }
+}
+
+// ─── Banner «En sala» (configuración) ───────────────────────────────
+
+class _EnSalaBanner extends StatelessWidget {
+  const _EnSalaBanner({required this.ctrl});
+  final RoomController ctrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final sem = VeColors.of(context);
+    final title = ctrl.roomName.isNotEmpty ? ctrl.roomName : 'Sala ${ctrl.code}';
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(children: [
+          Row(children: [
+            const LiveBadge(live: true),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(title,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+            ),
+          ]),
+          const SizedBox(height: 4),
+          Text(
+            'Ya estás en sala (${ctrl.modeLabel}${ctrl.isHost ? ' · anfitrión' : ''}). '
+            'La lista se sincroniza sola; los miembros y roles se ven en la Sala Viva.',
+            style: TextStyle(fontSize: 12.5, height: 1.5, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () => context.push('/sala-viva'),
+                icon: const Icon(Icons.groups_2_outlined, size: 18),
+                label: const Text('Abrir Sala Viva'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.tonal(
+              style: FilledButton.styleFrom(
+                  backgroundColor: sem.neg.withValues(alpha: 0.14),
+                  foregroundColor: sem.neg),
+              onPressed: () async => ctrl.leave(),
+              child: const Text('Salir'),
+            ),
+          ]),
+        ]),
       ),
     );
   }
@@ -114,8 +147,8 @@ class _ModePicker extends StatelessWidget {
         'El anfitrión activa su punto de acceso y los invitados se conectan a él: misma red local, cero datos móviles.'),
     ('server', Icons.dns_rounded, 'Servidor (sockets)',
         'Conecta con tu propio servidor socket.io o usa este teléfono como servidor.'),
-    ('bt', Icons.bluetooth_rounded, 'Bluetooth',
-        'Emparejamiento y datos por Bluetooth vía Nearby (BLE/Classic).'),
+    ('bt', Icons.bluetooth_rounded, 'Bluetooth directo (RFCOMM)',
+        'Bluetooth clásico teléfono a teléfono: emparejas y listo, sin internet ni WiFi. Varios invitados.'),
   ];
 
   @override
@@ -330,9 +363,7 @@ class _HostOptions extends StatelessWidget {
             child: FilledButton.icon(
               onPressed: () async {
                 final err = await ctrl.join(name: ctrl.myName, code: '');
-                if (err != null && context.mounted) {
-                  showToast(context, err, kind: ToastKind.error);
-                }
+                if (context.mounted) await _afterJoin(context, err);
               },
               icon: const Icon(Icons.add_circle_outline),
               label: const Text('Crear sala ahora'),
@@ -386,9 +417,7 @@ class _JoinByCodeState extends State<_JoinByCode> {
               onPressed: () async {
                 final err = await widget.ctrl
                     .join(name: widget.ctrl.myName, code: _code.text.trim().toUpperCase());
-                if (err != null && context.mounted) {
-                  showToast(context, err, kind: ToastKind.error);
-                }
+                if (context.mounted) await _afterJoin(context, err);
               },
               child: const Text('Entrar'),
             ),
@@ -439,9 +468,7 @@ class _NearbyRooms extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
                 final err = await ctrl.joinAd(r, ctrl.myName);
-                if (err != null && context.mounted) {
-                  showToast(context, err, kind: ToastKind.error);
-                }
+                if (context.mounted) await _afterJoin(context, err);
               },
             ),
           ),
@@ -553,148 +580,6 @@ class _PairingPanelState extends State<_PairingPanel> {
         ]),
       ),
     );
-  }
-}
-
-// ─── Sala activa ────────────────────────────────────────────────────────────
-
-class _ActiveRoom extends StatelessWidget {
-  const _ActiveRoom({required this.ctrl});
-  final RoomController ctrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      // Código + QR + copiar.
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(children: [
-            Row(children: [
-              Stamp(ctrl.modeLabel, color: sem.pos),
-              if (ctrl.roomName.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                Flexible(child: Text(ctrl.roomName,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800))),
-              ],
-              const Spacer(),
-              Stamp(ctrl.isPublic ? 'pública' : 'privada'),
-            ]),
-            const SizedBox(height: 14),
-            Row(children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('CÓDIGO DE LA SALA', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
-                  const SizedBox(height: 4),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(ctrl.code.isEmpty ? '—' : ctrl.code,
-                        style: VeText.displayNum(38, color: scheme.onSurface, weight: FontWeight.w700)),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    TextButton.icon(
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: ctrl.code));
-                        showToast(context, 'Código copiado', kind: ToastKind.ok);
-                      },
-                      icon: const Icon(Icons.copy_rounded, size: 16),
-                      label: const Text('Copiar'),
-                    ),
-                    if (ctrl.isHost && ctrl.emoji.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Text('PIN ${ctrl.pin} · ${ctrl.emoji}',
-                            style: const TextStyle(fontSize: 11.5, color: Color(0xFF93A0BE))),
-                      ),
-                  ]),
-                ]),
-              ),
-              const SizedBox(width: 12),
-              if (ctrl.code.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: scheme.outlineVariant)),
-                  child: QrImageView(
-                    data: 'valorave-sala:${ctrl.code}',
-                    size: 104,
-                    backgroundColor: Colors.white,
-                  ),
-                ),
-            ]),
-            if (ctrl.isHost)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Row(children: [
-                  const Icon(Icons.dns_rounded, size: 15),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      ctrl.lanAddress.isNotEmpty
-                          ? 'Este teléfono es el servidor: ${ctrl.lanAddress}'
-                          : 'Eres el anfitrión. Los invitados entran con el código y verifican PIN + emoji.',
-                      style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
-                    ),
-                  ),
-                ]),
-              ),
-          ]),
-        ),
-      ),
-      // Miembros.
-      SectionTitle('Miembros (${ctrl.members.length + 1})'),
-      Card(
-        child: Column(children: [
-          for (final m in ctrl.members)
-            ListTile(
-              dense: true,
-              leading: Icon(
-                m.online ? Icons.person_rounded : Icons.person_off_rounded,
-                size: 20,
-                color: m.online ? sem.pos : scheme.onSurfaceVariant,
-              ),
-              title: Text(m.name,
-                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
-              trailing: m.typing
-                  ? Text('escribiendo…', style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant))
-                  : null,
-            ),
-        ]),
-      ),
-      const SizedBox(height: 10),
-      Row(children: [
-        Expanded(
-          child: FilledButton.tonal(
-            onPressed: ctrl.sendTyping,
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.edit_note_rounded, size: 18),
-              SizedBox(width: 6),
-              Text('Avisar que escribo'),
-            ]),
-          ),
-        ),
-        const SizedBox(width: 8),
-        FilledButton(
-          style: FilledButton.styleFrom(
-              backgroundColor: sem.neg.withValues(alpha: 0.14),
-              foregroundColor: sem.neg),
-          onPressed: () async {
-            await ctrl.leave();
-          },
-          child: const Text('Salir'),
-        ),
-      ]),
-      const SizedBox(height: 8),
-      Text(
-        'La lista se sincroniza sola entre los miembros de la sala. Si se corta la conexión, tus cambios quedan en el outbox y salen al reconectar.',
-        style: TextStyle(fontSize: 11.5, height: 1.5, color: scheme.onSurfaceVariant),
-      ),
-    ]);
   }
 }
 

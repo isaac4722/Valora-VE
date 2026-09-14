@@ -19,6 +19,7 @@ import 'package:valorave/features/lista/lista_screen.dart';
 import 'package:valorave/features/products/products_screen.dart';
 import 'package:valorave/features/shell/main_shell.dart';
 import 'package:valorave/features/shell/notifs_center.dart';
+import 'package:valorave/room/room_transport.dart';
 import 'package:valorave/widgets/app_router.dart';
 import 'package:valorave/widgets/app_tour.dart';
 import 'package:valorave/features/welcome/welcome_screen.dart';
@@ -53,6 +54,9 @@ Widget _wrap(Widget child, {required AppStore store, ThemeMode mode = ThemeMode.
       ChangeNotifierProvider(create: (_) => _poller),
       Provider<AlertEngine>.value(value: _alerts),
       Provider<NotificationsService>.value(value: _notifs),
+      // v18.0 · Sala Viva: controlador de sala a nivel app (como en
+      // appProviders) — la Lista y la sala lo comparten.
+      ChangeNotifierProvider(create: (_) => RoomController(store)),
     ],
     child: MaterialApp(
       theme: AppTheme.light(),
@@ -358,6 +362,8 @@ void main() {
           ChangeNotifierProvider.value(value: store),
           ChangeNotifierProvider(create: (_) => ThemeController()),
           ChangeNotifierProvider.value(value: _poller),
+          // v18.0: la Lista lee el controlador de sala del árbol.
+          ChangeNotifierProvider(create: (_) => RoomController(store)),
         ],
         child: MaterialApp.router(
           theme: AppTheme.light(),
@@ -428,6 +434,8 @@ void main() {
           ChangeNotifierProvider(create: (_) => ThemeController()),
           ChangeNotifierProvider.value(value: _poller),
           Provider<SharedPreferences>.value(value: prefs),
+          // v18.0: el shell/Lista leen el controlador de sala del árbol.
+          ChangeNotifierProvider(create: (_) => RoomController(store)),
         ],
         child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
       ));

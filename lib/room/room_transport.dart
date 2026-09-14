@@ -23,9 +23,11 @@ import 'package:socket_io_client/socket_io_client.dart' as sio;
 
 import '../core/models.dart';
 import '../data/store.dart';
+import '../services/bt_hub.dart';
 import '../services/lan_hub.dart';
 import '../services/nearby_hub.dart';
 
+export '../services/bt_hub.dart' show BtHubImpl;
 export '../services/lan_hub.dart' show LanHubImpl;
 export '../services/nearby_hub.dart' show NearbyHubImpl;
 
@@ -196,6 +198,9 @@ class SocketIoTransport extends RoomTransport {
     _setStatus(RoomStatus.disconnected);
   }
 
+  /// Id propio dentro de la sala (socket.id) — para roles y «(tú)».
+  String get myId => _socket?.id ?? '';
+
   @override
   Future<List<String>> discover() async => const [];
 }
@@ -316,6 +321,66 @@ class LanTransport extends RoomTransport {
   Future<List<String>> discover() => hub.discover();
 }
 
+/// ─── (d) Bluetooth clásico RFCOMM/SPP (v18.0) ─────────────────────────────
+/// REAL, no vía Nearby: puente nativo BtSppPlugin.kt (ningún paquete de
+/// pub.dev soporta el rol servidor). Emparejamiento previo + socket SPP
+/// «ValoraVE»; el anfitrión acepta varios invitados. Hub en services/bt_hub.dart.
+class BtTransport extends RoomTransport {
+  BtTransport({required this.hub});
+  final BtHubImpl hub;
+
+  @override
+  String get name => 'Bluetooth';
+  @override
+  RoomStatus get status => hub.status;
+  @override
+  Stream<RoomEvent> get events => hub.events;
+  @override
+  Stream<RoomStatus> get statusStream => hub.statusStream;
+
+  @override
+  Future<void> connect({
+    required String roomCode,
+    required String myName,
+    String roomName = '',
+    String emoji = '',
+    bool isPublic = true,
+  }) =>
+      hub.connect(
+        roomCode: roomCode,
+        myName: myName,
+        roomName: roomName,
+        emoji: emoji,
+        isPublic: isPublic,
+      );
+
+  /// Unión directa por dirección MAC del anfitrión (con emparejamiento
+  /// previo). Devuelve null si conectó; si no, código de error humano.
+  Future<String?> connectDirect({
+    required String address,
+    required String roomCode,
+    required String myName,
+  }) =>
+      hub.connectToHost(
+        address: address,
+        roomCode: roomCode,
+        myName: myName,
+      );
+
+  @override
+  Future<Map<String, dynamic>?> emit(String type, Map<String, dynamic> payload) =>
+      hub.emit(type, payload);
+
+  @override
+  Future<Map<String, dynamic>?> emitTo(String targetId, String type, Map<String, dynamic> payload) =>
+      hub.emitTo(targetId, type, payload);
+
+  @override
+  Future<void> disconnect() => hub.disconnect();
+
+  @override
+  Future<List<String>> discover() => hub.discover();
+}
 /// ─── Utilidades del protocolo (idénticas al servidor) ───────────────────────
 class RoomProtocol {
   /// Límite de payload 16 KB (§6).
@@ -385,6 +450,12 @@ class RoomProtocol {
         'permissions' =>
           'La sala necesita permiso de Bluetooth/Nearby (y ubicación en '
               'Android antiguo). Concédelo cuando lo pida y reintenta',
+        'unavailable' => 'Este teléfono no tiene Bluetooth',
+        'off' => 'Enciende el Bluetooth para usar este modo',
+        'bt_timeout' => 'El otro teléfono no respondió a tiempo',
+        'bt_connect' => 'No se pudo conectar por Bluetooth',
+        'kicked' => 'Te sacaron de la sala',
+        'room_closed' => 'La sala se cerró',
         _ => 'Error: $reason',
       };
 }
@@ -476,6 +547,13 @@ class RoomController extends ChangeNotifier {
   String? _pairingError;
   String? _lastError;
 
+  // Identidad y rol propios (v18.0 · Sala Viva): _myPeerId es el id que los
+  // DEMÁS ven (socket.id en server, 'host' en directo, el id que asigna el
+  // anfitrión al invitado); _myRole baja a 'viewer' cuando el anfitrión lo
+  // cambia — el gate de item_* vive en emit().
+  String _myPeerId = '';
+  String _myRole = 'editor'; // host | editor | viewer
+
   // Presencia local (host directo) — mismos umbrales del server de referencia.
   static const int _staleMs = 35000;
   static const int _typingMs = 3000;
@@ -493,9 +571,12 @@ class RoomController extends ChangeNotifier {
   bool _scanning = false;
   LanHubImpl? _lanScanner;
   NearbyHubImpl? _nearScanner;
+  BtHubImpl? _btScanner; // v18.0: dispositivos BT (solo modo Bluetooth)
   StreamSubscription<Map<String, dynamic>>? _lanAdSub;
   StreamSubscription<Map<String, dynamic>>? _nearAdSub;
+  StreamSubscription<Map<String, dynamic>>? _btAdSub;
   Timer? _scanTimer;
+  Timer? _btRescanTimer; // re-discovery cada 12 s (Android corta solo)
 
   Timer? _pingTimer;
   Timer? _scanTimerPresence;
@@ -521,6 +602,37 @@ class RoomController extends ChangeNotifier {
   bool get scanning => _scanning;
   List<RoomAd> get foundRooms => List.unmodifiable(_foundRooms);
   List<String> get pendingNames => List.unmodifiable(_pendingVerify.values);
+
+  /// Identidad propia dentro de la sala (v18.0).
+  String get myId => _myPeerId;
+
+  /// Rol propio: 'host' | 'editor' | 'viewer'.
+  String get myRole => _myRole;
+
+  /// ¿Puedo administrar (renombrar/cerrar/expulsar/roles)? Solo el anfitrión
+  /// de los caminos directos — el server de referencia no trae estas acciones.
+  bool get canAdmin => _isHost && _mode != 'server';
+
+  /// Un observador ve la lista pero no la toca (gate en emit()).
+  bool get isViewer => _myRole == 'viewer';
+
+  /// Miembros normalizados para la UI (v18.0 · Sala Viva): el anfitrión
+  /// SIEMPRE presente y arriba, los demás ordenados (yo primero entre los
+  /// invitados). El anfitrión local no vive en _members (solo sus invitados).
+  List<RoomMember> get visibleMembers {
+    final hostEntry = _isHost && _mode != 'server'
+        ? RoomMember(id: 'host', name: _myName, role: 'host')
+        : (_members.where((m) => m.id == 'host').firstOrNull ??
+            RoomMember(id: 'host', name: 'Anfitrión', role: 'host'));
+    final rest = _members.where((m) => m.id != 'host').toList()
+      ..sort((a, b) {
+        final meA = a.id == _myPeerId ? 0 : 1;
+        final meB = b.id == _myPeerId ? 0 : 1;
+        if (meA != meB) return meA - meB;
+        return a.name.compareTo(b.name);
+      });
+    return [hostEntry, ...rest];
+  }
 
   /// Etiqueta humana del modo activo.
   String get modeLabel => switch (_mode) {
@@ -553,6 +665,61 @@ class RoomController extends ChangeNotifier {
   /// Pública (aparece en descubrimiento) o privada (solo por código).
   void setPublic(bool v) {
     _isPublic = v;
+    notifyListeners();
+  }
+
+  // ── v18.0 · Gobierno de la sala (Sala Viva) ──────────────────────────────
+
+  /// Anfitrión: renombra la sala (todos lo ven al instante).
+  Future<void> renameRoom(String name) async {
+    if (!canAdmin || !connected) return;
+    final n = name.trim();
+    if (n.isEmpty) return;
+    _roomName = n.length > 32 ? n.substring(0, 32) : n;
+    unawaited(emit('room_renamed', {'name': _roomName}));
+    notifyListeners();
+  }
+
+  /// Anfitrión: cierra la sala para todos (ellos vuelven solos a la Lista).
+  Future<void> closeRoom({String reason = 'closed'}) async {
+    if (!canAdmin || !connected) return;
+    try {
+      await emit('room_closed', {'reason': reason});
+    } finally {
+      await leave();
+    }
+  }
+
+  /// Anfitrión: cierra la sala al guardar una compra (auto-cierre v18.0).
+  /// Tolerante: si algo falla, la compra ya quedó guardada — no se bloquea.
+  Future<void> closeAfterPurchase() async {
+    if (!_isHost || !connected) return;
+    try {
+      await closeRoom(reason: 'purchase');
+    } catch (_) {/* la compra manda */}
+  }
+
+  /// Anfitrión: saca a un miembro (solo a él; el resto sigue).
+  Future<void> kickMember(String id) async {
+    if (!canAdmin || !connected || id == 'host' || id == _myPeerId) return;
+    await _transport?.emitTo(id, 'kicked', {});
+    _members.removeWhere((m) => m.id == id);
+    _pendingVerify.remove(id);
+    _lastSeenMs.remove(id);
+    _typingUntilMs.remove(id);
+    unawaited(emit('member_left', {'id': id})); // aviso al resto
+    notifyListeners();
+  }
+
+  /// Anfitrión: cambia el rol de un miembro (editor ↔ viewer).
+  Future<void> setMemberRole(String id, String role) async {
+    if (!canAdmin || !connected || id == 'host') return;
+    if (!['editor', 'viewer'].contains(role)) return;
+    final m = _members.where((x) => x.id == id).firstOrNull;
+    if (m == null || m.role == role) return;
+    m.role = role;
+    unawaited(emit('role_change', {'id': id, 'role': role})); // al resto
+    unawaited(_transport?.emitTo(id, 'your_role', {'role': role})); // a él
     notifyListeners();
   }
 
@@ -601,7 +768,8 @@ class RoomController extends ChangeNotifier {
   }
 
   int get _nowMs => DateTime.now().millisecondsSinceEpoch;
-  String get _myId => (_isHost && _mode != 'server') ? 'host' : 'me';
+  String get _myId =>
+      _myPeerId.isNotEmpty ? _myPeerId : ((_isHost && _mode != 'server') ? 'host' : 'me');
 
   // ── Unirse / crear ────────────────────────────────────────────────────────
 
@@ -647,8 +815,11 @@ class RoomController extends ChangeNotifier {
 
     final RoomTransport transport;
     switch (m) {
-      case 'nearby' || 'bt':
+      case 'nearby':
         transport = NearbyTransport(hub: NearbyHubImpl());
+      case 'bt':
+        // v18.0: Bluetooth REAL (RFCOMM/SPP nativo), no vía Nearby.
+        transport = BtTransport(hub: BtHubImpl());
       case 'lan' || 'hotspot':
         // Hotspot = LAN dentro de la subred del punto de acceso del
         // anfitrión: mismo transporte TCP+UDP, cero internet.
@@ -660,6 +831,10 @@ class RoomController extends ChangeNotifier {
         }
         transport = SocketIoTransport(serverUrl: url);
     }
+    // Identidad y rol de arranque (v18.0): el server la completa con su
+    // socket.id tras el ack; el invitado directo la recibe en room_joined.
+    _myPeerId = _isHost && m != 'server' ? 'host' : '';
+    _myRole = _isHost && m != 'server' ? 'host' : 'editor';
     await _teardownTransport();
     _transport = transport;
     _statusSub = transport.statusStream.listen((s) {
@@ -678,6 +853,32 @@ class RoomController extends ChangeNotifier {
           roomCode: _code,
           myName: _myName,
         );
+      } else if (transport is BtTransport) {
+        if (_isHost) {
+          await transport.connect(
+            roomCode: _code,
+            myName: _myName,
+            roomName: _roomName,
+            emoji: _emoji,
+            isPublic: _isPublic,
+          );
+        } else {
+          // Invitado BT: la MAC del anfitrión llega como endpoint o host.
+          final address = (targetEndpointId ?? directHost ?? '').trim();
+          if (address.isEmpty) {
+            await leave();
+            return 'Elige el dispositivo del anfitrión en la lista';
+          }
+          final err = await transport.connectDirect(
+            address: address,
+            roomCode: _code,
+            myName: _myName,
+          );
+          if (err != null) {
+            await leave();
+            return RoomProtocol.errorMessage(err);
+          }
+        }
       } else if (transport is SocketIoTransport) {
         await transport.connect(
             roomCode: _code, myName: _myName, roomName: _roomName, isPublic: _isPublic);
@@ -718,6 +919,7 @@ class RoomController extends ChangeNotifier {
         if (ack != null &&
             (ack['type'] == 'room_created' || ack['type'] == 'room_joined')) {
           _code = '${ack['code'] ?? ack['id'] ?? _code}';
+          _myPeerId = transport is SocketIoTransport ? transport.myId : '';
           _applyMembers(ack['members']);
           _suppress = true;
           _store.applyRemoteRoomEvent('list_replace', {'items': (ack['items'] as List?) ?? const []});
@@ -837,6 +1039,11 @@ class RoomController extends ChangeNotifier {
         if (!_isHost) {
           // Invitado directo: el anfitrión entrega el estado completo.
           _code = '${ev.payload['code'] ?? ev.payload['id'] ?? _code}';
+          // Identidad propia (v18.0): el anfitrión dice quién soy para los
+          // demás y con qué rol entro.
+          final you = '${ev.payload['you'] ?? ''}';
+          if (you.isNotEmpty) _myPeerId = you;
+          _myRole = '${ev.payload['yourRole'] ?? 'editor'}';
           _applyMembers(ev.payload['members']);
           _suppress = true;
           _store.applyRemoteRoomEvent('list_replace', {'items': (ev.payload['items'] as List?) ?? const []});
@@ -879,6 +1086,49 @@ class RoomController extends ChangeNotifier {
           _typingUntilMs[fromId] = _nowMs + _typingMs;
           _scanPresence(); // como el server: escanea en caliente (<1 s)
         }
+
+      // ── v18.0 · Sala Viva: gobierno de la sala ──
+      case 'room_renamed':
+        final n = '${ev.payload['name'] ?? ''}'.trim();
+        if (n.isNotEmpty) _roomName = n;
+
+      case 'room_closed':
+        final reason = '${ev.payload['reason'] ?? 'closed'}';
+        _lastError = reason == 'purchase'
+            ? 'La compra se cerró: la sala terminó'
+            : 'El anfitrión cerró la sala';
+        _store.pushNotification(
+            kind: NotifKind.info,
+            title: 'La sala se cerró',
+            body: reason == 'purchase'
+                ? 'La compra se guardó y la sala terminó. Vuelve a la lista.'
+                : 'El anfitrión terminó la sala.');
+        unawaited(leave());
+
+      case 'role_change':
+        final id = '${ev.payload['id'] ?? ''}';
+        final role = '${ev.payload['role'] ?? 'editor'}';
+        if (id.isNotEmpty && ['editor', 'viewer', 'host'].contains(role)) {
+          final m = _members.where((x) => x.id == id).firstOrNull;
+          if (m != null) m.role = role;
+          if (id == _myPeerId) _myRole = role;
+        }
+
+      case 'your_role':
+        final role = '${ev.payload['role'] ?? 'editor'}';
+        if (['editor', 'viewer', 'host'].contains(role)) {
+          _myRole = role;
+          _store.pushNotification(
+              kind: NotifKind.info,
+              title: role == 'viewer' ? 'Ahora eres observador' : 'Ahora puedes editar',
+              body: role == 'viewer'
+                  ? 'Puedes VER la lista, pero no modificarla.'
+                  : 'El anfitrión te devolvió la edición de la lista.');
+        }
+
+      case 'kicked':
+        _lastError = RoomProtocol.errorMessage('kicked');
+        unawaited(leave());
 
       case 'item_add' ||
             'item_update' ||
@@ -959,11 +1209,16 @@ class RoomController extends ChangeNotifier {
     final emojiOk = '${payload['emoji'] ?? ''}' == _emoji;
     _pendingVerify.remove(fromId);
     if (pinOk && emojiOk) {
-      _members.add(RoomMember(id: fromId, name: name));
+      _members.add(RoomMember(id: fromId, name: name, role: 'editor'));
       _lastSeenMs[fromId] = _nowMs;
       await _transport?.emitTo(fromId, 'room_joined', {
         'code': _code,
-        'members': _members.map((m) => {'id': m.id, 'name': m.name}).toList(),
+        'you': fromId, // v18.0: el invitado aprende su id aquí
+        'yourRole': 'editor',
+        'members': [
+          {'id': 'host', 'name': _myName, 'role': 'host'},
+          ..._members.map((m) => m.toMap()),
+        ],
         'items': _sanitizedCart(), // el anfitrión comparte su lista (§6)
       });
       for (final m in _members) {
@@ -1110,6 +1365,18 @@ class RoomController extends ChangeNotifier {
     _nearAdSub = _nearScanner!.roomAds.listen(_onAd);
     await _lanScanner!.startScan();
     await _nearScanner!.startScan();
+    // v18.0: el escáner BT solo despierta en modo Bluetooth — pide SOLO los
+    // permisos del modo elegido (orden del dueño). Android corta el discovery
+    // solo: se re-dispara cada 12 s mientras el lobby escanee.
+    if (_mode == 'bt') {
+      _btScanner ??= BtHubImpl();
+      await _btAdSub?.cancel();
+      _btAdSub = _btScanner!.roomAds.listen(_onAd);
+      await _btScanner!.startScan();
+      _btRescanTimer?.cancel();
+      _btRescanTimer = Timer.periodic(
+          const Duration(seconds: 12), (_) => _btScanner?.startDiscovery());
+    }
     _scanTimer?.cancel();
     _scanTimer = Timer.periodic(const Duration(seconds: 4), (_) => _pruneAds());
   }
@@ -1117,12 +1384,17 @@ class RoomController extends ChangeNotifier {
   Future<void> stopScan() async {
     _scanTimer?.cancel();
     _scanTimer = null;
+    _btRescanTimer?.cancel();
+    _btRescanTimer = null;
     await _lanAdSub?.cancel();
     await _nearAdSub?.cancel();
+    await _btAdSub?.cancel();
     _lanAdSub = null;
     _nearAdSub = null;
+    _btAdSub = null;
     await _lanScanner?.stopScan();
     await _nearScanner?.stopScan();
+    await _btScanner?.stopScan();
     if (_scanning) {
       _scanning = false;
       notifyListeners();
@@ -1176,6 +1448,15 @@ class RoomController extends ChangeNotifier {
   // ── Emisión con outbox: sin conexión → encola (outbox offline §7/§12.2) ──
 
   Future<void> emit(String type, Map<String, dynamic> payload) async {
+    // Gate de observador (v18.0): un viewer VE la lista pero no la toca.
+    // El host retransmite por emitTo (fuera de aquí), así que el relé no se
+    // ve afectado.
+    if (_myRole == 'viewer' &&
+        (type.startsWith('item_') ||
+            type == 'list_replace' ||
+            type == 'list_clear')) {
+      return;
+    }
     if (_transport == null || !connected) {
       _store.outbox
           .add({'type': type, ...payload, 'code': _code, 'queuedAt': DateTime.now().toIso8601String()});
@@ -1211,6 +1492,8 @@ class RoomController extends ChangeNotifier {
     _pendingVerify.clear();
     _needsPairing = false;
     _verifying = false;
+    _myPeerId = '';
+    _myRole = 'editor';
     _lastSeenMs.clear();
     _typingUntilMs.clear();
     _snapshot = const [];
@@ -1254,17 +1537,25 @@ class RoomController extends ChangeNotifier {
 }
 
 class RoomMember {
-  RoomMember({required this.id, required this.name, this.online = true, this.typing = false});
+  RoomMember({
+    required this.id,
+    required this.name,
+    this.role = 'editor', // host | editor | viewer (v18.0)
+    this.online = true,
+    this.typing = false,
+  });
 
   final String id;
   final String name;
+  String role;
   bool online;
   bool typing;
 
   factory RoomMember.fromMap(Map<String, dynamic> m) => RoomMember(
         id: '${m['id'] ?? ''}',
         name: '${m['name'] ?? ''}',
+        role: '${m['role'] ?? 'editor'}',
       );
 
-  Map<String, dynamic> toMap() => {'id': id, 'name': name};
+  Map<String, dynamic> toMap() => {'id': id, 'name': name, 'role': role};
 }

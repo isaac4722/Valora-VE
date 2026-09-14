@@ -27,6 +27,7 @@ import '../features/legal/legal_screen.dart';
 import '../features/lista/lista_screen.dart';
 import '../features/products/products_screen.dart';
 import '../features/room/room_screen.dart';
+import '../features/room/sala_viva.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/shell/main_shell.dart';
 import '../features/tickets/tickets_screen.dart';
@@ -88,8 +89,12 @@ GoRouter buildRouter({required AppStore store}) {
       // Tickets (dp6): galería de fotos de recibos de las compras.
       GoRoute(path: '/tickets', builder: (_, _) => const TicketsScreen()),
       // Sala en vivo: PANTALLA COMPLETA (v17.2, decisión del dueño — no
-      // vuelve a ser un sheet deslizante).
+      // vuelve a ser un sheet deslizable). v18.0: esta ruta es la
+      // CONFIGURACIÓN de la sala; la sala EN VIVO tiene pantalla propia.
       GoRoute(path: '/sala', builder: (_, _) => const RoomScreen()),
+      // Sala Viva (v18.0): la sala en vivo — código+QR, miembros con roles,
+      // gobierno del anfitrión y regreso automático a la Lista.
+      GoRoute(path: '/sala-viva', builder: (_, _) => const SalaVivaScreen()),
     ],
   );
 }

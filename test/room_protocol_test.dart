@@ -94,6 +94,35 @@ void main() {
       expect(RoomProtocol.errorMessage('room_full'), contains('llena'));
       expect(RoomProtocol.errorMessage('list_full'), contains('120'));
     });
+
+    // v18.0 · Bluetooth RFCOMM real: errores humanos del camino BT.
+    test('mensajes humanos de error BT', () {
+      expect(RoomProtocol.errorMessage('unavailable'),
+          'Este teléfono no tiene Bluetooth');
+      expect(RoomProtocol.errorMessage('off'),
+          'Enciende el Bluetooth para usar este modo');
+      expect(RoomProtocol.errorMessage('bt_timeout'),
+          'El otro teléfono no respondió a tiempo');
+      expect(RoomProtocol.errorMessage('bt_connect'),
+          'No se pudo conectar por Bluetooth');
+      expect(RoomProtocol.errorMessage('kicked'), 'Te sacaron de la sala');
+      expect(RoomProtocol.errorMessage('room_closed'), 'La sala se cerró');
+    });
+
+    // v18.0 · Sala Viva: roles viajan en el wire (host|editor|viewer).
+    test('RoomMember: rol con round-trip y default editor', () {
+      final m = RoomMember(id: 'bt1', name: 'Ana');
+      expect(m.role, 'editor');
+      final host = RoomMember.fromMap({'id': 'host', 'name': 'Yo', 'role': 'host'});
+      expect(host.role, 'host');
+      final viewer = RoomMember.fromMap({'id': 'bt2', 'name': 'Bob', 'role': 'viewer'});
+      expect(viewer.role, 'viewer');
+      // Round-trip: toMap conserva el rol.
+      final rt = RoomMember.fromMap(viewer.toMap());
+      expect(rt.role, 'viewer');
+      // Sin rol en el mapa (server de referencia viejo) → editor.
+      expect(RoomMember.fromMap({'id': 'x', 'name': 'X'}).role, 'editor');
+    });
   });
 
   group('RoomEvent', () {

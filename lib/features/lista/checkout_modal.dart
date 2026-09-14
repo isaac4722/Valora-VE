@@ -30,6 +30,7 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
+import '../../room/room_transport.dart';
 import '../../services/alerts.dart';
 import '../../services/notifications.dart';
 import '../../services/photo_compress.dart';
@@ -559,7 +560,18 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       : () async {
                           final ok = await _save();
                           if (context.mounted && ok) {
-                            Navigator.of(context).pop(true);
+                            // v18.0 · auto-cierre: si el anfitrión guardó la
+                            // compra en sala, la sala se cierra para todos y
+                            // cada quien vuelve a su lista. Tolerante: la
+                            // compra YA quedó guardada pase lo que pase.
+                            try {
+                              await context
+                                  .read<RoomController>()
+                                  .closeAfterPurchase();
+                            } catch (_) {}
+                            if (context.mounted) {
+                              Navigator.of(context).pop(true);
+                            }
                           }
                         },
                 ),
