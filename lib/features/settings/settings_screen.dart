@@ -87,7 +87,7 @@ class _DatosConexion extends StatelessWidget {
     final poller = context.read<RatesPoller>();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Datos y conexión'),
-      // Ancla del tour (v17.8): el paso «Modo offline total» enfoca este card.
+      // Ancla del tour (v17.8): el paso «Datos y conexión» enfoca este card.
       KeyedSubtree(
         key: TourKeys.conexion,
         child: Card(
@@ -106,7 +106,7 @@ class _DatosConexion extends StatelessWidget {
                   poller.refreshNow();
                 }
               },
-              title: const Text('Modo offline total',
+              title: const Text('No consultar API automáticamente',
                   style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800)),
               subtitle: Text(
                 s.offlineMode

@@ -229,7 +229,7 @@ final List<TourSegment> kTourSegments = <TourSegment>[
     steps: [
       TourStep(
         id: 'ajustes.conexion',
-        title: 'Modo offline total',
+        title: 'Tú decides cuándo consultar',
         anchor: TourKeys.conexion,
         body: 'En «Datos y conexión» decides si la app consulta APIs y cada '
             'cuánto. Todo lo descargado queda guardado en tu teléfono; con '
