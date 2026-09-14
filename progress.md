@@ -589,3 +589,83 @@ con la plantilla de `AGENT.md`.
 - Siguiente: esperar el run de Actions (CI + Build) y verificar que los
   4 APK suben; luego decidir con el dueño el merge a main (SOLO con
   orden expresa).
+
+## [TASK-19] v18.0 · recheck + 6 encargos · 2026-09-14 (UTC)
+- Agente: Super Z (GLM)
+- Hecho:
+  - Ronda con orden expresa del dueño: RECHECK primero (verificar y
+    arreglar ANTES de lo nuevo), luego 6 ítems, QA obligatorio.
+  - NOTA de sesión: el entorno se reinició a mitad de ronda y el trabajo
+    local no pusheado se PERDIÓ — la ronda completa se reconstruyó desde
+    cero sobre 8624671 (v17.9) con esta bitácora como registro único.
+  - RECHECK con hallazgos reales corregidos: (1) la bienvenida seguía
+    siendo un PageView de 3 páginas → UNA sola pantalla (sin tutorial
+    duplicado); (2) el tour medía anclas sin arrastrarlas a la vista →
+    motor por-paso con Scrollable.ensureVisible(400ms)+450ms de respiro,
+    ancla no montada se salta, guard _busy anti-doble-tap; (3) la clave
+    extinta del test de respaldos se llamaba 'igtf' → renombrada
+    'clave_extinta_v14' (grep -ri igtf = 0 en todo el repo). Finanzas
+    fuera y offline-first verificados OK sin cambios.
+  - Ítem 1 (walkthrough fijo): resuelto por el motor por-paso del
+    recheck — un solo overlay a la vez, ancla visible antes de medir.
+  - Ítem 2 (conversor XE/Wise): fuente+frescura arriba (línea tocable →
+    hoja de fuentes con tasas), monto 30px izquierda + selector derecha,
+    swap centrado grande, resultado HÉROE 52px FittedBox + «≈ fmtMoney»,
+    4 chips ±10%/±100 al mismo ancho (quickAdjustments reordenado),
+    _FechaTasas simplificado (solo presets+calendario+banner).
+  - Ítem 3 (modos con su tecnología): Bluetooth RFCOMM/SPP REAL —
+    BtSppPlugin.kt nativo a mano (MethodChannel+EventChannel; ningún
+    paquete pub soporta rol servidor RFCOMM): server multi-invitado,
+    cliente con bonding previo (45s), discovery, write 1:1/broadcast.
+    BtHubImpl JSON-lines con watchdogs (60s sin datos → host_lost).
+    Permisos SOLO del modo elegido (escáner BT únicamente en modo bt;
+    CONNECT/SCAN 31+, legacy BLUETOOTH/ADMIN+ubicación <31). Errores
+    bt_timeout/bt_connect/unavailable/off con texto humano.
+  - Ítem 4 (Sala Viva propia): ruta /sala-viva distinta de /sala
+    (config): código+QR+PIN, miembros normalizados (anfitrión arriba,
+    «(tú)»), roles host/editor/viewer con gate de viewer en item_*,
+    gobierno del anfitrión (renombrar/cerrar/expulsar/cambiar rol),
+    eventos room_renamed/room_closed/role_change/your_role/kicked,
+    regreso automático a /lista al desconectar y auto-cierre al guardar
+    compra (closeAfterPurchase tolerante). RoomController pasa a
+    provider de app; Lista gana strip «En sala» + tile con estado.
+  - Ítem 5 (toggle): «Modo offline total» → «No consultar API
+    automáticamente» (+ paso del tour actualizado).
+  - Ítem 6 (generadores): renderOffstagePng (Overlay left:-4000 PINTADO,
+    2 frames, rasterizado 3x, ancho acotado) — causa raíz del «No pude
+    generar» era capturar un boundary reciclado por el scroll.
+    captureWidget endurecido (null limpio, jamás excepción).
+    StatementDoc/StatementRow y TotalsDoc públicos: el MISMO widget es
+    preview y fuente del PNG. core/version.dart fuente única de versión
+    (kAppVersionVisible '18.0'); pie del PDF con versión real (antes
+    '17.2' hardcodeado).
+  - CI: APK renombrado a valorave-v{version}-build-{AAAAMMDD
+    Caracas}-{abi}.apk (y AAB); job release exige los 5 archivos con
+    los patrones nuevos.
+  - **Este commit**: versión 1.8.0-beta+17 · CHANGELOG v18.0 · esta
+    bitácora.
+- Decisiones:
+  - Puente Kotlin a mano para BT: verificado en pub.dev que ni
+    flutter_bluetooth_serial (congelado 2021) ni _plus ni variantes
+    exponen rol SERVIDOR RFCOMM — la alternativa era no tener el modo.
+  - Escaneo BT solo en modo 'bt' (permisos solo del elegido): pedir
+    BLUETOOTH_SCAN a quien no quiere BT sería intrusivo.
+  - Guest BT empareja ANTES de conectar: RFCOMM a un dispositivo sin
+    emparejar falla o dispara un diálogo a medias; el hub espera el
+    bonding (hasta 45s) y luego conecta (15s).
+  - Viewer ve pero no toca: el gate vive en emit() (única salida de
+    item_*/list_*) — el relé del anfitrión usa emitTo y no se afecta.
+  - closeAfterPurchase tolerante: la compra ya quedó guardada pase lo
+    que pase; la sala es_State secundario del cierre.
+  - renderOffstagePng usa Overlay PINTADO en left:-4000 y no Offstage:
+    Offstage no pinta y RepaintBoundary.toImage sale vacío.
+  - Sala Viva escucha al controlador (no al transporte): el regreso
+    automático cubre host_lost, room_closed, kicked y leave() propio.
+- Gates: analyze 0 issues · 142 tests verdes (140 + 2 nuevos: errores
+  BT + roles round-trip) con SDK 3.47.4 local reinstalado · build=push
+  a Actions con matriz de 4 APK renombrados (paso 8).
+- Bloqueos: ninguno. La pérdida de la ronda original por reinicio del
+  entorno se resolvió reconstruyendo (8 commits limpios por pieza).
+- Siguiente: push → poll CI+Build hasta verde → verificar los 4 APK
+  valorave-v1.8.0-build-{fecha}-{abi}.apk → merge a main SOLO con orden
+  expresa del dueño.

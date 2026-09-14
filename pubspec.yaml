@@ -1,10 +1,11 @@
 name: valorave
-description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y finanzas. Offline-first."
+description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y salas con su propia tecnología. Offline-first."
 publish_to: 'none'
 
-# 1.7.1-beta+16 · ronda v17.9 — builds para cualquier dispositivo
+# 1.8.0-beta+17 · ronda v18.0 — conversor XE/Wise, Bluetooth RFCOMM real,
+# Sala Viva propia, generadores off-stage y APK con nombre semántico.
 # (Regla 5 de AGENT.md · 1.x.y-beta+z · Regla 9: cobertura total de ABI).
-version: 1.7.1-beta+16
+version: 1.8.0-beta+17
 
 environment:
   sdk: ^3.9.2

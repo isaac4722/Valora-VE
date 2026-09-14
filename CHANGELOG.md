@@ -1,5 +1,88 @@
 # Changelog
 
+## 1.8.0-beta+17 · ronda v18.0 — recheck + 6 encargos del dueño
+
+Ronda con orden expresa de REVISAR ANTES DE AÑADIR: verificar lo hecho
+en rondas previas, arreglar lo encontrado y solo después lo nuevo.
+
+### Recheck · lo encontrado y corregido
+- **La bienvenida seguía siendo DOS pantallas de tutorial**: el PageView
+  de 3 páginas del dp4 convivió con el walkthrough v17.8 — la app tenía
+  «dos tutoriales» otra vez. La bienvenida es ahora UNA sola pantalla
+  corta (marca + lo que hace + país con banderas) y el walkthrough es
+  el ÚNICO tutorial.
+- **El tour enfocaba anclas que el usuario no veía** (tarjeta cortada):
+  el motor pasaba un overlay por SEGMENTO con todas las anclas medidas
+  de golpe, aunque vivieran bajo el pliegue de un scroll. Ahora es un
+  overlay POR PASO: `Scrollable.ensureVisible` arrastra el ancla a la
+  vista (400 ms) + 450 ms de respiro antes de medir; ancla no montada
+  → el paso se salta. Guard anti-doble-tap en las tarjetas.
+- **`grep -ri igtf` = 0 en todo el repo**: la clave extinta del test de
+  regresión de respaldos pasa a llamarse `clave_extinta_v14`.
+- Finanzas fuera (v17.8) verificado sin huérfanos; offline-first con
+  Hive sin duplicados `sourceId_date_rate`; progress.md reaplicado.
+
+### Nuevo · conversor estilo XE/Wise (orden del dueño)
+- Fuente + frescura ARRIBA del card como línea tocable: hoja con todas
+  las fuentes de la divisa, su categoría y su tasa.
+- Monto a la izquierda (30 px, secundario) · selector de divisa a la
+  derecha · swap centrado y grande entre ambas filas.
+- Resultado HÉROE 52 px con FittedBox y «≈ fmtMoney» debajo — sin
+  repetir la divisa (fin del «Bs Bs»).
+- Ajustes rápidos: fila de 4 chips al mismo ancho (±10 % · ±100),
+  reordenados a pedido.
+- `_FechaTasas` simplificado: solo presets + calendario + banner (la
+  fuente ya no se duplica arriba y abajo).
+
+### Nuevo · cada modo de conexión con SU tecnología (orden del dueño)
+- **Bluetooth REAL (RFCOMM/SPP)**: `BtSppPlugin.kt` nativo hecho a
+  mano (ningún paquete de pub soporta el rol servidor RFCOMM —
+  flutter_bluetooth_serial lleva congelado desde 2021). Servidor que
+  acepta varios invitados, cliente con emparejamiento previo (diálogo
+  del sistema, hasta 45 s), discovery con re-escaneo cada 12 s,
+  JSON-lines idénticas al protocolo lista-sync. Watchdog del invitado:
+  60 s sin datos del anfitrión → `host_lost`.
+- Permisos SOLO del modo elegido: el escáner BT despierta únicamente en
+  modo Bluetooth; el plugin pide `BLUETOOTH_CONNECT`/`SCAN` en API 31+
+  y legacy `BLUETOOTH`/`ADMIN` + ubicación en <31 (manifest).
+- Errores humanos nuevos: `unavailable`, `off`, `bt_timeout`,
+  `bt_connect`.
+
+### Nuevo · la sala EN VIVO tiene pantalla propia (orden del dueño)
+- `/sala-viva` (SalaVivaScreen), distinta de la configuración `/sala`:
+  código + QR + PIN para invitar, miembros con sus ROLES (anfitrión
+  arriba, «(tú)» marcado, editor/observador por persona).
+- Gobierno del anfitrión: renombrar la sala, cerrar para todos,
+  expulsar y cambiar roles (editor ↔ observador) — el observador VE la
+  lista pero no puede modificarla (gate en `item_*`).
+- Eventos de sala: `room_renamed`, `room_closed`, `role_change`,
+  `your_role`, `kicked` — cada quien reacciona solo.
+- Regreso automático a la Lista al desconectar; al guardar una compra
+  el anfitrión CIERRA la sala y todos vuelven solos.
+- La Lista lo sabe: strip «En sala» arriba de todo + tile de sala con
+  estado vivo; el controlador de sala es provider de aplicación.
+- RoomScreen queda como CONFIGURACIÓN pura: banner «En sala» → Sala
+  Viva; al conectar → toast + a la Lista.
+
+### Nuevo · generadores PNG/TEXTO/PDF funcionales (orden del dueño)
+- `renderOffstagePng`: compone documentos en el Overlay a left:-4000
+  (PINTADO de verdad, no Offstage) + 2 frames + rasterizado 3×. Causa
+  raíz del «No pude generar la imagen»: capturar el boundary VISIBLE de
+  una tarjeta que el scroll recicló devuelve null.
+- Constancia: `StatementDoc`/`StatementRow` públicos — el MISMO widget
+  es preview y fuente del PNG; pie del PDF con la versión REAL (antes
+  decía 17.2 a mano).
+- Lista: `TotalsDoc` público + share off-stage con totales recalculados
+  al vuelo.
+- `core/version.dart`: `kAppVersionVisible = '18.0'`, fuente única.
+
+### Nuevo · Ajustes y CI
+- Toggle renombrado: «Modo offline total» → «No consultar API
+  automáticamente» (sonaba a que la app perdía funciones).
+- APK con nombre semántico: `valorave-v{versión}-build-{AAAAMMDD
+  Caracas}-{abi}.apk` en cada artefacto; el AAB igual. Release exige
+  los 5 archivos con los nuevos patrones.
+
 ## 1.7.1-beta+16 · ronda v17.9 — APK para cualquier dispositivo
 
 Orden del dueño: «te faltó crear para los V8, o no sé si es error de
