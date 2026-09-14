@@ -1,4 +1,4 @@
-/// ─── Tour guiado completo (v17.8 · UN solo tutorial, rejugable) ─────────────
+/// ─── Tour guiado completo (v18.0 · UN solo tutorial, rejugable) ──────────
 /// Sustituye a los DOS sistemas anteriores (slides PageView de la bienvenida
 /// + recorridos por módulo v17.2 + puntas Ola 1), cuyos defectos eran:
 /// · Dos overlays a la vez (walkthrough del módulo + punta con 900 ms de
@@ -6,11 +6,15 @@
 /// · Burbujas fuera de pantalla (altura estimada fija de 150 px).
 /// · Una LISTA de recorridos en Ajustes en vez de un tutorial completo.
 ///
-/// Motor: `tutorial_coach_mark` 1.3.4 (pub.dev) — un overlay por segmento,
-/// tarjetas posicionadas según el ancla real (nunca estimadas) y respeto
-/// de safe-area. El tour cruza pestañas solo: navega con go_router, espera
-/// el layout y encadena segmentos; «Saltar» corta TODO y devuelve al
-/// usuario a donde estaba.
+/// Motor: `tutorial_coach_mark` 1.3.4 (pub.dev) — v18.0: UN overlay POR PASO
+/// (no por segmento). Antes de cada tarjeta el motor arrastra el ancla a la
+/// zona visible (`Scrollable.ensureVisible` 400 ms + 450 ms de respiro): el
+/// overlay nunca mide un rect que el usuario no está viendo — lección de la
+/// captura «tarjeta cortada». Ancla no montada → el paso se salta, no se
+/// fuerza un foco muerto.
+///
+/// El tour cruza pestañas solo: navega con go_router, espera el layout y
+/// encadena pasos; «Saltar» corta TODO y devuelve al usuario a donde estaba.
 ///
 /// Semántica: UNA oportunidad automática por instalación (flag
 /// `valorave.tour-done`, se marca ANTES de mostrar — si algo interrumpe,
@@ -269,9 +273,10 @@ Future<void> maybeRunTourOnce(BuildContext context) async {
 bool _tourRunning = false;
 bool get tourRunning => _tourRunning;
 
-/// Ejecuta el tour completo: navega segmento a segmento, encadena overlays
-/// y devuelve al usuario a su pestaña de origen (o a Inicio si venía de la
-/// bienvenida). «Saltar» corta el resto y restaura igual.
+/// Ejecuta el tour completo: navega segmento a segmento, y POR CADA PASO
+/// arrastra el ancla a la vista antes de mostrar su overlay. Devuelve al
+/// usuario a su pestaña de origen (o a Inicio si venía de la bienvenida).
+/// «Saltar» corta el resto y restaura igual.
 Future<void> runAppTour(BuildContext context) async {
   if (_tourRunning) return;
   _tourRunning = true;
@@ -283,17 +288,38 @@ Future<void> runAppTour(BuildContext context) async {
 
     // Índice global de pasos para «paso i de n» en las tarjetas.
     final total = kTourSegments.fold<int>(0, (a, s) => a + s.steps.length);
-    var offset = 0;
+    var index = 0;
 
+    loop:
     for (final seg in kTourSegments) {
       if (!context.mounted) return;
       // Navega al segmento y deja respirar el layout antes de medir anclas.
       router.go(seg.location);
       await Future<void>.delayed(const Duration(milliseconds: 350));
       if (!context.mounted) return;
-      final finished = await _runSegment(context, seg, offset, total);
-      if (!finished) break; // «Saltar»: se corta el tour completo.
-      offset += seg.steps.length;
+      for (final step in seg.steps) {
+        // Ancla no montada (pe. rama del shell aún sin visitar): el paso se
+        // SALTA — jamás se enfoca un rect que no existe.
+        final anchorCtx = step.anchor?.currentContext;
+        if (anchorCtx == null || !anchorCtx.mounted) {
+          index++;
+          continue;
+        }
+        // El ancla puede vivir DENTRO de un scroll y quedar bajo el pliegue:
+        // se arrastra a la zona visible (alignment 0.45 ≈ un poco sobre el
+        // centro) y se espera a que el arrastre TERMINA antes de medir.
+        await Scrollable.ensureVisible(
+          anchorCtx,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+          alignment: 0.45,
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 450));
+        if (!context.mounted) return;
+        final finished = await _runStep(context, seg, step, index, total);
+        if (!finished) break loop; // «Saltar»: se corta el tour completo.
+        index++;
+      }
     }
     // Restaura la pestaña de origen (post-skip o post-completo).
     if (context.mounted) router.go(backTo);
@@ -302,12 +328,13 @@ Future<void> runAppTour(BuildContext context) async {
   }
 }
 
-/// Corre un segmento. Devuelve true si se completó, false si se saltó.
-Future<bool> _runSegment(
-    BuildContext context, TourSegment seg, int globalOffset, int total) {
+/// Corre UN paso: un TutorialCoachMark con UN solo TargetFocus. Devuelve
+/// true si se completó, false si se saltó.
+Future<bool> _runStep(
+    BuildContext context, TourSegment seg, TourStep step, int index, int total) {
   final done = Completer<bool>();
   TutorialCoachMark(
-    targets: _targetsFor(context, seg, globalOffset, total),
+    targets: [_targetFor(context, seg, step, index, total)],
     colorShadow: Colors.black,
     opacityShadow: 0.78,
     paddingFocus: 12,
@@ -327,37 +354,35 @@ Future<bool> _runSegment(
   return done.future;
 }
 
-/// Construye los TargetFocus del segmento: ancla → alineación calculada con
+/// Construye el TargetFocus del paso: ancla → alineación calculada con
 /// el rect REAL (tarjeta abajo si hay sitio, arriba si el ancla está baja —
-/// nunca estimada, nunca fuera de pantalla). [globalOffset] es el índice del
-/// primer paso del segmento dentro del tour completo (para «paso i de n»).
-List<TargetFocus> _targetsFor(
-    BuildContext context, TourSegment seg, int globalOffset, int total) {
+/// nunca estimada, nunca fuera de pantalla). [index] es la posición global
+/// del paso dentro del tour completo (para «paso i de n»). El ancla YA está
+/// en la zona visible: `runAppTour` la arrastró antes de llamarnos.
+TargetFocus _targetFor(
+    BuildContext context, TourSegment seg, TourStep step, int index, int total) {
   final screen = MediaQuery.of(context).size;
-  return [
-    for (var i = 0; i < seg.steps.length; i++)
-      TargetFocus(
-        identify: seg.steps[i].id,
-        keyTarget: seg.steps[i].anchor,
-        shape: ShapeLightFocus.RRect,
-        radius: 14,
-        paddingFocus: 10,
-        contents: [
-          TargetContent(
-            align: _alignFor(seg.steps[i].anchor, screen),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            builder: (ctx, controller) => _TourCard(
-              segment: seg.title,
-              step: seg.steps[i],
-              stepIndex: globalOffset + i,
-              totalSteps: total,
-              onNext: () => controller.next(),
-              onSkip: () => controller.skip(),
-            ),
-          ),
-        ],
+  return TargetFocus(
+    identify: step.id,
+    keyTarget: step.anchor,
+    shape: ShapeLightFocus.RRect,
+    radius: 14,
+    paddingFocus: 10,
+    contents: [
+      TargetContent(
+        align: _alignFor(step.anchor, screen),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        builder: (ctx, controller) => _TourCard(
+          segment: seg.title,
+          step: step,
+          stepIndex: index,
+          totalSteps: total,
+          onNext: () => controller.next(),
+          onSkip: () => controller.skip(),
+        ),
       ),
-  ];
+    ],
+  );
 }
 
 /// Alineación según la posición real del ancla: centro por debajo del 55 %
@@ -375,7 +400,10 @@ ContentAlign _alignFor(GlobalKey? anchor, Size screen) {
 }
 
 /// ─── Tarjeta del paso (estética VeInk, la del walkthrough v17.2) ────────────
-class _TourCard extends StatelessWidget {
+/// StatefulWidget por el guard `_busy`: un doble toque en «Siguiente» no
+/// debe avanzar dos veces (el cierre del overlay es asíncrono y un segundo
+/// `next()` en el último paso duplicaría el onFinish).
+class _TourCard extends StatefulWidget {
   const _TourCard({
     required this.segment,
     required this.step,
@@ -393,9 +421,22 @@ class _TourCard extends StatelessWidget {
   final VoidCallback onSkip;
 
   @override
+  State<_TourCard> createState() => _TourCardState();
+}
+
+class _TourCardState extends State<_TourCard> {
+  bool _busy = false;
+
+  void _advance(VoidCallback cb) {
+    if (_busy) return;
+    setState(() => _busy = true);
+    cb();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isLast = stepIndex == totalSteps - 1;
+    final isLast = widget.stepIndex == widget.totalSteps - 1;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10),
@@ -415,7 +456,7 @@ class _TourCard extends StatelessWidget {
         children: [
           Row(children: [
             Expanded(
-              child: Text(segment,
+              child: Text(widget.segment,
                   style: TextStyle(
                       fontFamily: 'SpaceGrotesk',
                       fontSize: 10,
@@ -423,17 +464,17 @@ class _TourCard extends StatelessWidget {
                       letterSpacing: 1.1,
                       color: scheme.primary)),
             ),
-            Text('${stepIndex + 1}/$totalSteps',
+            Text('${widget.stepIndex + 1}/${widget.totalSteps}',
                 style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                     fontFeatures: const [FontFeature.tabularFigures()],
                     color: scheme.onSurfaceVariant)),
           ]),
-          if (step.flags.isNotEmpty) ...[
+          if (widget.step.flags.isNotEmpty) ...[
             const SizedBox(height: 8),
             Row(children: [
-              for (final c in step.flags)
+              for (final c in widget.step.flags)
                 Padding(
                   padding: const EdgeInsets.only(right: 5),
                   child: Flag(c, size: 16),
@@ -441,20 +482,20 @@ class _TourCard extends StatelessWidget {
             ]),
           ],
           const SizedBox(height: 8),
-          Text(step.title,
+          Text(widget.step.title,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          Text(step.body,
+          Text(widget.step.body,
               style: TextStyle(fontSize: 13, height: 1.5, color: scheme.onSurfaceVariant)),
           const SizedBox(height: 14),
           Row(children: [
             TextButton(
-              onPressed: onSkip,
+              onPressed: _busy ? null : () => _advance(widget.onSkip),
               child: const Text('Saltar'),
             ),
             const Spacer(),
             FilledButton(
-              onPressed: onNext,
+              onPressed: _busy ? null : () => _advance(widget.onNext),
               child: Text(isLast ? 'Entendido' : 'Siguiente'),
             ),
           ]),
