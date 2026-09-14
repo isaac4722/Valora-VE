@@ -470,10 +470,12 @@ const Map<Currency, List<double>> quickAmounts = {
 
 /// Ajustes rápidos del monto del conversor.
 const List<({String label, double Function(double) apply})> quickAdjustments = [
-  (label: '+100', apply: _plus100),
-  (label: '−100', apply: _minus100),
+  // v18.0 (orden del dueño): ±10 % primero, ±100 después — los porcentuales
+  // son los ajustes de uso diario en el conversor.
   (label: '+10 %', apply: _pct10),
   (label: '−10 %', apply: _pct10down),
+  (label: '+100', apply: _plus100),
+  (label: '−100', apply: _minus100),
 ];
 
 double _plus100(double v) => v + 100;

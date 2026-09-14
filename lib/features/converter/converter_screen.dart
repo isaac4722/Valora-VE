@@ -357,6 +357,17 @@ class _ConverterScreenState extends State<ConverterScreen> {
     double result = 0;
     if (plan != null && _amount > 0) result = _amount * plan.rate;
 
+    // Fuente activa del par + su frescura (v18.0: vive en la línea superior
+    // del conversor, estilo XE/Wise).
+    final primaryId =
+        (plan != null && plan.sourceIds.isNotEmpty) ? plan.sourceIds.first : ctx.sel(from);
+    final src = RateSource.of(primaryId);
+    final entry = store.board.sources[primaryId];
+    final when = entry?.updatedAt ?? store.board.fetchedAt;
+    final frescura = src?.category == SourceCategory.manual
+        ? 'tu tasa manual'
+        : (when != null ? timeAgo(when) : 'sin fecha aún');
+
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
       body: ListView(
@@ -367,14 +378,12 @@ class _ConverterScreenState extends State<ConverterScreen> {
           KeyedSubtree(
             key: TourKeys.convFecha,
             child: _FechaTasas(
-            store: store,
-            ctx: ctx,
-            from: from,
-            plan: plan,
             mode: _dateMode,
             customDate: _customDate,
             loading: _historicLoading,
-            historic: _historicRates,
+            sinDatos: _historicRates != null &&
+                !_historicLoading &&
+                (plan == null || plan.rate <= 0),
             onMode: (m) {
               setState(() => _dateMode = m);
               _applyRateContext();
@@ -393,7 +402,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
             to: to,
             result: result,
             plan: plan,
-            activeSourceId: ctx.sel(from),
+            ctx: ctx,
+            activeSourceId: primaryId,
+            frescura: frescura,
             hasOverride: _hasOverride(store, from),
             onAmount: (v) => setState(() => _amount = v),
             onAdjust: (v) {
@@ -445,50 +456,30 @@ class _ConverterScreenState extends State<ConverterScreen> {
   }
 }
 
-/// Fila de fecha de las tasas (entre el encabezado y el conversor): tasa
-/// activa con su frescura (timeAgo de updatedAt/fetchedAt) + presets +
-/// botón de calendario histórico + banner «tasa del `fecha`».
+/// Fila de fecha de las tasas (entre el encabezado y el conversor): presets
+/// de fecha + calendario histórico + banner «tasa del `fecha`».
+/// v18.0: la FUENTE y su frescura viven en la línea superior del conversor
+/// (estilo XE/Wise) — esta tarjeta ya no las duplica.
 class _FechaTasas extends StatelessWidget {
   const _FechaTasas({
-    required this.store,
-    required this.ctx,
-    required this.from,
-    required this.plan,
     required this.mode,
     required this.customDate,
     required this.loading,
-    required this.historic,
+    required this.sinDatos,
     required this.onMode,
     required this.onOpenCalendar,
   });
 
-  final AppStore store;
-  final RateContext ctx;
-  final Currency from;
-  final ConversionPlan? plan;
   final String mode;
   final DateTime? customDate;
   final bool loading;
-  final Map<String, double>? historic;
+  final bool sinDatos;
   final ValueChanged<String> onMode;
   final VoidCallback onOpenCalendar;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final sem = VeColors.of(context);
-    final primaryId =
-        (plan != null && plan!.sourceIds.isNotEmpty) ? plan!.sourceIds.first : ctx.sel(from);
-    final src = RateSource.of(primaryId);
-    final label = convSourceNames[primaryId] ?? src?.label ?? primaryId;
-    final entry = store.board.sources[primaryId];
-    final when = entry?.updatedAt ?? store.board.fetchedAt;
-    final frescura = src?.category == SourceCategory.manual
-        ? 'tu tasa manual'
-        : (when != null ? timeAgo(when) : 'sin fecha aún');
-    final sinDatos = historic != null &&
-        !loading &&
-        (plan == null || plan!.rate <= 0);
     final String periodo = switch (mode) {
       'yesterday' => 'de ayer',
       'week' => 'de hace 7 días',
@@ -499,39 +490,12 @@ class _FechaTasas extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Fila 1: fecha de la tasa activa + calendario histórico.
-          Row(children: [
-            if (src != null) ...[SourceDot(src.category), const SizedBox(width: 8)],
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  text: 'Tasas de $label ',
-                  style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface),
-                  children: [
-                    TextSpan(
-                        text: '· $frescura',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: scheme.onSurfaceVariant)),
-                  ],
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 8),
-            ChipTag('Elegir fecha', selected: mode == 'custom', onTap: onOpenCalendar),
-          ]),
-          const SizedBox(height: 10),
-          // Fila 2: presets (todos cargan histórico real).
+          // Fila 1: presets de fecha (todos cargan histórico real) + calendario.
           Wrap(spacing: 6, runSpacing: 6, children: [
             ChipTag('Hoy', selected: mode == 'today', onTap: () => onMode('today')),
             ChipTag('Ayer', selected: mode == 'yesterday', onTap: () => onMode('yesterday')),
             ChipTag('Hace 7 días', selected: mode == 'week', onTap: () => onMode('week')),
+            ChipTag('Elegir fecha', selected: mode == 'custom', onTap: onOpenCalendar),
           ]),
           // Banner histórico honesto (REQ 4/8).
           if (mode != 'today') ...[
@@ -588,10 +552,13 @@ class _FechaTasas extends StatelessWidget {
   }
 }
 
-/// Entrada/salida dual del par. La tarjeta NO crece de más: ambas cifras
-/// viven en ReadWindow con FittedBox(scaleDown) y maxLines 1 (REQ 1), el
-/// selector de fuente va junto al par (REQ 2) y los ajustes rápidos quedan
-/// pegados al campo de entrada (REQ 6).
+/// Entrada/salida dual del par, layout XE/Wise (v18.0, orden del dueño):
+/// · Fuente + frescura ARRIBA como una línea tocable (hoja de fuentes).
+/// · Monto a la izquierda (30 px, secundario) · selector de divisa a la
+///   derecha; el swap centrado y grande entre ambas filas.
+/// · Resultado HÉROE (52 px, FittedBox scaleDown) con «≈ fmtMoney» debajo.
+/// · Ajustes rápidos: fila de 4 chips al mismo ancho (±10 % · ±100).
+/// La tarjeta nunca crece de más: cifras en ReadWindow con maxLines 1 (REQ 1).
 class _DualInput extends StatefulWidget {
   const _DualInput({
     required this.amountCtrl,
@@ -600,7 +567,9 @@ class _DualInput extends StatefulWidget {
     required this.to,
     required this.result,
     required this.plan,
+    required this.ctx,
     required this.activeSourceId,
+    required this.frescura,
     required this.hasOverride,
     required this.onAmount,
     required this.onAdjust,
@@ -616,7 +585,11 @@ class _DualInput extends StatefulWidget {
   final Currency from, to;
   final double result;
   final ConversionPlan? plan;
+
+  /// Contexto de tasas vivo (para pintar la tasa de cada fuente en la hoja).
+  final RateContext ctx;
   final String activeSourceId;
+  final String frescura;
   final bool hasOverride;
   final ValueChanged<double> onAmount;
   final ValueChanged<double> onAdjust;
@@ -644,109 +617,231 @@ class _DualInputState extends State<_DualInput> {
     super.dispose();
   }
 
-  /// Campo de monto: lectura con cifra escalable (FittedBox) y edición al
-  /// tocar — misma ventana ReadWindow, altura controlada.
-  Widget _campoMonto(ColorScheme scheme) {
-    return ReadWindow(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      semanticLabel: 'Monto a convertir. Toca para editar.',
-      child: _editing
-          ? TextField(
-              controller: widget.amountCtrl,
-              focusNode: _focus,
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              maxLines: 1,
-              textAlign: TextAlign.end,
-              // Entrada SECUNDARIA (v17.6): la cifra héroe del par es la
-              // salida; el monto editable baja a 40 y se apoya en mutedFg
-              // para no competir por el ojo.
-              style: VeText.displayNum(40, color: scheme.onSurface),
-              decoration: const InputDecoration(
-                hintText: 'Monto',
-                border: InputBorder.none,
-              ),
-              onChanged: (t) => widget.onAmount(parseLocaleNum(t) ?? 0),
-              onSubmitted: (_) => _focus.unfocus(),
-            )
-          : GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => setState(() => _editing = true),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      fmtNum(widget.amount,
-                          decimals: smartDecimals(widget.amount, widget.from)),
-                      maxLines: 1,
-                      // Entrada secundaria: 40 vs héroe 56 de la salida.
-                      style: VeText.displayNum(40, color: scheme.onSurface),
-                    ),
+  /// Línea de fuente + frescura (estilo XE): tocable → hoja con TODAS las
+  /// fuentes de la divisa, su categoría y su tasa. El override del módulo
+  /// (si existe) se anuncia y se limpia a un toque.
+  Widget _fuenteLine(ColorScheme scheme) {
+    final src = RateSource.of(widget.activeSourceId);
+    final label =
+        convSourceNames[widget.activeSourceId] ?? src?.label ?? widget.activeSourceId;
+    return Row(children: [
+      Expanded(
+        child: InkWell(
+          onTap: _openSourcesSheet,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            child: Row(children: [
+              if (src != null) ...[SourceDot(src.category), const SizedBox(width: 8)],
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    text: label,
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface),
+                    children: [
+                      TextSpan(
+                          text: ' · ${widget.frescura}',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: scheme.onSurfaceVariant)),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  // Divisa SIEMPRE visible junto a la cifra (v17.5).
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    CurrencyTag(widget.from.code),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text('toca para escribir',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.expand_more, size: 18, color: scheme.onSurfaceVariant),
+            ]),
+          ),
+        ),
+      ),
+      if (widget.hasOverride)
+        TextButton(
+          onPressed: widget.onClearOverride,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text('Seguir global', style: TextStyle(fontSize: 11)),
+        ),
+    ]);
+  }
+
+  /// Hoja de fuentes de la divisa de origen (v18.0): categoría + tasa de cada
+  /// una; tocar una la activa (o limpia el override si es la global).
+  Future<void> _openSourcesSheet() async {
+    final scheme = Theme.of(context).colorScheme;
+    final ids = <String>[
+      for (final s in RateSource.sourcesFor(widget.from)) s.id,
+      // USD no compite en el tablero: su única referencia entra igual.
+      if (RateSource.sourcesFor(widget.from).isEmpty)
+        RateSource.validSourceId(widget.from, null),
+    ];
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+              child: Text('Fuente de tasa · ${widget.from.code}',
+                  style: VeText.labelCaps(10.5, color: scheme.primary)),
+            ),
+            for (final id in ids)
+              (() {
+                final src = RateSource.of(id);
+                final label = convSourceNames[id] ?? src?.label ?? id;
+                final rate = widget.ctx.rate(id);
+                final active = id == widget.activeSourceId;
+                return ListTile(
+                  dense: true,
+                  leading: src == null ? null : SourceDot(src.category),
+                  title: Text(label,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: active ? scheme.primary : scheme.onSurface)),
+                  subtitle: rate > 0
+                      ? Text('1 ${widget.from.code} = ${fmtRate(rate)} ${widget.to.code}',
+                          style: TextStyle(
+                              fontSize: 11.5, color: scheme.onSurfaceVariant))
+                      : null,
+                  trailing: active
+                      ? Icon(Icons.check_rounded, size: 18, color: scheme.primary)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(id),
+                );
+              })(),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) widget.onPickSource(widget.from, picked);
+  }
+
+  /// Fila de entrada: monto (30 px, secundario) a la IZQUIERDA y selector de
+  /// divisa a la derecha — el orden de lectura de XE/Wise.
+  Widget _montoRow(ColorScheme scheme) {
+    return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+      Expanded(
+        child: ReadWindow(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          semanticLabel: 'Monto a convertir. Toca para editar.',
+          child: _editing
+              ? TextField(
+                  controller: widget.amountCtrl,
+                  focusNode: _focus,
+                  autofocus: true,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  maxLines: 1,
+                  textAlign: TextAlign.left,
+                  // Entrada SECUNDARIA (v18.0): 30 px — el héroe es el
+                  // resultado, no el monto.
+                  style: VeText.displayNum(30, color: scheme.onSurface),
+                  decoration: const InputDecoration(
+                    hintText: 'Monto',
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (t) => widget.onAmount(parseLocaleNum(t) ?? 0),
+                  onSubmitted: (_) => _focus.unfocus(),
+                )
+              : GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() => _editing = true),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          fmtNum(widget.amount,
+                              decimals: smartDecimals(widget.amount, widget.from)),
+                          maxLines: 1,
+                          style: VeText.displayNum(30, color: scheme.onSurface),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text('toca para escribir',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                               fontSize: 10.5,
                               color: scheme.onSurfaceVariant)),
-                    ),
-                  ]),
-                ],
-              ),
-            ),
-    );
+                    ],
+                  ),
+                ),
+        ),
+      ),
+      const SizedBox(width: 8),
+      CurrencySelect(value: widget.from, onChanged: widget.onFrom),
+    ]);
   }
 
-  /// Salida: cifra escalable (nunca desborda, REQ 1) y honesta: sin plan → «—».
-  Widget _salida(ColorScheme scheme) {
+  /// Fila de salida: resultado HÉROE (52 px) a la izquierda, selector de
+  /// divisa a la derecha y «≈ fmtMoney» debajo — la cifra con símbolo local
+  /// que confirma el número grande SIN repetir la divisa (fin del «Bs Bs»).
+  Widget _resultadoRow(ColorScheme scheme) {
     final ok = widget.plan != null && widget.result > 0;
-    return ReadWindow(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      semanticLabel: 'Resultado de la conversión',
-      child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerRight,
-          child: ok
-              ? AnimatedNumber(
-                  widget.result,
-                  // HÉROE del par (v17.6): la salida manda — 56 tabular,
-                  // entrada a 40. Única cifra displayLarge de la pantalla.
-                  style: VeText.displayNum(56, color: scheme.onSurface),
-                  decimals: smartDecimals(widget.result, widget.to),
-                )
-              : Text('—',
-                  maxLines: 1,
-                  style:
-                      VeText.displayNum(56, color: scheme.onSurfaceVariant)),
-        ),
-        const SizedBox(height: 2),
-        // Divisa SIEMPRE visible junto a la cifra (v17.5).
-        Row(mainAxisSize: MainAxisSize.min, children: [
-          if (ok) ...[CurrencyTag(widget.to.code), const SizedBox(width: 6)],
-          Flexible(
-            child: Text(
-              // FIX «Bs Bs» (v17.6): el TAG ya dice la divisa; el subtítulo
-              // lleva SOLO el número (fmtMoney sin símbolo). Antes:
-              // [Bs] Bs 832,49 — duplicado.
-              ok ? fmtMoney(widget.result, widget.to) : 'sin tasa para este par',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Expanded(
+          child: ReadWindow(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            semanticLabel: 'Resultado de la conversión',
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: ok
+                  ? AnimatedNumber(
+                      widget.result,
+                      style: VeText.displayNum(52, color: scheme.onSurface),
+                      decimals: smartDecimals(widget.result, widget.to),
+                    )
+                  : Text('—',
+                      maxLines: 1,
+                      style: VeText.displayNum(
+                          52, color: scheme.onSurfaceVariant)),
             ),
           ),
-        ]),
+        ),
+        const SizedBox(width: 8),
+        CurrencySelect(value: widget.to, onChanged: widget.onTo),
       ]),
-    );
+      if (ok)
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 2),
+          child: Text(
+            '≈ ${fmtMoney(widget.result, widget.to)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                fontFeatures: const [FontFeature.tabularFigures()],
+                color: scheme.onSurfaceVariant),
+          ),
+        )
+      else
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 2),
+          child: Text('sin tasa para este par',
+              style: TextStyle(
+                  fontSize: 10.5, color: scheme.onSurfaceVariant)),
+        ),
+    ]);
   }
 
   @override
@@ -756,84 +851,53 @@ class _DualInputState extends State<_DualInput> {
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(children: [
-          // REQ 2: selector de fuente de tasa junto al par (default oficial).
-          Row(children: [
-            Expanded(
-              child: Text('FUENTE DE TASA · ${widget.from.code}',
-                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
-            ),
-            if (widget.hasOverride)
-              TextButton(
-                onPressed: widget.onClearOverride,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text('Seguir global', style: TextStyle(fontSize: 11)),
-              ),
-          ]),
-          const SizedBox(height: 6),
-          SourcePills(
-            // USD no compite en el tablero: su única referencia entra igual
-            // ('usd') para que el selector nunca quede vacío.
-            sources: [
-              for (final s in RateSource.sourcesFor(widget.from)) s.id,
-              if (RateSource.sourcesFor(widget.from).isEmpty)
-                RateSource.validSourceId(widget.from, null),
-            ],
-            value: widget.activeSourceId,
-            onChanged: (id) => widget.onPickSource(widget.from, id),
-          ),
-          const SizedBox(height: 12),
-          // Fila de entrada.
-          Row(children: [
-            CurrencySelect(value: widget.from, onChanged: widget.onFrom),
-            const Spacer(),
-            Expanded(flex: 2, child: _campoMonto(scheme)),
-          ]),
-          // REQ 6: ajustes rápidos inmediatamente bajo el campo de entrada.
+          _fuenteLine(scheme),
+          const Divider(height: 18),
+          _montoRow(scheme),
+          // Swap centrado y GRANDE (v18.0): el gesto firma del conversor.
           Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                for (final adj in quickAdjustments)
-                  ChipTag(adj.label, onTap: () => widget.onAdjust(adj.apply(widget.amount))),
-              ],
-            ),
-          ),
-          // FIX swap (v17.6): centrado REAL entre las dos filas. Antes:
-          // SizedBox(44) + Spacer → botón pegado a la izquierda.
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(children: [
               const Expanded(child: SizedBox()),
               TapScale(
                 onTap: widget.onSwap,
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: scheme.primary.withValues(alpha: 0.08),
+                    border: Border.all(
+                        color: scheme.primary.withValues(alpha: 0.25)),
                   ),
-                  child: Icon(Icons.swap_vert, size: 18, color: scheme.primary),
+                  child: Icon(Icons.swap_vert,
+                      size: 26, color: scheme.primary),
                 ),
               ),
               const Expanded(child: SizedBox()),
             ]),
           ),
-          // Fila de salida.
-          Row(children: [
-            CurrencySelect(value: widget.to, onChanged: widget.onTo),
-            const Spacer(),
-            Expanded(flex: 2, child: _salida(scheme)),
-          ]),
+          _resultadoRow(scheme),
+          // REQ 6 · v18.0: ajustes rápidos al mismo ancho — 4 chips Expanded
+          // (±10 % · ±100) siempre alineados, sin Wrap que los reordene.
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Row(
+              children: [
+                for (final adj in quickAdjustments)
+                  Expanded(
+                    child: Center(
+                      child: ChipTag(
+                        adj.label,
+                        onTap: () =>
+                            widget.onAdjust(adj.apply(widget.amount)),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ]),
       ),
     );
   }
 }
-
