@@ -153,28 +153,23 @@ void main() {
         child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router2),
       ));
       await tester.pump(const Duration(milliseconds: 300));
-      // Bienvenida dp4: PageView de 3 páginas (Siguiente ×2 → Comenzar).
-      // pumpAndSettle: la animación del PageView (280 ms) + onPageChanged
-      // deben completarse antes del siguiente tap.
-      expect(find.text('Siguiente'), findsOneWidget);
-      await tester.tap(find.text('Siguiente'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Siguiente'));
-      await tester.pumpAndSettle();
-      // Ola 1: el país vive EN la bienvenida (página 3, chips compactos).
-      expect(find.text('¿DESDE DÓNDE MIRAS LAS TASAS?'), findsOneWidget);
+      // v18.0: SIN PageView — la bienvenida es UNA sola pantalla; el país
+      // se preselecciona con chips de bandera y «Comenzar en …» lo fija.
+      expect(find.byType(PageView), findsNothing);
+      expect(find.text('Comenzar en Venezuela'), findsOneWidget);
+      // El chip de Colombia puede quedar bajo el pliegue: scroll hasta él.
+      await tester.scrollUntilVisible(
+        find.text('Colombia'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('Colombia'));
-      await tester.pumpAndSettle();
-      expect(find.text('Comenzar'), findsOneWidget);
-      await tester.tap(find.text('Comenzar'));
-      await tester.pumpAndSettle();
-      expect(find.text('¿Desde dónde miras las tasas?'), findsOneWidget);
-      // La selección de la bienvenida preselecciona el paso obligatorio.
-      expect(find.text('Elegir Colombia'), findsOneWidget);
-      await tester.tap(find.text('Elegir Colombia'));
+      await tester.pump();
+      expect(find.text('Comenzar en Colombia'), findsOneWidget);
+      await tester.tap(find.text('Comenzar en Colombia'));
       await tester.pump(const Duration(milliseconds: 300));
       expect(store.settings.country, 'CO');
-      // v17.8: SIN slides PageView — del país se pasa directo al cierre.
+      // v18.0: del país se pasa directo al cierre.
       expect(find.text('Todo listo'), findsOneWidget);
       await tester.tap(find.text('Empezar a usar ValoraVE'));
       await tester.pump(const Duration(milliseconds: 300));

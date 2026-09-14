@@ -80,14 +80,14 @@ void main() {
         'totalUSD': 3.0,
         'totalBS': 120,
         'rate': 40,
-        'igtf': true, // clave extinta: debe sobrar sin romper nada
+        'clave_extinta_v14': true, // campo v14 retirado: debe sobrar sin romper nada
         'notes': 'respaldo viejo',
       });
       expect(back.totalUSD, 3.0);
       expect(back.paidUSD, 3.0);
       expect(back.notes, 'respaldo viejo');
       // Round-trip v17.8: la clave extinta no se re-escribe.
-      expect(back.toJson().containsKey('igtf'), isFalse);
+      expect(back.toJson().containsKey('clave_extinta_v14'), isFalse);
     });
 
     test('Transaction con amountUSD (§12.1)', () {
