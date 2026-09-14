@@ -28,14 +28,16 @@ import '../../services/sharing.dart';
 import '../../state/app_state.dart';
 import '../../widgets/app_tour.dart';
 import '../../widgets/ui.dart';
+import '../../core/version.dart';
+
+// v18.0: la versión visible vive en core/version.dart (fuente única — la
+// usan las constancias PNG/PDF y los totales compartidos). Se re-exporta
+// aquí para no romper a quien ya importaba SettingsScreen por ella.
+export '../../core/version.dart' show kAppVersionVisible;
 
 part 'settings_sections.dart';
 part 'settings_alertas.dart';
 part 'settings_system.dart';
-
-/// Versión visible de la app (la del marketing); el buildNumber real viene
-/// de PackageInfo en la fila «Acerca de».
-const String kAppVersionVisible = '17.9';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});

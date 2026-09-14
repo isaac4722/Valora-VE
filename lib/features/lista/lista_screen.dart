@@ -18,6 +18,7 @@ import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
+import '../../core/version.dart';
 import '../../data/store.dart';
 import '../../room/room_transport.dart';
 import '../../services/quick_actions.dart' show scanRequest;
@@ -439,38 +440,12 @@ class _ListaScreenState extends State<ListaScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(children: [
-                  // Área capturada a PNG (fondo de tarjeta para el share).
+                  // Preview en pantalla (v18.0): el PNG del generador compone el
+                  // MISMO TotalsDoc off-stage — el share ya no depende de que
+                  // esta tarjeta siga montada tras el scroll.
                   RepaintBoundary(
                     key: _totalsKey,
-                    child: Container(
-                      color: scheme.surface,
-                      padding: const EdgeInsets.all(8),
-                      child: Column(children: [
-                        Row(children: [
-                          const Expanded(
-                            child: Text('ValoraVE · Totales',
-                                style: TextStyle(
-                                    fontFamily: 'SpaceGrotesk',
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800)),
-                          ),
-                          Text(fmtDate(DateTime.now()),
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: scheme.onSurfaceVariant)),
-                        ]),
-                        const SizedBox(height: 6),
-                        for (final e in totals.byCurrency.entries)
-                          _TotalsRow(text: fmtCurrency(e.value, e.key), code: e.key),
-                        const RuleDouble(),
-                        const SizedBox(height: 6),
-                        Text('Total USD: ${fmtUSD(totals.usd)}',
-                            style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: scheme.onSurface)),
-                      ]),
-                    ),
+                    child: TotalsDoc(totals: totals),
                   ),
                   const SizedBox(height: 8),
                   Row(children: [
@@ -507,10 +482,22 @@ class _ListaScreenState extends State<ListaScreen> {
     );
   }
 
-  /// Comparte los Totales como PNG (captura de la tarjeta, mismo camino
-  /// que el PNG del Conversor).
+  /// Totales actuales del carrito (recalculados para el render off-stage:
+  /// el PNG se genera desde el estado vivo, no desde el último build).
+  ({double usd, Map<Currency, double> byCurrency, int units}) _totalsOf() {
+    final store = context.read<AppStore>();
+    final ctx = store.contextOf(module: RateModule.calculator);
+    return cartTotals(store.cart, ctx);
+  }
+
+  /// Comparte los Totales como PNG (v18.0): compone el documento
+  /// OFF-STAGE — causa raíz del «No pude generar la imagen» era capturar el
+  /// boundary VISIBLE de una tarjeta que el scroll ya recicló. Fallback al
+  /// boundary visible si el off-stage no estuviera disponible.
   Future<void> _shareTotalsPng() async {
-    final bytes = await captureWidget(_totalsKey);
+    final totals = _totalsOf();
+    final off = await renderOffstagePng(context, TotalsDoc(totals: totals), width: 360);
+    final bytes = off ?? await captureWidget(_totalsKey);
     if (!mounted) return;
     if (bytes == null) {
       showToast(context, 'No pude generar la imagen', kind: ToastKind.error);
@@ -589,6 +576,54 @@ class _FuenteChip extends StatelessWidget {
           Icon(Icons.expand_more, size: 15, color: scheme.onSurfaceVariant),
         ]),
       ),
+    );
+  }
+}
+
+/// ─── Documento de Totales (v18.0: público y reutilizable) ──────────────────
+/// El MISMO widget sirve de preview en la tarjeta de Totales Y de fuente del
+/// PNG off-stage: lo que se ve es lo que se comparte.
+class TotalsDoc extends StatelessWidget {
+  const TotalsDoc({super.key, required this.totals});
+
+  final ({double usd, Map<Currency, double> byCurrency, int units}) totals;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      color: scheme.surface,
+      padding: const EdgeInsets.all(8),
+      child: Column(children: [
+        Row(children: [
+          const Expanded(
+            child: Text('ValoraVE · Totales',
+                style: TextStyle(
+                    fontFamily: 'SpaceGrotesk',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800)),
+          ),
+          Text(fmtDate(DateTime.now()),
+              style: TextStyle(
+                  fontSize: 11,
+                  color: scheme.onSurfaceVariant)),
+        ]),
+        const SizedBox(height: 6),
+        for (final e in totals.byCurrency.entries)
+          _TotalsRow(text: fmtCurrency(e.value, e.key), code: e.key),
+        const RuleDouble(),
+        const SizedBox(height: 6),
+        Text('Total USD: ${fmtUSD(totals.usd)}',
+            style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurface)),
+        const SizedBox(height: 4),
+        Text('ValoraVE $kAppVersionVisible · es-VE',
+            style: TextStyle(
+                fontSize: 9,
+                color: scheme.onSurfaceVariant)),
+      ]),
     );
   }
 }

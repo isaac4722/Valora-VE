@@ -19,6 +19,7 @@ import 'package:provider/provider.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
+import '../../core/version.dart';
 import '../../data/store.dart';
 import '../../services/sharing.dart';
 import '../../widgets/share_menu.dart';
@@ -70,8 +71,6 @@ class _StatementScreenState extends State<StatementScreen> {
         .where((p) => !p.date.isBefore(range.start) && !p.date.isAfter(range.end))
         .toList();
 
-    final totalBs = purchases.fold<double>(0, (a, p) => a + p.totalBS);
-
     final suffix = _scope == 0 ? '' : ' — ${fmtMesCorto(range.end.month)} ${range.end.year}';
     final label = '${fmtMesCorto(range.start.month)} ${range.start.year}$suffix';
 
@@ -99,49 +98,16 @@ class _StatementScreenState extends State<StatementScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Documento: RepaintBoundary REAL, fuente del PNG (captureWidget).
+          // Documento: RepaintBoundary REAL (preview en pantalla). El PNG
+          // del generador usa el MISMO widget compuesto off-stage (v18.0):
+          // este preview es solo eso, preview — el share ya no depende de
+          // que esta tarjeta siga montada tras el scroll.
           RepaintBoundary(
             key: _docKey,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: scheme.outlineVariant),
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(color: kInkAccent, borderRadius: BorderRadius.circular(9)),
-                    alignment: Alignment.center,
-                    child: const Text('V', style: TextStyle(fontFamily: 'SpaceGrotesk', fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('ValoraVE', style: VeText.displayNum(15, color: kInkAccent)),
-                    Text('Constancia de compras',
-                        style: const TextStyle(fontSize: 10.5, color: Colors.black54)),
-                  ]),
-                  const Spacer(),
-                  Text(label.toUpperCase(), style: VeText.labelCaps(9, color: Colors.black54)),
-                ]),
-                const Divider(height: 26),
-                if (purchases.isEmpty) ...[
-                  _row('Compras', '0', kInkAccent),
-                  const SizedBox(height: 10),
-                ] else ...[
-                  _row('Compras', '${purchases.length}', kInkAccent, big: true),
-                  _row('Total USD', fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD)), kInkAccent),
-                  _row('Total Bs ponderado', 'Bs ${fmtNum(totalBs)}', kInkAccent),
-                  const SizedBox(height: 10),
-                  ..._storeRows(purchases),
-                ],
-                const SizedBox(height: 16),
-                Text('Generado ${fmtDateTime(DateTime.now())} · ValoraVE 1.0.0-beta',
-                    style: const TextStyle(fontSize: 9, color: Colors.black38)),
-              ]),
+            child: StatementDoc(
+              label: label,
+              scopeLabel: _scopeLabel,
+              purchases: purchases,
             ),
           ),
           const SizedBox(height: 16),
@@ -164,35 +130,18 @@ class _StatementScreenState extends State<StatementScreen> {
     );
   }
 
-  Widget _row(String label, String value, Color color, {bool big = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-        const SizedBox(width: 6),
-        const Expanded(child: LedgerLine()),
-        Text(value,
-            style: TextStyle(
-                fontFamily: 'SpaceGrotesk',
-                fontSize: big ? 22 : 15,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
-                color: color)),
-      ]),
+  /// Genera el PNG de la constancia (v18.0): compone el documento
+  /// OFF-STAGE (nunca depende del preview visible) y, si algo raro pasa,
+  /// cae al boundary visible como último recurso.
+  Future<Uint8List?> _renderDocPng(
+      DateTimeRange range, String label, List<Purchase> purchases) async {
+    final off = await renderOffstagePng(
+      context,
+      StatementDoc(label: label, scopeLabel: _scopeLabel, purchases: purchases),
+      width: 380,
     );
-  }
-
-  List<Widget> _storeRows(List<Purchase> purchases) {
-    final byStore = <String, double>{};
-    for (final p in purchases) {
-      final s = p.store ?? 'Sin tienda';
-      byStore[s] = (byStore[s] ?? 0) + p.totalUSD;
-    }
-    final sorted = byStore.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return [
-      for (final e in sorted.take(6))
-        _row(e.key, fmtUSD(e.value), Colors.black87),
-    ];
+    if (off != null) return off;
+    return captureWidget(_docKey, targetWidth: 1080);
   }
 
   /// Menú propio (v17.2): texto · imagen · PDF, cada uno con compartir o
@@ -214,7 +163,7 @@ class _StatementScreenState extends State<StatementScreen> {
         label: 'Compartir imagen',
         hint: 'PNG de la constancia (1080 px) para redes o chat',
         onRun: () async {
-          final bytes = await captureWidget(_docKey, targetWidth: 1080);
+          final bytes = await _renderDocPng(range, label, purchases);
           if (bytes == null) return 'No se pudo generar la imagen. Intenta de nuevo.';
           await sharePng(bytes, _pngName);
           return null;
@@ -225,7 +174,7 @@ class _StatementScreenState extends State<StatementScreen> {
         label: 'Descargar imagen',
         hint: 'Guarda el PNG sin abrir el share',
         onRun: () async {
-          final bytes = await captureWidget(_docKey, targetWidth: 1080);
+          final bytes = await _renderDocPng(range, label, purchases);
           if (bytes == null) return 'No se pudo generar la imagen. Intenta de nuevo.';
           return runDownloadBytes(bytes, _pngName);
         },
@@ -335,7 +284,7 @@ class _StatementScreenState extends State<StatementScreen> {
         pw.SizedBox(height: 22),
         pw.Divider(color: PdfColors.grey400),
         pw.SizedBox(height: 6),
-        pw.Text('Generado ${fmtDateTime(DateTime.now())} · ValoraVE 17.2',
+        pw.Text('Generado ${fmtDateTime(DateTime.now())} · ValoraVE $kAppVersionVisible',
             style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey600)),
       ],
     ));
@@ -369,6 +318,132 @@ class _StatementScreenState extends State<StatementScreen> {
           pw.Text(value, style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: c)),
         ]),
       ),
+    );
+  }
+}
+
+/// ─── Documento de la constancia (v18.0: público y reutilizable) ───────────
+/// El MISMO widget sirve de preview en pantalla Y de fuente del PNG
+/// off-stage: una sola definición, cero deriva visual entre lo que se ve
+/// y lo que se comparte.
+class StatementDoc extends StatelessWidget {
+  const StatementDoc({
+    super.key,
+    required this.label,
+    required this.scopeLabel,
+    required this.purchases,
+  });
+
+  final String label;
+  final String scopeLabel;
+  final List<Purchase> purchases;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final totalBs = purchases.fold<double>(0, (a, p) => a + p.totalBS);
+    final byStore = <String, double>{};
+    for (final p in purchases) {
+      final s = p.store ?? 'Sin tienda';
+      byStore[s] = (byStore[s] ?? 0) + p.totalUSD;
+    }
+    final sorted = byStore.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+                color: kInkAccent, borderRadius: BorderRadius.circular(9)),
+            alignment: Alignment.center,
+            child: const Text('V',
+                style: TextStyle(
+                    fontFamily: 'SpaceGrotesk',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white)),
+          ),
+          const SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('ValoraVE', style: VeText.displayNum(15, color: kInkAccent)),
+            Text('Constancia de compras',
+                style: const TextStyle(fontSize: 10.5, color: Colors.black54)),
+          ]),
+          const Spacer(),
+          Text(label.toUpperCase(),
+              style: VeText.labelCaps(9, color: Colors.black54)),
+        ]),
+        const Divider(height: 26),
+        if (purchases.isEmpty) ...[
+          const StatementRow(
+              label: 'Compras', value: '0', color: kInkAccent),
+          const SizedBox(height: 10),
+        ] else ...[
+          StatementRow(
+              label: 'Compras',
+              value: '${purchases.length}',
+              color: kInkAccent,
+              big: true),
+          StatementRow(
+              label: 'Total USD',
+              value: fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD)),
+              color: kInkAccent),
+          StatementRow(
+              label: 'Total Bs ponderado',
+              value: 'Bs ${fmtNum(totalBs)}',
+              color: kInkAccent),
+          const SizedBox(height: 10),
+          for (final e in sorted.take(6))
+            StatementRow(label: e.key, value: fmtUSD(e.value), color: Colors.black87),
+        ],
+        const SizedBox(height: 16),
+        Text('Generado ${fmtDateTime(DateTime.now())} · ValoraVE $kAppVersionVisible',
+            style: const TextStyle(fontSize: 9, color: Colors.black38)),
+      ]),
+    );
+  }
+}
+
+/// Fila asiento del documento (rótulo · línea punteada · cifra).
+class StatementRow extends StatelessWidget {
+  const StatementRow({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.color,
+    this.big = false,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+  final bool big;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        const SizedBox(width: 6),
+        const Expanded(child: LedgerLine()),
+        Text(value,
+            style: TextStyle(
+                fontFamily: 'SpaceGrotesk',
+                fontSize: big ? 22 : 15,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+                color: color)),
+      ]),
     );
   }
 }

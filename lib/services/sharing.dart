@@ -1,6 +1,9 @@
 /// ─── Compartir: textos, enlaces de lista, PNG (share_plus) ─────────────────
 /// El PNG 1080×1080 del conversor y 1080×1350 de constancias se dibuja en
 /// canvas Flutter (ui.Image → PNG bytes) — aquí están los helpers comunes.
+/// v18.0: renderOffstagePng compone documentos FUERA DE PANTALLA (causa
+/// raíz de «No se puede generar»: capturar el boundary visible de una
+/// tarjeta que el scroll ya recicló/destruyó devuelve null).
 library;
 
 import 'dart:convert';
@@ -38,10 +41,24 @@ Future<void> shareTotalsText(
 }
 
 /// Captura un widget (RepaintBoundary) a PNG bytes 1080 px de ancho.
+/// Endurecido (v18.0): boundary muerto/desmontado/sin tamaño → null limpio
+/// en vez de excepción; el llamante decide el mensaje humano.
 Future<Uint8List?> captureWidget(GlobalKey key, {int targetWidth = 1080}) async {
-  final boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-  if (boundary == null) return null;
-  final image = await boundary.toImage(pixelRatio: 3);
+  try {
+    final boundary =
+        key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null || !boundary.attached || !boundary.hasSize) {
+      return null;
+    }
+    final image = await boundary.toImage(pixelRatio: 3);
+    return await _resizeToWidth(image, targetWidth);
+  } catch (_) {
+    return null; // sin cero: el documento compartible nunca tumba la app
+  }
+}
+
+/// Reescala una imagen al ancho objetivo (calidad 1080 px).
+Future<Uint8List?> _resizeToWidth(ui.Image image, int targetWidth) async {
   final ratio = targetWidth / image.width;
   if (ratio < 1) {
     final w = targetWidth;
@@ -56,6 +73,56 @@ Future<Uint8List?> captureWidget(GlobalKey key, {int targetWidth = 1080}) async 
   }
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   return data?.buffer.asUint8List();
+}
+
+/// Renderiza un widget FUERA DE PANTALLA y lo devuelve como PNG (v18.0).
+///
+/// El documento se monta en el Overlay raíz posicionado en left:-4000:
+/// PINTADO de verdad (Offstage NO pinta y RepaintBoundary.toImage sale
+/// vacío) pero invisible para el usuario. Se dejan correr DOS frames para
+/// que layout, fuentes e imágenes terminen, y se rasteriza a 3× con ancho
+/// lógico fijado ([width] — default 360 → 1080 px finales) porque las filas
+/// con Expanded necesitan un ancho acotado.
+///
+/// Este es el camino propio de los generadores (Lista/Totales y
+/// Constancia): no dependen de que la tarjeta visible siga montada.
+Future<Uint8List?> renderOffstagePng(
+  BuildContext context,
+  Widget doc, {
+  int targetWidth = 1080,
+  double width = 360,
+}) async {
+  OverlayEntry? entry;
+  final key = GlobalKey();
+  try {
+    final overlay = Overlay.of(context, rootOverlay: true);
+    entry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: -4000,
+        top: 0,
+        width: width,
+        child: RepaintBoundary(
+          key: key,
+          child: Material(type: MaterialType.transparency, child: doc),
+        ),
+      ),
+    );
+    overlay.insert(entry);
+    // Dos frames: montaje+layout y settle de pintura/fuentes.
+    await WidgetsBinding.instance.endOfFrame;
+    await WidgetsBinding.instance.endOfFrame;
+    final boundary =
+        key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    if (boundary == null || !boundary.attached || !boundary.hasSize) {
+      return null;
+    }
+    final image = await boundary.toImage(pixelRatio: 3);
+    return await _resizeToWidth(image, targetWidth);
+  } catch (_) {
+    return null;
+  } finally {
+    entry?.remove();
+  }
 }
 
 /// Comparte PNG por WebShare nativo de Android.
