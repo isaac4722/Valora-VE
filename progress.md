@@ -669,3 +669,53 @@ con la plantilla de `AGENT.md`.
 - Siguiente: push → poll CI+Build hasta verde → verificar los 4 APK
   valorave-v1.8.0-build-{fecha}-{abi}.apk → merge a main SOLO con orden
   expresa del dueño.
+
+---
+## [TASK-20] v19.0 · DolarApi blindado + es-VE total + sellos + BiSwap + tour propio + sala P2P desde 0 · 2026-09-15
+- Agente: Super Z (GLM, agente principal · SDK Flutter 3.47.4 local)
+- Hecho:
+  - CHECK previo (orden del dueño): endpoints DolarApi verificados en vivo
+    (VE/CO/MX/BR 200 OK · BR con claves en portugués · AwesomeAPI con cuota
+    agotada desde datacenter — parsers tolerantes a 429). DolarApi ya vivía
+    en board.dart e history_api.dart: lo que faltaba era el respaldo del
+    tablero vivo fuera de VE.
+  - feat(datos): respaldo por región — TRM datos.gov.co (Superfinanciera,
+    oficial) · COP mercado AwesomeAPI · MXN Frankfurter · BRL AwesomeAPI
+    (USD/EUR). Parsers puros testeables; providers = orígenes reales.
+  - feat(fmt): formato es-VE en TODAS las cifras visibles (campo del
+    conversor, share texto/tarjeta, alertas, insights, widgets Android con
+    parseVe en Kotlin). fmtPlain retirado.
+  - feat(tasas): SourceSeal (icono+palabra OFICIAL/MERCADO/PROMEDIO/MANUAL)
+    sustituye al SourceDot/rayita; «Mercado» como etiqueta de la categoría
+    paralela; pseudo-fuente «1 USD = 1 USD» eliminada del conversor.
+  - feat(conversor): BiSwap — el resultado viaja al monto al intercambiar.
+  - feat(tour): motor propio (overlay + recorte real con Path.difference,
+    safe-area, re-medición en rotación, Completer por paso);
+    tutorial_coach_mark fuera del pubspec; contenido intacto.
+  - feat(sala): REESCRITA DESDE 0 — causa raíz del «no puedo crear/unirse»:
+    hubs inferían rol por código vacío y el host pasaba código generado
+    (arrancaba como descubridor). Seam RoomLink con startHost/dial
+    explícitos; protocolo hello→welcome determinista (sin PIN); 3 modos P2P
+    sin internet (Cerca/WiFi-Hotspot/Bluetooth); modo Servidor y
+    socket_io_client retirados; gobierno v18.0 intacto; lobby y Sala Viva
+    reescritos; tests con enlace falso.
+- Decisiones:
+  - PIN+emoji fuera: el código de 6 letras ES el secreto de una lista de
+    compras; el baile de verificación era una fuente de carreras.
+  - Modo Servidor fuera (no es P2P, necesita internet — contra la orden
+    expresa «todo posible sin conexión a internet»). server/ queda como
+    referencia del protocolo.
+  - Hotspot se funde con WiFi (misma tecnología UDP+TCP, misma subred):
+    3 modos claros en el lobby.
+  - CSV/exportes siguen en formato máquina (punto decimal) a propósito.
+  - Las cruzadas CO (BRL/MXN a COP) no se añaden: el motor ya resuelve vía
+    USD y DolarAPI no aporta valor sobre eso (documentado aquí).
+- Gates: analyze 0 issues · 155 tests verdes (142 + 13 netos: board 7,
+  sala 15 reescritos menos 4 viejos, BiSwap 1) · build=push a Actions con
+  matriz de 4 APK (paso 8 al cierre).
+- Bloqueos: ninguno. Dos carreras propias halladas y corregidas por los
+  tests (invitado conectado a nivel transporte antes de welcome;
+  concurrencia de hello's mutando _members durante _broadcast).
+- Siguiente: push → poll CI+Build hasta verde → verificar los 4 APK
+  valorave-v1.9.0-build-{fecha}-{abi}.apk → merge a main SOLO con orden
+  expresa del dueño.

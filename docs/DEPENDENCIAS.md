@@ -13,7 +13,6 @@ Resueltas con Flutter 3.47.3 stable (canal stable sin pin en CI). El gate
 | shared_preferences | ^2.3.2 | prefs UI (tema, tips, recientes) |
 | dio | ^5.7.0 | tablero de tasas + **SSE propio** (§trap 1) |
 | connectivity_plus | ^7.3.1 | offline real (v17.8): saber cuándo NO hay red |
-| socket_io_client | 2.0.3+1 | sala lista-sync (transporte Servidor) |
 | flutter_local_notifications | ^17.2.4 | 5 canales locales (SIN FCM, decisión §4.7) |
 | file_picker | ^12.2.0 | §trap 2: 11.x rompe KGP en AGP≥9 sin builtInKotlin |
 | home_widget | ^0.9.4 | widget 4×1 BCV |
@@ -28,7 +27,6 @@ Resueltas con Flutter 3.47.3 stable (canal stable sin pin en CI). El gate
 | syncfusion_flutter_charts | ^27.1.48 | brecha, evolución, histórico, donut, barras |
 | dynamic_color | ^1.7.0 | Material You (opcional) |
 | qr_flutter | ^4.1.0 | QR de sala |
-| tutorial_coach_mark | ^1.3.4 | tour guiado completo (v17.8): foco anclado, sin apilar ni salirse |
 | pdf + printing | ^3.11.1 / ^5.13.2 | constancias PDF |
 | intl | ^0.19.0 | formato es-VE |
 | nested | ^1.0.0 | (tipado de listas de providers) |

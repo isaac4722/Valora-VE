@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.9.0-beta+18 · ronda v19.0 — DolarApi blindado, es-VE total, sellos, BiSwap, tour propio y sala P2P desde 0
+
+Ronda con orden expresa de VERIFICAR ANTES DE TOCAR NADA y ejecutar
+completa sin errores. Seis piezas, una por commit, ciclo 9P en cada una.
+
+### DolarApi con cadena de respaldo (orden del dueño)
+- El tablero ya hablaba con las 4 regiones de DolarAPI y los históricos
+  ya usan dolarapi+awesomeapi+datos.gov.co; lo que faltaba era el
+  RESPALDO del tablero vivo fuera de VE: CO → Superfinanciera
+  (datos.gov.co, oficial) + AwesomeAPI · MX → Frankfurter · BR →
+  AwesomeAPI. Parsers puros tolerantes (429 no lanza, degrada).
+- `providers` del tablero ahora son los orígenes REALES que llenaron
+  cada fuente (antes decía dolarapi.com siempre).
+
+### La app entera habla es-VE («1.234,56»)
+- Fugas en-US corregidas: campo del conversor tras ±10 %/±100, texto y
+  tarjeta compartidos, notificaciones de alertas, insights y los widgets
+  de Android (Dart escribe coma decimal; Kotlin los parsea tolerante y
+  recalc la brecha en es-VE). CSV/exports siguen en formato máquina a
+  propósito. `fmtPlain` retirado del núcleo.
+
+### Sellos de tasa (fuera la rayita de color)
+- SourceSeal: icono + PALABRA (OFICIAL · MERCADO · PROMEDIO · MANUAL) —
+  legible sin colores, el color es solo acento. La categoría paralela
+  se lee «Mercado». 10 call sites migrados.
+- La pseudo-fuente «1 USD = 1 USD» ELIMINADA del conversor: con USD la
+  línea de fuente no se toca y la referencia lista las fuentes de la
+  otra divisa (o desaparece).
+
+### BiSwap
+- El swap intercambia divisas Y cifras: el resultado pasa a ser el monto
+  (estilo XE/Wise completo). Ya no es un uni swap de banderas.
+
+### Walkthrough con motor propio
+- Reescritura total (orden del dueño): overlay de la casa con recorte
+  REAL del ancla (Path.difference), posicionamiento por rect con
+  safe-area, re-medición en rotación, un Completer por paso (doble toque
+  imposible). `tutorial_coach_mark` retirado del pubspec. Contenido
+  intacto: 13 pasos, 6 segmentos.
+
+### Sala P2P reescrita desde 0 (orden del dueño)
+- CAUSA RAÍZ hallada: los hubs inferían el rol por «código vacío» pero
+  el host pasaba su código generado → arrancaba como DESCUBRIDOR y nadie
+  anunciaba la sala («no puedo crear/unirme»).
+- Seam con rol explícito startHost/dial · protocolo hello→welcome
+  determinista (sin PIN: el código de 6 letras es el secreto) · 3 modos
+  P2P sin internet (Cerca/WiFi-Hotspot/Bluetooth RFCOMM) · modo Servidor
+  (socket.io) retirado junto a su dependencia · gobierno v18.0 intacto
+  (roles, renombrar, cerrar, auto-cierre tras compra) · host_lost
+  honesto sin limbo · tests con enlace falso (+15, incluida la
+  regresión del rol ambiguo).
+
 ## 1.8.0-beta+17 · ronda v18.0 — recheck + 6 encargos del dueño
 
 Ronda con orden expresa de REVISAR ANTES DE AÑADIR: verificar lo hecho
