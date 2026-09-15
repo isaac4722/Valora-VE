@@ -142,6 +142,10 @@ class _ConverterScreenState extends State<ConverterScreen> {
     };
     final day = SnapshotPoint.dayKey(date);
     final rates = <String, double>{};
+    // v19 (orden del dueño): TODO lo consultado queda guardado localmente —
+    // los puntos históricos que llegan de la API se fusionan al libro de
+    // snapshots (día gana remoto) y se persisten en el teléfono.
+    final fetched = <SnapshotPoint>[];
     for (final id in ids) {
       final def = RateSource.of(id);
       if (def?.category == SourceCategory.manual) {
@@ -157,8 +161,22 @@ class _ConverterScreenState extends State<ConverterScreen> {
             ..sort((a, b) => a.day.compareTo(b.day));
           return local.isEmpty ? null : HistPoint(date: local.last.day, rate: local.last.rate);
         });
-        if (point != null) rates[id] = point.rate;
+        if (point != null) {
+          rates[id] = point.rate;
+          final pointDay = point.date.length == 10 ? point.date : day;
+          fetched.add(SnapshotPoint(
+              sourceId: id, day: pointDay, rate: point.rate));
+        }
       } catch (_) {/* honesto: sin dato */}
+    }
+    if (fetched.isNotEmpty) {
+      // Fusión ANTES de mutar la lista (remoto gana por día; local se
+      // conserva) — y luego reemplazo atómico.
+      final merged = mergeSeries(fetched, store.snapshots);
+      store.snapshots
+        ..clear()
+        ..addAll(merged);
+      store.persistSnapshots();
     }
     final b = rates['ves-bcv'], p = rates['ves-parallel'];
     if (b != null && p != null) rates['ves-avg'] = (b + p) / 2;

@@ -144,22 +144,14 @@ Future<(Map<String, RateEntry>, List<String>)> _veBlock() async {
   return (sources, errors);
 }
 
-/// Colombia: TRM + USD mercado + EUR.
+/// Colombia: TRM oficial + UNA sola consulta de cotizaciones (v19, orden del
+/// dueño: un endpoint devuelve TODAS las monedas — no una llamada por cada
+/// una). La lista trae USD y EUR (y más) con compra/venta: punto medio.
 Future<(Map<String, RateEntry>, List<String>)> _coBlock() async {
   final sources = <String, RateEntry>{};
   final errors = <String>[];
-  Future<void> one(String url, String id) async {
-    try {
-      final v = await _fetchJson(Uri.parse(url));
-      final q = _asList(v).firstOrNull;
-      final e =
-          SourceEntryX.entry(_mid(q), q?['fechaActualizacion'] as String?);
-      if (e != null) sources[id] = e;
-    } catch (err) {
-      errors.add('$id: $err');
-    }
-  }
 
+  // 1) TRM oficial (Superfinanciera) — endpoint propio.
   try {
     final v = await _fetchJson(Uri.parse('https://co.dolarapi.com/v1/trm'));
     final e = SourceEntryX.entry(v is Map ? (v['valor'] as num?) : null,
@@ -168,8 +160,23 @@ Future<(Map<String, RateEntry>, List<String>)> _coBlock() async {
   } catch (err) {
     errors.add('cop-trm: $err');
   }
-  await one('https://co.dolarapi.com/v1/cotizaciones/usd', 'cop-market');
-  await one('https://co.dolarapi.com/v1/cotizaciones/eur', 'eur-cop');
+
+  // 2) TODAS las cotizaciones de mercado en UNA consulta (USD → cop-market,
+  //    EUR → eur-cop).
+  try {
+    final rows = _asList(await _fetchJson(
+        Uri.parse('https://co.dolarapi.com/v1/cotizaciones')));
+    for (final q in rows) {
+      final code = '${q['moneda'] ?? ''}';
+      final e = SourceEntryX.entry(
+          _mid(q), q['fechaActualizacion'] as String?);
+      if (e == null) continue;
+      if (code == 'USD') sources['cop-market'] = e;
+      if (code == 'EUR') sources['eur-cop'] = e;
+    }
+  } catch (err) {
+    errors.add('cotizaciones CO: $err');
+  }
   return (sources, errors);
 }
 
@@ -189,24 +196,25 @@ Future<(Map<String, RateEntry>, List<String>)> _mxBlock() async {
   return (sources, errors);
 }
 
-/// Brasil: USD + EUR.
+/// Brasil: UNA sola consulta con TODAS las cotizaciones (v19: USD y EUR
+/// llegan juntos — antes eran dos llamadas).
 Future<(Map<String, RateEntry>, List<String>)> _brBlock() async {
   final sources = <String, RateEntry>{};
   final errors = <String>[];
-  Future<void> one(String url, String id) async {
-    try {
-      final v = await _fetchJson(Uri.parse(url));
-      final q = _asList(v).firstOrNull;
-      final e =
-          SourceEntryX.entry(_mid(q), q?['fechaActualizacion'] as String?);
-      if (e != null) sources[id] = e;
-    } catch (err) {
-      errors.add('$id: $err');
+  try {
+    final rows = _asList(
+        await _fetchJson(Uri.parse('https://br.dolarapi.com/v1/cotacoes')));
+    for (final q in rows) {
+      final code = '${q['moeda'] ?? q['moneda'] ?? ''}';
+      final e = SourceEntryX.entry(
+          _mid(q), (q['dataAtualizacao'] ?? q['fechaActualizacion']) as String?);
+      if (e == null) continue;
+      if (code == 'USD') sources['brl-br'] = e;
+      if (code == 'EUR') sources['eur-brl'] = e;
     }
+  } catch (err) {
+    errors.add('cotacoes BR: $err');
   }
-
-  await one('https://br.dolarapi.com/v1/cotacoes/usd', 'brl-br');
-  await one('https://br.dolarapi.com/v1/cotacoes/eur', 'eur-brl');
   return (sources, errors);
 }
 
