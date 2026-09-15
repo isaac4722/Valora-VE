@@ -508,6 +508,25 @@ void main() {
     });
   });
 
+  group('Banderas (v19): las 6 divisas cargan su asset real', () {
+    testWidgets('Flag de cada divisa pinta la imagen, no el fallback', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Wrap(
+            children: [
+              for (final c in Currency.values) Flag(c, size: 24),
+            ],
+          ),
+        ),
+      ));
+      // Las 6 divisas del foco tienen asset real (assets/flags): ninguna
+      // cae al fallback (ColoredBox del errorBuilder).
+      expect(find.byType(Image), findsNWidgets(Currency.values.length));
+      expect(find.byType(ColoredBox), findsNothing);
+    });
+  });
+
   group('Home v19: fecha simple, sin saltos y manual no es offline', () {
     testWidgets('fecha corta «lun 15 sep · HH:MM» sin fecha larga', (tester) async {
       final store = _pumpedStore(tester, dir: 'w11');

@@ -563,104 +563,22 @@ class _MiniCard extends StatelessWidget {
   }
 }
 
-/// Hoja «Fuentes de {divisa}» (dp6): sello de categoría, radio de la activa
-/// y monto «1 {base} = X {quote}». Elegir fuente la activa GLOBALMENTE
-/// (setRateSource, mismo camino de la cotización principal); la manual
-/// lleva a Ajustes → Monedas y tasas donde vive el editor.
-Future<void> _openCurrencySources(BuildContext context, Currency c) {
-  return showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (bctx) => SafeArea(
-      child: Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(bctx).viewInsets.bottom),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          SheetHeader('Fuentes de ${c.code}'),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
-              child: _FuentesSheetContent(currency: c),
-            ),
-          ),
-        ]),
-      ),
-    ),
+/// Hoja de fuentes de una divisa (v19): el MISMO selector de TASA visual de
+/// toda la app — filas [Bandera][Nombre][Precio + símbolo] con color de
+/// categoría y Manual editable INLINE (antes era una lista plana sin
+/// banderas que mandaba la manual a Ajustes).
+Future<void> _openCurrencySources(BuildContext context, Currency c) async {
+  final store = context.read<AppStore>();
+  await showRateSheet(
+    context,
+    currency: c,
+    ctx: store.contextOf(),
+    currentId: store.sourceFor(c),
+    title: 'Fuentes de ${c.code}',
+    onPick: (id) => store.setRateSource(c, id),
   );
 }
 
-class _FuentesSheetContent extends StatelessWidget {
-  const _FuentesSheetContent({required this.currency});
-
-  final Currency currency;
-
-  @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    final ctx = store.contextOf();
-    final activeId = store.sourceFor(currency);
-    final scheme = Theme.of(context).colorScheme;
-    final VeInk sem = VeColors.of(context);
-
-    final fuentes = RateSource.sourcesFor(currency);
-    if (fuentes.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(20),
-        child: Text('Sin fuentes registradas para esta divisa.'),
-      );
-    }
-
-    return Column(children: [
-      for (final s in fuentes)
-        ListTile(
-          selected: s.id == activeId,
-          leading: SourceDot(s.category),
-          title: Text(s.edgeName,
-              style: const TextStyle(
-                  fontSize: 13.5, fontWeight: FontWeight.w700)),
-          subtitle: Text(s.detail,
-              style: TextStyle(
-                  fontSize: 11,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          trailing: Builder(builder: (context) {
-            final rate = ctx.rates[s.id] ?? (s.id == 'usd' ? 1.0 : null);
-            final Color ink = switch (s.category) {
-              SourceCategory.official => sem.pos,
-              SourceCategory.mixed => sem.warn,
-              SourceCategory.parallel => sem.neg,
-              SourceCategory.manual => sem.manual,
-            };
-            return Text(
-              rate != null && rate > 0
-                  ? '${s.base.code} → ${fmtRate(rate)} ${s.quote.code}'
-                  : '—',
-              style: VeText.displayNum(12.5,
-                  color: rate != null ? ink : scheme.onSurfaceVariant),
-            );
-          }),
-          // Manual: se edita en Ajustes (no es una fuente del tablero).
-          onTap: s.category == SourceCategory.manual
-              ? () {
-                  Navigator.of(context).pop();
-                  context.go('/ajustes');
-                }
-              : () {
-                  store.setRateSource(s.currency, s.id);
-                  Navigator.of(context).pop();
-                },
-        ),
-      const Padding(
-        padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
-        child: CategoryLegend(),
-      ),
-    ]);
-  }
-}
-
-/// «Alertas de precios»: productos CON meta fijada — nombre, meta, último
-/// precio y estado honesto (¡bajo meta! pos / pendiente). Tap → Productos.
-/// Vacío → fila muted + CTA honesto a Productos.
 class _AlertasPrecios extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
