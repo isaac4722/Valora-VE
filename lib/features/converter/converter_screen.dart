@@ -42,8 +42,27 @@ class ConverterScreen extends StatefulWidget {
 }
 
 class _ConverterScreenState extends State<ConverterScreen> {
-  final _amountCtrl = TextEditingController(text: '1');
-  double _amount = 1;
+  /// BIDIRECCIONAL (v19, orden del dueño): los DOS campos se editan.
+  /// [_driver] recuerda el último lado tecleado; el pasivo se sincroniza
+  /// en cada build (también cuando la tasa cambia sola). [_fromTyped] y
+  /// [_toTyped] guardan lo escrito en cada lado — el monto efectivo SIEMPRE
+  /// se deriva del conductor con la tasa viva (nada se redondea a lo bruto).
+  final _fromCtrl = TextEditingController(text: '1');
+  final _toCtrl = TextEditingController();
+  double _fromTyped = 1;
+  double _toTyped = 0;
+  String _driver = 'from';
+
+  /// Monto efectivo en la divisa FROM (fuente de verdad de la conversión).
+  double get _amountNow {
+    final store = context.read<AppStore>();
+    final ctx = _context(store);
+    final from = CurrencyX.from(store.data.converter.from);
+    final to = CurrencyX.from(store.data.converter.to);
+    final rate = ctx.plan(from, to)?.rate ?? 0;
+    if (_driver == 'to') return rate > 0 && _toTyped > 0 ? _toTyped / rate : 0;
+    return _fromTyped;
+  }
   String _dateMode = 'today'; // today | yesterday | week | custom
   DateTime? _customDate;
   Map<String, double>? _historicRates; // tasas históricas (sourceId → rate)
@@ -75,7 +94,8 @@ class _ConverterScreenState extends State<ConverterScreen> {
     _notesSave?.cancel();
     // Flush del debounce: si quedó texto sin guardar, se persiste al salir.
     if (pending) _storeRef?.writeConversionNotes(_notesCtrl.text);
-    _amountCtrl.dispose();
+    _fromCtrl.dispose();
+    _toCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -158,6 +178,26 @@ class _ConverterScreenState extends State<ConverterScreen> {
       rates: _historicRates!,
       selected: base.selected,
     );
+  }
+
+  /// Intercambia los lados del par (botón swap o al elegir la divisa del
+  /// otro lado). El NÚMERO se conserva: si el conductor era el resultado,
+  /// ese valor pasa a ser el monto del nuevo par (comportamiento XE).
+  void _swapSides(
+      AppStore store, Currency from, Currency to, ConversionPlan? plan, double result) {
+    final rate = plan?.rate ?? 0;
+    final nuevo = _driver == 'to'
+        ? _toTyped
+        : (rate > 0 && result > 0 ? result : _fromTyped);
+    store.setConverterPair(to.code, from.code);
+    setState(() {
+      _fromTyped = nuevo > 0 ? nuevo : 0;
+      _toTyped = 0;
+      _driver = 'from';
+      // La nueva divisa FROM es la antigua `to`.
+      _fromCtrl.text =
+          fmtNum(_fromTyped, decimals: smartDecimals(_fromTyped, to));
+    });
   }
 
   /// ¿Hay override de fuente propio del conversor para esta divisa?
@@ -256,8 +296,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
     final plan = ctx.plan(from, to);
-    if (plan == null || _amount <= 0) return null;
-    final result = _amount * plan.rate;
+    final amount = _amountNow;
+    if (plan == null || amount <= 0) return null;
+    final result = amount * plan.rate;
     final primaryId =
         plan.sourceIds.isNotEmpty ? plan.sourceIds.first : ctx.sel(from);
     final src = RateSource.of(primaryId);
@@ -267,7 +308,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
       context,
       from: from,
       to: to,
-      inputAmount: _amount,
+      inputAmount: amount,
       resultAmount: result,
       rateLine: '1 ${from.code} = ${fmtRate(plan.rate)} ${to.code}',
       sourceLabel: cat.isEmpty ? label : '$label · $cat',
@@ -284,10 +325,11 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
     final plan = ctx.plan(from, to);
-    if (plan == null || _amount <= 0) return;
-    final result = _amount * plan.rate;
+    final amount = _amountNow;
+    if (plan == null || amount <= 0) return;
+    final result = amount * plan.rate;
     final text =
-        '${fmtPlain(_amount, 2)} ${from.code} = ${fmtMoney(result, to)} · '
+        '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} · '
         '1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} — ValoraVE';
     await showShareMenu(context, title: 'Resultado ${from.code} → ${to.code}', actions: [
       ShareMenuAction(
@@ -330,8 +372,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
     final plan = ctx.plan(from, to);
-    if (plan == null || _amount <= 0) return;
-    final result = _amount * plan.rate;
+    final amount = _amountNow;
+    if (plan == null || amount <= 0) return;
+    final result = amount * plan.rate;
     final primaryId =
         plan.sourceIds.isNotEmpty ? plan.sourceIds.first : ctx.sel(from);
     final src = RateSource.of(primaryId);
@@ -339,7 +382,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final cat = src?.category.label ?? '';
     copiarAlPortapapeles(
       context,
-      '${fmtMoney(_amount, from)} ${from.code} = '
+      '${fmtMoney(amount, from)} ${from.code} = '
           '${fmtMoney(result, to)} ${to.code} · '
           '1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} '
           '($label${cat.isEmpty ? '' : ' · $cat'}) · ValoraVE',
@@ -355,9 +398,20 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
     final plan = ctx.plan(from, to);
+    final amount = _amountNow;
 
     double result = 0;
-    if (plan != null && _amount > 0) result = _amount * plan.rate;
+    if (plan != null && amount > 0) result = amount * plan.rate;
+
+    // Campo PASIVO sincronizado con el estado vivo (la tasa puede cambiar
+    // sola): el conductor conserva exactamente lo que el usuario tecleó.
+    final passiveTo = _driver == 'from';
+    final passiveTxt = passiveTo
+        ? (result > 0 ? fmtNum(result, decimals: smartDecimals(result, to)) : '')
+        : (amount > 0 ? fmtNum(amount, decimals: smartDecimals(amount, from)) : '');
+    if ((passiveTo ? _toCtrl : _fromCtrl).text != passiveTxt) {
+      (passiveTo ? _toCtrl : _fromCtrl).text = passiveTxt;
+    }
 
     // Fuente activa del par + su frescura (v18.0: vive en la línea superior
     // del conversor, estilo XE/Wise).
@@ -399,8 +453,8 @@ class _ConverterScreenState extends State<ConverterScreen> {
           KeyedSubtree(
             key: TourKeys.convFuente,
             child: _DualInput(
-            amountCtrl: _amountCtrl,
-            amount: _amount,
+            fromCtrl: _fromCtrl,
+            toCtrl: _toCtrl,
             from: from,
             to: to,
             result: result,
@@ -409,16 +463,32 @@ class _ConverterScreenState extends State<ConverterScreen> {
             activeSourceId: primaryId,
             frescura: frescura,
             hasOverride: _hasOverride(store, from),
-            onAmount: (v) => setState(() => _amount = v),
+            onFromInput: (v) => setState(() {
+              _fromTyped = v;
+              _driver = 'from';
+            }),
+            onToInput: (v) => setState(() {
+              _toTyped = v;
+              _driver = 'to';
+            }),
             onAdjust: (v) {
+              // Los ajustes rápidos mueven el lado FROM (es el «monto»).
               setState(() {
-                _amount = v <= 0 ? 0 : v;
-                _amountCtrl.text = fmtPlain(_amount, 2);
+                _fromTyped = v <= 0 ? 0 : v;
+                _driver = 'from';
+                _fromCtrl.text = fmtNum(_fromTyped,
+                    decimals: smartDecimals(_fromTyped, from));
               });
             },
-            onSwap: () => store.setConverterPair(to.code, from.code),
-            onFrom: (c) => store.setConverterPair(c.code, to.code),
-            onTo: (c) => store.setConverterPair(from.code, c.code),
+            // Swap XE: elegir la divisa del otro lado INTERCAMBIA lados; el
+            // número escrito se queda (el resultado pasa a ser el monto).
+            onSwap: () => _swapSides(store, from, to, plan, result),
+            onFrom: (c) => c == to
+                ? _swapSides(store, from, to, plan, result)
+                : store.setConverterPair(c.code, to.code),
+            onTo: (c) => c == from
+                ? _swapSides(store, from, to, plan, result)
+                : store.setConverterPair(from.code, c.code),
             onPickSource: _pickSource,
             onClearOverride: () =>
                 store.setModuleRateSource(RateModule.converter, from, null),
@@ -448,10 +518,10 @@ class _ConverterScreenState extends State<ConverterScreen> {
           _RutaCalculo(plan: plan),
           // REQ 5: fuentes disponibles por divisa implicada en el par.
           _ReferenciaFuentes(ctx: ctx, from: from, to: to, onPick: _pickSource),
-          _TablaMontos(ctx: ctx, amount: _amount, from: from),
+          _TablaMontos(ctx: ctx, amount: amount, from: from),
           // dp6 · mejora 9: matriz completa de pares a un vistazo (plegada).
           _Matriz6(ctx: ctx),
-          _Recientes(from: from, to: to, amount: _amount, result: result, plan: plan),
+          _Recientes(from: from, to: to, amount: amount, result: result, plan: plan),
           _Notas(ctrl: _notesCtrl),
         ],
       ),
@@ -555,17 +625,18 @@ class _FechaTasas extends StatelessWidget {
   }
 }
 
-/// Entrada/salida dual del par, layout XE/Wise (v18.0, orden del dueño):
+/// Entrada/salida dual del par, layout XE/Wise — BIDIRECCIONAL (v19, orden
+/// del dueño): los DOS campos se editan con formato de miles en vivo
+/// (MoneyField); escribir ABAJO calcula hacia arriba (monto = valor / tasa).
 /// · Fuente + frescura ARRIBA como una línea tocable (hoja de fuentes).
-/// · Monto a la izquierda (30 px, secundario) · selector de divisa a la
-///   derecha; el swap centrado y grande entre ambas filas.
-/// · Resultado HÉROE (52 px, FittedBox scaleDown) con «≈ fmtMoney» debajo.
+/// · Monto arriba (30 px, secundario) · resultado HÉROE abajo (46 px).
+/// · Selector de divisa a la derecha de cada campo; elegir la divisa del
+///   OTRO lado intercambia los lados (jamás «VES → VES»).
 /// · Ajustes rápidos: fila de 4 chips al mismo ancho (±10 % · ±100).
-/// La tarjeta nunca crece de más: cifras en ReadWindow con maxLines 1 (REQ 1).
-class _DualInput extends StatefulWidget {
+class _DualInput extends StatelessWidget {
   const _DualInput({
-    required this.amountCtrl,
-    required this.amount,
+    required this.fromCtrl,
+    required this.toCtrl,
     required this.from,
     required this.to,
     required this.result,
@@ -574,7 +645,8 @@ class _DualInput extends StatefulWidget {
     required this.activeSourceId,
     required this.frescura,
     required this.hasOverride,
-    required this.onAmount,
+    required this.onFromInput,
+    required this.onToInput,
     required this.onAdjust,
     required this.onSwap,
     required this.onFrom,
@@ -583,8 +655,8 @@ class _DualInput extends StatefulWidget {
     required this.onClearOverride,
   });
 
-  final TextEditingController amountCtrl;
-  final double amount;
+  final TextEditingController fromCtrl;
+  final TextEditingController toCtrl;
   final Currency from, to;
   final double result;
   final ConversionPlan? plan;
@@ -594,43 +666,25 @@ class _DualInput extends StatefulWidget {
   final String activeSourceId;
   final String frescura;
   final bool hasOverride;
-  final ValueChanged<double> onAmount;
+  final ValueChanged<double> onFromInput;
+  final ValueChanged<double> onToInput;
   final ValueChanged<double> onAdjust;
   final VoidCallback onSwap;
   final ValueChanged<Currency> onFrom, onTo;
   final void Function(Currency c, String id) onPickSource;
   final VoidCallback onClearOverride;
 
-  @override
-  State<_DualInput> createState() => _DualInputState();
-}
-
-class _DualInputState extends State<_DualInput> {
-  bool _editing = false;
-  late final FocusNode _focus = FocusNode()
-    ..addListener(() {
-      if (!_focus.hasFocus && mounted && _editing) {
-        setState(() => _editing = false);
-      }
-    });
-
-  @override
-  void dispose() {
-    _focus.dispose();
-    super.dispose();
-  }
-
   /// Línea de fuente + frescura (estilo XE): tocable → hoja con TODAS las
   /// fuentes de la divisa, su categoría y su tasa. El override del módulo
   /// (si existe) se anuncia y se limpia a un toque.
-  Widget _fuenteLine(ColorScheme scheme) {
-    final src = RateSource.of(widget.activeSourceId);
+  Widget _fuenteLine(BuildContext ctx, ColorScheme scheme) {
+    final src = RateSource.of(activeSourceId);
     final label =
-        convSourceNames[widget.activeSourceId] ?? src?.label ?? widget.activeSourceId;
+        convSourceNames[activeSourceId] ?? src?.label ?? activeSourceId;
     return Row(children: [
       Expanded(
         child: InkWell(
-          onTap: _openSourcesSheet,
+          onTap: () => _openSourcesSheet(ctx),
           borderRadius: BorderRadius.circular(10),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
@@ -646,7 +700,7 @@ class _DualInputState extends State<_DualInput> {
                         color: scheme.onSurface),
                     children: [
                       TextSpan(
-                          text: ' · ${widget.frescura}',
+                          text: ' · $frescura',
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -663,9 +717,9 @@ class _DualInputState extends State<_DualInput> {
           ),
         ),
       ),
-      if (widget.hasOverride)
+      if (hasOverride)
         TextButton(
-          onPressed: widget.onClearOverride,
+          onPressed: onClearOverride,
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 6),
             minimumSize: Size.zero,
@@ -680,127 +734,89 @@ class _DualInputState extends State<_DualInput> {
   /// visual de toda la app — filas [Bandera][Nombre][Precio + símbolo] con
   /// color de categoría; la Manual abre el editor inline. Tocar una la
   /// activa (o limpia el override si es la global).
-  Future<void> _openSourcesSheet() async {
+  Future<void> _openSourcesSheet(BuildContext context) async {
     await showRateSheet(
       context,
-      currency: widget.from,
-      ctx: widget.ctx,
-      currentId: widget.activeSourceId,
-      onPick: (id) => widget.onPickSource(widget.from, id),
+      currency: from,
+      ctx: ctx,
+      currentId: activeSourceId,
+      onPick: (id) => onPickSource(from, id),
     );
   }
 
+  /// Valor FROM efectivo para los ajustes rápidos (±10 % · ±100): si el
+  /// conductor es el campo de abajo, se usa el monto derivado hacia arriba.
+  double _fromValueOf(double result, ConversionPlan? plan) {
+    final rate = plan?.rate ?? 0;
+    if (rate <= 0) return 0;
+    return result > 0 ? result / rate : 0;
+  }
+
   /// Fila de entrada: monto (30 px, secundario) a la IZQUIERDA y selector de
-  /// divisa a la derecha — el orden de lectura de XE/Wise.
+  /// divisa a la derecha — el orden de lectura de XE/Wise. Siempre editable,
+  /// con formato de miles en vivo (MoneyField).
   Widget _montoRow(ColorScheme scheme) {
     return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
       Expanded(
-        child: ReadWindow(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-          semanticLabel: 'Monto a convertir. Toca para editar.',
-          child: _editing
-              ? TextField(
-                  controller: widget.amountCtrl,
-                  focusNode: _focus,
-                  autofocus: true,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  maxLines: 1,
-                  textAlign: TextAlign.left,
-                  // Entrada SECUNDARIA (v18.0): 30 px — el héroe es el
-                  // resultado, no el monto.
-                  style: VeText.displayNum(30, color: scheme.onSurface),
-                  decoration: const InputDecoration(
-                    hintText: 'Monto',
-                    border: InputBorder.none,
-                  ),
-                  onChanged: (t) => widget.onAmount(parseLocaleNum(t) ?? 0),
-                  onSubmitted: (_) => _focus.unfocus(),
-                )
-              : GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => setState(() => _editing = true),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          fmtNum(widget.amount,
-                              decimals: smartDecimals(widget.amount, widget.from)),
-                          maxLines: 1,
-                          style: VeText.displayNum(30, color: scheme.onSurface),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text('toca para escribir',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 10.5,
-                              color: scheme.onSurfaceVariant)),
-                    ],
-                  ),
-                ),
+        child: MoneyField(
+          controller: fromCtrl,
+          onChanged: onFromInput,
+          maxDecimals: 6,
+          style: VeText.displayNum(30, color: scheme.onSurface),
+          decoration: const InputDecoration(
+            hintText: 'Monto',
+            border: InputBorder.none,
+            isCollapsed: true,
+            contentPadding: EdgeInsets.symmetric(vertical: 8),
+          ),
         ),
       ),
       const SizedBox(width: 8),
-      CurrencySelect(value: widget.from, onChanged: widget.onFrom),
+      CurrencySelect(value: from, onChanged: onFrom),
     ]);
   }
 
-  /// Fila de salida: resultado HÉROE (52 px) a la izquierda, selector de
-  /// divisa a la derecha y «≈ fmtMoney» debajo — la cifra con símbolo local
-  /// que confirma el número grande SIN repetir la divisa (fin del «Bs Bs»).
+  /// Fila de salida: resultado HÉROE (46 px), EDITABLE (v19 bidireccional):
+  /// escribir aquí calcula el monto hacia arriba. Debajo, la cifra con
+  /// símbolo local que confirma el número grande SIN repetir la divisa.
   Widget _resultadoRow(ColorScheme scheme) {
-    final ok = widget.plan != null && widget.result > 0;
+    final ok = plan != null && result > 0;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         Expanded(
-          child: ReadWindow(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-            semanticLabel: 'Resultado de la conversión',
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: ok
-                  ? AnimatedNumber(
-                      widget.result,
-                      style: VeText.displayNum(52, color: scheme.onSurface),
-                      decimals: smartDecimals(widget.result, widget.to),
-                    )
-                  : Text('—',
-                      maxLines: 1,
-                      style: VeText.displayNum(
-                          52, color: scheme.onSurfaceVariant)),
+          child: MoneyField(
+            controller: toCtrl,
+            onChanged: onToInput,
+            maxDecimals: 6,
+            style: VeText.displayNum(
+                46, color: ok ? scheme.onSurface : scheme.onSurfaceVariant),
+            decoration: InputDecoration(
+              hintText: 'Resultado',
+              border: InputBorder.none,
+              isCollapsed: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              hintStyle: VeText.displayNum(
+                  46, color: scheme.onSurfaceVariant),
             ),
           ),
         ),
         const SizedBox(width: 8),
-        CurrencySelect(value: widget.to, onChanged: widget.onTo),
+        CurrencySelect(value: to, onChanged: onTo),
       ]),
-      if (ok)
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 2),
-          child: Text(
-            '≈ ${fmtMoney(widget.result, widget.to)}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                fontFeatures: const [FontFeature.tabularFigures()],
-                color: scheme.onSurfaceVariant),
-          ),
-        )
-      else
-        Padding(
-          padding: const EdgeInsets.only(left: 4, top: 2),
-          child: Text('sin tasa para este par',
-              style: TextStyle(
-                  fontSize: 10.5, color: scheme.onSurfaceVariant)),
+      Padding(
+        padding: const EdgeInsets.only(left: 4, top: 2),
+        child: Text(
+          ok
+              ? '≈ ${fmtMoney(result, to)}'
+              : 'sin tasa para este par',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+              fontSize: ok ? 12 : 10.5,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant),
         ),
+      ),
     ]);
   }
 
@@ -811,7 +827,7 @@ class _DualInputState extends State<_DualInput> {
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(children: [
-          _fuenteLine(scheme),
+          _fuenteLine(context, scheme),
           const Divider(height: 18),
           _montoRow(scheme),
           // Swap centrado y GRANDE (v18.0): el gesto firma del conversor.
@@ -820,7 +836,7 @@ class _DualInputState extends State<_DualInput> {
             child: Row(children: [
               const Expanded(child: SizedBox()),
               TapScale(
-                onTap: widget.onSwap,
+                onTap: onSwap,
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -849,7 +865,7 @@ class _DualInputState extends State<_DualInput> {
                       child: ChipTag(
                         adj.label,
                         onTap: () =>
-                            widget.onAdjust(adj.apply(widget.amount)),
+                            onAdjust(adj.apply(_fromValueOf(result, plan))),
                       ),
                     ),
                   ),

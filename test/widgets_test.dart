@@ -274,6 +274,38 @@ void main() {
       expect(find.text('RUTA DEL CÁLCULO'), findsOneWidget);
     });
 
+    testWidgets('Conversor BIDIRECCIONAL: escribir abajo calcula arriba + sin misma moneda', (tester) async {
+      final store = _pumpedStore(tester, dir: 'w3b');
+      await _initServices(store);
+      store.setRateBoard(RateBoard(sources: {
+        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
+        'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
+      }));
+      await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
+      await tester.pumpAndSettle();
+      // Par inicial USD → VES. Escribir 1000 arriba → abajo 40.000 en vivo.
+      final fields = find.byType(MoneyField);
+      await tester.enterText(fields.first, '1000');
+      await tester.pump();
+      expect(find.text('1.000'), findsOneWidget);
+      expect(find.text('40.000,00'), findsOneWidget);
+      // BIDIRECCIONAL: escribir 80.000 ABAJO → arriba 2.000.
+      await tester.enterText(fields.at(1), '80000');
+      await tester.pump();
+      expect(find.text('80.000'), findsOneWidget);
+      expect(find.text('2.000,00'), findsOneWidget);
+      // Elegir la divisa del OTRO lado INTERCAMBIA (jamás USD → USD).
+      final fromCode = store.data.converter.from;
+      final toCode = store.data.converter.to;
+      await tester.tap(find.byType(CurrencySelect).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(toCode == 'USD' ? 'Dólar' : 'Bolívar').last);
+      await tester.pumpAndSettle();
+      expect(store.data.converter.from, toCode);
+      expect(store.data.converter.to, fromCode);
+      expect(store.data.converter.from == store.data.converter.to, isFalse);
+    });
+
     testWidgets('Lista: agregar producto, plantilla, vuelto, dividir', (tester) async {
       final store = _pumpedStore(tester, dir: 'w4');
       await _initServices(store);

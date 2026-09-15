@@ -1069,10 +1069,12 @@ class CurrencySelect extends StatelessWidget {
 /// Mientras escribes, los miles se separan con puntos («1000» → «1.000», un
 /// millón → «1.000.000») y la COMA es el único separador decimal (punto
 /// tecleado se interpreta como decimal — hábito EN — y se normaliza a coma).
-/// El controlador queda SIEMPRE con el texto ya formateado, el cursor en su
-/// sitio lógico y [onChanged] entrega el número parseado. Un solo campo de
-/// monto para TODA la app: conversor, presupuesto, vuelto, precios, metas,
-/// sueldo y tasas manuales.
+/// El controlador queda SIEMPRE con el texto ya formateado y el cursor en su
+/// sitio lógico. [onChanged] entrega el número parseado SOLO con entrada del
+/// usuario (los setText programáticos del controlador re-formatean pero no
+/// disparan el callback — así dos MoneyField pueden sincronizarse sin bucles).
+/// Un solo campo de monto para TODA la app: conversor, presupuesto, vuelto,
+/// precios, metas, sueldo y tasas manuales.
 class MoneyField extends StatefulWidget {
   const MoneyField({
     super.key,
@@ -1142,17 +1144,34 @@ class _MoneyFieldState extends State<MoneyField> {
     super.dispose();
   }
 
-  /// Canon del texto: SOLO dígitos y UNA coma decimal (la primera coma o
-  /// punto gana; el resto se descarta). Los puntos de miles tecleados a
-  /// mano se tratan como decimal (ver doc del widget).
+  /// Canon del texto: SOLO dígitos y UNA coma decimal. Detección del
+  /// separador decimal en dos pasadas (por el ÚLTIMO separador):
+  /// · coma al final → coma decimal y los puntos son MIL ES-VE
+  ///   («40.000,00» → 40000,00 — crítico para setText programáticos);
+  /// · punto al final → decimal, SALVO el patrón de miles clásico
+  ///   («1.000» sin coma y 3 dígitos tras el punto = mil, no 1,0).
   String _canon(String raw) {
+    final clean = raw.replaceAll(RegExp(r'[^0-9.,]'), '');
+    if (clean.isEmpty) return '';
+    final lastComma = clean.lastIndexOf(',');
+    final lastDot = clean.lastIndexOf('.');
+    String decSep;
+    if (lastComma > lastDot) {
+      decSep = ',';
+    } else if (lastDot > lastComma) {
+      final digitsAfter = clean.length - lastDot - 1;
+      final isThousands = lastDot > 0 && digitsAfter == 3 && lastComma < 0;
+      decSep = isThousands ? '' : '.';
+    } else {
+      decSep = '';
+    }
     final sb = StringBuffer();
     var dec = false;
-    for (final ch in raw.split('')) {
+    for (final ch in clean.split('')) {
       final isDigit = ch.codeUnitAt(0) >= 0x30 && ch.codeUnitAt(0) <= 0x39;
       if (isDigit) {
         sb.write(ch);
-      } else if ((ch == ',' || ch == '.') && !dec) {
+      } else if (!dec && decSep.isNotEmpty && ch == decSep) {
         if (sb.isEmpty) sb.write('0'); // «,5» → «0,5»
         sb.write(',');
         dec = true;
@@ -1204,6 +1223,9 @@ class _MoneyFieldState extends State<MoneyField> {
     return s.length;
   }
 
+  /// Re-formatea el texto del controlador (sea edición del usuario o
+  /// setText programático). El cursor se conserva en su posición lógica; en
+  /// cambios programáticos (sin selección válida) va al final.
   void _onCtrl() {
     if (_formatting) return;
     _formatting = true;
@@ -1211,7 +1233,7 @@ class _MoneyFieldState extends State<MoneyField> {
       final old = _ctrl.text;
       final selection = _ctrl.selection;
       final formatted = _format(_canon(old));
-      final keep = selection.isValid
+      final keep = selection.isValid && selection.baseOffset <= old.length
           ? _valueCharsBefore(old, selection.baseOffset)
           : _valueCharsBefore(old, old.length);
       _ctrl.value = TextEditingValue(
@@ -1219,10 +1241,15 @@ class _MoneyFieldState extends State<MoneyField> {
         selection: TextSelection.collapsed(
             offset: _offsetAfter(formatted, keep).clamp(0, formatted.length)),
       );
-      widget.onChanged?.call(parseLocaleNum(formatted) ?? 0);
     } finally {
       _formatting = false;
     }
+  }
+
+  /// Entrada del USUARIO (TextField.onChanged): re-formatea (ya lo hizo el
+  /// listener) y emite el número. Los setText externos NO pasan por aquí.
+  void _onUserInput(String _) {
+    widget.onChanged?.call(parseLocaleNum(_ctrl.text) ?? 0);
   }
 
   @override
@@ -1239,6 +1266,7 @@ class _MoneyFieldState extends State<MoneyField> {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
       ],
+      onChanged: _onUserInput,
       onSubmitted: widget.onSubmitted == null
           ? null
           : (v) => widget.onSubmitted!(v),
