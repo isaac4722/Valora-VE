@@ -416,7 +416,19 @@ class _ConverterScreenState extends State<ConverterScreen> {
                     decimals: smartDecimals(_amount, from));
               });
             },
-            onSwap: () => store.setConverterPair(to.code, from.code),
+            onSwap: () {
+              // BiSwap (v19.0 · orden del dueño): divisas Y cifras se
+              // intercambian — el resultado pasa a ser el monto, como en
+              // XE/Wise. Ya no es un «uni swap» que solo mueve banderas.
+              if (result > 0) {
+                setState(() {
+                  _amount = result;
+                  _amountCtrl.text = fmtNum(_amount,
+                      decimals: smartDecimals(_amount, to));
+                });
+              }
+              store.setConverterPair(to.code, from.code);
+            },
             onFrom: (c) => store.setConverterPair(c.code, to.code),
             onTo: (c) => store.setConverterPair(from.code, c.code),
             onPickSource: _pickSource,

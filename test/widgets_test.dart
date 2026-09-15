@@ -217,6 +217,9 @@ void main() {
       await tester.tap(find.byIcon(Icons.swap_vert));
       await tester.pumpAndSettle();
       expect(store.data.converter.from, isNot(fromBefore));
+      // BiSwap (v19.0): la cifra VIAJA — el resultado (1 USD × 40 = 40 Bs)
+      // pasa a ser el monto tras el swap («40,00» es-VE en el campo).
+      expect(find.text('40,00'), findsAtLeastNWidgets(1));
       // La ruta del cálculo quedó MÁS ABAJO (v17.2 añade fecha de tasas +
       // fuente encima): baja hasta ella antes de afirmar.
       await tester.dragUntilVisible(
