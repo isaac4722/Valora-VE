@@ -161,9 +161,18 @@ class AppStore extends ChangeNotifier {
     _persist();
   }
 
-  /// setConverterPair: par directo del conversor.
+  /// setConverterPair: par directo del conversor. v19 (orden del dueño): el
+  /// par SIEMPRE tiene divisas distintas — nunca «VES → VES». Si llega un
+  /// par igual (respaldo viejo o caller descuidado), el otro lado cae al
+  /// complemento canónico (USD, o VES si la divisa ES USD).
   void setConverterPair(String from, String to) {
-    _data = AppData.fromJson(_data.toJson()..['converter'] = ConverterState(from: from, to: to).toJson());
+    var f = from.toUpperCase();
+    var t = to.toUpperCase();
+    if (f == t) {
+      t = f == Currency.usd.code ? Currency.ves.code : Currency.usd.code;
+    }
+    _data = AppData.fromJson(
+        _data.toJson()..['converter'] = ConverterState(from: f, to: t).toJson());
     _persist();
   }
 
@@ -561,9 +570,14 @@ class AppStore extends ChangeNotifier {
     _persist();
   }
 
-  /// setBudget: 0 limpia.
+  /// setBudget (v19): 0 limpia el MONTO pero conserva la MONEDA elegida —
+  /// el bug del dueño («no deja seleccionar la moneda») nacía de que al no
+  /// haber monto la divisa se reseteaba a VES y el selector parecía no
+  /// responder. La moneda del presupuesto vive siempre en el modelo.
   void setBudget(double amount, String currency) {
-    final b = amount > 0 ? Budget(amount: amount, currency: currency) : const Budget();
+    final b = Budget(
+        amount: amount > 0 ? amount : 0,
+        currency: CurrencyX.from(currency).code);
     _data = AppData.fromJson(_data.toJson()..['budget'] = b.toJson());
     _persist();
   }

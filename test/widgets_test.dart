@@ -134,6 +134,46 @@ void main() {
       expect(value, 'b');
     });
 
+    testWidgets('MoneyField formatea miles en vivo (es-VE) y emite el número', (tester) async {
+      double? valor;
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: MoneyField(onChanged: (v) => valor = v, hintText: 'Monto'),
+        ),
+      ));
+      final field = find.byType(TextField);
+      // «1000» → «1.000»
+      await tester.enterText(field, '1000');
+      await tester.pump();
+      expect(find.text('1.000'), findsOneWidget);
+      expect(valor, 1000);
+      // «1000000» → «1.000.000»
+      await tester.enterText(field, '1000000');
+      await tester.pump();
+      expect(find.text('1.000.000'), findsOneWidget);
+      expect(valor, 1000000);
+      // Coma decimal: «1.000,5» (canon 1000,5)
+      await tester.enterText(field, '1000,5');
+      await tester.pump();
+      expect(find.text('1.000,5'), findsOneWidget);
+      expect(valor, 1000.5);
+      // Punto tecleado = decimal (hábito EN) → «3,5»
+      await tester.enterText(field, '3.5');
+      await tester.pump();
+      expect(find.text('3,5'), findsOneWidget);
+      expect(valor, 3.5);
+      // Coma inicial → «0,5»
+      await tester.enterText(field, ',5');
+      await tester.pump();
+      expect(find.text('0,5'), findsOneWidget);
+      expect(valor, 0.5);
+      // Vacío → 0, sin caracteres rarios.
+      await tester.enterText(field, '');
+      await tester.pump();
+      expect(valor, 0);
+    });
+
 
   });
 

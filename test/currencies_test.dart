@@ -220,10 +220,12 @@ void main() {
       expect(c.plan(Currency.usd, Currency.ves), isNull);
     });
 
-    test('from==to → rate 1', () {
+    test('from==to → NULL (v19: no existe X→X, no se ofrece 1 a 1)', () {
       final c = ctx(rates: {'ves-bcv': 40}, selected: {Currency.ves: 'ves-bcv'});
-      final p = c.plan(Currency.ves, Currency.ves)!;
-      expect(p.rate, 1);
+      expect(c.plan(Currency.ves, Currency.ves), isNull);
+      expect(c.plan(Currency.usd, Currency.usd), isNull);
+      // convert() sigue siendo honesto: mismo monto, misma moneda.
+      expect(c.convert(100, Currency.ves, Currency.ves), 100);
     });
 
     test('toUSD con rate<=0 → 0 (nunca divide por cero)', () {

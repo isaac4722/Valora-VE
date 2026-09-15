@@ -1065,6 +1065,193 @@ class CurrencySelect extends StatelessWidget {
   }
 }
 
+/// ─── Campo de monto con formato es-VE EN VIVO (v19, orden del dueño) ───────
+/// Mientras escribes, los miles se separan con puntos («1000» → «1.000», un
+/// millón → «1.000.000») y la COMA es el único separador decimal (punto
+/// tecleado se interpreta como decimal — hábito EN — y se normaliza a coma).
+/// El controlador queda SIEMPRE con el texto ya formateado, el cursor en su
+/// sitio lógico y [onChanged] entrega el número parseado. Un solo campo de
+/// monto para TODA la app: conversor, presupuesto, vuelto, precios, metas,
+/// sueldo y tasas manuales.
+class MoneyField extends StatefulWidget {
+  const MoneyField({
+    super.key,
+    this.controller,
+    this.initialText,
+    this.onChanged,
+    this.hintText,
+    this.labelText,
+    this.style,
+    this.textAlign = TextAlign.left,
+    this.focusNode,
+    this.autofocus = false,
+    this.enabled = true,
+    this.maxDecimals = 4,
+    this.decoration,
+    this.onSubmitted,
+    this.textInputAction,
+    this.suffix,
+  });
+
+  /// Controlador externo (opcional): si no se pasa, se crea uno interno.
+  final TextEditingController? controller;
+
+  /// Texto inicial (p. ej. el valor guardado) — SOLO se aplica al crear el
+  /// controlador interno o la primera vez que se monta.
+  final String? initialText;
+  final ValueChanged<double>? onChanged;
+  final String? hintText;
+  final String? labelText;
+  final TextStyle? style;
+  final TextAlign textAlign;
+  final FocusNode? focusNode;
+  final bool autofocus;
+  final bool enabled;
+  final int maxDecimals;
+  final InputDecoration? decoration;
+  final ValueChanged<String>? onSubmitted;
+  final TextInputAction? textInputAction;
+  final Widget? suffix;
+
+  @override
+  State<MoneyField> createState() => _MoneyFieldState();
+}
+
+class _MoneyFieldState extends State<MoneyField> {
+  TextEditingController? _own;
+  TextEditingController get _ctrl =>
+      widget.controller ?? (_own ??= TextEditingController());
+
+  /// Guard anti-recursión: el re-formateo dispara el listener del propio
+  /// controlador; sin esto el cursor baila.
+  bool _formatting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.controller == null) {
+      _own = TextEditingController(text: _format(_canon(widget.initialText ?? '')));
+    }
+    _ctrl.addListener(_onCtrl);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.removeListener(_onCtrl);
+    _own?.dispose();
+    super.dispose();
+  }
+
+  /// Canon del texto: SOLO dígitos y UNA coma decimal (la primera coma o
+  /// punto gana; el resto se descarta). Los puntos de miles tecleados a
+  /// mano se tratan como decimal (ver doc del widget).
+  String _canon(String raw) {
+    final sb = StringBuffer();
+    var dec = false;
+    for (final ch in raw.split('')) {
+      final isDigit = ch.codeUnitAt(0) >= 0x30 && ch.codeUnitAt(0) <= 0x39;
+      if (isDigit) {
+        sb.write(ch);
+      } else if ((ch == ',' || ch == '.') && !dec) {
+        if (sb.isEmpty) sb.write('0'); // «,5» → «0,5»
+        sb.write(',');
+        dec = true;
+      }
+    }
+    var canon = sb.toString();
+    final comma = canon.indexOf(',');
+    if (comma >= 0 && canon.length - comma - 1 > widget.maxDecimals) {
+      canon = canon.substring(0, comma + 1 + widget.maxDecimals);
+    }
+    return canon;
+  }
+
+  /// Canon → texto con puntos de miles: «1234567,5» → «1.234.567,5».
+  String _format(String canon) {
+    final parts = canon.split(',');
+    final digits = parts[0].replaceAll(RegExp(r'^0+(?=[0-9])'), '');
+    final sb = StringBuffer();
+    for (var i = 0; i < digits.length; i++) {
+      sb.write(digits[i]);
+      final rest = digits.length - 1 - i;
+      if (rest > 0 && rest % 3 == 0) sb.write('.');
+    }
+    var out = sb.toString();
+    if (parts.length > 1) out = '$out,${parts[1]}';
+    return out;
+  }
+
+  /// Caracteres con valor (dígitos + coma) antes del offset — para restaurar
+  /// el cursor en su posición lógica tras el re-formateo.
+  static int _valueCharsBefore(String s, int offset) {
+    var n = 0;
+    for (var i = 0; i < offset && i < s.length; i++) {
+      final c = s[i];
+      final isDigit = c.codeUnitAt(0) >= 0x30 && c.codeUnitAt(0) <= 0x39;
+      if (isDigit || c == ',') n++;
+    }
+    return n;
+  }
+
+  static int _offsetAfter(String s, int valueChars) {
+    var n = 0;
+    for (var i = 0; i < s.length; i++) {
+      if (n >= valueChars) return i;
+      final c = s[i];
+      final isDigit = c.codeUnitAt(0) >= 0x30 && c.codeUnitAt(0) <= 0x39;
+      if (isDigit || c == ',') n++;
+    }
+    return s.length;
+  }
+
+  void _onCtrl() {
+    if (_formatting) return;
+    _formatting = true;
+    try {
+      final old = _ctrl.text;
+      final selection = _ctrl.selection;
+      final formatted = _format(_canon(old));
+      final keep = selection.isValid
+          ? _valueCharsBefore(old, selection.baseOffset)
+          : _valueCharsBefore(old, old.length);
+      _ctrl.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(
+            offset: _offsetAfter(formatted, keep).clamp(0, formatted.length)),
+      );
+      widget.onChanged?.call(parseLocaleNum(formatted) ?? 0);
+    } finally {
+      _formatting = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _ctrl,
+      focusNode: widget.focusNode,
+      autofocus: widget.autofocus,
+      enabled: widget.enabled,
+      textAlign: widget.textAlign,
+      style: widget.style,
+      textInputAction: widget.textInputAction,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+      ],
+      onSubmitted: widget.onSubmitted == null
+          ? null
+          : (v) => widget.onSubmitted!(v),
+      decoration: widget.decoration ??
+          InputDecoration(
+            hintText: widget.hintText,
+            labelText: widget.labelText,
+            suffix: widget.suffix,
+          ),
+    );
+  }
+}
+
 /// Banner de salud de tasas (§9 ui-bits). Dos causas, dos copys:
 /// · SIN RED (v17.8, señal viva de connectivity_plus): calmado — las
 ///   tasas guardadas siguen siendo la verdad y la red vuelve sola.

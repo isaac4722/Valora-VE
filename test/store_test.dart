@@ -195,11 +195,36 @@ void main() {
       expect(store.cart.first.quantity, 2);
     });
 
-    test('setBudget 0 limpia', () {
+    test('setBudget 0 limpia el monto pero CONSERVA la moneda (v19)', () {
       store.setBudget(100, 'VES');
       expect(store.data.budget.amount, 100);
       store.setBudget(0, 'VES');
       expect(store.data.budget.amount, 0);
+      // Bug del dueño: cambiar la moneda sin monto la reseteaba a VES.
+      store.setBudget(0, 'EUR');
+      expect(store.data.budget.currency, 'EUR');
+      expect(store.data.budget.amount, 0);
+      store.setBudget(250, 'EUR');
+      expect(store.data.budget.currency, 'EUR');
+      expect(store.data.budget.amount, 250);
+    });
+
+    test('setConverterPair JAMÁS acepta divisas iguales (v19)', () {
+      store.setConverterPair('USD', 'VES');
+      expect(store.data.converter.from, 'USD');
+      expect(store.data.converter.to, 'VES');
+      // Par igual entrante → el otro lado se despeja (USD complemento).
+      store.setConverterPair('VES', 'VES');
+      expect(store.data.converter.from, 'VES');
+      expect(store.data.converter.to, 'USD');
+      expect(store.data.converter.from != store.data.converter.to, isTrue);
+      // USD→USD → cae a VES.
+      store.setConverterPair('USD', 'USD');
+      expect(store.data.converter.to, 'VES');
+      // Casos normales intactos.
+      store.setConverterPair('EUR', 'COP');
+      expect(store.data.converter.from, 'EUR');
+      expect(store.data.converter.to, 'COP');
     });
 
     test('updateBasketItem <=0 elimina', () {

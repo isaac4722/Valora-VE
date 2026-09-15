@@ -367,10 +367,10 @@ class RateContext {
   /// VISIBLE con su ruta COMPLETA de 4 tramos (EUR → local → USD → destino)
   /// · vía dólar (puente invisible para no-EUR).
   ConversionPlan? plan(Currency from, Currency to) {
-    if (from == to) {
-      return ConversionPlan(
-          rate: 1, path: [from], sourceIds: const <String>[], direct: true);
-    }
+    // v19 (orden del dueño): un par IGUAL no es una conversión — 100 Bs son
+    // 100 Bs; la app jamás ofrece «VES → VES». Se devuelve null y la UI
+    // garantiza pares distintos (setConverterPair + selects con swap).
+    if (from == to) return null;
     // 1) Arista directa definida por la fuente seleccionada de from/to.
     for (final c in [from, to]) {
       final def = RateSource.of(sel(c));
