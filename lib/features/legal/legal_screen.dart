@@ -70,7 +70,7 @@ class LegalScreen extends StatelessWidget {
                   'empaquetadas localmente para que la primera ejecución sin red '
                   'tipografíe igual. Plugins oficiales de pub.dev con su licencia '
                   'BSD/MIT correspondiente (Flutter, provider, hive, dio, '
-                  'socket_io_client, flutter_local_notifications, syncfusion '
+                  'flutter_local_notifications, syncfusion '
                   'community license, entre otros).',
                   style: TextStyle(fontSize: 13, height: 1.55, color: scheme.onSurfaceVariant),
                 ),

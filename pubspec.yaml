@@ -29,7 +29,6 @@ dependencies:
   # ── Red ──────────────────────────────────────────────────────────────────
   dio: ^5.7.0                       # tablero de tasas + SSE propio (§trap 1)
   connectivity_plus: ^7.3.1         # offline REAL (v17.8): saber cuándo NO hay red
-  socket_io_client: 2.0.3+1         # sala lista-sync (transporte Servidor)
 
   # ── Plataforma Android ───────────────────────────────────────────────────
   flutter_local_notifications: ^17.2.4   # 5 canales locales (sin FCM)

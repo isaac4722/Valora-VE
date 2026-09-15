@@ -19,7 +19,7 @@ import 'package:valorave/features/lista/lista_screen.dart';
 import 'package:valorave/features/products/products_screen.dart';
 import 'package:valorave/features/shell/main_shell.dart';
 import 'package:valorave/features/shell/notifs_center.dart';
-import 'package:valorave/room/room_transport.dart';
+import 'package:valorave/room/room_controller.dart';
 import 'package:valorave/widgets/app_router.dart';
 import 'package:valorave/widgets/app_tour.dart';
 import 'package:valorave/features/welcome/welcome_screen.dart';

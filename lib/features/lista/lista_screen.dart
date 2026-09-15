@@ -20,7 +20,7 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../core/version.dart';
 import '../../data/store.dart';
-import '../../room/room_transport.dart';
+import '../../room/room_controller.dart';
 import '../../services/quick_actions.dart' show scanRequest;
 import '../../services/sharing.dart';
 import '../../widgets/app_tour.dart' show TourKeys;

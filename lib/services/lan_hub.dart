@@ -47,7 +47,7 @@ class LanHubImpl {
   String _roomCode = '';
   String _myName = 'Comprador';
   String _roomName = '';
-  String _emoji = '';
+  final String _emoji = '';
   bool _roomPublic = true;
   String? _hostIp;
 
@@ -98,30 +98,42 @@ class LanHubImpl {
     return out.toList();
   }
 
-  /// Conecta como anfitrión (roomCode vacío) o invitado por código. El
-  /// invitado descubre al anfitrión por broadcast/sondas; para entrar directo
-  /// usa [connectToHost].
-  Future<void> connect({
+  /// v19.0 · rol EXPLÍCITO: el anfitrión llama [startHost] (anuncia su
+  /// código real) y el invitado [dial] — el rol YA NO se infiere de si el
+  /// código está vacío (ese seam ambiguo era el bug del «crear sala» que
+  /// nunca creaba: el host pasaba su código generado y el hub lo arrancaba
+  /// como descubridor).
+  Future<void> startHost({
     required String roomCode,
     required String myName,
     String roomName = '',
-    String emoji = '',
     bool isPublic = true,
   }) async {
     _myName = myName;
     _roomCode = roomCode;
     _roomName = roomName;
-    _emoji = emoji;
     _roomPublic = isPublic;
-    _isHost = roomCode.isEmpty;
+    _isHost = true;
     _setStatus(RoomStatus.connecting);
     try {
-      if (_isHost) {
-        await _startHost();
-      } else {
-        await _startGuestDiscovery();
-        _startProbes(_kWhoRoom);
-      }
+      await _startHost();
+    } catch (_) {
+      _setStatus(RoomStatus.error);
+    }
+  }
+
+  /// Invitado: descubre al anfitrión por código (broadcast + sondas WHO).
+  Future<void> dial({
+    required String roomCode,
+    required String myName,
+  }) async {
+    _myName = myName;
+    _roomCode = roomCode;
+    _isHost = false;
+    _setStatus(RoomStatus.connecting);
+    try {
+      await _startGuestDiscovery();
+      _startProbes(_kWhoRoom);
     } catch (_) {
       _setStatus(RoomStatus.error);
     }

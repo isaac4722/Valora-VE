@@ -1,9 +1,8 @@
-/// ─── Sala Viva · la sala EN VIVO tiene pantalla propia (v18.0) ─────────────
-/// Distinta de la configuración (/sala): aquí se VIVE la sala — código + QR
-/// para invitar, miembros con sus roles (anfitrión arriba, «(tú)» marcado),
-/// salir/cerrar/renombrar/editar roles (solo el anfitrión) y regreso
-/// automático a la Lista si la conexión se corta. Al finalizar la compra, el
-/// anfitrión cierra la sala y todos vuelven solos.
+/// ─── Sala Viva (v19.0 · reescrita sobre el protocolo hello/welcome) ─────────
+/// La sala EN VIVO: código + QR para invitar, miembros con roles, gobierno
+/// del anfitrión (renombrar, expulsar, roles, cerrar) y salida limpia. Sin
+/// PIN: el código de 6 letras ES el secreto (reescritura v19.0). Si la
+/// conexión se cae, vuelve sola a la Lista — nunca un limbo.
 library;
 
 import 'package:flutter/material.dart';
@@ -13,10 +12,10 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/theme.dart';
+import '../../room/room_controller.dart';
 import '../../room/room_transport.dart';
 import '../../widgets/ui.dart';
 
-/// Ruta de la Sala Viva (push desde la Lista o la configuración de sala).
 const String kSalaVivaRoute = '/sala-viva';
 
 class SalaVivaScreen extends StatefulWidget {
@@ -27,248 +26,245 @@ class SalaVivaScreen extends StatefulWidget {
 }
 
 class _SalaVivaScreenState extends State<SalaVivaScreen> {
-  RoomController? _ctrl;
-  bool _listening = false;
+  RoomController? _watched;
 
-  @override
-  void dispose() {
-    _ctrl?.removeListener(_onRoomChanged);
-    super.dispose();
-  }
-
-  /// Regreso automático: sin sala no hay nada que ver aquí — a la Lista.
   void _onRoomChanged() {
-    final ctrl = _ctrl;
-    if (ctrl == null || !mounted) return;
-    if (!ctrl.connected && ctrl.status != RoomStatus.connecting) {
+    if (!mounted) return;
+    final room = _watched;
+    if (room == null) return;
+    if (!room.connected && room.status != RoomStatus.connecting) {
+      // La conexión cayó: vuelve a la Lista — nunca un limbo.
       context.go('/lista');
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final ctrl = _ctrl ??= context.read<RoomController>();
-    if (!_listening) {
-      _listening = true;
-      ctrl.addListener(_onRoomChanged);
+  void initState() {
+    super.initState();
+    final room = context.read<RoomController>();
+    if (!room.connected && room.status != RoomStatus.connecting) {
+      // Sin sala: nada que ver aquí.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/lista');
+      });
+      return;
     }
-    final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
-    final members = ctrl.visibleMembers;
-
-    return Scaffold(
-      backgroundColor: scheme.surfaceContainerLowest,
-      body: ListenableBuilder(
-        listenable: ctrl,
-        builder: (context, _) {
-          final title = ctrl.roomName.isNotEmpty
-              ? ctrl.roomName
-              : (ctrl.code.isNotEmpty ? 'Sala ${ctrl.code}' : 'Sala en vivo');
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              PageHeader(title, hint: 'En vivo · ${ctrl.modeLabel}'),
-              if (ctrl.lastError != null) _ErrorBanner(msg: ctrl.lastError!),
-              if (!ctrl.connected) ...[
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(children: [
-                      const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          ctrl.status == RoomStatus.connecting
-                              ? 'Conectando…'
-                              : 'La sala se desconectó. Volviendo a tu lista…',
-                          style: TextStyle(
-                              fontSize: 13, color: scheme.onSurfaceVariant),
-                        ),
-                      ),
-                    ]),
-                  ),
-                ),
-              ] else ...[
-                _CodigoQrCard(ctrl: ctrl),
-                const SizedBox(height: 10),
-                if (ctrl.isViewer)
-                  Card(
-                    color: sem.warn.withValues(alpha: 0.08),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(children: [
-                        Icon(Icons.visibility_outlined,
-                            size: 18, color: sem.warn),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Eres OBSERVADOR: puedes ver la lista en vivo, '
-                            'pero no modificarla. El anfitrión decide quién edita.',
-                            style: TextStyle(
-                                fontSize: 12.5,
-                                height: 1.45,
-                                fontWeight: FontWeight.w600,
-                                color: sem.warn),
-                          ),
-                        ),
-                      ]),
-                    ),
-                  ),
-                _MiembrosCard(ctrl: ctrl, members: members),
-                const SizedBox(height: 12),
-                if (ctrl.canAdmin) ...[
-                  Row(children: [
-                    Expanded(
-                      child: FilledButton.tonalIcon(
-                        onPressed: _renameDialog,
-                        icon: const Icon(Icons.drive_file_rename_outline,
-                            size: 18),
-                        label: const Text('Renombrar'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: FilledButton.tonalIcon(
-                        onPressed: _closeDialog,
-                        icon: const Icon(Icons.lock_outline, size: 18),
-                        label: const Text('Cerrar sala'),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 8),
-                ],
-                Row(children: [
-                  Expanded(
-                    child: FilledButton.tonal(
-                      onPressed: ctrl.sendTyping,
-                      child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.edit_note_rounded, size: 18),
-                            SizedBox(width: 6),
-                            Text('Avisar que escribo'),
-                          ]),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                        backgroundColor: sem.neg.withValues(alpha: 0.14),
-                        foregroundColor: sem.neg),
-                    onPressed: () async {
-                      final ok = await _confirmLeave(context);
-                      if (ok == true) await ctrl.leave();
-                    },
-                    child: const Text('Salir'),
-                  ),
-                ]),
-                const SizedBox(height: 10),
-                Text(
-                  'La lista se sincroniza sola entre los miembros. Si se corta '
-                  'la conexión, tus cambios quedan en el outbox y salen al '
-                  'reconectar. Al finalizar la compra, el anfitrión cierra la '
-                  'sala y todos vuelven a su lista.',
-                  style: TextStyle(
-                      fontSize: 11.5,
-                      height: 1.5,
-                      color: scheme.onSurfaceVariant),
-                ),
-              ],
-            ],
-          );
-        },
-      ),
-    );
+    // La conexión puede caerse mientras estamos dentro.
+    _watched = room;
+    room.addListener(_onRoomChanged);
   }
 
-  // ── Diálogos ──────────────────────────────────────────────────────────────
+  @override
+  void dispose() {
+    _watched?.removeListener(_onRoomChanged);
+    super.dispose();
+  }
 
-  Future<bool?> _confirmLeave(BuildContext context) async {
-    final ctrl = _ctrl!;
-    return showDialog<bool>(
+  Future<void> _confirmLeave() async {
+    final room = context.read<RoomController>();
+    final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(ctrl.isHost ? '¿Cerrar tu sala?' : '¿Salir de la sala?'),
-        content: Text(ctrl.isHost
-            ? 'Si solo sales, la sala sigue viva para los demás. Usa '
-                '«Cerrar sala» para terminarla para todos.'
-            : 'Dejas de recibir los cambios en vivo. Puedes volver a entrar '
-                'con el código.'),
+      builder: (_) => AlertDialog(
+        title: Text(room.isHost ? '¿Cerrar tu sala?' : '¿Salir de la sala?'),
+        content: Text(room.isHost
+            ? 'Al cerrar, todos los invitados vuelven a su lista con lo '
+                'último sincronizado.'
+            : 'El anfitrión y el resto siguen en la sala.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Quedarme')),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Quedarme'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Salir')),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(room.isHost ? 'Cerrar sala' : 'Salir'),
+          ),
         ],
       ),
     );
+    if (ok == true && mounted) {
+      await room.leave();
+      if (mounted) context.go('/lista');
+    }
   }
 
   Future<void> _renameDialog() async {
-    final ctrl = _ctrl!;
-    final c = TextEditingController(text: ctrl.roomName);
+    final room = context.read<RoomController>();
+    final c = TextEditingController(text: room.roomName);
     final name = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Renombrar la sala'),
+      builder: (_) => AlertDialog(
+        title: const Text('Renombrar sala'),
         content: TextField(
           controller: c,
-          autofocus: true,
           maxLength: 32,
-          decoration:
-              const InputDecoration(labelText: 'Nombre', isDense: true),
+          autofocus: true,
+          decoration: const InputDecoration(
+              hintText: 'Nombre de la sala', counterText: ''),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+              onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, c.text),
-              child: const Text('Renombrar')),
+              onPressed: () => Navigator.of(context).pop(c.text),
+              child: const Text('Guardar')),
         ],
       ),
     );
     if (name != null && name.trim().isNotEmpty) {
-      await ctrl.renameRoom(name);
+      await room.renameRoom(name);
     }
-    c.dispose();
   }
 
-  Future<void> _closeDialog() async {
-    final ctrl = _ctrl!;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('¿Cerrar la sala?'),
-        content: const Text(
-            'Todos los miembros salen de la sala y vuelven a su lista. La '
-            'lista sincronizada deja de actualizarse.'),
+  @override
+  Widget build(BuildContext context) {
+    final room = context.watch<RoomController>();
+    final members = room.visibleMembers;
+    final title = room.roomName.isNotEmpty
+        ? room.roomName
+        : (room.code.isNotEmpty ? 'Sala ${room.code}' : 'Sala en vivo');
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+      appBar: AppBar(
+        title: Text(title),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Cerrar sala')),
+          IconButton(
+            tooltip: 'Salir de la sala',
+            icon: const Icon(Icons.logout),
+            onPressed: _confirmLeave,
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          PageHeader(title, hint: 'En vivo · ${room.modeLabel}'),
+          if (room.lastError != null) _ErrorBanner(msg: room.lastError!),
+          if (!room.connected) ...[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(children: [
+                  const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2)),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                      child: Text('Conectando con la sala…',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600))),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (room.isViewer)
+            _ViewerNotice(card: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(children: [
+                  Icon(Icons.visibility_outlined,
+                      size: 16, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                        'Eres observador: ves la lista en vivo, pero no la tocas.',
+                        style: TextStyle(fontSize: 12)),
+                  ),
+                ]),
+              ),
+            )),
+          if (room.canAdmin) _AdminBar(onRename: _renameDialog, onClose: _confirmLeave),
+          _CodigoQrCard(room: room),
+          _MiembrosCard(room: room, members: members),
         ],
       ),
     );
-    if (ok == true) {
-      await ctrl.closeRoom();
-      if (mounted) context.go('/lista');
-    }
   }
 }
 
-// ─── Código + QR + PIN ──────────────────────────────────────────────────────
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.msg});
 
+  final String msg;
+
+  @override
+  Widget build(BuildContext context) {
+    final sem = VeColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: sem.neg.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: sem.neg.withValues(alpha: 0.35)),
+        ),
+        child: Row(children: [
+          Icon(Icons.error_outline, size: 16, color: sem.neg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(msg,
+                style: TextStyle(
+                    fontSize: 12.5, fontWeight: FontWeight.w600, color: sem.neg)),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _ViewerNotice extends StatelessWidget {
+  const _ViewerNotice({required this.card});
+
+  final Widget card;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: card,
+      );
+}
+
+/// Barra de gobierno del anfitrión: renombrar y cerrar.
+class _AdminBar extends StatelessWidget {
+  const _AdminBar({required this.onRename, required this.onClose});
+
+  final VoidCallback onRename;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onRename,
+            icon: const Icon(Icons.edit, size: 15),
+            label: const Text('Renombrar', style: TextStyle(fontSize: 12.5)),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: FilledButton.tonalIcon(
+            onPressed: onClose,
+            icon: const Icon(Icons.close, size: 15),
+            label: const Text('Cerrar sala', style: TextStyle(fontSize: 12.5)),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Código + QR + modo: lo que se comparte para invitar.
 class _CodigoQrCard extends StatelessWidget {
-  const _CodigoQrCard({required this.ctrl});
-  final RoomController ctrl;
+  const _CodigoQrCard({required this.room});
+
+  final RoomController room;
 
   @override
   Widget build(BuildContext context) {
@@ -279,225 +275,207 @@ class _CodigoQrCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(children: [
           Row(children: [
-            Stamp(ctrl.modeLabel, color: sem.pos),
-            if (ctrl.roomName.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Flexible(
-                  child: Text(ctrl.roomName,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 13.5, fontWeight: FontWeight.w800))),
-            ],
-            const Spacer(),
-            Stamp(ctrl.isPublic ? 'pública' : 'privada'),
-          ]),
-          const SizedBox(height: 14),
-          Row(children: [
-            Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('CÓDIGO DE LA SALA',
-                        style: VeText.labelCaps(
-                            9.5, color: scheme.onSurfaceVariant)),
-                    const SizedBox(height: 4),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                          ctrl.code.isEmpty ? '—' : ctrl.code,
-                          style: VeText.displayNum(38,
-                              color: scheme.onSurface,
-                              weight: FontWeight.w700)),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(children: [
-                      TextButton.icon(
-                        onPressed: () {
-                          Clipboard.setData(
-                              ClipboardData(text: ctrl.code));
-                          showToast(context, 'Código copiado',
-                              kind: ToastKind.ok);
-                        },
-                        icon: const Icon(Icons.copy_rounded, size: 16),
-                        label: const Text('Copiar'),
-                      ),
-                      if (ctrl.isHost && ctrl.emoji.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: Text('PIN ${ctrl.pin} · ${ctrl.emoji}',
-                              style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: scheme.onSurfaceVariant)),
-                        ),
-                    ]),
-                  ]),
-            ),
-            const SizedBox(width: 12),
-            if (ctrl.code.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: scheme.outlineVariant)),
-                child: QrImageView(
-                  data: 'valorave-sala:${ctrl.code}',
-                  size: 104,
-                  backgroundColor: Colors.white,
-                ),
+            Stamp(room.modeLabel, color: sem.pos),
+            const SizedBox(width: 6),
+            if (room.roomName.isNotEmpty)
+              Expanded(
+                child: Text(room.roomName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700)),
               ),
+            Stamp(room.isPublic ? 'pública' : 'privada'),
           ]),
-          if (ctrl.isHost)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Row(children: [
-                const Icon(Icons.dns_rounded, size: 15),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    ctrl.lanAddress.isNotEmpty
-                        ? 'Este teléfono es el servidor: ${ctrl.lanAddress}'
-                        : 'Eres el anfitrión. Los invitados entran con el '
-                            'código y verifican PIN + emoji.',
-                    style: TextStyle(
-                        fontSize: 11.5, color: scheme.onSurfaceVariant),
-                  ),
-                ),
-              ]),
+          const SizedBox(height: 12),
+          Text('CÓDIGO DE LA SALA',
+              style: VeText.labelCaps(10.5, color: scheme.primary)),
+          const SizedBox(height: 6),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: room.code));
+              showToast(context, 'Código copiado', kind: ToastKind.ok);
+            },
+            child: Text(
+              room.code.isEmpty ? '—' : room.code,
+              style: VeText.displayNum(38, color: scheme.onSurface),
             ),
+          ),
+          Text('toca para copiar',
+              style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 12),
+          if (room.code.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: QrImageView(
+                data: 'valorave-sala:${room.code}',
+                version: QrVersions.auto,
+                size: 170,
+                backgroundColor: Colors.transparent,
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            'Comparte el código o el QR — quien lo tenga entra con la '
+            'tecnología ${room.modeLabel}.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+          ),
+          if (room.isHost && room.lanAddress.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Este teléfono es la sala: ${room.lanAddress}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 11, color: scheme.primary, fontWeight: FontWeight.w600),
+            ),
+          ],
         ]),
       ),
     );
   }
 }
 
-// ─── Miembros + roles ───────────────────────────────────────────────────────
-
+/// Miembros con roles; el anfitrión administra (expulsar · editor/observador).
 class _MiembrosCard extends StatelessWidget {
-  const _MiembrosCard({required this.ctrl, required this.members});
-  final RoomController ctrl;
-  final List<RoomMember> members;
+  const _MiembrosCard({required this.room, required this.members});
 
-  static const _roleLabels = <String, String>{
-    'host': 'ANFITRIÓN',
-    'editor': 'EDITOR',
-    'viewer': 'OBSERVADOR',
-  };
+  final RoomController room;
+  final List<RoomMember> members;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
-    return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionTitle('Miembros (${members.length})'),
-          Card(
-            child: Column(children: [
-              for (final m in members)
-                ListTile(
-                  dense: true,
-                  leading: Icon(
-                    m.online
-                        ? Icons.person_rounded
-                        : Icons.person_off_rounded,
-                    size: 20,
-                    color: m.online ? sem.pos : scheme.onSurfaceVariant,
-                  ),
-                  title: Text(
-                    m.id == ctrl.myId || (m.id == 'host' && ctrl.isHost)
-                        ? '${m.name} (tú)'
-                        : m.name,
-                    style: const TextStyle(
-                        fontSize: 13.5, fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    _roleLabels[m.role] ?? 'EDITOR',
-                    style: VeText.labelCaps(
-                        8.5, color: scheme.onSurfaceVariant),
-                  ),
-                  trailing: _trailing(context, m),
-                ),
-            ]),
-          ),
-        ]);
-  }
-
-  /// Acciones por miembro (solo anfitrión, nunca sobre sí mismo).
-  Widget? _trailing(BuildContext context, RoomMember m) {
-    if (m.typing) {
-      return Text('escribiendo…',
-          style: TextStyle(
-              fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant));
-    }
-    if (!ctrl.canAdmin || m.id == 'host' || m.id == ctrl.myId) return null;
-    return IconButton(
-      icon: const Icon(Icons.more_vert_rounded, size: 20),
-      onPressed: () => _memberMenu(context, m),
-    );
-  }
-
-  Future<void> _memberMenu(BuildContext context, RoomMember m) async {
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-            child: Text(m.name,
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w800)),
-          ),
-          ListTile(
-            leading: Icon(m.role == 'viewer'
-                ? Icons.edit_outlined
-                : Icons.visibility_outlined),
-            title: Text(m.role == 'viewer'
-                ? 'Permitir editar la lista'
-                : 'Convertir en observador'),
-            subtitle: Text(m.role == 'viewer'
-                ? 'Podrá agregar y tachar ítems'
-                : 'Solo verá la lista, sin editar'),
-            onTap: () => Navigator.pop(ctx, 'role'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.person_remove_outlined),
-            title: const Text('Expulsar de la sala'),
-            onTap: () => Navigator.pop(ctx, 'kick'),
-          ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(
+              child: Text('MIEMBROS (${members.length})',
+                  style: VeText.labelCaps(10.5, color: scheme.primary)),
+            ),
+            if (room.connected)
+              IconButton(
+                tooltip: 'Avisar que estás escribiendo',
+                icon: Icon(Icons.keyboard, size: 17, color: scheme.primary),
+                onPressed: room.sendTyping,
+              ),
+          ]),
+          for (final m in members)
+            _MemberTile(
+              room: room,
+              m: m,
+              isMe: m.id == room.myId || (m.id == 'host' && room.isHost),
+            ),
         ]),
       ),
     );
-    if (action == 'role') {
-      await ctrl.setMemberRole(m.id, m.role == 'viewer' ? 'editor' : 'viewer');
-    } else if (action == 'kick') {
-      await ctrl.kickMember(m.id);
-    }
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.msg});
-  final String msg;
+class _MemberTile extends StatelessWidget {
+  const _MemberTile({required this.room, required this.m, required this.isMe});
+
+  final RoomController room;
+  final RoomMember m;
+  final bool isMe;
 
   @override
   Widget build(BuildContext context) {
-    final sem = VeColors.of(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      color: sem.neg.withValues(alpha: 0.08),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(children: [
-          Icon(Icons.error_outline, size: 18, color: sem.neg),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Text(msg,
-                  style: TextStyle(fontSize: 12.5, color: sem.neg))),
-        ]),
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    final isHostRow = m.id == 'host';
+    final canManage =
+        room.canAdmin && !isHostRow && m.id != room.myId;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        CircleAvatar(
+          radius: 14,
+          backgroundColor: scheme.primary.withValues(alpha: 0.10),
+          child: Text(
+            m.name.isEmpty ? '?' : m.name.characters.first.toUpperCase(),
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w800, color: scheme.primary),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Flexible(
+                child: Text(
+                  isMe ? '${m.name} (tú)' : m.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface),
+                ),
+              ),
+              if (m.typing) ...[
+                const SizedBox(width: 6),
+                Text('escribe…',
+                    style: TextStyle(
+                        fontSize: 10.5,
+                        fontStyle: FontStyle.italic,
+                        color: scheme.onSurfaceVariant)),
+              ],
+            ]),
+            Text(
+              isHostRow ? 'Anfitrión' : (m.role == 'viewer' ? 'Observador' : 'Editor'),
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+            ),
+          ]),
+        ),
+        if (canManage)
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert, size: 17, color: scheme.onSurfaceVariant),
+            onSelected: (v) async {
+              if (v == 'role') {
+                await room.setMemberRole(
+                    m.id, m.role == 'viewer' ? 'editor' : 'viewer');
+              } else if (v == 'kick') {
+                final ok = await showDialog<bool>(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: Text('¿Sacar a ${m.name}?'),
+                    content: const Text(
+                        'Solo sale esta persona; el resto de la sala sigue.'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Cancelar')),
+                      FilledButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('Sacar')),
+                    ],
+                  ),
+                );
+                if (ok == true) await room.kickMember(m.id);
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'role',
+                child: Text(m.role == 'viewer'
+                    ? 'Hacer editor'
+                    : 'Hacer observador'),
+              ),
+              const PopupMenuItem(
+                value: 'kick',
+                child: Text('Sacar de la sala'),
+              ),
+            ],
+          ),
+      ]),
     );
   }
 }

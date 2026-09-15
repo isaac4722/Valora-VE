@@ -30,7 +30,7 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
-import '../../room/room_transport.dart';
+import '../../room/room_controller.dart';
 import '../../services/alerts.dart';
 import '../../services/notifications.dart';
 import '../../services/photo_compress.dart';

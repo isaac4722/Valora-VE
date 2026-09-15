@@ -17,7 +17,7 @@ import '../data/board.dart';
 import '../data/rate_history.dart';
 import '../data/sse_stream.dart';
 import '../data/store.dart';
-import '../room/room_transport.dart';
+import '../room/room_controller.dart';
 import '../services/alerts.dart';
 import '../services/connectivity.dart';
 import '../services/widget_service.dart';
