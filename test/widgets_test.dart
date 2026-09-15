@@ -334,6 +334,19 @@ void main() {
       expect(store.products.length, 21);
       // filtro por categoría (datos)
       expect(store.products.where((p) => p.category == ProductCategory.bebidas).length, 4);
+      // v19: la ficha abre con las secciones en Cards y el precio usa
+      // MoneyField (formato de miles en vivo).
+      await tester.tap(find.text(store.products.first.name));
+      await tester.pumpAndSettle(const Duration(milliseconds: 200));
+      expect(find.text('ACTUALIZAR PRECIO'), findsOneWidget);
+      expect(find.byType(MoneyField), findsAtLeastNWidgets(1));
+      // Ajustes vive al final de la ficha: scroll hasta la sección.
+      await tester.scrollUntilVisible(
+        find.text('AJUSTES DEL PRODUCTO'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('AJUSTES DEL PRODUCTO'), findsOneWidget);
     });
 
     testWidgets('Análisis: Gastos alimentado por compras de Lista', (tester) async {
