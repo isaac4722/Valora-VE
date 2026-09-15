@@ -25,6 +25,7 @@ import '../../services/quick_actions.dart' show scanRequest;
 import '../../services/sharing.dart';
 import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
+import '../../widgets/rate_sheet.dart';
 import '../../widgets/ui.dart';
 import 'checkout_modal.dart';
 import 'item_editor.dart';
@@ -521,10 +522,11 @@ class _ListaScreenState extends State<ListaScreen> {
 }
 
 /// Selector de FUENTE de tasa dependiente de la moneda de cálculo (requisito
-/// A): opciones = RateSource.sourcesFor(moneda); valor = fuente del módulo
-/// Lista (RateModule.calculator — el override por módulo §9.3; sin override
-/// cae a la global, cuyo default es la oficial). Cambia con
-/// setModuleRateSource para no alterar el Conversor ni las fichas de producto.
+/// A): v19 — la hoja visual de toda la app (RateTile con bandera, precio y
+/// categoría; la Manual con editor inline). Valor = fuente del módulo Lista
+/// (RateModule.calculator — el override por módulo §9.3; sin override cae a
+/// la global, cuyo default es la oficial). Cambia con setModuleRateSource
+/// para no alterar el Conversor ni las fichas de producto.
 class _FuenteChip extends StatelessWidget {
   const _FuenteChip({required this.store, required this.currency});
 
@@ -536,30 +538,18 @@ class _FuenteChip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final currentId = store.sourceFor(currency, module: RateModule.calculator);
     final current = RateSource.of(currentId);
-    final sources = RateSource.sourcesFor(currency);
-    return PopupMenuButton<String>(
-      initialValue: currentId,
-      onSelected: (id) =>
-          store.setModuleRateSource(RateModule.calculator, currency, id),
-      tooltip: 'Fuente de la tasa del módulo Lista',
-      itemBuilder: (_) => [
-        for (final s in sources)
-          PopupMenuItem(
-            value: s.id,
-            child: Row(children: [
-              SourceDot(s.category),
-              const SizedBox(width: 8),
-              Text(s.label, style: const TextStyle(fontSize: 13)),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(s.detail,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 10.5, color: scheme.onSurfaceVariant)),
-              ),
-            ]),
-          ),
-      ],
+    return TapScale(
+      onTap: () async {
+        await showRateSheet(
+          context,
+          currency: currency,
+          ctx: store.contextOf(module: RateModule.calculator),
+          currentId: currentId,
+          title: 'Tasa del módulo Lista · ${currency.label}',
+          onPick: (id) =>
+              store.setModuleRateSource(RateModule.calculator, currency, id),
+        );
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(

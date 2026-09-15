@@ -23,6 +23,7 @@ import '../../state/app_state.dart';
 import '../../widgets/app_router.dart' show kHeroRateKey;
 import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
+import '../../widgets/rate_sheet.dart';
 import '../../widgets/ui.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -352,6 +353,13 @@ class _WeekSpark extends StatelessWidget {
   }
 }
 
+/// ─── Lista de Cotización (v19.0, orden del dueño) ────────────────────────────
+/// Agrupada por divisa base: sección USD (BCV · Paralelo · Promedio ·
+/// Manual · TRM · Mercado · Brasil · Banxico) y sección EUR (aristas del
+/// euro). Cada fila es un RateTile: [Bandera] [Nombre] [Precio + símbolo]
+/// con el color de categoría establecido. La fila Manual del país siempre
+/// está visible: el lápiz (o el toque, si no hay valor) abre el editor
+/// INLINE — la tasa manual se fija desde aquí, sin ir a Ajustes.
 class _CotizacionPrincipal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -359,33 +367,21 @@ class _CotizacionPrincipal extends StatelessWidget {
     final poller = context.watch<RatesPoller>();
     final country = CountryX.from(store.settings.country);
     final ctx = store.contextOf();
-    final featured = country.featured.toSet();
-
-    // Filas visibles (v17.2 «tasas según la moneda seleccionada»):
-    // · TODAS las fuentes de la divisa del país con valor (board, derivadas
-    //   y manuales — p.ej. VES: BCV · Paralelo · Promedio · Manual);
-    // · la fuente SELECCIONADA de las demás divisas del libro (EUR, COP…).
-    final rows = {
-      ...RateSource.sourcesFor(country.currency).map((s) => s.id),
-      for (final e in ctx.selected.entries)
-        if (e.key != country.currency) e.value,
-    }.toList(growable: false);
+    final manualId = '${country.currency.code.toLowerCase()}-manual';
+    final hasAny = !store.board.isEmpty || ctx.rates.containsKey(manualId);
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Cotización principal'),
-      // v17.6 (RECHECK R2-6): tres estados HONESTOS con los widgets
-      // reutilizables de ui.dart — y la CARGA con spinner: NUNCA «Buscando
-      // tasas…» con wifi-off (el combo mentiroso que el dueño prohibió).
-      if (store.board.isEmpty && !ctx.rates.containsKey('${country.currency.code.toLowerCase()}-manual'))
+      if (!hasAny)
         if (poller.offlineActive)
           // Desconexión ELEGIDA (modo offline): cloud_off + guía local.
           OfflineState(
             'Modo offline activo',
-            hint: 'ValoraVE funciona 100% local. Agrega tu tasa manual en '
-                'Ajustes → Monedas y tasas, o desactiva el modo offline '
-                'cuando quieras volver a consultar las APIs.',
+            hint: 'ValoraVE funciona 100% local. Pega tu tasa manual aquí '
+                'mismo, o desactiva el modo offline cuando quieras volver a '
+                'consultar las APIs.',
             actionLabel: 'Tasa manual',
-            onAction: () => GoRouter.of(context).go('/ajustes'),
+            onAction: () => _editManual(context, store, manualId),
           )
         else if (poller.networkBlocked || poller.offlineNet)
           // Sin red (señal viva v17.8) o red bloqueada SIN datos guardados:
@@ -394,89 +390,97 @@ class _CotizacionPrincipal extends StatelessWidget {
             'Sin conexión · sin tasas guardadas todavía',
             hint: 'No pierdes nada: todo lo demás de la app funciona igual '
                 'con los datos de tu teléfono. Cuando vuelva la red, las '
-                'tasas se descargan solas; o agrega una tasa manual ahora.',
+                'tasas se descargan solas; o pega una tasa manual ahora.',
             icon: Icons.wifi_off,
             actionLabel: poller.loading ? 'Consultando…' : 'Reintentar',
             onAction: poller.loading ? null : () => poller.retryNow(),
             secondaryLabel: 'Tasa manual',
-            onSecondary: () => GoRouter.of(context).go('/ajustes'),
+            onSecondary: () => _editManual(context, store, manualId),
           )
         else
           // PRIMERA CARGA: spinner, cero iconografía de red.
           LoadingState(
             'Buscando tasas…',
-            hint: 'Primera carga de tasas en curso. También puedes agregar '
-                'una tasa manual en Ajustes → Monedas y tasas.',
+            hint: 'Primera carga de tasas en curso. También puedes pegar '
+                'una tasa manual ahora mismo.',
             actionLabel: 'Tasa manual',
-            onAction: () => GoRouter.of(context).go('/ajustes'),
+            onAction: () => _editManual(context, store, manualId),
           )
       else
         Card(
-          child: Column(children: [
-            for (final id in rows)
-              _RateRow(sourceId: id, selected: featured.contains(id) || ctx.sel(CurrencyX.from(RateSource.of(id)?.currency.code ?? 'VES')) == id),
-          ]),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(children: [
+              // ── Grupo USD: todas las fuentes «1 USD = X» ──
+              const RateGroupHeader(
+                Currency.usd,
+                hint: '1 USD = X · toca una fila para activarla',
+              ),
+              ..._groupRows(context, store, ctx,
+                  [Currency.ves, Currency.cop, Currency.brl, Currency.mxn],
+                  country.currency),
+              // ── Grupo EUR: aristas del euro (solo si alguna tiene valor) ──
+              if (_visibleSources(ctx, const [Currency.eur], country.currency).isNotEmpty) ...<Widget>[
+                const RateGroupHeader(Currency.eur, hint: '1 EUR = X'),
+                ..._groupRows(context, store, ctx, const [Currency.eur], country.currency),
+              ],
+            ]),
+          ),
         ),
     ]);
   }
-}
 
-class _RateRow extends StatelessWidget {
-  const _RateRow({required this.sourceId, required this.selected});
+  /// Fuentes visibles de [currencies]: con valor (>0) + SIEMPRE la Manual
+  /// de la divisa del país (acceso rápido del dueño).
+  List<RateSource> _visibleSources(
+      RateContext ctx, List<Currency> currencies, Currency countryCurrency) {
+    final out = <RateSource>[];
+    for (final c in currencies) {
+      for (final s in RateSource.sourcesFor(c)) {
+        final isCountryManual =
+            s.category == SourceCategory.manual && c == countryCurrency;
+        if (ctx.rate(s.id) <= 0 && !isCountryManual) continue;
+        out.add(s);
+      }
+    }
+    return out;
+  }
 
-  final String sourceId;
-  final bool selected;
+  List<Widget> _groupRows(BuildContext context, AppStore store, RateContext ctx,
+      List<Currency> currencies, Currency countryCurrency) {
+    return <Widget>[
+      for (final s in _visibleSources(ctx, currencies, countryCurrency))
+        RateTile(
+          sourceId: s.id,
+          rate: ctx.rate(s.id),
+          selected: ctx.sel(s.currency) == s.id,
+          freshness: store.board.sources[s.id] == null
+              ? null
+              : timeAgo(store.board.sources[s.id]!.updatedAt),
+          onTap: () {
+            if (ctx.rate(s.id) <= 0) {
+              // Manual sin valor: el editor ES la activación.
+              _editManual(context, store, s.id);
+              return;
+            }
+            store.setRateSource(s.currency, s.id);
+          },
+          onEdit: s.category == SourceCategory.manual
+              ? () => _editManual(context, store, s.id)
+              : null,
+        ),
+    ];
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  /// Editor manual inline: guarda y ACTIVA la fuente del país.
+  Future<void> _editManual(
+      BuildContext context, AppStore store, String sourceId) async {
     final s = RateSource.of(sourceId);
-    if (s == null) return const SizedBox.shrink();
-    // Valor desde el contexto activo: tablero vivo + derivadas + manuales
-    // (así «Manual» y filas sin red también aparecen — v17.2).
-    final rate = store.contextOf().rates[sourceId] ?? (sourceId == 'usd' ? 1.0 : null);
-    if (rate == null || rate <= 0) return const SizedBox.shrink();
-    final fetched = store.board.sources[sourceId];
-    final VeInk sem = VeColors.of(context);
-    final ink = switch (s.category) {
-      SourceCategory.official => sem.pos,
-      SourceCategory.mixed => sem.warn,
-      SourceCategory.parallel => sem.neg,
-      SourceCategory.manual => sem.manual,
-    };
-
-    return InkWell(
-      onTap: () => store.setRateSource(s.currency, s.id),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        child: Row(children: [
-          SourceDot(s.category),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Flexible(child: Text('${s.edgeName}${selected ? ' · activa' : ''}',
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700))),
-              ]),
-              Text(s.detail, style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-            ]),
-          ),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Semantics(
-              label: '1 ${s.base.code} igual a ${fmtRate(rate)} ${s.quote.code}',
-              child: Text(s.currency == Currency.eur ? fmtEurRate(rate) : fmtRate(rate),
-                  style: VeText.displayNum(19, color: Theme.of(context).colorScheme.onSurface)),
-            ),
-            Text(fetched == null ? 'manual / derivada' : timeAgo(fetched.updatedAt),
-                style: TextStyle(fontSize: 10.5, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          ]),
-          const SizedBox(width: 8),
-          Text(s.quote == Currency.ves ? 'Bs' : s.quote.code,
-              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: ink)),
-        ]),
-      ),
-    );
+    if (s == null) return;
+    final saved = await showManualRateEditor(context, sourceId: sourceId);
+    if (saved && context.mounted) {
+      store.setRateSource(s.currency, s.id);
+    }
   }
 }
 

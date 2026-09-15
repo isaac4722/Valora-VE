@@ -26,6 +26,7 @@ import '../../data/store.dart';
 import '../../services/sharing.dart';
 import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
+import '../../widgets/rate_sheet.dart';
 import '../../widgets/share_card.dart';
 import '../../widgets/share_menu.dart';
 import '../../widgets/ui.dart';
@@ -675,61 +676,18 @@ class _DualInputState extends State<_DualInput> {
     ]);
   }
 
-  /// Hoja de fuentes de la divisa de origen (v18.0): categoría + tasa de cada
-  /// una; tocar una la activa (o limpia el override si es la global).
+  /// Hoja de fuentes de la divisa de origen (v19): el selector de TASA
+  /// visual de toda la app — filas [Bandera][Nombre][Precio + símbolo] con
+  /// color de categoría; la Manual abre el editor inline. Tocar una la
+  /// activa (o limpia el override si es la global).
   Future<void> _openSourcesSheet() async {
-    final scheme = Theme.of(context).colorScheme;
-    final ids = <String>[
-      for (final s in RateSource.sourcesFor(widget.from)) s.id,
-      // USD no compite en el tablero: su única referencia entra igual.
-      if (RateSource.sourcesFor(widget.from).isEmpty)
-        RateSource.validSourceId(widget.from, null),
-    ];
-    final picked = await showModalBottomSheet<String>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
-              child: Text('Fuente de tasa · ${widget.from.code}',
-                  style: VeText.labelCaps(10.5, color: scheme.primary)),
-            ),
-            for (final id in ids)
-              (() {
-                final src = RateSource.of(id);
-                final label = convSourceNames[id] ?? src?.label ?? id;
-                final rate = widget.ctx.rate(id);
-                final active = id == widget.activeSourceId;
-                return ListTile(
-                  dense: true,
-                  leading: src == null ? null : SourceDot(src.category),
-                  title: Text(label,
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: active ? scheme.primary : scheme.onSurface)),
-                  subtitle: rate > 0
-                      ? Text('1 ${widget.from.code} = ${fmtRate(rate)} ${widget.to.code}',
-                          style: TextStyle(
-                              fontSize: 11.5, color: scheme.onSurfaceVariant))
-                      : null,
-                  trailing: active
-                      ? Icon(Icons.check_rounded, size: 18, color: scheme.primary)
-                      : null,
-                  onTap: () => Navigator.of(context).pop(id),
-                );
-              })(),
-          ],
-        ),
-      ),
+    await showRateSheet(
+      context,
+      currency: widget.from,
+      ctx: widget.ctx,
+      currentId: widget.activeSourceId,
+      onPick: (id) => widget.onPickSource(widget.from, id),
     );
-    if (picked != null) widget.onPickSource(widget.from, picked);
   }
 
   /// Fila de entrada: monto (30 px, secundario) a la IZQUIERDA y selector de
