@@ -88,15 +88,35 @@ class MainShell extends StatelessWidget {
     // Rate-health (§5): el banner se monta SIEMPRE encima del body y decide
     // solo su visibilidad (rateStale = se vio tablero OK hace >15 min).
     final RatesPoller poller = context.watch<RatesPoller>();
+    final AppStore store = context.watch<AppStore>();
+
+    // v19 (orden del dueño): la tasa MANUAL es una tasa personalizada, NO un
+    // estado «sin conexión». Si la fuente activa del país es manual — o el
+    // usuario eligió no consultar APIs — el banner de salud no aparece: la
+    // app funciona normal y natural con SU tasa.
+    final countryCur = CountryX.from(store.settings.country).currency;
+    final manualActive =
+        RateSource.of(store.sourceFor(countryCur))?.category == SourceCategory.manual;
+    final chosenOffline = store.settings.offlineMode;
+    final showHealth = !manualActive && !chosenOffline;
 
     return Scaffold(
       body: Column(
         children: [
           _Header(activeIndex: current),
-          RateHealthBanner(
-              stale: poller.rateStale,
-              offline: poller.offlineNet,
-              onRetry: poller.offlineNet ? null : () => poller.refreshNow()),
+          // v19 · anti-salto: el banner ya no empuja el contenido de golpe —
+          // AnimatedSize lo despliega/pliega en 300 ms.
+          AnimatedSize(
+            duration: kLayoutDur,
+            curve: kEaseVe,
+            alignment: Alignment.topCenter,
+            child: showHealth
+                ? RateHealthBanner(
+                    stale: poller.rateStale,
+                    offline: poller.offlineNet,
+                    onRetry: poller.offlineNet ? null : () => poller.refreshNow())
+                : const SizedBox(width: double.infinity),
+          ),
           if (current == 0) _HomeTicker(),
           const _TourTrigger(),
           Expanded(child: navigationShell),

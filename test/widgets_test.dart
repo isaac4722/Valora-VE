@@ -481,6 +481,39 @@ void main() {
     });
   });
 
+  group('Home v19: fecha simple, sin saltos y manual no es offline', () {
+    testWidgets('fecha corta «lun 15 sep · HH:MM» sin fecha larga', (tester) async {
+      final store = _pumpedStore(tester, dir: 'w11');
+      await _initServices(store);
+      store.setRateBoard(RateBoard(sources: {
+        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
+        'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
+      }));
+      await tester.pumpWidget(_wrap(const HomeScreen(), store: store));
+      await tester.pumpAndSettle();
+      // La fecha larga («lunes, 15 de septiembre de 2026») ya NO existe.
+      expect(find.textContaining(' de septiembre de '), findsNothing);
+      // El formato corto vive en UNA línea: «dia DD mes · HH:MM».
+      expect(
+          find.textContaining(
+              RegExp(r'^[a-záéíóú]{3} \d{1,2} [a-z]{3} · \d{2}:\d{2}$')),
+          findsOneWidget);
+    });
+
+    testWidgets('tasa manual activa → SIN banner de salud (no es offline)', (tester) async {
+      final store = _pumpedStore(tester, dir: 'w12');
+      await _initServices(store);
+      store.setManualRate('ves-manual', 42);
+      store.setRateSource(Currency.ves, 'ves-manual');
+      await tester.pumpWidget(_wrap(const HomeScreen(), store: store));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Sin conexión'), findsNothing);
+      expect(find.textContaining('no se actualiza'), findsNothing);
+      // La fila Manual está ACTIVA en la lista de cotización.
+      expect(find.text('Manual'), findsOneWidget);
+    });
+  });
+
   group('Tour completo (v19.0 · motor propio, un solo tutorial)', () {
     test('integridad: 6 segmentos, ids únicos, anclas GlobalKeys', () {
       // El tour es UNO y cubre toda la app: 5 pestañas + Ajustes.

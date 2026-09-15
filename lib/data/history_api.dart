@@ -173,8 +173,15 @@ Future<HistoryResult> seriesForSource(String sourceId, int days) async {
 
 /// Tasa de una fecha exacta (o del último día hábil anterior) — motor de la
 /// «fecha histórica» del Conversor. Fuente: serie remota, respaldo snapshots.
+/// v19 [preferLocal]: sin red se pregunta PRIMERO al libro local — cero
+/// esperas de 9 s fingiendo búsqueda (la tasa manual/personalizada no se
+/// trata como «offline»).
 Future<HistPoint?> rateOn(String sourceId, String date,
-    {HistPoint? Function(String, String)? localFallback}) async {
+    {HistPoint? Function(String, String)? localFallback, bool preferLocal = false}) async {
+  if (preferLocal && localFallback != null) {
+    final local = localFallback(sourceId, date);
+    if (local != null) return local;
+  }
   // Punto de hoy (viva) si la fecha es hoy.
   final res = await seriesForSource(sourceId, 180);
   for (var i = res.points.length - 1; i >= 0; i--) {

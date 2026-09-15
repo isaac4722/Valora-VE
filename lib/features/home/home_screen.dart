@@ -43,8 +43,20 @@ class HomeScreen extends StatelessWidget {
           children: [
             const TipsTrigger(scope: 'home'),
             _Hero(poller: poller),
-            _RateHero(),
-            _WeekSpark(),
+            // v19 · anti-salto: el héroe y la chispa de 7 días SON
+            // condicionales (sin datos → shrink). AnimatedSize convierte su
+            // aparición/desaparición en transición (300 ms) — el resto del
+            // contenido nunca brinca al llegar la primera tasa o al cambiar
+            // de fuente.
+            AnimatedSize(
+              duration: kLayoutDur,
+              curve: kEaseVe,
+              alignment: Alignment.topCenter,
+              child: Column(children: [
+                _RateHero(),
+                _WeekSpark(),
+              ]),
+            ),
             // Anclas del tour completo (v17.8): cotización + divisas del foco.
             KeyedSubtree(key: TourKeys.cotizacion, child: _CotizacionPrincipal()),
             KeyedSubtree(key: TourKeys.divisasFoco, child: _DivisasFoco()),
@@ -125,13 +137,13 @@ class _HeroState extends State<_Hero> {
     return Padding(
       padding: const EdgeInsets.only(top: 10, bottom: 14),
       child: Row(children: [
+        // v19 (orden del dueño): la fecha LARGA se retira — una sola línea
+        // corta «lun 15 sep · 14:30» dice lo mismo sin ocupar el hero.
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${saludo(now)} · $hhmm',
-                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
-            Text(fmtDateLong(now),
-                style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, color: scheme.onSurface, height: 1.2)),
-          ]),
+          child: Text(
+            '${kDias[now.weekday - 1].substring(0, 3)} ${now.day} ${kMeses[now.month - 1].substring(0, 3)} · $hhmm',
+            style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: scheme.onSurface, height: 1.2),
+          ),
         ),
         if (widget.poller.loading)
           const SizedBox(

@@ -23,6 +23,7 @@ import '../../core/theme.dart';
 import '../../data/history_api.dart';
 import '../../data/rate_history.dart';
 import '../../data/store.dart';
+import '../../state/app_state.dart' show RatesPoller;
 import '../../services/sharing.dart';
 import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
@@ -125,6 +126,10 @@ class _ConverterScreenState extends State<ConverterScreen> {
   /// Sin dato → mapa sin la tasa → mensaje honesto; nunca fabrica tasas.
   Future<void> _loadHistoric(DateTime date) async {
     final store = context.read<AppStore>();
+    // v19: sin red NO se sondea la API (9 s de espera fingida): el libro
+    // local responde primero (preferLocal) y la tasa manual sigue contando
+    // como personalizada, no como «sin conexión».
+    final offlineNet = context.read<RatesPoller>().offlineNet;
     final base = store.contextOf(module: RateModule.converter);
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
@@ -156,7 +161,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
       }
       if (id == 'ves-avg') continue; // se deriva abajo (§3.1)
       try {
-        final point = await rateOn(id, day, localFallback: (sourceId, d) {
+        final point = await rateOn(id, day, preferLocal: offlineNet, localFallback: (sourceId, d) {
           final local = store.snapshots.where((p) => p.sourceId == sourceId && p.day == d).toList()
             ..sort((a, b) => a.day.compareTo(b.day));
           return local.isEmpty ? null : HistPoint(date: local.last.day, rate: local.last.rate);
@@ -240,9 +245,10 @@ class _ConverterScreenState extends State<ConverterScreen> {
   /// FIX date-picker (v17.6): los días del calendario ya no salen SOLO de los
   /// snapshots locales (un teléfono nuevo veía 1-2 días = «no aparece nada»).
   /// La hoja abre al instante con lo local y fusiona la serie REMOTA de las
-  /// fuentes del par (180 días por fuente, seriesForSource). Offline → los
-  /// locales cubren y el error se ignora en silencio.
+  /// fuentes del par (180 días por fuente, seriesForSource). Offline (v19) →
+  /// ni se intenta: los locales cubren SIN espera ni spinner falso.
   Future<Set<String>> _diasRemotos(List<String> ids) async {
+    if (context.read<RatesPoller>().offlineNet) return const <String>{};
     final probes = <String>{
       for (final id in ids)
         ...(id == 'ves-avg' ? const ['ves-bcv', 'ves-parallel'] : [id]),
