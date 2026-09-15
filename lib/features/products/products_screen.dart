@@ -64,8 +64,9 @@ DateTime? parseCsvDate(String raw) {
   var year = int.tryParse(m.group(3)!);
   if (year == null) return null;
   if (year < 100) year += 2000;
-  if (day == null || day < 1 || day > 31 || month < 1 || month > 12)
+  if (day == null || day < 1 || day > 31 || month < 1 || month > 12) {
     return null;
+  }
   return DateTime(year, month, day);
 }
 

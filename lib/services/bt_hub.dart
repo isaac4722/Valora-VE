@@ -141,8 +141,9 @@ class BtHubImpl {
       if (m['kind'] == 'connected') {
         if (!connected.isCompleted) connected.complete(null);
       } else if (m['kind'] == 'error') {
-        if (!connected.isCompleted)
+        if (!connected.isCompleted) {
           connected.complete('${m['code'] ?? 'bt_connect'}');
+        }
       }
     });
     final started =

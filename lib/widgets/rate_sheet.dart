@@ -292,8 +292,9 @@ Future<void> showRateSheet(
                     sheetCtx,
                     sourceId: s.id,
                   );
-                  if (saved && sheetCtx.mounted)
+                  if (saved && sheetCtx.mounted) {
                     Navigator.of(sheetCtx).pop(s.id);
+                  }
                   return;
                 }
                 Navigator.of(sheetCtx).pop(s.id);
@@ -304,8 +305,9 @@ Future<void> showRateSheet(
                         sheetCtx,
                         sourceId: s.id,
                       );
-                      if (saved && sheetCtx.mounted)
+                      if (saved && sheetCtx.mounted) {
                         Navigator.of(sheetCtx).pop(s.id);
+                      }
                     }
                   : null,
             ),

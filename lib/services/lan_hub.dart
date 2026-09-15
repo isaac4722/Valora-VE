@@ -68,8 +68,9 @@ class LanHubImpl {
       final ifs = await NetworkInterface.list();
       for (final i in ifs) {
         for (final a in i.addresses) {
-          if (a.type == InternetAddressType.IPv4 && !a.isLoopback)
+          if (a.type == InternetAddressType.IPv4 && !a.isLoopback) {
             return a.address;
+          }
         }
       }
     } catch (_) {}
@@ -198,8 +199,9 @@ class LanHubImpl {
   };
 
   Future<void> _announceRoom() async {
-    if (_udp == null || !_roomPublic)
+    if (_udp == null || !_roomPublic) {
       return; // privadas: solo respuesta a WHO|CODE
+    }
     final line = '$kAdPrefix${jsonEncode(_adPayload)}';
     final bytes = utf8.encode(line);
     for (final b in await _broadcastAddrs()) {
@@ -228,12 +230,13 @@ class LanHubImpl {
   void _onUdpHostPacket(Datagram d) {
     final msg = utf8.decode(d.data, allowMalformed: true).trim();
     if (msg == kWho) {
-      if (_roomPublic)
+      if (_roomPublic) {
         _udp?.send(
           utf8.encode('$kAdPrefix${jsonEncode(_adPayload)}'),
           d.address,
           d.port,
         );
+      }
     } else if (msg.startsWith('$kWho|')) {
       // WHO|CODE: responde también a salas privadas si el código coincide.
       if (msg.substring(kWho.length + 1) == _roomCode) {
@@ -378,8 +381,9 @@ class LanHubImpl {
   /// Escucha pasiva + sondas WHO. Los anuncios llegan por [roomAds].
   Future<bool> startScan() async {
     if (_scanning) return true;
-    if (_status != RoomStatus.disconnected)
+    if (_status != RoomStatus.disconnected) {
       return false; // no se escanea en sala activa
+    }
     _scanning = true;
     try {
       await _startGuestDiscovery();

@@ -122,8 +122,9 @@ class _AlertasState extends State<_Alertas> {
                       'Meta BCV (Bs por USD)',
                       ctrl,
                     );
-                    if (value != null)
+                    if (value != null) {
                       store.setSetting('rateTargetAlerts.bcv', value);
+                    }
                   },
                 ),
                 SwitchListTile(
@@ -145,8 +146,9 @@ class _AlertasState extends State<_Alertas> {
                       'Meta paralelo (Bs por USD)',
                       ctrl,
                     );
-                    if (value != null)
+                    if (value != null) {
                       store.setSetting('rateTargetAlerts.parallel', value);
+                    }
                   },
                 ),
                 SwitchListTile(

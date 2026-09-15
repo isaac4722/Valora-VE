@@ -199,8 +199,9 @@ class _StatementScreenState extends State<StatementScreen> {
           hint: 'PNG de la constancia (1080 px) para redes o chat',
           onRun: () async {
             final bytes = await _renderDocPng(range, label, purchases);
-            if (bytes == null)
+            if (bytes == null) {
               return 'No se pudo generar la imagen. Intenta de nuevo.';
+            }
             await sharePng(bytes, _pngName);
             return null;
           },
@@ -211,8 +212,9 @@ class _StatementScreenState extends State<StatementScreen> {
           hint: 'Guarda el PNG sin abrir el share',
           onRun: () async {
             final bytes = await _renderDocPng(range, label, purchases);
-            if (bytes == null)
+            if (bytes == null) {
               return 'No se pudo generar la imagen. Intenta de nuevo.';
+            }
             return runDownloadBytes(bytes, _pngName);
           },
         ),

@@ -1166,16 +1166,20 @@ class AppStore extends ChangeNotifier {
             var next = c;
             final p = Map<String, dynamic>.from(patch);
             if (p['name'] is String) next = next.copyWith(name: p['name']);
-            if (p['quantity'] is num)
+            if (p['quantity'] is num) {
               next = next.copyWith(
                 quantity: (p['quantity'] as num).toInt().clamp(1, 999),
               );
-            if (p['price'] is num)
+            }
+            if (p['price'] is num) {
               next = next.copyWith(price: (p['price'] as num).toDouble());
-            if (p['currency'] is String)
+            }
+            if (p['currency'] is String) {
               next = next.copyWith(currency: p['currency']);
-            if (p['checked'] is bool)
+            }
+            if (p['checked'] is bool) {
               next = next.copyWith(checked: p['checked']);
+            }
             if (p.containsKey('checkedBy')) {
               final cb = p['checkedBy'];
               next = (cb is String && cb.isNotEmpty)

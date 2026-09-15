@@ -142,8 +142,9 @@ class AlertEngine {
         final pct = (rate / base - 1) * 100;
         if (pct.abs() < threshold) continue;
         final lastSpike = _spikeCooldown[id];
-        if (lastSpike != null && now.difference(lastSpike).inMinutes < 30)
+        if (lastSpike != null && now.difference(lastSpike).inMinutes < 30) {
           continue;
+        }
         _spikeCooldown[id] = now;
         if (!_claim('spike.$id')) continue;
         final label = RateSource.of(id)?.label ?? id;

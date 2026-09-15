@@ -158,13 +158,15 @@ String presentationLabel(Product p) {
       return 'Unidad';
     case Presentation.weight:
       final g = p.size;
-      if (g >= 1000)
+      if (g >= 1000) {
         return '${fmtNum(g / 1000, decimals: g % 1000 == 0 ? 0 : 2)} kg';
+      }
       return '${fmtNum(g, decimals: 0)} g';
     case Presentation.volume:
       final ml = p.size;
-      if (ml >= 1000)
+      if (ml >= 1000) {
         return '${fmtNum(ml / 1000, decimals: ml % 1000 == 0 ? 0 : 2)} L';
+      }
       return '${fmtNum(ml, decimals: 0)} ml';
     case Presentation.pack:
       return 'Paquete · ${fmtNum(p.size, decimals: 0)} pzas';

@@ -851,8 +851,9 @@ class _InflacionAnchor extends StatelessWidget {
                               int i,
                               int si,
                             ) {
-                              if (i < 0 || i >= costSeries.length)
+                              if (i < 0 || i >= costSeries.length) {
                                 return const SizedBox.shrink();
+                              }
                               final p = costSeries[i];
                               return _TipBox(
                                 main: fmtUSD(p.cost),
@@ -1010,8 +1011,9 @@ class _InflacionAnchor extends StatelessWidget {
                               int i,
                               int si,
                             ) {
-                              if (i < 0 || i >= devalPoints.length)
+                              if (i < 0 || i >= devalPoints.length) {
                                 return const SizedBox.shrink();
+                              }
                               final p = devalPoints[i];
                               return _TipBox(
                                 main: 'BCV ${fmtRate(p.rate)}',
@@ -1737,8 +1739,9 @@ class _HistoricaAnchorState extends State<_HistoricaAnchor> {
                             int i,
                             int si,
                           ) {
-                            if (i < 0 || s is! List || i >= s.length)
+                            if (i < 0 || s is! List || i >= s.length) {
                               return const SizedBox.shrink();
+                            }
                             final p = s[i] as SnapshotPoint;
                             return _TipBox(
                               main: fmtRate(p.rate),
