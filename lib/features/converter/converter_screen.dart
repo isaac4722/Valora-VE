@@ -622,45 +622,53 @@ class _DualInputState extends State<_DualInput> {
 
   /// Línea de fuente + frescura (estilo XE): tocable → hoja con TODAS las
   /// fuentes de la divisa, su categoría y su tasa. El override del módulo
-  /// (si existe) se anuncia y se limpia a un toque.
+  /// (si existe) se anuncia y se limpia a un toque. v19.0: con USD la línea
+  /// NO se toca — el dólar es la referencia de la app (1 = 1), no una fuente
+  /// elegible (orden del dueño).
   Widget _fuenteLine(ColorScheme scheme) {
     final src = RateSource.of(widget.activeSourceId);
     final label =
         convSourceNames[widget.activeSourceId] ?? src?.label ?? widget.activeSourceId;
+    final isUsd = widget.from == Currency.usd;
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      child: Row(children: [
+        if (!isUsd && src != null) ...[SourceSeal(src.category), const SizedBox(width: 8)],
+        Expanded(
+          child: Text.rich(
+            TextSpan(
+              text: isUsd ? 'USD · referencia de la app' : label,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface),
+              children: [
+                TextSpan(
+                    text: isUsd
+                        ? ' · 1 = 1, sin fuente'
+                        : ' · ${widget.frescura}',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: scheme.onSurfaceVariant)),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 4),
+        if (!isUsd)
+          Icon(Icons.expand_more, size: 18, color: scheme.onSurfaceVariant),
+      ]),
+    );
+    if (isUsd) return content; // sin InkWell: nada que elegir
     return Row(children: [
       Expanded(
         child: InkWell(
           onTap: _openSourcesSheet,
           borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-            child: Row(children: [
-              if (src != null) ...[SourceDot(src.category), const SizedBox(width: 8)],
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    text: label,
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface),
-                    children: [
-                      TextSpan(
-                          text: ' · ${widget.frescura}',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: scheme.onSurfaceVariant)),
-                    ],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(Icons.expand_more, size: 18, color: scheme.onSurfaceVariant),
-            ]),
-          ),
+          child: content,
         ),
       ),
       if (widget.hasOverride)
@@ -678,13 +686,12 @@ class _DualInputState extends State<_DualInput> {
 
   /// Hoja de fuentes de la divisa de origen (v18.0): categoría + tasa de cada
   /// una; tocar una la activa (o limpia el override si es la global).
+  /// v19.0: USD no abre hoja — no hay nada que elegir (1 = 1).
   Future<void> _openSourcesSheet() async {
+    if (widget.from == Currency.usd) return;
     final scheme = Theme.of(context).colorScheme;
     final ids = <String>[
       for (final s in RateSource.sourcesFor(widget.from)) s.id,
-      // USD no compite en el tablero: su única referencia entra igual.
-      if (RateSource.sourcesFor(widget.from).isEmpty)
-        RateSource.validSourceId(widget.from, null),
     ];
     final picked = await showModalBottomSheet<String>(
       context: context,
@@ -709,7 +716,7 @@ class _DualInputState extends State<_DualInput> {
                 final active = id == widget.activeSourceId;
                 return ListTile(
                   dense: true,
-                  leading: src == null ? null : SourceDot(src.category),
+                  leading: src == null ? null : SourceSeal(src.category),
                   title: Text(label,
                       style: TextStyle(
                           fontSize: 14,

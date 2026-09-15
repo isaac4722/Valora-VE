@@ -545,7 +545,7 @@ class _FuenteChip extends StatelessWidget {
           PopupMenuItem(
             value: s.id,
             child: Row(children: [
-              SourceDot(s.category),
+              SourceSeal(s.category),
               const SizedBox(width: 8),
               Text(s.label, style: const TextStyle(fontSize: 13)),
               const SizedBox(width: 6),
@@ -567,7 +567,7 @@ class _FuenteChip extends StatelessWidget {
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           if (current != null) ...[
-            SourceDot(current.category),
+            SourceSeal(current.category),
             const SizedBox(width: 6),
           ],
           Text('Fuente: ${current?.label ?? currentId}',

@@ -109,15 +109,10 @@ class _ReferenciaFuentes extends StatelessWidget {
     for (final s in [...RateSource.sourcesFor(from), ...RateSource.sourcesFor(to)]) {
       if (!ids.contains(s.id)) ids.add(s.id);
     }
-    // USD no compite en el tablero: entra como referencia (1 USD = USD).
-    if ((from == Currency.usd || to == Currency.usd) && !ids.contains('usd')) {
-      if (from == Currency.usd) {
-        ids.insert(0, 'usd');
-      } else {
-        ids.add('usd');
-      }
-    }
-    if (ids.isEmpty) ids.add(RateSource.validSourceId(from, null));
+    // v19.0 (orden del dueño): USD no aporta fuentes — 1 USD = 1 USD es
+    // obvio en el mismo contexto. Con USD en el par se listan las fuentes de
+    // la OTRA divisa; si no hay nada, la sección desaparece.
+    if (ids.isEmpty) return const SizedBox.shrink();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Referencia de fuentes'),
@@ -136,12 +131,11 @@ class _ReferenciaFuentes extends StatelessWidget {
 
   Widget _fila(BuildContext context, ColorScheme scheme, RateSource s) {
     final activa = ctx.sel(s.currency) == s.id;
-    // USD es el puente: tasa de referencia 1 (RateContext.activeRate(usd)).
-    final r = s.id == 'usd' ? 1.0 : ctx.rate(s.id);
+    final r = ctx.rate(s.id);
     final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(children: [
-        SourceDot(s.category),
+        SourceSeal(s.category),
         const SizedBox(width: 9),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

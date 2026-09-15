@@ -448,7 +448,7 @@ class _RateRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         child: Row(children: [
-          SourceDot(s.category),
+          SourceSeal(s.category),
           const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -597,7 +597,7 @@ class _FuentesSheetContent extends StatelessWidget {
       for (final s in fuentes)
         ListTile(
           selected: s.id == activeId,
-          leading: SourceDot(s.category),
+          leading: SourceSeal(s.category),
           title: Text(s.edgeName,
               style: const TextStyle(
                   fontSize: 13.5, fontWeight: FontWeight.w700)),

@@ -1,5 +1,5 @@
 /// ─── ValoraVE · Sistema de diseño «El Instrumento» (§8 + GUI dp4) ───────────
-/// Componentes firma: Stamp, ReadWindow, LedgerRow, RuleDouble, SourceDot,
+/// Componentes firma: Stamp, ReadWindow, LedgerRow, RuleDouble, SourceSeal,
 /// TrendBadge, SectionTitle, PageHeader, EmptyState, CategoryIcon, StatCard,
 /// StoreAvatar, Flag, AnimatedNumber (odómetro), LiveDot, ChipTag,
 /// SegmentedChips, RateTicker configurable, RateHealthBanner.
@@ -278,39 +278,42 @@ class RuleDouble extends StatelessWidget {
   }
 }
 
-/// Marca de categoría de fuente: barra 3×13 con formas distintas.
-class SourceDot extends StatelessWidget {
-  const SourceDot(this.cat, {super.key, this.color});
+/// Sello de categoría de tasa (v19.0 · orden del dueño): ICONO + PALABRA —
+/// la identidad no vive en una rayita de color («AI slop», fuera). Un sello
+/// se lee SIN colores y dice QUÉ es la tasa: OFICIAL 🏛 · MERCADO 🛒 ·
+/// PROMEDIO ⚖ · MANUAL ✎. El color queda solo como acento suave.
+class SourceSeal extends StatelessWidget {
+  const SourceSeal(this.cat, {super.key});
 
   final SourceCategory cat;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final VeInk sem = VeColors.of(context);
-    final Color c = color ??
-        switch (cat) {
-          SourceCategory.official => sem.pos,
-          SourceCategory.mixed => sem.warn,
-          SourceCategory.parallel => sem.neg,
-          SourceCategory.manual => sem.manual,
-        };
+    final (icon, word, c) = switch (cat) {
+      SourceCategory.official =>
+        (Icons.account_balance_rounded, 'OFICIAL', sem.pos),
+      SourceCategory.parallel => (Icons.storefront_rounded, 'MERCADO', sem.neg),
+      SourceCategory.mixed => (Icons.balance_rounded, 'PROMEDIO', sem.warn),
+      SourceCategory.manual => (Icons.edit_note_rounded, 'MANUAL', sem.manual),
+    };
     return Container(
-      width: 3,
-      height: 13,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
       decoration: BoxDecoration(
-        color: cat == SourceCategory.mixed ? Colors.transparent : c,
-        border: cat == SourceCategory.mixed ? Border.all(color: c, width: 1.6) : null,
-        borderRadius: switch (cat) {
-          SourceCategory.official => BorderRadius.circular(999),
-          SourceCategory.parallel => const BorderRadius.only(
-              topLeft: Radius.circular(0),
-              bottomLeft: Radius.circular(0),
-              topRight: Radius.circular(999),
-              bottomRight: Radius.circular(999)),
-          _ => BorderRadius.circular(2),
-        },
+        color: c.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: c.withValues(alpha: 0.38), width: 1),
       ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 10.5, color: c),
+        const SizedBox(width: 4),
+        Text(word,
+            style: TextStyle(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.6,
+                color: c)),
+      ]),
     );
   }
 }
@@ -954,7 +957,7 @@ class LiveBadge extends StatelessWidget {
   }
 }
 
-/// Píldora de fuente con SourceDot + etiqueta (RateBadge).
+/// Píldora de fuente con SourceSeal + etiqueta (RateBadge).
 class RateBadge extends StatelessWidget {
   const RateBadge({super.key, required this.sourceId, this.trailing, this.onTap, this.selected = false});
 
@@ -983,7 +986,7 @@ class RateBadge extends StatelessWidget {
                   : Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (s != null) ...[SourceDot(s.category), const SizedBox(width: 6)],
+          if (s != null) ...[SourceSeal(s.category), const SizedBox(width: 6)],
           Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
           if (trailing != null) ...[
             const SizedBox(width: 6),
@@ -1445,7 +1448,7 @@ String fmtMesAno(DateTime d) => DateFormat.MMMM('es').format(d).substring(0, 3);
 // ═══════════════════════════════════════════════════════════════════════════
 // dp6 · Componentes adoptados del motor v17 «Consolidación nativa» (GUI dp6,
 // decisión del dueño: el actual manda, se integra lo que faltaba). Adaptados
-// a los tokens de ESTA rama (VeText/VeColors/SourceDot) — sin segundas
+// a los tokens de ESTA rama (VeText/VeColors/SourceSeal) — sin segundas
 // bibliotecas. Botones (Primary/Ghost), Sparkline, MiniRateCard, SectionCard,
 // SheetHeader, Paginator, Settle y CategoryLegend.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1830,9 +1833,9 @@ class _SettleState extends State<Settle> with SingleTickerProviderStateMixin {
       );
 }
 
-/// Leyenda de categorías de tasa (Oficial/Promedio/Paralelo/Manual) con el
-/// SourceDot de la casa. Usada en Bienvenida y Ajustes para explicar de un
-/// vistazo qué significa cada color del libro.
+/// Leyenda de categorías de tasa con el SourceSeal de la casa (v19.0:
+/// icono + palabra). Usada en Bienvenida y Ajustes para explicar de un
+/// vistazo qué significa cada sello del libro.
 class CategoryLegend extends StatelessWidget {
   const CategoryLegend({super.key});
 
@@ -1845,8 +1848,8 @@ class CategoryLegend extends StatelessWidget {
         'Oficial',
         'BCV · TRM · Banxico · Real · EUR oficial'
       ),
-      (SourceCategory.mixed, 'Promedio', 'Entre oficial y paralelo'),
-      (SourceCategory.parallel, 'Paralelo', 'Mercado VES · COP · EUR'),
+      (SourceCategory.mixed, 'Promedio', 'Entre oficial y mercado'),
+      (SourceCategory.parallel, 'Mercado', 'Paralelo VES · COP · EUR'),
       (SourceCategory.manual, 'Manual', 'Tu propia tasa'),
     ];
     return Column(
@@ -1855,7 +1858,7 @@ class CategoryLegend extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 5),
             child: Row(children: [
-              SourceDot(cat),
+              SourceSeal(cat),
               const SizedBox(width: 8),
               Text(label,
                   style: const TextStyle(

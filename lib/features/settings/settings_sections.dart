@@ -297,7 +297,7 @@ class _ManualFieldState extends State<_ManualField> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(children: [
-        SourceDot(SourceCategory.manual),
+        SourceSeal(SourceCategory.manual),
         const SizedBox(width: 8),
         Expanded(child: Text('Tasa manual ${s.currency.code}', style: const TextStyle(fontSize: 12.5))),
         SizedBox(

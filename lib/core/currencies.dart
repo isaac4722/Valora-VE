@@ -10,16 +10,19 @@ library;
 /// No existe ninguna otra moneda en la app.
 enum Currency { usd, ves, cop, eur, brl, mxn }
 
-/// Categoría de fuente de tasa — el COLOR dice QUÉ es la tasa, no de dónde:
-/// official verde · mixed ámbar · parallel rojo · manual violeta.
+/// Categoría de fuente de tasa — el SELLO dice QUÉ es la tasa (v19.0:
+/// icono + palabra, no rayita de color): official 🏛 · mixed ⚖ ·
+/// parallel 🛒 (mercado) · manual ✎.
 enum SourceCategory { official, mixed, parallel, manual }
 
-/// Etiqueta corta de categoría de fuente (web CATEGORY_LABEL).
+/// Etiqueta corta de categoría de fuente (web CATEGORY_LABEL). v19.0: la
+/// categoría paralela se lee «Mercado» (la palabra del dueño) — los nombres
+/// de fuente concretos siguen diciendo «Paralelo» donde aplica.
 extension SourceCategoryX on SourceCategory {
   String get label => switch (this) {
         SourceCategory.official => 'Oficial',
         SourceCategory.mixed => 'Promedio',
-        SourceCategory.parallel => 'Paralelo',
+        SourceCategory.parallel => 'Mercado',
         SourceCategory.manual => 'Manual',
       };
 }
@@ -237,7 +240,9 @@ class RateSource {
 }
 
 /// Nombres cortos del grupo de fuentes en el Conversor (v15, sin repetir
-/// palabras): «Dólar Oficial» (BCV) · «Dólar Paralelo» (mercado).
+/// palabras): «Dólar Oficial» (BCV) · «Dólar Paralelo» (mercado). v19.0: sin
+/// la pseudo-fuente «usd» — 1 USD = 1 USD es obvio y no compite (orden del
+/// dueño): el dólar es el puente de la app, no una fuente elegible.
 const Map<String, String> convSourceNames = {
   'ves-bcv': 'Dólar Oficial',
   'ves-parallel': 'Dólar Paralelo',
@@ -254,7 +259,6 @@ const Map<String, String> convSourceNames = {
   'eur-ves-paralelo': 'EUR Paralelo',
   'eur-cop': 'EUR a COP',
   'eur-brl': 'EUR a BRL',
-  'usd': 'Dólar',
 };
 
 /// Plan de conversión (ConversionPlan del web v15): la tasa efectiva, la
