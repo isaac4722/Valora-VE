@@ -118,7 +118,7 @@ class ConversionShareCard extends StatelessWidget {
               Flag(to, size: 40),
             ]),
             const SizedBox(height: 26),
-            Text('POR ${fmtPlain(inputAmount, 2)} ${from.code}',
+            Text('POR ${fmtNum(inputAmount, decimals: 2)} ${from.code}',
                 style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 27,

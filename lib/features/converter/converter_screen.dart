@@ -285,7 +285,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
     if (plan == null || _amount <= 0) return;
     final result = _amount * plan.rate;
     final text =
-        '${fmtPlain(_amount, 2)} ${from.code} = ${fmtMoney(result, to)} · '
+        '${fmtMoney(_amount, from)} ${from.code} = ${fmtMoney(result, to)} · '
         '1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} — ValoraVE';
     await showShareMenu(context, title: 'Resultado ${from.code} → ${to.code}', actions: [
       ShareMenuAction(
@@ -410,7 +410,10 @@ class _ConverterScreenState extends State<ConverterScreen> {
             onAdjust: (v) {
               setState(() {
                 _amount = v <= 0 ? 0 : v;
-                _amountCtrl.text = fmtPlain(_amount, 2);
+                // v19.0: el campo también habla es-VE («1.234,56»), igual que
+                // el resto de la app — nada de formato en-US en la UI.
+                _amountCtrl.text = fmtNum(_amount,
+                    decimals: smartDecimals(_amount, from));
               });
             },
             onSwap: () => store.setConverterPair(to.code, from.code),

@@ -632,7 +632,7 @@ class _InflacionAnchor extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(
                       'Línea punteada: proyección 30 días con memoria amortiguada '
-                      '(φ 0,85 · ${costProj.dailyPct >= 0 ? '+' : ''}${costProj.dailyPct.toStringAsFixed(2)} %/día). '
+                      '(φ 0,85 · ${fmtPct(costProj.dailyPct, decimals: 2)}/día). '
                       'Es una lectura del momentum, no una promesa.',
                       style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
                 ),
@@ -1387,7 +1387,7 @@ class _HeatmapCalendar extends StatelessWidget {
                       'tasas llena un cuadro.'
                   : 'Cuadro por día (BCV vs el día anterior con datos). '
                       'Día con mayor subida: ${fmtDayLabel(DateTime.parse(worst.day))} '
-                      '(${worst.pct >= 0 ? '+' : ''}${worst.pct.toStringAsFixed(1)} %).',
+                      '(${fmtPct(worst.pct)}).',
               style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
           const SizedBox(height: 10),
           for (final m in months)
@@ -1473,8 +1473,7 @@ class _HeatmapCalendar extends StatelessWidget {
     }
     final label = pct == null
         ? '${day.day} ${fmtMesCorto(day.month)} sin datos'
-        : '${day.day} ${fmtMesCorto(day.month)}: '
-            '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)} %';
+        : '${day.day} ${fmtMesCorto(day.month)}: ${fmtPct(pct)}';
     return Semantics(
       label: label,
       child: Container(

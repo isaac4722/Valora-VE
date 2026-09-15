@@ -142,8 +142,8 @@ class AlertEngine {
           kind: NotifKind.spike,
           channelId: 'rate_alerts',
           title: 'Pico en $label',
-          body: 'La tasa de $label movió ${pct.toStringAsFixed(1)} % '
-              '(de ${base.toStringAsFixed(2)} a ${rate.toStringAsFixed(2)}).',
+          body: 'La tasa de $label movió ${fmtPct(pct)} '
+              '(de ${fmtRate(base)} a ${fmtRate(rate)}).',
           persist: persist,
         );
       }
@@ -168,8 +168,8 @@ class AlertEngine {
           kind: NotifKind.gap,
           channelId: 'rate_alerts',
           title: 'Brecha BCV ↔ Paralelo',
-          body: 'La brecha está en ${gap.toStringAsFixed(1)} % '
-              '(umbral ${gapThreshold.toStringAsFixed(0)} %).',
+          body: 'La brecha está en ${fmtPct(gap)} '
+              '(umbral ${fmtNum(gapThreshold, decimals: 0)} %).',
           persist: persist,
         );
       }
@@ -190,7 +190,7 @@ class AlertEngine {
           kind: NotifKind.daily,
           channelId: 'rate_alerts',
           title: 'Cambio del día en BCV',
-          body: 'La tasa oficial movió ${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)} % hoy.',
+          body: 'La tasa oficial movió ${fmtPct(pct)} hoy.',
           persist: persist,
         );
       }
@@ -294,8 +294,8 @@ class AlertEngine {
           kind: NotifKind.target,
           channelId: 'rate_alerts',
           title: '$label alcanzó tu meta',
-          body: 'La tasa de $label llegó a ${rate.toStringAsFixed(2)} '
-              '(meta ${target.toStringAsFixed(2)}).',
+          body: 'La tasa de $label llegó a ${fmtRate(rate)} '
+              '(meta ${fmtRate(target)}).',
           persist: persist,
         );
       }

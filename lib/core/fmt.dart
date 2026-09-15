@@ -17,8 +17,6 @@ const List<String> kDias = [
   'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo',
 ];
 
-final NumberFormat _nfUs = NumberFormat.decimalPattern('en_US');
-
 /// Número es-VE: 1.234,56 (negativos con − inicial).
 String fmtNum(double v, {int decimals = 2}) {
   if (v.isNaN || v.isInfinite) return '—';
@@ -292,9 +290,6 @@ String fold(String s) {
   }
   return sb.toString();
 }
-
-/// Números para formato «es» con _nfUs (helper interno para/export).
-String fmtPlain(double v, int decimals) => _nfUs.format(v);
 
 // ─── Fechas ISO locales ────────────────────────────────────────────────────
 

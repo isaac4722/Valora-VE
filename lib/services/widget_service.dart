@@ -8,6 +8,8 @@ library;
 
 import 'package:home_widget/home_widget.dart';
 
+import '../core/fmt.dart';
+
 const _kAndroidGroup = 'valorave_widgets';
 
 class WidgetService {
@@ -26,14 +28,16 @@ class WidgetService {
     if (bcv == null || bcv <= 0) return;
     try {
       final now = DateTime.now();
-      await HomeWidget.saveWidgetData<String>('widgetBcvRate', bcv.toStringAsFixed(2));
+      // v19.0: el widget también habla es-VE («832,49») — mismo formato que
+      // toda la app, punto de miles y coma decimal.
+      await HomeWidget.saveWidgetData<String>('widgetBcvRate', fmtNum(bcv, decimals: 2));
       await HomeWidget.saveWidgetData<String>(
-          'widgetParallelRate', parallel == null ? '—' : parallel.toStringAsFixed(2));
+          'widgetParallelRate', parallel == null ? '—' : fmtNum(parallel, decimals: 2));
       await HomeWidget.saveWidgetData<String>(
           'widgetBcvUpdated', '${now.hour}:${now.minute.toString().padLeft(2, '0')}');
       // Brecha para el widget «Brecha» (respaldo recalculado también en Kotlin).
       final gap = (parallel != null && parallel > 0)
-          ? '${parallel > bcv ? '+' : ''}${((parallel / bcv - 1) * 100).toStringAsFixed(1)} %'
+          ? fmtPct((parallel / bcv - 1) * 100)
           : '—';
       await HomeWidget.saveWidgetData<String>('widgetGapPct', gap);
       // La familia completa se refresca con las mismas claves.

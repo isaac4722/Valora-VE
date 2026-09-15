@@ -29,6 +29,14 @@ abstract class BaseRatesWidget : AppWidgetProvider() {
 
     protected class Rates(val bcv: String, val parallel: String, val updated: String, val gap: String)
 
+    // v19.0: Dart escribe cifras es-VE («1.234,56») — el respaldo Kotlin las
+    // parsea tolerante y las vuelve a formatear con coma decimal.
+    private fun parseVe(s: String?): Double? =
+        s?.replace(".", "")?.replace(',', '.')?.toDoubleOrNull()
+
+    private fun fmtVePct(v: Double): String =
+        String.format("%+.1f %%", v).replace('.', ',')
+
     protected fun read(context: Context): Rates {
         val data = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
         val bcv = data.getString("widgetBcvRate", null) ?: "—"
@@ -37,10 +45,10 @@ abstract class BaseRatesWidget : AppWidgetProvider() {
         // Brecha recalculada del par guardado (Dart también la escribe en
         // widgetGapPct; aquí es respaldo si solo llegaron las tasas).
         val gap = data.getString("widgetGapPct", null) ?: run {
-            val b = bcv.toDoubleOrNull()
-            val p = parallel.toDoubleOrNull()
+            val b = parseVe(bcv)
+            val p = parseVe(parallel)
             if (b != null && p != null && b > 0) {
-                String.format("%+.1f %%", (p / b - 1) * 100)
+                fmtVePct((p / b - 1) * 100)
             } else "—"
         }
         return Rates(bcv, parallel, updated, gap)
