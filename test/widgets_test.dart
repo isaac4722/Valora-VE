@@ -322,7 +322,14 @@ void main() {
       await tester.tap(find.text('Agregar a la lista'));
       await tester.pumpAndSettle();
       expect(store.cart.length, 1);
-      // total y agregar: on-screen tras pump
+      // v19: total en moneda de cálculo + USD de extra al lado.
+      store.setSetting('calcCurrency', 'VES');
+      await tester.pumpAndSettle();
+      expect(find.text('TOTAL DE LA COMPRA'), findsOneWidget);
+      expect(find.textContaining('≈'), findsWidgets);
+      // v19: Vuelto y Dividir viven en el CHECKOUT (jerarquía post-compra).
+      expect(find.text('Calculadora de vuelto'), findsNothing);
+      expect(find.text('Dividir la cuenta'), findsNothing);
     });
 
     testWidgets('Productos: semilla catálogo, filtro por chip, ficha', (tester) async {

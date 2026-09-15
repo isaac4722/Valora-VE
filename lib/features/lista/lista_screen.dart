@@ -253,9 +253,11 @@ class _ListaScreenState extends State<ListaScreen> {
           // v18.0 · Sala Viva: si estás en sala, la lista lo sabe — el strip
           // vive arriba de TODO y lleva a la pantalla de la sala.
           const _EnSalaStrip(),
-          // Hero total.
+          // Hero total (v19, orden del dueño): el número grande en la moneda
+          // principal de cálculo y, como extra al lado, su equivalente en USD.
           ReadWindow(
-            semanticLabel: 'Total de la compra',
+            semanticLabel:
+                'Total de la compra: ${fmtMoney(totalInCalc, calcCur)} ${calcCur.code}',
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Text('TOTAL DE LA COMPRA', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
@@ -266,12 +268,35 @@ class _ListaScreenState extends State<ListaScreen> {
                 LiveBadge(live: false, label: '${store.cart.length} ítems'),
               ]),
               const SizedBox(height: 4),
-              AnimatedNumber(
-                totalInCalc,
-                // Héroe: cifra a 64 px tabular (firma de la app).
-                style: VeText.displayNum(64, color: scheme.onSurface),
-                decimals: smartDecimals(totalInCalc, calcCur),
-              ),
+              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Expanded(
+                  child: AnimatedNumber(
+                    totalInCalc,
+                    // Héroe: cifra a 64 px tabular (firma de la app).
+                    style: VeText.displayNum(64, color: scheme.onSurface),
+                    decimals: smartDecimals(totalInCalc, calcCur),
+                  ),
+                ),
+                // Extra USD al lado (si la moneda de cálculo NO es USD).
+                if (calcCur != Currency.usd && totals.usd > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10, bottom: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Flag(Currency.usd, size: 14),
+                        const SizedBox(height: 2),
+                        Text('≈ ${fmtUSD(totals.usd)}',
+                            textAlign: TextAlign.end,
+                            style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                                color: scheme.onSurfaceVariant)),
+                      ],
+                    ),
+                  ),
+              ]),
             ]),
           ),
           // Tasas de cálculo: moneda + FUENTE dependiente (requisito A).
@@ -474,10 +499,11 @@ class _ListaScreenState extends State<ListaScreen> {
           ],
           // Plantillas.
           _Plantillas(),
-          // Vuelto multi-divisa + dividir con propina + checkout modal.
+          // v19 (orden del dueño): Vuelto y Dividir la cuenta viven AHORA en
+          // el modal de «Finalizar compra» (apartado AL PAGAR) — la pantalla
+          // de lista queda para armar la compra; lo demás es post-compra.
           if (store.cart.isNotEmpty) ...[
-            _Vuelto(ctx: ctx, totals: totals, calcCur: calcCur, totalInCalc: totalInCalc),
-            _DividirCuenta(totalUsd: totals.usd, totalInCalc: totalInCalc, calcCur: calcCur),
+            const SizedBox(height: 6),
             const _CheckoutLauncher(),
           ],
         ],
@@ -756,18 +782,26 @@ class _PresupuestoState extends State<_Presupuesto> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Expanded(
-                child: TextField(
+                // v19: MoneyField con miles en vivo; la MONEDA se elige y
+                // queda fija aunque aún no haya monto (bug del dueño).
+                child: MoneyField(
                   controller: _ctrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
-                    hintText: budget.amount > 0 ? fmtMoney(budget.amount, bCur) : 'Tu presupuesto',
+                    hintText: budget.amount > 0
+                        ? fmtMoney(budget.amount, bCur)
+                        : 'Tu presupuesto en ${bCur.code}',
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               CurrencySelect(value: bCur, onChanged: (c) {
-                final v = parseLocaleNum(_ctrl.text);
-                store.setBudget(v ?? budget.amount, c.code);
+                // Cambia la divisa conservando el monto vigente (o el
+                // tecleado si hay): setBudget ya NUNCA resetea la moneda.
+                final v = parseLocaleNum(_ctrl.text) ?? budget.amount;
+                store.setBudget(v, c.code);
+                if (context.mounted) {
+                  setState(() {});
+                }
               }),
               const SizedBox(width: 8),
               FilledButton(
@@ -870,304 +904,6 @@ class _Plantillas extends StatelessWidget {
 /// moneda del cálculo (vía ctx.plan: arista directa, puente EUR o vía USD).
 /// El vuelto sale en la moneda del cálculo y, si se pide, desglosado por
 /// divisa. Sin tasa para una divisa → mensaje honesto (no inventa números).
-class _Vuelto extends StatefulWidget {
-  const _Vuelto({
-    required this.ctx,
-    required this.totals,
-    required this.calcCur,
-    required this.totalInCalc,
-  });
-
-  final RateContext ctx;
-  final ({double usd, Map<Currency, double> byCurrency, int units}) totals;
-  final Currency calcCur;
-  final double totalInCalc;
-
-  @override
-  State<_Vuelto> createState() => _VueltoState();
-}
-
-class _VueltoState extends State<_Vuelto> {
-  final List<TextEditingController> _ctrls = [TextEditingController()];
-  final List<Currency> _currencies = [Currency.ves];
-  bool _breakdown = false;
-
-  @override
-  void dispose() {
-    for (final c in _ctrls) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  void _addRow() {
-    setState(() {
-      _ctrls.add(TextEditingController());
-      _currencies.add(Currency.usd);
-    });
-  }
-
-  void _removeRow(int i) {
-    setState(() {
-      _ctrls.removeAt(i).dispose();
-      _currencies.removeAt(i);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
-    final calcCur = widget.calcCur;
-
-    var delivered = 0.0;
-    final missing = <Currency>{};
-    final rows = <({Currency cur, double amount, double converted, bool missing})>[];
-    for (var i = 0; i < _ctrls.length; i++) {
-      final amount = parseLocaleNum(_ctrls[i].text) ?? 0;
-      if (amount <= 0) continue;
-      final cur = _currencies[i];
-      final p = widget.ctx.plan(cur, calcCur);
-      if (p == null) {
-        missing.add(cur);
-        rows.add((cur: cur, amount: amount, converted: 0, missing: true));
-        continue;
-      }
-      final converted = amount * p.rate;
-      delivered += converted;
-      rows.add((cur: cur, amount: amount, converted: converted, missing: false));
-    }
-    final bool hasInput = rows.isNotEmpty;
-    final double change = delivered - widget.totalInCalc;
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Calculadora de vuelto'),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(
-                'Total a cubrir: ${fmtCurrency(widget.totalInCalc, calcCur)}'
-                '${calcCur != Currency.usd ? ' (${fmtUSD(widget.totals.usd)})' : ''}',
-                style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
-            const SizedBox(height: 8),
-            // Filas «moneda + monto» (varios pagos en distintas divisas).
-            for (var i = 0; i < _ctrls.length; i++)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _ctrls[i],
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                          hintText: i == 0 ? '¿Con cuánto pagas?' : 'Otro pago'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  CurrencySelect(
-                    value: _currencies[i],
-                    onChanged: (c) => setState(() => _currencies[i] = c),
-                  ),
-                  if (_ctrls.length > 1)
-                    IconButton(
-                      tooltip: 'Quitar pago',
-                      icon: Icon(Icons.close, size: 16, color: scheme.onSurfaceVariant),
-                      onPressed: () => _removeRow(i),
-                    ),
-                ]),
-              ),
-            TextButton.icon(
-              onPressed: _addRow,
-              icon: const Icon(Icons.add, size: 14),
-              label: const Text('Pagar en otra divisa', style: TextStyle(fontSize: 12)),
-            ),
-            // Resultado: vuelto o falta, en la moneda del cálculo.
-            if (hasInput) ...[
-              const SizedBox(height: 6),
-              if (missing.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    'Sin tasa viva para ${missing.map((m) => m.code).join(', ')}: '
-                    'no puedo convertir ese pago — revisa su fuente en Ajustes.',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: sem.warn),
-                  ),
-                ),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  change >= 0
-                      ? 'Vuelto: ${fmtCurrency(change, calcCur)}'
-                      : 'Faltan: ${fmtCurrency(-change, calcCur)}',
-                  style: VeText.displayNum(22,
-                      color: change >= 0 ? sem.pos : sem.neg),
-                ),
-              ),
-              Text('Entregado: ${fmtCurrency(delivered, calcCur)}',
-                  style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
-              TextButton(
-                onPressed: () => setState(() => _breakdown = !_breakdown),
-                style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                child: Text(_breakdown ? 'Ocultar desglose' : 'Desglosar por divisa',
-                    style: const TextStyle(fontSize: 12)),
-              ),
-              if (_breakdown)
-                for (final r in rows)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: LedgerRow(
-                      leading: Flag(r.cur, size: 14),
-                      label: '${fmtMoney(r.amount, r.cur)} ${r.cur.code}',
-                      value: r.missing
-                          ? 'Sin tasa'
-                          : '${fmtMoney(r.converted, calcCur)} ${calcCur.code}',
-                      valueColor: r.missing ? sem.warn : null,
-                    ),
-                  ),
-            ],
-          ]),
-        ),
-      ),
-    ]);
-  }
-}
-
-/// ─── Dividir la cuenta (requisito L) ────────────────────────────────────────
-/// Personas (+/−) · propina % (chips 0/5/10/15/20) · opción «propina ya
-/// incluida en el total» (simple: sobre el total con impuesto ya dentro) ·
-/// resultado por persona en la moneda del cálculo · copiar texto.
-class _DividirCuenta extends StatefulWidget {
-  const _DividirCuenta({
-    required this.totalUsd,
-    required this.totalInCalc,
-    required this.calcCur,
-  });
-
-  final double totalUsd;
-  final double totalInCalc;
-  final Currency calcCur;
-
-  @override
-  State<_DividirCuenta> createState() => _DividirCuentaState();
-}
-
-class _DividirCuentaState extends State<_DividirCuenta> {
-  int _people = 2;
-  int _tipPct = 0;
-  bool _tipIncluded = false;
-
-  static const _tipOptions = [0, 5, 10, 15, 20];
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
-    final people = _people.clamp(1, 50);
-    final factor = _tipIncluded ? 1.0 : 1 + _tipPct / 100;
-    final perPerson = widget.totalInCalc * factor / people;
-    final perPersonUsd = widget.totalUsd * factor / people;
-    final tipAmount = widget.totalInCalc * _tipPct / 100;
-
-    final copyText = 'Reparto ValoraVE · ${fmtDate(DateTime.now())}\n'
-        'Total: ${fmtCurrency(widget.totalInCalc, widget.calcCur)}'
-        ' (${fmtUSD(widget.totalUsd)})\n'
-        'Propina: $_tipPct % — ${_tipIncluded ? 'ya incluida en el total' : 'se añade al total'}\n'
-        '$people personas → ${fmtCurrency(perPerson, widget.calcCur)} c/u';
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Dividir la cuenta'),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Personas.
-            Row(children: [
-              Text('PERSONAS', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
-              const SizedBox(width: 10),
-              InkWell(
-                onTap: () => setState(() => _people = (_people - 1).clamp(1, 50)),
-                borderRadius: BorderRadius.circular(8),
-                child: const Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(Icons.remove_circle_outline, size: 20)),
-              ),
-              Text('$people', style: VeText.displayNum(16, color: scheme.onSurface)),
-              InkWell(
-                onTap: () => setState(() => _people = (_people + 1).clamp(1, 50)),
-                borderRadius: BorderRadius.circular(8),
-                child: const Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(Icons.add_circle_outline, size: 20)),
-              ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () => copiarAlPortapapeles(context, copyText, 'Reparto copiado'),
-                icon: const Icon(Icons.copy, size: 14),
-                label: const Text('Copiar', style: TextStyle(fontSize: 12)),
-              ),
-            ]),
-            const SizedBox(height: 6),
-            // Propina %.
-            Wrap(spacing: 6, children: [
-              for (final t in _tipOptions)
-                ChipTag('$t %', selected: _tipPct == t,
-                    onTap: () => setState(() => _tipPct = t)),
-            ]),
-            const SizedBox(height: 6),
-            // Opción simple: propina sobre el total con impuesto (ya dentro).
-            Row(children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Propina ya incluida en el total',
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                  Text('Apágalo si la propina se añade encima del total',
-                      style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
-                ]),
-              ),
-              Switch(value: _tipIncluded, onChanged: (v) => setState(() => _tipIncluded = v)),
-            ]),
-            const SizedBox(height: 8),
-            // Resultado por persona en la moneda del cálculo.
-            ReadWindow(
-              semanticLabel: 'Cuota por persona',
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text('Cada quien: ${fmtCurrency(perPerson, widget.calcCur)}',
-                      style: VeText.displayNum(19, color: scheme.onSurface)),
-                ),
-                if (widget.calcCur != Currency.usd)
-                  Text('≈ ${fmtUSD(perPersonUsd)} c/u',
-                      style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
-                if (_tipPct > 0)
-                  Text(
-                    _tipIncluded
-                        ? 'Propina $_tipPct % (${fmtCurrency(tipAmount, widget.calcCur)}) dentro del total'
-                        : 'Propina $_tipPct % añadida: ${fmtCurrency(tipAmount, widget.calcCur)}',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: _tipIncluded ? scheme.onSurfaceVariant : sem.pos),
-                  ),
-              ]),
-            ),
-          ]),
-        ),
-      ),
-    ]);
-  }
-}
-
-/// ─── Cerrar compra (requisito G) ────────────────────────────────────────────
-/// Ya NO guarda en línea ni muestra la interfaz inline: un resumen corto y
-/// el botón «Finalizar compra» que abre el MODAL de checkout
-/// (checkout_modal.dart) con tiendas, ajuste de pagado, nota y foto.
 class _CheckoutLauncher extends StatelessWidget {
   const _CheckoutLauncher();
 
