@@ -1,24 +1,25 @@
-/// ─── Tour guiado completo (v18.0 · UN solo tutorial, rejugable) ──────────
-/// Sustituye a los DOS sistemas anteriores (slides PageView de la bienvenida
-/// + recorridos por módulo v17.2 + puntas Ola 1), cuyos defectos eran:
-/// · Dos overlays a la vez (walkthrough del módulo + punta con 900 ms de
-///   respiro que no alcanzaba) — capturas del dueño: «2 al mismo tiempo».
-/// · Burbujas fuera de pantalla (altura estimada fija de 150 px).
-/// · Una LISTA de recorridos en Ajustes en vez de un tutorial completo.
+/// ─── Tour guiado completo (v19.0 · motor PROPIO, sin paquetes) ─────────────
+/// Reescritura total del walkthrough (orden del dueño: «todavía están mal,
+/// reescribe los WALKTHROUGH»). Fuera `tutorial_coach_mark` — el motor es de
+/// la casa y no tiene sorpresas de terceros:
 ///
-/// Motor: `tutorial_coach_mark` 1.3.4 (pub.dev) — v18.0: UN overlay POR PASO
-/// (no por segmento). Antes de cada tarjeta el motor arrastra el ancla a la
-/// zona visible (`Scrollable.ensureVisible` 400 ms + 450 ms de respiro): el
-/// overlay nunca mide un rect que el usuario no está viendo — lección de la
-/// captura «tarjeta cortada». Ancla no montada → el paso se salta, no se
-/// fuerza un foco muerto.
+/// · UN overlay POR PASO, insertado en el Overlay raíz: cortina negra con el
+///   RECORTE REAL del ancla (CustomPainter + Path.difference — el agujero es
+///   el rect medido del widget, nunca una estimación).
+/// · Antes de cada tarjeta el motor arrastra el ancla a la zona visible
+///   (`Scrollable.ensureVisible` 400 ms) y espera 450 ms: el recorte nunca
+///   mide un rect que el usuario no está viendo.
+/// · La tarjeta se posiciona con el rect real: debajo del ancla si hay más
+///   sitio, arriba si el ancla está baja — y respeta la safe-area. En rotación
+///   el overlay se re-mide (depende de MediaQuery).
+/// · «Siguiente»/«Saltar» completan UN Completer por paso: el doble toque no
+///   puede avanzar dos veces por construcción (sin guards frágiles).
+/// · Ancla no montada (pe. rama del shell sin visitar) → el paso se salta.
 ///
-/// El tour cruza pestañas solo: navega con go_router, espera el layout y
-/// encadena pasos; «Saltar» corta TODO y devuelve al usuario a donde estaba.
-///
-/// Semántica: UNA oportunidad automática por instalación (flag
-/// `valorave.tour-done`, se marca ANTES de mostrar — si algo interrumpe,
-/// no vuelve a molestar) y replay libre desde Ajustes → Tutorial.
+/// El tour cruza pestañas solo (go_router) y «Saltar» devuelve al usuario a
+/// donde estaba. Semántica: UNA oportunidad automática por instalación (flag
+/// `valorave.tour-done`, se marca ANTES de mostrar) y replay libre desde
+/// Ajustes → Tutorial.
 library;
 
 import 'dart:async';
@@ -27,7 +28,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 import '../core/currencies.dart';
 import 'app_router.dart' show kNavBarKey, kHeaderActionsKey;
@@ -74,7 +74,7 @@ class TourStep {
   final String title;
   final String body;
 
-  /// Ancla del paso; null = tarjeta centrada arriba (sin foco).
+  /// Ancla del paso (rect real que la cortina recorta).
   final GlobalKey? anchor;
 
   /// Banderas REALES (assets/flags) que encabezan la tarjeta.
@@ -268,25 +268,25 @@ Future<void> maybeRunTourOnce(BuildContext context) async {
   await runAppTour(context);
 }
 
-/// Guard anti-reentrada: jamás dos tours a la vez (la lección de las
-/// capturas del dueño — nada se apila sobre nada).
+/// Guard anti-reentrada: jamás dos tours a la vez.
 bool _tourRunning = false;
 bool get tourRunning => _tourRunning;
 
-/// Ejecuta el tour completo: navega segmento a segmento, y POR CADA PASO
-/// arrastra el ancla a la vista antes de mostrar su overlay. Devuelve al
+/// Ejecuta el tour completo: navega segmento a segmento y, POR CADA PASO,
+/// arrastra el ancla a la vista antes de abrir su overlay. Devuelve al
 /// usuario a su pestaña de origen (o a Inicio si venía de la bienvenida).
 /// «Saltar» corta el resto y restaura igual.
 Future<void> runAppTour(BuildContext context) async {
   if (_tourRunning) return;
   _tourRunning = true;
+  OverlayEntry? entry;
   try {
     final router = GoRouter.of(context);
+    final overlayState = Overlay.of(context, rootOverlay: true);
     final origin =
         router.routerDelegate.currentConfiguration.uri.toString();
     final backTo = origin.isEmpty || origin == '/bienvenida' ? '/' : origin;
 
-    // Índice global de pasos para «paso i de n» en las tarjetas.
     final total = kTourSegments.fold<int>(0, (a, s) => a + s.steps.length);
     var index = 0;
 
@@ -299,15 +299,14 @@ Future<void> runAppTour(BuildContext context) async {
       if (!context.mounted) return;
       for (final step in seg.steps) {
         // Ancla no montada (pe. rama del shell aún sin visitar): el paso se
-        // SALTA — jamás se enfoca un rect que no existe.
+        // SALTA — jamás se recorta un rect que no existe.
         final anchorCtx = step.anchor?.currentContext;
         if (anchorCtx == null || !anchorCtx.mounted) {
           index++;
           continue;
         }
         // El ancla puede vivir DENTRO de un scroll y quedar bajo el pliegue:
-        // se arrastra a la zona visible (alignment 0.45 ≈ un poco sobre el
-        // centro) y se espera a que el arrastre TERMINA antes de medir.
+        // se arrastra a la zona visible y se espera a que el arrastre TERMINE.
         await Scrollable.ensureVisible(
           anchorCtx,
           duration: const Duration(milliseconds: 400),
@@ -316,94 +315,185 @@ Future<void> runAppTour(BuildContext context) async {
         );
         await Future<void>.delayed(const Duration(milliseconds: 450));
         if (!context.mounted) return;
-        final finished = await _runStep(context, seg, step, index, total);
-        if (!finished) break loop; // «Saltar»: se corta el tour completo.
+
+        // UN paso = UN OverlayEntry. Los botones completan el Completer una
+        // sola vez: el doble toque no puede avanzar dos pasos por diseño.
+        final next = Completer<bool>();
+        entry = OverlayEntry(
+          builder: (_) => _TourOverlay(
+            segment: seg.title,
+            step: step,
+            stepIndex: index,
+            totalSteps: total,
+            onNext: () {
+              if (!next.isCompleted) next.complete(true);
+            },
+            onSkip: () {
+              if (!next.isCompleted) next.complete(false);
+            },
+          ),
+        );
+        overlayState.insert(entry);
+        final goOn = await next.future;
+        entry.remove();
+        entry = null;
+        if (!goOn) break loop; // «Saltar»: se corta el tour completo.
         index++;
       }
     }
     // Restaura la pestaña de origen (post-skip o post-completo).
     if (context.mounted) router.go(backTo);
   } finally {
+    entry?.remove();
     _tourRunning = false;
   }
 }
 
-/// Corre UN paso: un TutorialCoachMark con UN solo TargetFocus. Devuelve
-/// true si se completó, false si se saltó.
-Future<bool> _runStep(
-    BuildContext context, TourSegment seg, TourStep step, int index, int total) {
-  final done = Completer<bool>();
-  TutorialCoachMark(
-    targets: [_targetFor(context, seg, step, index, total)],
-    colorShadow: Colors.black,
-    opacityShadow: 0.78,
-    paddingFocus: 12,
-    hideSkip: true, // Saltar vive DENTRO de la tarjeta propia
-    useSafeArea: true,
-    pulseEnable: true,
-    focusAnimationDuration: const Duration(milliseconds: 420),
-    unFocusAnimationDuration: const Duration(milliseconds: 260),
-    onFinish: () {
-      if (!done.isCompleted) done.complete(true);
-    },
-    onSkip: () {
-      if (!done.isCompleted) done.complete(false);
-      return true;
-    },
-  ).show(context: context);
-  return done.future;
-}
+/// ─── Overlay de UN paso ─────────────────────────────────────────────────────
+/// Cortina con el recorte REAL del ancla + tarjeta posicionada según el rect
+/// medido. El GestureDetector de la cortina es opaco: nada de lo de abajo
+/// recibe toques mientras el paso está abierto.
+class _TourOverlay extends StatelessWidget {
+  const _TourOverlay({
+    required this.segment,
+    required this.step,
+    required this.stepIndex,
+    required this.totalSteps,
+    required this.onNext,
+    required this.onSkip,
+  });
 
-/// Construye el TargetFocus del paso: ancla → alineación calculada con
-/// el rect REAL (tarjeta abajo si hay sitio, arriba si el ancla está baja —
-/// nunca estimada, nunca fuera de pantalla). [index] es la posición global
-/// del paso dentro del tour completo (para «paso i de n»). El ancla YA está
-/// en la zona visible: `runAppTour` la arrastró antes de llamarnos.
-TargetFocus _targetFor(
-    BuildContext context, TourSegment seg, TourStep step, int index, int total) {
-  final screen = MediaQuery.of(context).size;
-  return TargetFocus(
-    identify: step.id,
-    keyTarget: step.anchor,
-    shape: ShapeLightFocus.RRect,
-    radius: 14,
-    paddingFocus: 10,
-    contents: [
-      TargetContent(
-        align: _alignFor(step.anchor, screen),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        builder: (ctx, controller) => _TourCard(
-          segment: seg.title,
-          step: step,
-          stepIndex: index,
-          totalSteps: total,
-          onNext: () => controller.next(),
-          onSkip: () => controller.skip(),
+  final String segment;
+  final TourStep step;
+  final int stepIndex;
+  final int totalSteps;
+  final VoidCallback onNext;
+  final VoidCallback onSkip;
+
+  /// Rect REAL del ancla en coordenadas de pantalla (null si no medible).
+  Rect? _anchorRect() {
+    final ctx = step.anchor?.currentContext;
+    if (ctx == null || !ctx.mounted) return null;
+    final box = ctx.findRenderObject();
+    if (box is! RenderBox || !box.attached || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // MediaQuery en el build: rotación/resize re-mide el recorte solo.
+    final media = MediaQuery.of(context);
+    final size = media.size;
+    final rect = _anchorRect();
+
+    // ¿Dónde hay más sitio? Debajo del ancla o encima de él.
+    final spaceBelow =
+        rect == null ? size.height : size.height - rect.bottom;
+    final spaceAbove = rect == null ? 0.0 : rect.top;
+    final below = spaceBelow >= spaceAbove;
+
+    final double maxCardHeight = rect == null
+        ? size.height * 0.6
+        : (below
+            ? spaceBelow - 14 - media.padding.bottom - 8
+            : spaceAbove - 14 - media.padding.top - 8);
+
+    final card = _TourCard(
+      segment: segment,
+      step: step,
+      stepIndex: stepIndex,
+      totalSteps: totalSteps,
+      onNext: onNext,
+      onSkip: onSkip,
+    );
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 180),
+      builder: (context, t, child) => Opacity(opacity: t, child: child),
+      child: Stack(children: [
+        // Cortina con recorte: opaca al hit-test, bloquea TODO lo de abajo.
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {}, // traga el toque: el tour se avanza con la tarjeta
+            child: CustomPaint(
+              painter: _ScrimWithHole(hole: rect),
+              size: size,
+            ),
+          ),
         ),
-      ),
-    ],
-  );
+        // Tarjeta: debajo del ancla si hay más sitio, arriba si está baja.
+        if (rect == null)
+          Positioned(
+            left: 16,
+            right: 16,
+            top: media.padding.top + 24,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxCardHeight),
+              child: card,
+            ),
+          )
+        else if (below)
+          Positioned(
+            left: 16,
+            right: 16,
+            top: rect.bottom + 14,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxCardHeight),
+              child: card,
+            ),
+          )
+        else
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: size.height - rect.top + 14,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxCardHeight),
+              child: card,
+            ),
+          ),
+      ]),
+    );
+  }
 }
 
-/// Alineación según la posición real del ancla: centro por debajo del 55 %
-/// de la pantalla → tarjeta ARRIBA; si no, abajo. Sin ancla → arriba.
-ContentAlign _alignFor(GlobalKey? anchor, Size screen) {
-  if (anchor == null) return ContentAlign.top;
-  final ctx = anchor.currentContext;
-  if (ctx == null) return ContentAlign.top;
-  final box = ctx.findRenderObject() as RenderBox?;
-  if (box == null || !box.attached || !box.hasSize) return ContentAlign.top;
-  final rect = box.localToGlobal(Offset.zero) & box.size;
-  return rect.center.dy > screen.height * 0.55
-      ? ContentAlign.top
-      : ContentAlign.bottom;
+/// Cortina negra con el agujero del ancla (Path.difference — recorte real).
+class _ScrimWithHole extends CustomPainter {
+  const _ScrimWithHole({this.hole});
+
+  final Rect? hole;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.black.withValues(alpha: 0.78);
+    final full = Path()..addRect(Offset.zero & size);
+    if (hole == null) {
+      canvas.drawPath(full, paint);
+      return;
+    }
+    final cut = RRect.fromRectAndRadius(
+        hole!.inflate(6), const Radius.circular(14));
+    final path = Path.combine(
+        PathOperation.difference, full, Path()..addRRect(cut));
+    canvas.drawPath(path, paint);
+    // Filo suave alrededor del foco: señala el ancla sin hacer ruido.
+    canvas.drawRRect(
+      cut,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = Colors.white.withValues(alpha: 0.35),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ScrimWithHole old) => old.hole != hole;
 }
 
-/// ─── Tarjeta del paso (estética VeInk, la del walkthrough v17.2) ────────────
-/// StatefulWidget por el guard `_busy`: un doble toque en «Siguiente» no
-/// debe avanzar dos veces (el cierre del overlay es asíncrono y un segundo
-/// `next()` en el último paso duplicaría el onFinish).
-class _TourCard extends StatefulWidget {
+/// ─── Tarjeta del paso (estética VeInk) ──────────────────────────────────────
+class _TourCard extends StatelessWidget {
   const _TourCard({
     required this.segment,
     required this.step,
@@ -421,22 +511,9 @@ class _TourCard extends StatefulWidget {
   final VoidCallback onSkip;
 
   @override
-  State<_TourCard> createState() => _TourCardState();
-}
-
-class _TourCardState extends State<_TourCard> {
-  bool _busy = false;
-
-  void _advance(VoidCallback cb) {
-    if (_busy) return;
-    setState(() => _busy = true);
-    cb();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isLast = widget.stepIndex == widget.totalSteps - 1;
+    final isLast = stepIndex == totalSteps - 1;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10),
@@ -456,7 +533,7 @@ class _TourCardState extends State<_TourCard> {
         children: [
           Row(children: [
             Expanded(
-              child: Text(widget.segment,
+              child: Text(segment,
                   style: TextStyle(
                       fontFamily: 'SpaceGrotesk',
                       fontSize: 10,
@@ -464,17 +541,17 @@ class _TourCardState extends State<_TourCard> {
                       letterSpacing: 1.1,
                       color: scheme.primary)),
             ),
-            Text('${widget.stepIndex + 1}/${widget.totalSteps}',
+            Text('${stepIndex + 1}/$totalSteps',
                 style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                     fontFeatures: const [FontFeature.tabularFigures()],
                     color: scheme.onSurfaceVariant)),
           ]),
-          if (widget.step.flags.isNotEmpty) ...[
+          if (step.flags.isNotEmpty) ...[
             const SizedBox(height: 8),
             Row(children: [
-              for (final c in widget.step.flags)
+              for (final c in step.flags)
                 Padding(
                   padding: const EdgeInsets.only(right: 5),
                   child: Flag(c, size: 16),
@@ -482,20 +559,22 @@ class _TourCardState extends State<_TourCard> {
             ]),
           ],
           const SizedBox(height: 8),
-          Text(widget.step.title,
+          Text(step.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          Text(widget.step.body,
-              style: TextStyle(fontSize: 13, height: 1.5, color: scheme.onSurfaceVariant)),
+          Text(step.body,
+              maxLines: 6,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: 13, height: 1.5, color: scheme.onSurfaceVariant)),
           const SizedBox(height: 14),
           Row(children: [
-            TextButton(
-              onPressed: _busy ? null : () => _advance(widget.onSkip),
-              child: const Text('Saltar'),
-            ),
+            TextButton(onPressed: onSkip, child: const Text('Saltar')),
             const Spacer(),
             FilledButton(
-              onPressed: _busy ? null : () => _advance(widget.onNext),
+              onPressed: onNext,
               child: Text(isLast ? 'Entendido' : 'Siguiente'),
             ),
           ]),

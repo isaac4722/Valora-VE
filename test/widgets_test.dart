@@ -386,7 +386,7 @@ void main() {
     });
   });
 
-  group('Tour completo (v17.8 · tutorial_coach_mark, un solo tutorial)', () {
+  group('Tour completo (v19.0 · motor propio, un solo tutorial)', () {
     test('integridad: 6 segmentos, ids únicos, anclas GlobalKeys', () {
       // El tour es UNO y cubre toda la app: 5 pestañas + Ajustes.
       expect(kTourSegments.map((s) => s.location).toList(),
