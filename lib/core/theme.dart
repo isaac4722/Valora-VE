@@ -89,26 +89,26 @@ class VeInk extends ThemeExtension<VeInk> {
   });
 
   const VeInk.light()
-      : this(
-          pos: VeColors.posLight,
-          neg: VeColors.negLight,
-          warn: VeColors.warnLight,
-          manual: VeColors.manualLight,
-          cop: VeColors.copLight,
-          brl: VeColors.brlLight,
-          mxn: VeColors.mxnLight,
-        );
+    : this(
+        pos: VeColors.posLight,
+        neg: VeColors.negLight,
+        warn: VeColors.warnLight,
+        manual: VeColors.manualLight,
+        cop: VeColors.copLight,
+        brl: VeColors.brlLight,
+        mxn: VeColors.mxnLight,
+      );
 
   const VeInk.dark()
-      : this(
-          pos: VeColors.posDark,
-          neg: VeColors.negDark,
-          warn: VeColors.warnDark,
-          manual: VeColors.manualDark,
-          cop: VeColors.copDark,
-          brl: VeColors.brlDark,
-          mxn: VeColors.mxnDark,
-        );
+    : this(
+        pos: VeColors.posDark,
+        neg: VeColors.negDark,
+        warn: VeColors.warnDark,
+        manual: VeColors.manualDark,
+        cop: VeColors.copDark,
+        brl: VeColors.brlDark,
+        mxn: VeColors.mxnDark,
+      );
 
   final Color pos; // verde — oficiales, positivo
   final Color neg; // rojo — paralelos, negativo, destructivo
@@ -127,16 +127,15 @@ class VeInk extends ThemeExtension<VeInk> {
     Color? cop,
     Color? brl,
     Color? mxn,
-  }) =>
-      VeInk(
-        pos: pos ?? this.pos,
-        neg: neg ?? this.neg,
-        warn: warn ?? this.warn,
-        manual: manual ?? this.manual,
-        cop: cop ?? this.cop,
-        brl: brl ?? this.brl,
-        mxn: mxn ?? this.mxn,
-      );
+  }) => VeInk(
+    pos: pos ?? this.pos,
+    neg: neg ?? this.neg,
+    warn: warn ?? this.warn,
+    manual: manual ?? this.manual,
+    cop: cop ?? this.cop,
+    brl: brl ?? this.brl,
+    mxn: mxn ?? this.mxn,
+  );
 
   @override
   VeInk lerp(VeInk? other, double t) {
@@ -162,34 +161,34 @@ class VeInk extends ThemeExtension<VeInk> {
 /// color porque el usuario eligió otro wallpaper.
 abstract final class AppTheme {
   static ThemeData light([ColorScheme? dynamicScheme]) => _build(
-        bg: VeColors.bgLight,
-        card: VeColors.cardLight,
-        fg: VeColors.fgLight,
-        muted: VeColors.mutedLight,
-        mutedFg: VeColors.mutedFgLight,
-        primary: VeColors.primaryLight,
-        onPrimary: Colors.white,
-        accent: VeColors.accentLight,
-        border: VeColors.borderLight,
-        destructive: VeColors.destructiveLight,
-        isDark: false,
-        dynamicScheme: dynamicScheme,
-      );
+    bg: VeColors.bgLight,
+    card: VeColors.cardLight,
+    fg: VeColors.fgLight,
+    muted: VeColors.mutedLight,
+    mutedFg: VeColors.mutedFgLight,
+    primary: VeColors.primaryLight,
+    onPrimary: Colors.white,
+    accent: VeColors.accentLight,
+    border: VeColors.borderLight,
+    destructive: VeColors.destructiveLight,
+    isDark: false,
+    dynamicScheme: dynamicScheme,
+  );
 
   static ThemeData dark([ColorScheme? dynamicScheme]) => _build(
-        bg: VeColors.bgDark,
-        card: VeColors.cardDark,
-        fg: VeColors.fgDark,
-        muted: VeColors.mutedDark,
-        mutedFg: VeColors.mutedFgDark,
-        primary: VeColors.primaryDark,
-        onPrimary: VeColors.onPrimaryDark,
-        accent: VeColors.accentDark,
-        border: VeColors.borderDark,
-        destructive: VeColors.destructiveDark,
-        isDark: true,
-        dynamicScheme: dynamicScheme,
-      );
+    bg: VeColors.bgDark,
+    card: VeColors.cardDark,
+    fg: VeColors.fgDark,
+    muted: VeColors.mutedDark,
+    mutedFg: VeColors.mutedFgDark,
+    primary: VeColors.primaryDark,
+    onPrimary: VeColors.onPrimaryDark,
+    accent: VeColors.accentDark,
+    border: VeColors.borderDark,
+    destructive: VeColors.destructiveDark,
+    isDark: true,
+    dynamicScheme: dynamicScheme,
+  );
 
   static ThemeData _build({
     required Color bg,
@@ -261,7 +260,9 @@ abstract final class AppTheme {
           color: fg,
           letterSpacing: -0.2,
         ),
-        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        systemOverlayStyle: isDark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
       ),
       // §8 sombra firma sutil: card eleva 1 con sombra azul-noche al 8 %.
       cardTheme: CardThemeData(
@@ -291,7 +292,10 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: muted.withValues(alpha: 0.55),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: border),
@@ -304,7 +308,10 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: effPrimary, width: 1.4),
         ),
-        hintStyle: TextStyle(color: mutedFg.withValues(alpha: 0.75), fontSize: 13.5),
+        hintStyle: TextStyle(
+          color: mutedFg.withValues(alpha: 0.75),
+          fontSize: 13.5,
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -312,7 +319,9 @@ abstract final class AppTheme {
           foregroundColor: effOnPrimary,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           textStyle: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 13.5,
@@ -325,7 +334,9 @@ abstract final class AppTheme {
           foregroundColor: fg,
           side: BorderSide(color: border),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           textStyle: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 13.5,
@@ -425,8 +436,11 @@ class VePageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final CurvedAnimation curved =
-        CurvedAnimation(parent: animation, curve: kEaseVe, reverseCurve: kEaseVe.flipped);
+    final CurvedAnimation curved = CurvedAnimation(
+      parent: animation,
+      curve: kEaseVe,
+      reverseCurve: kEaseVe.flipped,
+    );
     if (MediaQuery.disableAnimationsOf(context)) {
       return FadeTransition(opacity: curved, child: child);
     }
@@ -450,16 +464,15 @@ abstract final class VeText {
     required Color color,
     FontWeight weight = FontWeight.w700,
     double? letterSpacing,
-  }) =>
-      TextStyle(
-        fontFamily: 'SpaceGrotesk',
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        letterSpacing: letterSpacing ?? -0.02 * size,
-        fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
-        height: 1.05,
-      );
+  }) => TextStyle(
+    fontFamily: 'SpaceGrotesk',
+    fontSize: size,
+    fontWeight: weight,
+    color: color,
+    letterSpacing: letterSpacing ?? -0.02 * size,
+    fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+    height: 1.05,
+  );
 
   /// `label-caps` — rótulos técnicos en mayúsculas con tracking amplio.
   ///
@@ -469,12 +482,11 @@ abstract final class VeText {
     double size, {
     required Color color,
     FontWeight weight = FontWeight.w600,
-  }) =>
-      TextStyle(
-        fontFamily: 'Inter',
-        fontSize: size < 9.5 ? 9.5 : size,
-        fontWeight: weight,
-        color: color,
-        letterSpacing: 0.12 * (size < 9.5 ? 9.5 : size),
-      );
+  }) => TextStyle(
+    fontFamily: 'Inter',
+    fontSize: size < 9.5 ? 9.5 : size,
+    fontWeight: weight,
+    color: color,
+    letterSpacing: 0.12 * (size < 9.5 ? 9.5 : size),
+  );
 }

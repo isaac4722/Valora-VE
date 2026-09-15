@@ -18,7 +18,8 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 class ConnectivityService {
-  ConnectivityService({Connectivity? plugin}) : _plugin = plugin ?? Connectivity();
+  ConnectivityService({Connectivity? plugin})
+    : _plugin = plugin ?? Connectivity();
 
   final Connectivity _plugin;
   StreamSubscription<List<ConnectivityResult>>? _sub;
@@ -52,7 +53,9 @@ class ConnectivityService {
             if (!_changes.isClosed) _changes.add(now);
           }
         },
-        onError: (_) {/* canal muerto: el último estado queda vigente */},
+        onError: (_) {
+          /* canal muerto: el último estado queda vigente */
+        },
       );
     } catch (_) {
       // Sin EventChannel disponible: el servicio queda en sondeo estático.

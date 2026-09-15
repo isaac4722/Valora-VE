@@ -30,7 +30,7 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
-import '../../room/room_transport.dart';
+import '../../room/room_controller.dart';
 import '../../services/alerts.dart';
 import '../../services/notifications.dart';
 import '../../services/photo_compress.dart';
@@ -45,17 +45,22 @@ Future<void> showCheckoutSheet(BuildContext context) async {
     builder: (_) => const CheckoutModal(),
   );
   if (saved == true && context.mounted) {
-    showToast(context, 'Compra guardada en el historial',
-        kind: ToastKind.ok,
-        actionLabel: 'Ver historial',
-        onAction: () => context.push('/historial'));
+    showToast(
+      context,
+      'Compra guardada en el historial',
+      kind: ToastKind.ok,
+      actionLabel: 'Ver historial',
+      onAction: () => context.push('/historial'),
+    );
   }
 }
 
 /// Totales del carrito (USD + por moneda + unidades) — motor compartido
 /// entre la pantalla Lista y este modal (antes vivía en lista_screen.dart).
 ({double usd, Map<Currency, double> byCurrency, int units}) cartTotals(
-    List<CartItem> cart, RateContext ctx) {
+  List<CartItem> cart,
+  RateContext ctx,
+) {
   final by = <Currency, double>{};
   var usd = 0.0;
   var units = 0;
@@ -110,7 +115,8 @@ Purchase buildPurchase({
     rate: rate,
     rateSourceId: ctx.sel(Currency.ves),
     paidTotal: paidTotal,
-    paidCurrency: paidCurrency ?? (cart.isNotEmpty ? cart.first.currency : 'VES'),
+    paidCurrency:
+        paidCurrency ?? (cart.isNotEmpty ? cart.first.currency : 'VES'),
     ticketPhoto: ticketDataUrl,
     notes: notes,
   );
@@ -158,10 +164,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
     // Default multitienda ON si algún ítem ya trae tienda asignada.
     _multiStore = _cart.any((c) => (c.store ?? '').trim().isNotEmpty);
     _paidCurrency = CurrencyX.from(
-        _cart.isNotEmpty ? _cart.first.currency : _store.settings.calcCurrency);
+      _cart.isNotEmpty ? _cart.first.currency : _store.settings.calcCurrency,
+    );
     for (final c in _cart) {
       _matches[c.id] = _store.findSimilarProduct(
-          name: c.name, barcode: c.barcode, store: c.store);
+        name: c.name,
+        barcode: c.barcode,
+        store: c.store,
+      );
     }
   }
 
@@ -186,12 +196,17 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   void _recomputeMatch(CartItem it) {
     _matches[it.id] = _store.findSimilarProduct(
-        name: it.name, barcode: it.barcode, store: it.store);
+      name: it.name,
+      barcode: it.barcode,
+      store: it.store,
+    );
   }
 
   void _setItemStore(CartItem it, String? value) {
-    final patched =
-        it.copyWith(store: value, clearStore: value == null || value.trim().isEmpty);
+    final patched = it.copyWith(
+      store: value,
+      clearStore: value == null || value.trim().isEmpty,
+    );
     _store.updateCartItem(it.id, patched);
     final idx = _cart.indexWhere((c) => c.id == it.id);
     if (idx >= 0) _cart[idx] = patched;
@@ -215,7 +230,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
     for (final it in _cart) {
       final s = _multiStore
           ? ((it.store ?? '').trim().isEmpty ? 'Sin asignar' : it.store!.trim())
-          : ((_singleStore ?? '').trim().isEmpty ? 'Sin tienda' : _singleStore!.trim());
+          : ((_singleStore ?? '').trim().isEmpty
+                ? 'Sin tienda'
+                : _singleStore!.trim());
       (map[s] ??= []).add(it);
     }
     return map;
@@ -227,10 +244,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
     try {
       final picker = ImagePicker();
       final photo = await picker.pickImage(
-          source: ImageSource.camera,
-          maxWidth: 1024,
-          maxHeight: 1024,
-          imageQuality: 72);
+        source: ImageSource.camera,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 72,
+      );
       if (photo == null) return;
       var bytes = await photo.readAsBytes();
       if (bytes.length > 12 * 1024 * 1024) {
@@ -242,7 +260,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
       // Re-asegura JPEG ≤1024 px (photo_compress): si no reduce, se conserva
       // el original del picker (nunca se agranda ni degrada a ciegas).
       final compressed = await compressJpeg(
-          Uint8List.fromList(bytes), quality: 72, maxDim: 1024);
+        Uint8List.fromList(bytes),
+        quality: 72,
+        maxDim: 1024,
+      );
       if (compressed != null) bytes = compressed;
       if (!mounted) return;
       setState(() => _ticketDataUrl = photoToDataUrl(bytes));
@@ -255,10 +276,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
   /// de tickets viejos (fire-and-forget). Devuelve true para cerrar el modal.
   Future<bool> _save() async {
     if (_cart.isEmpty) return true;
-    final single =
-        (_singleStore ?? '').trim().isEmpty ? null : _singleStore!.trim();
-    final notes =
-        (_notesCtrl.text).trim().isEmpty ? null : _notesCtrl.text.trim();
+    final single = (_singleStore ?? '').trim().isEmpty
+        ? null
+        : _singleStore!.trim();
+    final notes = (_notesCtrl.text).trim().isEmpty
+        ? null
+        : _notesCtrl.text.trim();
     final paid = parseLocaleNum(_paidCtrl.text);
     final t = _totals;
 
@@ -297,15 +320,15 @@ class _CheckoutModalState extends State<CheckoutModal> {
         _store.recordPurchaseItemOnProduct(pid, purchaseItem, store: itemStore);
         try {
           context.read<AlertEngine>().checkProductRise(
-                notifs: context.read<NotificationsService>(),
-                persist: (kind, title, body) => _store.pushNotification(
-                    kind: kind, title: title, body: body),
-                productId: pid,
-                productName: purchaseItem.name,
-                oldPrice: prev?.price ?? 0,
-                newPrice: purchaseItem.priceUSD,
-                storeName: itemStore,
-              );
+            notifs: context.read<NotificationsService>(),
+            persist: (kind, title, body) =>
+                _store.pushNotification(kind: kind, title: title, body: body),
+            productId: pid,
+            productName: purchaseItem.name,
+            oldPrice: prev?.price ?? 0,
+            newPrice: purchaseItem.priceUSD,
+            storeName: itemStore,
+          );
         } catch (_) {
           // Sin Provider (previews/tests): la alerta es no-op, la compra sigue.
         }
@@ -367,220 +390,317 @@ class _CheckoutModalState extends State<CheckoutModal> {
     final scheme = Theme.of(context).colorScheme;
     final t = _totals;
     final groups = _groupedByStore();
-    final matchesList =
-        _cart.where((c) => (_matches[c.id] != null)).toList();
+    final matchesList = _cart.where((c) => (_matches[c.id] != null)).toList();
 
     return SafeArea(
       top: false,
       child: Padding(
         // Deja sitio al teclado sin tapar el botón final.
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
         child: ConstrainedBox(
           constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.92),
+            maxHeight: MediaQuery.of(context).size.height * 0.92,
+          ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              // Cabecera.
-              Row(children: [
-                Expanded(
-                  child: Text('Finalizar compra',
-                      style: TextStyle(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Cabecera.
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Finalizar compra',
+                        style: TextStyle(
                           fontFamily: 'SpaceGrotesk',
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: scheme.onSurface)),
-                ),
-                IconButton(
-                  tooltip: 'Cerrar',
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: () => Navigator.of(context).pop(false),
-                ),
-              ]),
-              Text(
-                  '${_cart.length} ítems · ${t.units} unidades · ${t.byCurrency.length} monedas',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-              const SizedBox(height: 10),
-              ReadWindow(
-                semanticLabel: 'Total a guardar',
-                child: Row(children: [
-                  Expanded(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                          '${_calcCur.code} ${fmtMoney(_totalInCalc, _calcCur)}',
-                          style: VeText.displayNum(34, color: scheme.onSurface)),
-                    ),
-                  ),
-                  Text('Total USD: ${fmtUSD(t.usd)}',
-                      style: TextStyle(
-                          fontSize: 11.5, color: scheme.onSurfaceVariant)),
-                ]),
-              ),
-              // Desglose por tienda (requisito F/G: resumen final agrupado).
-              for (final entry in groups.entries) ...[
-                const SizedBox(height: 12),
-                Row(children: [
-                  Icon(Icons.storefront_outlined, size: 13, color: scheme.primary),
-                  const SizedBox(width: 6),
-                  Text(entry.key,
-                      style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w800)),
-                ]),
-                const SizedBox(height: 4),
-                for (final it in entry.value)
-                  LedgerRow(
-                    label: '${it.quantity} × ${it.name}',
-                    value: fmtUSD(_itemUsd(it)),
-                  ),
-                const RuleDouble(),
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text('Subtotal: ${fmtUSD(_groupUsd(entry.value))}',
-                      style: VeText.displayNum(13, color: scheme.onSurface)),
-                ),
-                // Multitienda ON: campo de tienda por ítem.
-                if (_multiStore)
-                  for (final it in entry.value)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: StoreAutocompleteField(
-                        stores: _store.stores,
-                        initialValue: it.store,
-                        hint: 'Tienda de ${it.name}',
-                        onChanged: (v) => _setItemStore(it, v),
+                          color: scheme.onSurface,
+                        ),
                       ),
                     ),
-              ],
-              const SizedBox(height: 12),
-              // Toggle multitienda (requisito F).
-              Row(children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Varias tiendas', style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
-                    Text(
-                      _multiStore
-                          ? 'Cada ítem se asigna a su tienda.'
-                          : 'Una sola tienda para toda la compra.',
-                      style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+                    IconButton(
+                      tooltip: 'Cerrar',
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () => Navigator.of(context).pop(false),
                     ),
-                  ]),
+                  ],
                 ),
-                Switch(value: _multiStore, onChanged: (v) => setState(() => _multiStore = v)),
-              ]),
-              if (!_multiStore) ...[
-                StoreAutocompleteField(
-                  stores: _store.stores,
-                  initialValue: _singleStore,
-                  hint: 'Tienda de la compra (opcional)',
-                  onChanged: (v) => setState(() {
-                    _singleStore = v;
-                    // El match «ya existe» depende de la tienda en juego.
-                    for (final c in _cart) {
-                      _recomputeMatch(c);
-                    }
-                  }),
-                ),
-              ],
-              // H: avisos «ya existe» con Vincular / Crear nuevo.
-              if (matchesList.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Text('YA EN TU LIBRO', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
-                const SizedBox(height: 6),
-                for (final it in matchesList)
-                  _MatchRow(
-                    item: it,
-                    match: _matches[it.id]!,
-                    linked: _link[it.id] == true,
-                    onLink: () => _linkTo(it, _matches[it.id]!),
-                    onCreate: () => setState(() => _link[it.id] = false),
-                  ),
-              ],
-              const SizedBox(height: 14),
-              // Pagado (ajustado) + moneda (se mantiene del checkout previo).
-              Text('PAGADO (AJUSTADO)', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
-              const SizedBox(height: 6),
-              Row(children: [
-                Expanded(
-                  child: TextField(
-                    controller: _paidCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                        hintText: 'Total: ${fmtUSD(t.usd)} · ${_calcCur.code} ${fmtMoney(_totalInCalc, _calcCur)}'),
+                Text(
+                  '${_cart.length} ítems · ${t.units} unidades · ${t.byCurrency.length} monedas',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(width: 8),
-                CurrencySelect(
-                  value: _paidCurrency,
-                  onChanged: (c) => setState(() => _paidCurrency = c),
-                ),
-              ]),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _notesCtrl,
-                decoration: const InputDecoration(hintText: 'Nota o descripción (opcional)'),
-              ),
-              const SizedBox(height: 8),
-              // Foto del ticket (JPEG 1024 .72 + compress).
-              Row(children: [
-                OutlinedButton.icon(
-                  onPressed: _picking ? null : _pickTicket,
-                  icon: _picking
-                      ? const SizedBox(width: 14, height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.camera_alt_outlined, size: 15),
-                  label: Text(_ticketDataUrl == null ? 'Foto del ticket' : 'Foto lista',
-                      style: const TextStyle(fontSize: 12.5)),
-                ),
-                if (_ticketDataUrl != null) ...[
-                  const SizedBox(width: 8),
-                  Icon(Icons.photo, size: 14, color: scheme.primary),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text('Ticket adjunto (~200 KB)',
-                        style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+                const SizedBox(height: 10),
+                ReadWindow(
+                  semanticLabel: 'Total a guardar',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '${_calcCur.code} ${fmtMoney(_totalInCalc, _calcCur)}',
+                            style: VeText.displayNum(
+                              34,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'Total USD: ${fmtUSD(t.usd)}',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                  TextButton(
-                    onPressed: () => setState(() => _ticketDataUrl = null),
-                    child: const Text('Quitar', style: TextStyle(fontSize: 12)),
+                ),
+                // Desglose por tienda (requisito F/G: resumen final agrupado).
+                for (final entry in groups.entries) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.storefront_outlined,
+                        size: 13,
+                        color: scheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        entry.key,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  for (final it in entry.value)
+                    LedgerRow(
+                      label: '${it.quantity} × ${it.name}',
+                      value: fmtUSD(_itemUsd(it)),
+                    ),
+                  const RuleDouble(),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'Subtotal: ${fmtUSD(_groupUsd(entry.value))}',
+                      style: VeText.displayNum(13, color: scheme.onSurface),
+                    ),
+                  ),
+                  // Multitienda ON: campo de tienda por ítem.
+                  if (_multiStore)
+                    for (final it in entry.value)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: StoreAutocompleteField(
+                          stores: _store.stores,
+                          initialValue: it.store,
+                          hint: 'Tienda de ${it.name}',
+                          onChanged: (v) => _setItemStore(it, v),
+                        ),
+                      ),
+                ],
+                const SizedBox(height: 12),
+                // Toggle multitienda (requisito F).
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Varias tiendas',
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            _multiStore
+                                ? 'Cada ítem se asigna a su tienda.'
+                                : 'Una sola tienda para toda la compra.',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _multiStore,
+                      onChanged: (v) => setState(() => _multiStore = v),
+                    ),
+                  ],
+                ),
+                if (!_multiStore) ...[
+                  StoreAutocompleteField(
+                    stores: _store.stores,
+                    initialValue: _singleStore,
+                    hint: 'Tienda de la compra (opcional)',
+                    onChanged: (v) => setState(() {
+                      _singleStore = v;
+                      // El match «ya existe» depende de la tienda en juego.
+                      for (final c in _cart) {
+                        _recomputeMatch(c);
+                      }
+                    }),
                   ),
                 ],
-              ]),
-              // v19 · AL PAGAR: vuelto multi-divisa y reparto con propina
-              // (antes vivían como secciones sueltas de la pantalla Lista).
-              _Vuelto(ctx: _ctx, totals: t, calcCur: _calcCur, totalInCalc: _totalInCalc),
-              _DividirCuenta(totalUsd: t.usd, totalInCalc: _totalInCalc, calcCur: _calcCur),
-              const SizedBox(height: 14),
-              // Acción final única.
-              SizedBox(
-                width: double.infinity,
-                child: PrimaryButton(
-                  'Guardar compra',
-                  icon: Icons.save_outlined,
-                  onPressed: _cart.isEmpty
-                      ? null
-                      : () async {
-                          final ok = await _save();
-                          if (context.mounted && ok) {
-                            // v18.0 · auto-cierre: si el anfitrión guardó la
-                            // compra en sala, la sala se cierra para todos y
-                            // cada quien vuelve a su lista. Tolerante: la
-                            // compra YA quedó guardada pase lo que pase.
-                            try {
-                              await context
-                                  .read<RoomController>()
-                                  .closeAfterPurchase();
-                            } catch (_) {}
-                            if (context.mounted) {
-                              Navigator.of(context).pop(true);
-                            }
-                          }
-                        },
+                // H: avisos «ya existe» con Vincular / Crear nuevo.
+                if (matchesList.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    'YA EN TU LIBRO',
+                    style: VeText.labelCaps(
+                      9.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  for (final it in matchesList)
+                    _MatchRow(
+                      item: it,
+                      match: _matches[it.id]!,
+                      linked: _link[it.id] == true,
+                      onLink: () => _linkTo(it, _matches[it.id]!),
+                      onCreate: () => setState(() => _link[it.id] = false),
+                    ),
+                ],
+                const SizedBox(height: 14),
+                // Pagado (ajustado) + moneda (se mantiene del checkout previo).
+                Text(
+                  'PAGADO (AJUSTADO)',
+                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
                 ),
-              ),
-            ]),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _paidCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: InputDecoration(
+                          hintText:
+                              'Total: ${fmtUSD(t.usd)} · ${_calcCur.code} ${fmtMoney(_totalInCalc, _calcCur)}',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    CurrencySelect(
+                      value: _paidCurrency,
+                      onChanged: (c) => setState(() => _paidCurrency = c),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _notesCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'Nota o descripción (opcional)',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Foto del ticket (JPEG 1024 .72 + compress).
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _picking ? null : _pickTicket,
+                      icon: _picking
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.camera_alt_outlined, size: 15),
+                      label: Text(
+                        _ticketDataUrl == null
+                            ? 'Foto del ticket'
+                            : 'Foto lista',
+                        style: const TextStyle(fontSize: 12.5),
+                      ),
+                    ),
+                    if (_ticketDataUrl != null) ...[
+                      const SizedBox(width: 8),
+                      Icon(Icons.photo, size: 14, color: scheme.primary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Ticket adjunto (~200 KB)',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => setState(() => _ticketDataUrl = null),
+                        child: const Text(
+                          'Quitar',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                // v19 · AL PAGAR: vuelto multi-divisa y reparto con propina
+                // (antes vivían como secciones sueltas de la pantalla Lista).
+                _Vuelto(
+                  ctx: _ctx,
+                  totals: t,
+                  calcCur: _calcCur,
+                  totalInCalc: _totalInCalc,
+                ),
+                _DividirCuenta(
+                  totalUsd: t.usd,
+                  totalInCalc: _totalInCalc,
+                  calcCur: _calcCur,
+                ),
+                const SizedBox(height: 14),
+                // Acción final única.
+                SizedBox(
+                  width: double.infinity,
+                  child: PrimaryButton(
+                    'Guardar compra',
+                    icon: Icons.save_outlined,
+                    onPressed: _cart.isEmpty
+                        ? null
+                        : () async {
+                            final ok = await _save();
+                            if (context.mounted && ok) {
+                              // v18.0 · auto-cierre: si el anfitrión guardó la
+                              // compra en sala, la sala se cierra para todos y
+                              // cada quien vuelve a su lista. Tolerante: la
+                              // compra YA quedó guardada pase lo que pase.
+                              try {
+                                await context
+                                    .read<RoomController>()
+                                    .closeAfterPurchase();
+                              } catch (_) {}
+                              if (context.mounted) {
+                                Navigator.of(context).pop(true);
+                              }
+                            }
+                          },
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -653,7 +773,8 @@ class _VueltoState extends State<_Vuelto> {
 
     var delivered = 0.0;
     final missing = <Currency>{};
-    final rows = <({Currency cur, double amount, double converted, bool missing})>[];
+    final rows =
+        <({Currency cur, double amount, double converted, bool missing})>[];
     for (var i = 0; i < _ctrls.length; i++) {
       final amount = parseLocaleNum(_ctrls[i].text) ?? 0;
       if (amount <= 0) continue;
@@ -666,106 +787,149 @@ class _VueltoState extends State<_Vuelto> {
       }
       final converted = amount * p.rate;
       delivered += converted;
-      rows.add((cur: cur, amount: amount, converted: converted, missing: false));
+      rows.add((
+        cur: cur,
+        amount: amount,
+        converted: converted,
+        missing: false,
+      ));
     }
     final bool hasInput = rows.isNotEmpty;
     final double change = delivered - widget.totalInCalc;
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Calculadora de vuelto'),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(
-                'Total a cubrir: ${fmtCurrency(widget.totalInCalc, calcCur)}'
-                '${calcCur != Currency.usd ? ' (${fmtUSD(widget.totals.usd)})' : ''}',
-                style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
-            const SizedBox(height: 8),
-            // Filas «moneda + monto» (varios pagos en distintas divisas).
-            for (var i = 0; i < _ctrls.length; i++)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _ctrls[i],
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                          hintText: i == 0 ? '¿Con cuánto pagas?' : 'Otro pago'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  CurrencySelect(
-                    value: _currencies[i],
-                    onChanged: (c) => setState(() => _currencies[i] = c),
-                  ),
-                  if (_ctrls.length > 1)
-                    IconButton(
-                      tooltip: 'Quitar pago',
-                      icon: Icon(Icons.close, size: 16, color: scheme.onSurfaceVariant),
-                      onPressed: () => _removeRow(i),
-                    ),
-                ]),
-              ),
-            TextButton.icon(
-              onPressed: _addRow,
-              icon: const Icon(Icons.add, size: 14),
-              label: const Text('Pagar en otra divisa', style: TextStyle(fontSize: 12)),
-            ),
-            // Resultado: vuelto o falta, en la moneda del cálculo.
-            if (hasInput) ...[
-              const SizedBox(height: 6),
-              if (missing.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    'Sin tasa viva para ${missing.map((m) => m.code).join(', ')}: '
-                    'no puedo convertir ese pago — revisa su fuente en Ajustes.',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: sem.warn),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle('Calculadora de vuelto'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Total a cubrir: ${fmtCurrency(widget.totalInCalc, calcCur)}'
+                  '${calcCur != Currency.usd ? ' (${fmtUSD(widget.totals.usd)})' : ''}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  change >= 0
-                      ? 'Vuelto: ${fmtCurrency(change, calcCur)}'
-                      : 'Faltan: ${fmtCurrency(-change, calcCur)}',
-                  style: VeText.displayNum(22,
-                      color: change >= 0 ? sem.pos : sem.neg),
-                ),
-              ),
-              Text('Entregado: ${fmtCurrency(delivered, calcCur)}',
-                  style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
-              TextButton(
-                onPressed: () => setState(() => _breakdown = !_breakdown),
-                style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                child: Text(_breakdown ? 'Ocultar desglose' : 'Desglosar por divisa',
-                    style: const TextStyle(fontSize: 12)),
-              ),
-              if (_breakdown)
-                for (final r in rows)
+                const SizedBox(height: 8),
+                // Filas «moneda + monto» (varios pagos en distintas divisas).
+                for (var i = 0; i < _ctrls.length; i++)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: LedgerRow(
-                      leading: Flag(r.cur, size: 14),
-                      label: '${fmtMoney(r.amount, r.cur)} ${r.cur.code}',
-                      value: r.missing
-                          ? 'Sin tasa'
-                          : '${fmtMoney(r.converted, calcCur)} ${calcCur.code}',
-                      valueColor: r.missing ? sem.warn : null,
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _ctrls[i],
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              hintText: i == 0
+                                  ? '¿Con cuánto pagas?'
+                                  : 'Otro pago',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        CurrencySelect(
+                          value: _currencies[i],
+                          onChanged: (c) => setState(() => _currencies[i] = c),
+                        ),
+                        if (_ctrls.length > 1)
+                          IconButton(
+                            tooltip: 'Quitar pago',
+                            icon: Icon(
+                              Icons.close,
+                              size: 16,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                            onPressed: () => _removeRow(i),
+                          ),
+                      ],
                     ),
                   ),
-            ],
-          ]),
+                TextButton.icon(
+                  onPressed: _addRow,
+                  icon: const Icon(Icons.add, size: 14),
+                  label: const Text(
+                    'Pagar en otra divisa',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+                // Resultado: vuelto o falta, en la moneda del cálculo.
+                if (hasInput) ...[
+                  const SizedBox(height: 6),
+                  if (missing.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        'Sin tasa viva para ${missing.map((m) => m.code).join(', ')}: '
+                        'no puedo convertir ese pago — revisa su fuente en Ajustes.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: sem.warn,
+                        ),
+                      ),
+                    ),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      change >= 0
+                          ? 'Vuelto: ${fmtCurrency(change, calcCur)}'
+                          : 'Faltan: ${fmtCurrency(-change, calcCur)}',
+                      style: VeText.displayNum(
+                        22,
+                        color: change >= 0 ? sem.pos : sem.neg,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Entregado: ${fmtCurrency(delivered, calcCur)}',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() => _breakdown = !_breakdown),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      _breakdown ? 'Ocultar desglose' : 'Desglosar por divisa',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  if (_breakdown)
+                    for (final r in rows)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: LedgerRow(
+                          leading: Flag(r.cur, size: 14),
+                          label: '${fmtMoney(r.amount, r.cur)} ${r.cur.code}',
+                          value: r.missing
+                              ? 'Sin tasa'
+                              : '${fmtMoney(r.converted, calcCur)} ${calcCur.code}',
+                          valueColor: r.missing ? sem.warn : null,
+                        ),
+                      ),
+                ],
+              ],
+            ),
+          ),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 }
 
@@ -805,93 +969,159 @@ class _DividirCuentaState extends State<_DividirCuenta> {
     final perPersonUsd = widget.totalUsd * factor / people;
     final tipAmount = widget.totalInCalc * _tipPct / 100;
 
-    final copyText = 'Reparto ValoraVE · ${fmtDate(DateTime.now())}\n'
+    final copyText =
+        'Reparto ValoraVE · ${fmtDate(DateTime.now())}\n'
         'Total: ${fmtCurrency(widget.totalInCalc, widget.calcCur)}'
         ' (${fmtUSD(widget.totalUsd)})\n'
         'Propina: $_tipPct % — ${_tipIncluded ? 'ya incluida en el total' : 'se añade al total'}\n'
         '$people personas → ${fmtCurrency(perPerson, widget.calcCur)} c/u';
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Dividir la cuenta'),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Personas.
-            Row(children: [
-              Text('PERSONAS', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
-              const SizedBox(width: 10),
-              InkWell(
-                onTap: () => setState(() => _people = (_people - 1).clamp(1, 50)),
-                borderRadius: BorderRadius.circular(8),
-                child: const Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(Icons.remove_circle_outline, size: 20)),
-              ),
-              Text('$people', style: VeText.displayNum(16, color: scheme.onSurface)),
-              InkWell(
-                onTap: () => setState(() => _people = (_people + 1).clamp(1, 50)),
-                borderRadius: BorderRadius.circular(8),
-                child: const Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(Icons.add_circle_outline, size: 20)),
-              ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () => copiarAlPortapapeles(context, copyText, 'Reparto copiado'),
-                icon: const Icon(Icons.copy, size: 14),
-                label: const Text('Copiar', style: TextStyle(fontSize: 12)),
-              ),
-            ]),
-            const SizedBox(height: 6),
-            // Propina %.
-            Wrap(spacing: 6, children: [
-              for (final t in _tipOptions)
-                ChipTag('$t %', selected: _tipPct == t,
-                    onTap: () => setState(() => _tipPct = t)),
-            ]),
-            const SizedBox(height: 6),
-            // Opción simple: propina sobre el total con impuesto (ya dentro).
-            Row(children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Propina ya incluida en el total',
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                  Text('Apágalo si la propina se añade encima del total',
-                      style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
-                ]),
-              ),
-              Switch(value: _tipIncluded, onChanged: (v) => setState(() => _tipIncluded = v)),
-            ]),
-            const SizedBox(height: 8),
-            // Resultado por persona en la moneda del cálculo.
-            ReadWindow(
-              semanticLabel: 'Cuota por persona',
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text('Cada quien: ${fmtCurrency(perPerson, widget.calcCur)}',
-                      style: VeText.displayNum(19, color: scheme.onSurface)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle('Dividir la cuenta'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Personas.
+                Row(
+                  children: [
+                    Text(
+                      'PERSONAS',
+                      style: VeText.labelCaps(
+                        9.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    InkWell(
+                      onTap: () =>
+                          setState(() => _people = (_people - 1).clamp(1, 50)),
+                      borderRadius: BorderRadius.circular(8),
+                      child: const Padding(
+                        padding: EdgeInsets.all(6),
+                        child: Icon(Icons.remove_circle_outline, size: 20),
+                      ),
+                    ),
+                    Text(
+                      '$people',
+                      style: VeText.displayNum(16, color: scheme.onSurface),
+                    ),
+                    InkWell(
+                      onTap: () =>
+                          setState(() => _people = (_people + 1).clamp(1, 50)),
+                      borderRadius: BorderRadius.circular(8),
+                      child: const Padding(
+                        padding: EdgeInsets.all(6),
+                        child: Icon(Icons.add_circle_outline, size: 20),
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => copiarAlPortapapeles(
+                        context,
+                        copyText,
+                        'Reparto copiado',
+                      ),
+                      icon: const Icon(Icons.copy, size: 14),
+                      label: const Text(
+                        'Copiar',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
                 ),
-                if (widget.calcCur != Currency.usd)
-                  Text('≈ ${fmtUSD(perPersonUsd)} c/u',
-                      style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
-                if (_tipPct > 0)
-                  Text(
-                    _tipIncluded
-                        ? 'Propina $_tipPct % (${fmtCurrency(tipAmount, widget.calcCur)}) dentro del total'
-                        : 'Propina $_tipPct % añadida: ${fmtCurrency(tipAmount, widget.calcCur)}',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: _tipIncluded ? scheme.onSurfaceVariant : sem.pos),
+                const SizedBox(height: 6),
+                // Propina %.
+                Wrap(
+                  spacing: 6,
+                  children: [
+                    for (final t in _tipOptions)
+                      ChipTag(
+                        '$t %',
+                        selected: _tipPct == t,
+                        onTap: () => setState(() => _tipPct = t),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Opción simple: propina sobre el total con impuesto (ya dentro).
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Propina ya incluida en el total',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            'Apágalo si la propina se añade encima del total',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _tipIncluded,
+                      onChanged: (v) => setState(() => _tipIncluded = v),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Resultado por persona en la moneda del cálculo.
+                ReadWindow(
+                  semanticLabel: 'Cuota por persona',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Cada quien: ${fmtCurrency(perPerson, widget.calcCur)}',
+                          style: VeText.displayNum(19, color: scheme.onSurface),
+                        ),
+                      ),
+                      if (widget.calcCur != Currency.usd)
+                        Text(
+                          '≈ ${fmtUSD(perPersonUsd)} c/u',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      if (_tipPct > 0)
+                        Text(
+                          _tipIncluded
+                              ? 'Propina $_tipPct % (${fmtCurrency(tipAmount, widget.calcCur)}) dentro del total'
+                              : 'Propina $_tipPct % añadida: ${fmtCurrency(tipAmount, widget.calcCur)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _tipIncluded
+                                ? scheme.onSurfaceVariant
+                                : sem.pos,
+                          ),
+                        ),
+                    ],
                   ),
-              ]),
+                ),
+              ],
             ),
-          ]),
+          ),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 }
 
@@ -929,19 +1159,42 @@ class _MatchRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: sem.warn.withValues(alpha: 0.35)),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('«${item.name}» ya existe en $where',
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: scheme.onSurface)),
-          const SizedBox(height: 6),
-          Row(children: [
-            ChipTag('Vincular', selected: linked, onTap: linked ? null : onLink),
-            const SizedBox(width: 6),
-            ChipTag('Crear nuevo', selected: !linked, onTap: !linked ? null : onCreate),
-            const Spacer(),
-            if (linked)
-              Icon(Icons.check_circle_outline, size: 15, color: scheme.primary),
-          ]),
-        ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '«${item.name}» ya existe en $where',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                ChipTag(
+                  'Vincular',
+                  selected: linked,
+                  onTap: linked ? null : onLink,
+                ),
+                const SizedBox(width: 6),
+                ChipTag(
+                  'Crear nuevo',
+                  selected: !linked,
+                  onTap: !linked ? null : onCreate,
+                ),
+                const Spacer(),
+                if (linked)
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 15,
+                    color: scheme.primary,
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

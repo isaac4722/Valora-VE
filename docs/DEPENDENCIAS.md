@@ -13,7 +13,6 @@ Resueltas con Flutter 3.47.3 stable (canal stable sin pin en CI). El gate
 | shared_preferences | ^2.3.2 | prefs UI (tema, tips, recientes) |
 | dio | ^5.7.0 | tablero de tasas + **SSE propio** (§trap 1) |
 | connectivity_plus | ^7.3.1 | offline real (v17.8): saber cuándo NO hay red |
-| socket_io_client | 2.0.3+1 | sala lista-sync (transporte Servidor) |
 | flutter_local_notifications | ^17.2.4 | 5 canales locales (SIN FCM, decisión §4.7) |
 | file_picker | ^12.2.0 | §trap 2: 11.x rompe KGP en AGP≥9 sin builtInKotlin |
 | home_widget | ^0.9.4 | widget 4×1 BCV |

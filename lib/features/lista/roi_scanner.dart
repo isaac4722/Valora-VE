@@ -23,9 +23,9 @@ class RoiScannerScreen extends StatefulWidget {
   /// Abre el escáner ROI y devuelve el código leído (null si se cerró).
   /// El valor especial `__manual__` = el usuario eligió escribirlo a mano.
   static Future<String?> scan(BuildContext context) async {
-    return Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const RoiScannerScreen()),
-    );
+    return Navigator.of(
+      context,
+    ).push<String>(MaterialPageRoute(builder: (_) => const RoiScannerScreen()));
   }
 
   @override
@@ -35,7 +35,11 @@ class RoiScannerScreen extends StatefulWidget {
 class _RoiScannerScreenState extends State<RoiScannerScreen> {
   final _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal,
-    formats: const [BarcodeFormat.ean13, BarcodeFormat.ean8, BarcodeFormat.code128],
+    formats: const [
+      BarcodeFormat.ean13,
+      BarcodeFormat.ean8,
+      BarcodeFormat.code128,
+    ],
   );
   bool _torch = false;
   bool _done = false; // evita doble pop por fotogramas consecutivos
@@ -88,57 +92,82 @@ class _RoiScannerScreenState extends State<RoiScannerScreen> {
           ),
         ],
       ),
-      body: LayoutBuilder(builder: (context, box) {
-        // Una sola verdad geométrica: el Rect del scanWindow es el mismo que
-        // se enmascara y dibuja (centrado, 72 % ancho × 32 % alto).
-        final size = box.biggest;
-        final window = Rect.fromCenter(
-          center: size.center(Offset.zero),
-          width: size.width * 0.72,
-          height: size.height * 0.32,
-        );
-        return Stack(children: [
-          // Cámara con scanWindow: SOLO el recuadro se procesa (5.x).
-          Positioned.fill(
-            child: MobileScanner(
-              controller: _controller,
-              onDetect: _onDetect,
-              scanWindow: window,
-            ),
-          ),
-          // Máscara oscura alrededor del recuadro (4 fondos α .55).
-          _Mask(top: 0, left: 0, right: 0, height: window.top),
-          _Mask(top: window.bottom, left: 0, right: 0, height: size.height - window.bottom),
-          _Mask(top: window.top, left: 0, width: window.left, height: window.height),
-          _Mask(top: window.top, left: window.right, width: size.width - window.right, height: window.height),
-          // Marco redondeado del visor (no bloquea gestos).
-          Positioned.fromRect(
-            rect: window,
-            child: const IgnorePointer(child: _AimFrame()),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Text(
-                    'Apunta al código de barras — solo se lee el recuadro',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop('__manual__'),
-                    child: const Text('Escribir el código a mano',
-                        style: TextStyle(color: Colors.white)),
-                  ),
-                ]),
+      body: LayoutBuilder(
+        builder: (context, box) {
+          // Una sola verdad geométrica: el Rect del scanWindow es el mismo que
+          // se enmascara y dibuja (centrado, 72 % ancho × 32 % alto).
+          final size = box.biggest;
+          final window = Rect.fromCenter(
+            center: size.center(Offset.zero),
+            width: size.width * 0.72,
+            height: size.height * 0.32,
+          );
+          return Stack(
+            children: [
+              // Cámara con scanWindow: SOLO el recuadro se procesa (5.x).
+              Positioned.fill(
+                child: MobileScanner(
+                  controller: _controller,
+                  onDetect: _onDetect,
+                  scanWindow: window,
+                ),
               ),
-            ),
-          ),
-        ]);
-      }),
+              // Máscara oscura alrededor del recuadro (4 fondos α .55).
+              _Mask(top: 0, left: 0, right: 0, height: window.top),
+              _Mask(
+                top: window.bottom,
+                left: 0,
+                right: 0,
+                height: size.height - window.bottom,
+              ),
+              _Mask(
+                top: window.top,
+                left: 0,
+                width: window.left,
+                height: window.height,
+              ),
+              _Mask(
+                top: window.top,
+                left: window.right,
+                width: size.width - window.right,
+                height: window.height,
+              ),
+              // Marco redondeado del visor (no bloquea gestos).
+              Positioned.fromRect(
+                rect: window,
+                child: const IgnorePointer(child: _AimFrame()),
+              ),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Apunta al código de barras — solo se lee el recuadro',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                        const SizedBox(height: 10),
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(context).pop('__manual__'),
+                          child: const Text(
+                            'Escribir el código a mano',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

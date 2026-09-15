@@ -10,18 +10,21 @@ library;
 /// No existe ninguna otra moneda en la app.
 enum Currency { usd, ves, cop, eur, brl, mxn }
 
-/// Categoría de fuente de tasa — el COLOR dice QUÉ es la tasa, no de dónde:
-/// official verde · mixed ámbar · parallel rojo · manual violeta.
+/// Categoría de fuente de tasa — el SELLO dice QUÉ es la tasa (v19.0:
+/// icono + palabra, no rayita de color): official 🏛 · mixed ⚖ ·
+/// parallel 🛒 (mercado) · manual ✎.
 enum SourceCategory { official, mixed, parallel, manual }
 
-/// Etiqueta corta de categoría de fuente (web CATEGORY_LABEL).
+/// Etiqueta corta de categoría de fuente (web CATEGORY_LABEL). v19.0: la
+/// categoría paralela se lee «Mercado» (la palabra del dueño) — los nombres
+/// de fuente concretos siguen diciendo «Paralelo» donde aplica.
 extension SourceCategoryX on SourceCategory {
   String get label => switch (this) {
-        SourceCategory.official => 'Oficial',
-        SourceCategory.mixed => 'Promedio',
-        SourceCategory.parallel => 'Paralelo',
-        SourceCategory.manual => 'Manual',
-      };
+    SourceCategory.official => 'Oficial',
+    SourceCategory.mixed => 'Promedio',
+    SourceCategory.parallel => 'Mercado',
+    SourceCategory.manual => 'Manual',
+  };
 }
 
 /// Código corto seguro (el `.name` del enum puede quedar tapado por
@@ -32,20 +35,20 @@ extension CurrencyX on Currency {
   /// Código corto ('USD').
   String get code => enumCode(this).toUpperCase();
   String get symbol => switch (this) {
-        Currency.usd => r'$',
-        Currency.ves => 'Bs',
-        Currency.eur => '€',
-        Currency.brl => r'R$',
-        _ => code,
-      };
+    Currency.usd => r'$',
+    Currency.ves => 'Bs',
+    Currency.eur => '€',
+    Currency.brl => r'R$',
+    _ => code,
+  };
   String get label => switch (this) {
-        Currency.usd => 'Dólar',
-        Currency.ves => 'Bolívar',
-        Currency.cop => 'Peso colombiano',
-        Currency.eur => 'Euro',
-        Currency.brl => 'Real',
-        Currency.mxn => 'Peso mexicano',
-      };
+    Currency.usd => 'Dólar',
+    Currency.ves => 'Bolívar',
+    Currency.cop => 'Peso colombiano',
+    Currency.eur => 'Euro',
+    Currency.brl => 'Real',
+    Currency.mxn => 'Peso mexicano',
+  };
 
   /// Decimales por defecto al mostrar montos (COP 0, resto 2).
   int get decimals => this == Currency.cop ? 0 : 2;
@@ -59,13 +62,13 @@ extension CurrencyX on Currency {
 
   /// Orden canónico del foco: VES · USD · EUR · COP · BRL · MXN.
   static List<Currency> get focus => [
-        Currency.ves,
-        Currency.usd,
-        Currency.eur,
-        Currency.cop,
-        Currency.brl,
-        Currency.mxn,
-      ];
+    Currency.ves,
+    Currency.usd,
+    Currency.eur,
+    Currency.cop,
+    Currency.brl,
+    Currency.mxn,
+  ];
 
   /// Foco sin USD (para selects donde el dólar no compite).
   static List<Currency> get focusMain =>
@@ -92,43 +95,43 @@ enum Country { VE, CO, BR, MX, US }
 extension CountryX on Country {
   String get code => enumCode(this);
   String get label => switch (this) {
-        Country.VE => 'Venezuela',
-        Country.CO => 'Colombia',
-        Country.BR => 'Brasil',
-        Country.MX => 'México',
-        Country.US => 'Global / USD',
-      };
+    Country.VE => 'Venezuela',
+    Country.CO => 'Colombia',
+    Country.BR => 'Brasil',
+    Country.MX => 'México',
+    Country.US => 'Global / USD',
+  };
   Currency get currency => switch (this) {
-        Country.VE => Currency.ves,
-        Country.CO => Currency.cop,
-        Country.BR => Currency.brl,
-        Country.MX => Currency.mxn,
-        Country.US => Currency.usd,
-      };
+    Country.VE => Currency.ves,
+    Country.CO => Currency.cop,
+    Country.BR => Currency.brl,
+    Country.MX => Currency.mxn,
+    Country.US => Currency.usd,
+  };
 
   /// Fuentes protagonistas del país (héroe + cinta «Mi país»).
   List<String> get featured => switch (this) {
-        Country.VE => ['ves-bcv', 'ves-parallel', 'ves-avg'],
-        Country.CO => ['cop-trm', 'cop-market'],
-        Country.BR => ['brl-br'],
-        Country.MX => ['mxn-banxico'],
-        Country.US => ['ves-parallel', 'cop-trm', 'brl-br', 'mxn-banxico'],
-      };
+    Country.VE => ['ves-bcv', 'ves-parallel', 'ves-avg'],
+    Country.CO => ['cop-trm', 'cop-market'],
+    Country.BR => ['brl-br'],
+    Country.MX => ['mxn-banxico'],
+    Country.US => ['ves-parallel', 'cop-trm', 'brl-br', 'mxn-banxico'],
+  };
 
   /// Fuente EUR preferida del país (setCountry del web §2.1).
   String get eurSource => switch (this) {
-        Country.VE => 'eur-ves-oficial',
-        Country.CO => 'eur-cop',
-        Country.BR => 'eur-brl',
-        _ => 'eur-ves-oficial',
-      };
+    Country.VE => 'eur-ves-oficial',
+    Country.CO => 'eur-cop',
+    Country.BR => 'eur-brl',
+    _ => 'eur-ves-oficial',
+  };
 
   /// Extras regionales de la calculadora de sueldo (Inicio).
   List<Currency> get extras => switch (this) {
-        Country.VE => const [Currency.cop, Currency.brl],
-        Country.CO => const [Currency.usd],
-        _ => const [],
-      };
+    Country.VE => const [Currency.cop, Currency.brl],
+    Country.CO => const [Currency.usd],
+    _ => const [],
+  };
 
   static final Map<String, Country> _byCode = {
     for (final c in Country.values) enumCode(c): c,
@@ -150,62 +153,162 @@ class RateSource {
   final bool live;
   final SourceCategory category;
 
-  const RateSource(this.id, this.currency, this.label, this.detail, this.base,
-      this.quote,
-      {this.live = true, this.category = SourceCategory.official});
+  const RateSource(
+    this.id,
+    this.currency,
+    this.label,
+    this.detail,
+    this.base,
+    this.quote, {
+    this.live = true,
+    this.category = SourceCategory.official,
+  });
 
   /// Etiqueta natural de las aristas EUR («EUR Oficial a Bs»…).
   String get edgeName => currency == Currency.eur ? 'EUR $label' : label;
 
   static const all = <RateSource>[
     // VES
-    RateSource('ves-bcv', Currency.ves, 'BCV',
-        'Oficial · Banco Central de Venezuela', Currency.usd, Currency.ves),
-    RateSource('ves-parallel', Currency.ves, 'Paralelo', 'Mercado',
-        Currency.usd, Currency.ves,
-        category: SourceCategory.parallel),
-    RateSource('ves-avg', Currency.ves, 'Promedio', 'Entre BCV y paralelo',
-        Currency.usd, Currency.ves,
-        live: false, category: SourceCategory.mixed),
-    RateSource('ves-manual', Currency.ves, 'Manual',
-        'Tu propia tasa en VES por USD', Currency.usd, Currency.ves,
-        live: false, category: SourceCategory.manual),
+    RateSource(
+      'ves-bcv',
+      Currency.ves,
+      'BCV',
+      'Oficial · Banco Central de Venezuela',
+      Currency.usd,
+      Currency.ves,
+    ),
+    RateSource(
+      'ves-parallel',
+      Currency.ves,
+      'Paralelo',
+      'Mercado',
+      Currency.usd,
+      Currency.ves,
+      category: SourceCategory.parallel,
+    ),
+    RateSource(
+      'ves-avg',
+      Currency.ves,
+      'Promedio',
+      'Entre BCV y paralelo',
+      Currency.usd,
+      Currency.ves,
+      live: false,
+      category: SourceCategory.mixed,
+    ),
+    RateSource(
+      'ves-manual',
+      Currency.ves,
+      'Manual',
+      'Tu propia tasa en VES por USD',
+      Currency.usd,
+      Currency.ves,
+      live: false,
+      category: SourceCategory.manual,
+    ),
     // COP
-    RateSource('cop-trm', Currency.cop, 'TRM', 'Superfinanciera', Currency.usd,
-        Currency.cop),
-    RateSource('cop-market', Currency.cop, 'Mercado', 'DolarAPI Colombia',
-        Currency.usd, Currency.cop,
-        category: SourceCategory.parallel),
-    RateSource('cop-manual', Currency.cop, 'Manual',
-        'Tu propia tasa en COP por USD', Currency.usd, Currency.cop,
-        live: false, category: SourceCategory.manual),
+    RateSource(
+      'cop-trm',
+      Currency.cop,
+      'TRM',
+      'Superfinanciera',
+      Currency.usd,
+      Currency.cop,
+    ),
+    RateSource(
+      'cop-market',
+      Currency.cop,
+      'Mercado',
+      'DolarAPI Colombia',
+      Currency.usd,
+      Currency.cop,
+      category: SourceCategory.parallel,
+    ),
+    RateSource(
+      'cop-manual',
+      Currency.cop,
+      'Manual',
+      'Tu propia tasa en COP por USD',
+      Currency.usd,
+      Currency.cop,
+      live: false,
+      category: SourceCategory.manual,
+    ),
     // BRL
-    RateSource('brl-br', Currency.brl, 'Brasil', 'Cotización oficial de Brasil',
-        Currency.usd, Currency.brl),
-    RateSource('brl-manual', Currency.brl, 'Manual',
-        'Tu propia tasa en BRL por USD', Currency.usd, Currency.brl,
-        live: false, category: SourceCategory.manual),
+    RateSource(
+      'brl-br',
+      Currency.brl,
+      'Brasil',
+      'Cotización oficial de Brasil',
+      Currency.usd,
+      Currency.brl,
+    ),
+    RateSource(
+      'brl-manual',
+      Currency.brl,
+      'Manual',
+      'Tu propia tasa en BRL por USD',
+      Currency.usd,
+      Currency.brl,
+      live: false,
+      category: SourceCategory.manual,
+    ),
     // MXN
-    RateSource('mxn-banxico', Currency.mxn, 'Banxico', 'Banco de México',
-        Currency.usd, Currency.mxn),
-    RateSource('mxn-manual', Currency.mxn, 'Manual',
-        'Tu propia tasa en MXN por USD', Currency.usd, Currency.mxn,
-        live: false, category: SourceCategory.manual),
+    RateSource(
+      'mxn-banxico',
+      Currency.mxn,
+      'Banxico',
+      'Banco de México',
+      Currency.usd,
+      Currency.mxn,
+    ),
+    RateSource(
+      'mxn-manual',
+      Currency.mxn,
+      'Manual',
+      'Tu propia tasa en MXN por USD',
+      Currency.usd,
+      Currency.mxn,
+      live: false,
+      category: SourceCategory.manual,
+    ),
     // EUR: aristas emparejadas (familia misma fuente)
-    RateSource('eur-ves-oficial', Currency.eur, 'Oficial a Bs',
-        'EUR Oficial a Bs · BCV', Currency.eur, Currency.ves),
-    RateSource('eur-ves-paralelo', Currency.eur, 'Paralelo a Bs',
-        'EUR Paralelo a Bs · mercado', Currency.eur, Currency.ves,
-        category: SourceCategory.parallel),
-    RateSource('eur-cop', Currency.eur, 'a COP',
-        'EUR a COP · DolarAPI Colombia', Currency.eur, Currency.cop),
-    RateSource('eur-brl', Currency.eur, 'a BRL', 'EUR a BRL · Brasil',
-        Currency.eur, Currency.brl),
+    RateSource(
+      'eur-ves-oficial',
+      Currency.eur,
+      'Oficial a Bs',
+      'EUR Oficial a Bs · BCV',
+      Currency.eur,
+      Currency.ves,
+    ),
+    RateSource(
+      'eur-ves-paralelo',
+      Currency.eur,
+      'Paralelo a Bs',
+      'EUR Paralelo a Bs · mercado',
+      Currency.eur,
+      Currency.ves,
+      category: SourceCategory.parallel,
+    ),
+    RateSource(
+      'eur-cop',
+      Currency.eur,
+      'a COP',
+      'EUR a COP · DolarAPI Colombia',
+      Currency.eur,
+      Currency.cop,
+    ),
+    RateSource(
+      'eur-brl',
+      Currency.eur,
+      'a BRL',
+      'EUR a BRL · Brasil',
+      Currency.eur,
+      Currency.brl,
+    ),
   ];
 
-  static final Map<String, RateSource> byId = {
-    for (final s in all) s.id: s,
-  };
+  static final Map<String, RateSource> byId = {for (final s in all) s.id: s};
 
   /// El store RECHAZA ids desconocidos (setRateBoard del web §2.1): una
   /// respuesta vieja con fuentes retiradas nunca entra al estado.
@@ -213,7 +316,13 @@ class RateSource {
       id == null ? null : byId[id] ?? (id == 'usd' ? _usd : null);
 
   static const RateSource _usd = RateSource(
-      'usd', Currency.usd, 'Dólar', 'Referencia', Currency.usd, Currency.usd);
+    'usd',
+    Currency.usd,
+    'Dólar',
+    'Referencia',
+    Currency.usd,
+    Currency.usd,
+  );
 
   static List<RateSource> sourcesFor(Currency c) =>
       all.where((s) => s.currency == c).toList();
@@ -237,7 +346,9 @@ class RateSource {
 }
 
 /// Nombres cortos del grupo de fuentes en el Conversor (v15, sin repetir
-/// palabras): «Dólar Oficial» (BCV) · «Dólar Paralelo» (mercado).
+/// palabras): «Dólar Oficial» (BCV) · «Dólar Paralelo» (mercado). v19.0: sin
+/// la pseudo-fuente «usd» — 1 USD = 1 USD es obvio y no compite (orden del
+/// dueño): el dólar es el puente de la app, no una fuente elegible.
 const Map<String, String> convSourceNames = {
   'ves-bcv': 'Dólar Oficial',
   'ves-parallel': 'Dólar Paralelo',
@@ -254,7 +365,6 @@ const Map<String, String> convSourceNames = {
   'eur-ves-paralelo': 'EUR Paralelo',
   'eur-cop': 'EUR a COP',
   'eur-brl': 'EUR a BRL',
-  'usd': 'Dólar',
 };
 
 /// Plan de conversión (ConversionPlan del web v15): la tasa efectiva, la
@@ -284,8 +394,7 @@ class RateContext {
   const RateContext({required this.rates, required this.selected});
 
   double rate(String sourceId) => rates[sourceId] ?? 0;
-  String sel(Currency c) =>
-      selected[c] ?? RateSource.defaultSource[c] ?? '';
+  String sel(Currency c) => selected[c] ?? RateSource.defaultSource[c] ?? '';
 
   /// Tasa activa de la divisa (fuente seleccionada; live/derived/manual).
   double activeRate(Currency c) {
@@ -379,11 +488,19 @@ class RateContext {
       if (r <= 0) continue;
       if (def.base == from && def.quote == to) {
         return ConversionPlan(
-            rate: r, path: [from, to], sourceIds: [def.id], direct: true);
+          rate: r,
+          path: [from, to],
+          sourceIds: [def.id],
+          direct: true,
+        );
       }
       if (def.base == to && def.quote == from) {
         return ConversionPlan(
-            rate: 1 / r, path: [from, to], sourceIds: [def.id], direct: true);
+          rate: 1 / r,
+          path: [from, to],
+          sourceIds: [def.id],
+          direct: true,
+        );
       }
     }
     // 2) Puente EUR VISIBLE con ruta de 4 tramos: el cálculo real pasa

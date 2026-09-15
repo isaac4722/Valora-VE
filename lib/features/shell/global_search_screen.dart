@@ -59,14 +59,24 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         .toList();
     final List<Product> productos = q.isEmpty
         ? const <Product>[]
-        : store.products.where((Product p) => hit(p.name) || (p.barcode ?? '').contains(_query.trim())).toList();
+        : store.products
+              .where(
+                (Product p) =>
+                    hit(p.name) || (p.barcode ?? '').contains(_query.trim()),
+              )
+              .toList();
     final List<Purchase> compras = q.isEmpty
         ? const <Purchase>[]
-        : store.purchases.where((Purchase c) => c.store != null && hit(c.store!)).toList();
+        : store.purchases
+              .where((Purchase c) => c.store != null && hit(c.store!))
+              .toList();
     final List<NotificationItem> notifs = q.isEmpty
         ? const <NotificationItem>[]
-        : store.notifs.where((NotificationItem n) => hit('${n.title} ${n.body}')).toList();
-    final bool sinResultados = q.isNotEmpty &&
+        : store.notifs
+              .where((NotificationItem n) => hit('${n.title} ${n.body}'))
+              .toList();
+    final bool sinResultados =
+        q.isNotEmpty &&
         modulos.isEmpty &&
         productos.isEmpty &&
         compras.isEmpty &&
@@ -102,16 +112,27 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             Text(
               'Módulos, productos del catálogo, compras con tienda y '
               'avisos. Escribe para filtrar — sin acentos también.',
-              style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ],
           if (modulos.isNotEmpty) ...<Widget>[
             const _GroupLabel('Módulos'),
-            for (final (String title, String sub, IconData icon, String loc) in modulos)
+            for (final (String title, String sub, IconData icon, String loc)
+                in modulos)
               ListTile(
                 leading: Icon(icon, color: scheme.primary),
                 title: Text(title, style: const TextStyle(fontSize: 14.5)),
-                subtitle: Text(sub, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                subtitle: Text(
+                  sub,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
                 dense: true,
                 onTap: () => _go(loc),
               ),
@@ -120,11 +141,19 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             const _GroupLabel('Productos'),
             for (final Product p in productos.take(8))
               ListTile(
-                leading: Icon(Icons.inventory_2_outlined, color: scheme.primary),
+                leading: Icon(
+                  Icons.inventory_2_outlined,
+                  color: scheme.primary,
+                ),
                 title: Text(p.name, style: const TextStyle(fontSize: 14.5)),
                 subtitle: Text(
-                  p.latestRecord == null ? 'Catálogo · sin precio aún' : 'Catálogo · ${fmtUSD(p.latestRecord!.price)}',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  p.latestRecord == null
+                      ? 'Catálogo · sin precio aún'
+                      : 'Catálogo · ${fmtUSD(p.latestRecord!.price)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 dense: true,
                 onTap: () => _go('/productos'),
@@ -134,11 +163,20 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             const _GroupLabel('Compras'),
             for (final Purchase c in compras.take(8))
               ListTile(
-                leading: Icon(Icons.receipt_long_outlined, color: scheme.primary),
-                title: Text(c.store ?? 'Sin tienda', style: const TextStyle(fontSize: 14.5)),
+                leading: Icon(
+                  Icons.receipt_long_outlined,
+                  color: scheme.primary,
+                ),
+                title: Text(
+                  c.store ?? 'Sin tienda',
+                  style: const TextStyle(fontSize: 14.5),
+                ),
                 subtitle: Text(
                   '${fmtDate(c.date)} · ${fmtUSD(c.totalUSD)}',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 dense: true,
                 onTap: () => _go('/historial'),
@@ -148,12 +186,20 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             const _GroupLabel('Avisos'),
             for (final NotificationItem n in notifs.take(8))
               ListTile(
-                leading: Icon(Icons.notifications_outlined, color: scheme.primary),
+                leading: Icon(
+                  Icons.notifications_outlined,
+                  color: scheme.primary,
+                ),
                 title: Text(n.title, style: const TextStyle(fontSize: 14.5)),
-                subtitle: Text(n.body,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+                subtitle: Text(
+                  n.body,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
                 dense: true,
                 onTap: () => _go('/'),
               ),
@@ -163,12 +209,19 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               padding: const EdgeInsets.only(top: 40),
               child: Column(
                 children: <Widget>[
-                  Icon(Icons.search_off, size: 42, color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.search_off,
+                    size: 42,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(height: 10),
                   Text(
                     'Sin resultados para «$_query»',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -180,12 +233,28 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 }
 
 /// Módulos navegables con hint (paralelo al NAV_ITEMS del web).
-const List<(String, String, IconData, String)> _kSearchModules = <(String, String, IconData, String)>[
+const List<(String, String, IconData, String)>
+_kSearchModules = <(String, String, IconData, String)>[
   ('Inicio', 'Tasas del día y resumen', Icons.home_outlined, '/'),
   ('Divisas', 'Conversor con fecha histórica', Icons.swap_horiz, '/conversor'),
-  ('Lista', 'Lista de compras y vuelto', Icons.shopping_cart_outlined, '/lista'),
-  ('Productos', 'Catálogo y metas de precio', Icons.inventory_2_outlined, '/productos'),
-  ('Análisis', 'Brecha, gastos y devaluación', Icons.bar_chart_outlined, '/analisis'),
+  (
+    'Lista',
+    'Lista de compras y vuelto',
+    Icons.shopping_cart_outlined,
+    '/lista',
+  ),
+  (
+    'Productos',
+    'Catálogo y metas de precio',
+    Icons.inventory_2_outlined,
+    '/productos',
+  ),
+  (
+    'Análisis',
+    'Brecha, gastos y devaluación',
+    Icons.bar_chart_outlined,
+    '/analisis',
+  ),
   ('Historial', 'Compras como asientos', Icons.history, '/historial'),
   ('Tickets', 'Fotos de tus recibos', Icons.receipt_long_outlined, '/tickets'),
   ('Ajustes', 'País, cinta y apariencia', Icons.settings_outlined, '/ajustes'),

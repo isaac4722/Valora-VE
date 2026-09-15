@@ -13,7 +13,11 @@ const int kMaxDays = 180;
 /// · mismo (fuente, día) con valor distinto → última gana (un punto por día);
 /// · (fuente, día) nuevo → se añade. Así el libro es una hoja de ruta
 ///   compacta: nunca hay dos filas idénticas para la misma fecha/fuente.
-void appendSnapshots(List<SnapshotPoint> store, RateBoard board, {DateTime? now}) {
+void appendSnapshots(
+  List<SnapshotPoint> store,
+  RateBoard board, {
+  DateTime? now,
+}) {
   now ??= DateTime.now();
   final day = SnapshotPoint.dayKey(now);
   for (final e in board.sources.entries) {
@@ -36,8 +40,7 @@ void _prune(List<SnapshotPoint> store, DateTime now) {
   }
   final kept = <SnapshotPoint>[];
   for (final e in bySource.entries) {
-    final days = e.value.toList()
-      ..sort((a, b) => a.day.compareTo(b.day));
+    final days = e.value.toList()..sort((a, b) => a.day.compareTo(b.day));
     if (days.length > kMaxDays) {
       days.removeRange(0, days.length - kMaxDays);
     }
@@ -50,17 +53,26 @@ void _prune(List<SnapshotPoint> store, DateTime now) {
 
 /// Serie de una fuente a [days] días (asc por día). Recorta a los últimos
 /// [days] días desde hoy: puntos con día < cutoff se descartan (§4).
-List<SnapshotPoint> snapshotSeries(List<SnapshotPoint> store, String sourceId, int days) {
-  final cutoff = SnapshotPoint.dayKey(DateTime.now().subtract(Duration(days: days)));
+List<SnapshotPoint> snapshotSeries(
+  List<SnapshotPoint> store,
+  String sourceId,
+  int days,
+) {
+  final cutoff = SnapshotPoint.dayKey(
+    DateTime.now().subtract(Duration(days: days)),
+  );
   return store
       .where((p) => p.sourceId == sourceId && p.day.compareTo(cutoff) >= 0)
       .toList()
-      ..sort((a, b) => a.day.compareTo(b.day))
+    ..sort((a, b) => a.day.compareTo(b.day))
     ..removeWhere((p) => p.day.isEmpty);
 }
 
 /// mergeSeries: si el mismo día existe en remoto y local, GANA REMOTO.
-List<SnapshotPoint> mergeSeries(List<SnapshotPoint> remote, List<SnapshotPoint> local) {
+List<SnapshotPoint> mergeSeries(
+  List<SnapshotPoint> remote,
+  List<SnapshotPoint> local,
+) {
   final byKey = <String, SnapshotPoint>{};
   for (final p in local) {
     byKey['${p.sourceId}|${p.day}'] = p;
@@ -68,8 +80,7 @@ List<SnapshotPoint> mergeSeries(List<SnapshotPoint> remote, List<SnapshotPoint> 
   for (final p in remote) {
     byKey['${p.sourceId}|${p.day}'] = p; // remoto gana
   }
-  return byKey.values.toList()
-    ..sort((a, b) => a.day.compareTo(b.day));
+  return byKey.values.toList()..sort((a, b) => a.day.compareTo(b.day));
 }
 
 /// Profundidad de historial disponible (len bcv ?? parallel, §4).

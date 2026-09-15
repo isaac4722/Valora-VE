@@ -49,7 +49,11 @@ class AlertEngine {
   /// evaluado en cada ciclo del tablero) y desde la tarea horaria de
   /// workmanager (app cerrada — precisión ±1 h, honesta para un aviso de
   /// rutina). El claim por día evita duplicados entre ambos caminos.
-  void reminderCheck(NotificationsService notifs, {DateTime? now, AlertPersist? persist}) {
+  void reminderCheck(
+    NotificationsService notifs, {
+    DateTime? now,
+    AlertPersist? persist,
+  }) {
     if (!reminderEnabled) return;
     final t = now ?? DateTime.now();
     if (t.hour != reminderHour) return;
@@ -59,7 +63,8 @@ class AlertEngine {
       kind: NotifKind.reminder,
       channelId: 'reminders',
       title: '¿Ya registraste los precios de hoy?',
-      body: 'Un minuto en Productos mantiene tu libro al día '
+      body:
+          'Un minuto en Productos mantiene tu libro al día '
           '(y tus metas de precio útiles).',
       persist: persist,
     );
@@ -89,7 +94,11 @@ class AlertEngine {
 
   void _saveFired() {
     _prefs.setStringList(
-        _kFired, _fired.entries.map((e) => '${e.key}|${e.value.toIso8601String()}').toList());
+      _kFired,
+      _fired.entries
+          .map((e) => '${e.key}|${e.value.toIso8601String()}')
+          .toList(),
+    );
   }
 
   /// Dedupe ~60 s por clave (antiduplicado del web §7).
@@ -133,7 +142,8 @@ class AlertEngine {
         final pct = (rate / base - 1) * 100;
         if (pct.abs() < threshold) continue;
         final lastSpike = _spikeCooldown[id];
-        if (lastSpike != null && now.difference(lastSpike).inMinutes < 30) continue;
+        if (lastSpike != null && now.difference(lastSpike).inMinutes < 30)
+          continue;
         _spikeCooldown[id] = now;
         if (!_claim('spike.$id')) continue;
         final label = RateSource.of(id)?.label ?? id;
@@ -142,8 +152,9 @@ class AlertEngine {
           kind: NotifKind.spike,
           channelId: 'rate_alerts',
           title: 'Pico en $label',
-          body: 'La tasa de $label movió ${pct.toStringAsFixed(1)} % '
-              '(de ${base.toStringAsFixed(2)} a ${rate.toStringAsFixed(2)}).',
+          body:
+              'La tasa de $label movió ${fmtPct(pct)} '
+              '(de ${fmtRate(base)} a ${fmtRate(rate)}).',
           persist: persist,
         );
       }
@@ -157,7 +168,15 @@ class AlertEngine {
 
     // ── Metas de tasa (histéresis) ──
     _targetRate(notifs, 'bcv', 'ves-bcv', s.targetBcv, store, 'BCV', persist);
-    _targetRate(notifs, 'parallel', 'ves-parallel', s.targetParallel, store, 'Paralelo', persist);
+    _targetRate(
+      notifs,
+      'parallel',
+      'ves-parallel',
+      s.targetParallel,
+      store,
+      'Paralelo',
+      persist,
+    );
 
     // ── Brecha BCV↔Paralelo ──
     final gap = ctx.gapPct();
@@ -168,8 +187,9 @@ class AlertEngine {
           kind: NotifKind.gap,
           channelId: 'rate_alerts',
           title: 'Brecha BCV ↔ Paralelo',
-          body: 'La brecha está en ${gap.toStringAsFixed(1)} % '
-              '(umbral ${gapThreshold.toStringAsFixed(0)} %).',
+          body:
+              'La brecha está en ${fmtPct(gap)} '
+              '(umbral ${fmtNum(gapThreshold, decimals: 0)} %).',
           persist: persist,
         );
       }
@@ -177,7 +197,9 @@ class AlertEngine {
 
     // ── Cambio del día (BCV vs snapshot de ayer) ──
     final today = SnapshotPoint.dayKey(now);
-    final yesterday = SnapshotPoint.dayKey(now.subtract(const Duration(days: 1)));
+    final yesterday = SnapshotPoint.dayKey(
+      now.subtract(const Duration(days: 1)),
+    );
     final t = store.snapshots.where((p) => p.sourceId == 'ves-bcv').toList()
       ..sort((a, b) => a.day.compareTo(b.day));
     final todayP = t.where((p) => p.day == today).firstOrNull;
@@ -190,7 +212,7 @@ class AlertEngine {
           kind: NotifKind.daily,
           channelId: 'rate_alerts',
           title: 'Cambio del día en BCV',
-          body: 'La tasa oficial movió ${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)} % hoy.',
+          body: 'La tasa oficial movió ${fmtPct(pct)} hoy.',
           persist: persist,
         );
       }
@@ -219,17 +241,20 @@ class AlertEngine {
     final pct = (newPrice / oldPrice - 1) * 100;
     if (pct < productRiseThreshold) return;
     if (!_claim(
-        'product-rise.$productId.${SnapshotPoint.dayKey(DateTime.now())}')) {
+      'product-rise.$productId.${SnapshotPoint.dayKey(DateTime.now())}',
+    )) {
       return;
     }
-    final donde =
-        (storeName == null || storeName.isEmpty) ? '' : ' en $storeName';
+    final donde = (storeName == null || storeName.isEmpty)
+        ? ''
+        : ' en $storeName';
     _notify(
       notifs,
       kind: NotifKind.threshold,
       channelId: 'rate_alerts',
       title: 'Subió $productName',
-      body: 'Nuevo precio ${fmtUSD(newPrice)}$donde · '
+      body:
+          'Nuevo precio ${fmtUSD(newPrice)}$donde · '
           '${fmtPct(pct)} vs el anterior (${fmtUSD(oldPrice)}).',
       persist: persist,
     );
@@ -255,15 +280,16 @@ class AlertEngine {
       if (last == null || last.price <= 0) continue;
       final met = last.price <= t * (1 - an.kTargetEps);
       if (met) {
-        final fresh = p.metSince == null ||
-            SnapshotPoint.dayKey(p.metSince!) == today;
+        final fresh =
+            p.metSince == null || SnapshotPoint.dayKey(p.metSince!) == today;
         if (fresh && _claim('price-target.${p.id}.$today')) {
           _notify(
             notifs,
             kind: NotifKind.threshold,
             channelId: 'price_targets',
             title: '¡${p.name} bajo tu meta!',
-            body: 'Último precio ${fmtUSD(last.price)} · meta ${fmtUSD(t)}. '
+            body:
+                'Último precio ${fmtUSD(last.price)} · meta ${fmtUSD(t)}. '
                 'Momento de comprar si lo tenías vigilado.',
             persist: persist,
           );
@@ -279,23 +305,33 @@ class AlertEngine {
   }
 
   /// Histéresis de metas: avisa una vez al cruzar, rearma al bajar.
-  void _targetRate(NotificationsService notifs, String key, String sourceId,
-      double? target, AppStore store, String label,
-      [AlertPersist? persist]) {
+  void _targetRate(
+    NotificationsService notifs,
+    String key,
+    String sourceId,
+    double? target,
+    AppStore store,
+    String label, [
+    AlertPersist? persist,
+  ]) {
     if (target == null || target <= 0) return;
     final rate = store.board.sources[sourceId]?.rate;
     if (rate == null || rate <= 0) return;
     final armed = _prefs.getBool('valorave.target-armed.$key') ?? true;
     if (rate >= target) {
       if (armed && _claim('target.$key')) {
-        _prefs.setBool('valorave.target-armed.$key', false); // dispara y desarma
+        _prefs.setBool(
+          'valorave.target-armed.$key',
+          false,
+        ); // dispara y desarma
         _notify(
           notifs,
           kind: NotifKind.target,
           channelId: 'rate_alerts',
           title: '$label alcanzó tu meta',
-          body: 'La tasa de $label llegó a ${rate.toStringAsFixed(2)} '
-              '(meta ${target.toStringAsFixed(2)}).',
+          body:
+              'La tasa de $label llegó a ${fmtRate(rate)} '
+              '(meta ${fmtRate(target)}).',
           persist: persist,
         );
       }
@@ -316,7 +352,14 @@ class AlertEngine {
     required String body,
     AlertPersist? persist,
   }) {
-    unawaited(notifs.show(channelId: channelId, title: title, body: body, tag: 'valorave-$kind'));
+    unawaited(
+      notifs.show(
+        channelId: channelId,
+        title: title,
+        body: body,
+        tag: 'valorave-$kind',
+      ),
+    );
     persist?.call(kind, title, body);
     debugPrint('[alertas] $title · $body');
   }

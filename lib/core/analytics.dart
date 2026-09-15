@@ -23,14 +23,18 @@ double toUSD(double amount, double rate) {
 /// Dinero exacto (§3.2 decimal.js): la suma se hace con Decimal y se
 /// redondea a 6 decimales solo al salir (los USD normalizados pueden
 /// necesitar 4+ decimales para el precio por unidad).
-({double totalUSD, Map<String, double> byCurrency, int units})
-    cartTotals(List<CartItem> cart, double Function(Currency c) usdOf) {
+({double totalUSD, Map<String, double> byCurrency, int units}) cartTotals(
+  List<CartItem> cart,
+  double Function(Currency c) usdOf,
+) {
   final byCurrency = <String, Decimal>{};
   var totalUSD = Decimal.zero;
   var units = 0;
   for (final item in cart) {
-    final line = Decimal.fromInt(item.quantity) * Decimal.parse(item.price.toString());
-    byCurrency[item.currency] = (byCurrency[item.currency] ?? Decimal.zero) + line;
+    final line =
+        Decimal.fromInt(item.quantity) * Decimal.parse(item.price.toString());
+    byCurrency[item.currency] =
+        (byCurrency[item.currency] ?? Decimal.zero) + line;
     final c = CurrencyX.from(item.currency);
     final u = usdOf(c);
     if (u > 0) {
@@ -40,7 +44,9 @@ double toUSD(double amount, double rate) {
   }
   return (
     totalUSD: (totalUSD.toDouble() * 1e6).roundToDouble() / 1e6,
-    byCurrency: byCurrency.map((k, v) => MapEntry(k, (v.toDouble() * 1e6).roundToDouble() / 1e6)),
+    byCurrency: byCurrency.map(
+      (k, v) => MapEntry(k, (v.toDouble() * 1e6).roundToDouble() / 1e6),
+    ),
     units: units,
   );
 }
@@ -60,12 +66,23 @@ double toUSD(double amount, double rate) {
   final r = Decimal.parse(rate.toString());
   final totalUsd = (Decimal.parse(totalBS.toString()) / r).toDecimal();
   final paidTotal =
-      Decimal.parse(paidUSD.toString()) + (Decimal.parse(paidBS.toString()) / r).toDecimal();
+      Decimal.parse(paidUSD.toString()) +
+      (Decimal.parse(paidBS.toString()) / r).toDecimal();
   final diff = paidTotal - totalUsd;
   if (diff < Decimal.zero) {
-    return (paid: paidTotal.toDouble(), diff: diff.toDouble(), missing: -diff.toDouble(), change: 0);
+    return (
+      paid: paidTotal.toDouble(),
+      diff: diff.toDouble(),
+      missing: -diff.toDouble(),
+      change: 0,
+    );
   }
-  return (paid: paidTotal.toDouble(), diff: diff.toDouble(), missing: 0, change: (diff * r).toDouble());
+  return (
+    paid: paidTotal.toDouble(),
+    diff: diff.toDouble(),
+    missing: 0,
+    change: (diff * r).toDouble(),
+  );
 }
 
 // ─── Precios: variación y proyección ───────────────────────────────────────
@@ -108,7 +125,10 @@ double? predictPrice(List<PriceRecord> records, {int days = 7}) {
 }
 
 /// Inflación personal (§3.2): en USD y su equivalente en Bs con [rateUSD].
-({double usd, double? bs}) personalInflation(List<Product> products, {double? rateUSD}) {
+({double usd, double? bs}) personalInflation(
+  List<Product> products, {
+  double? rateUSD,
+}) {
   var usd = 0.0;
   var count = 0;
   for (final p in products) {
@@ -133,7 +153,7 @@ List<PriceRecord> vesRateTimeline(List<PriceRecord> records) {
 
 /// Devaluación VES: % entre primer y último punto + fechas.
 ({double pct, double from, double to, DateTime fromAt, DateTime toAt})?
-    vesDevaluation(List<PriceRecord> timeline) {
+vesDevaluation(List<PriceRecord> timeline) {
   if (timeline.length < 2) return null;
   final first = timeline.first, last = timeline.last;
   if (first.price <= 0) return null;
@@ -147,9 +167,8 @@ List<PriceRecord> vesRateTimeline(List<PriceRecord> records) {
 }
 
 /// Precio en Bs del record con la tasa que usó al registrarse.
-double recordPriceBS(PriceRecord r) => r.currency == 'VES'
-    ? r.originalPrice
-    : (r.rate > 0 ? r.price * r.rate : 0);
+double recordPriceBS(PriceRecord r) =>
+    r.currency == 'VES' ? r.originalPrice : (r.rate > 0 ? r.price * r.rate : 0);
 
 // ─── Metas de precio (§9.4) ────────────────────────────────────────────────
 
@@ -187,7 +206,8 @@ String storeInitials(String name) {
 /// Estadísticas por tienda: total USD, nº compras, última fecha.
 /// Bucket '' = «Sin tienda». Orden: total↓, compras↓, fecha↓.
 List<({String store, double totalUSD, int count, DateTime? last})> storeStats(
-    List<Purchase> purchases) {
+  List<Purchase> purchases,
+) {
   final map = <String, ({double total, int count, DateTime? last})>{};
   for (final p in purchases) {
     final key = p.store ?? '';
@@ -195,19 +215,29 @@ List<({String store, double totalUSD, int count, DateTime? last})> storeStats(
     map[key] = (
       total: (cur?.total ?? 0) + p.totalUSD,
       count: (cur?.count ?? 0) + 1,
-      last: (cur?.last == null || (p.date.isAfter(cur!.last!))) ? p.date : cur.last,
+      last: (cur?.last == null || (p.date.isAfter(cur!.last!)))
+          ? p.date
+          : cur.last,
     );
   }
-  final out = map.entries
-      .map((e) => (store: e.key, totalUSD: e.value.total, count: e.value.count, last: e.value.last))
-      .toList()
-    ..sort((a, b) {
-      final byTotal = b.totalUSD.compareTo(a.totalUSD);
-      if (byTotal != 0) return byTotal;
-      final byCount = b.count.compareTo(a.count);
-      if (byCount != 0) return byCount;
-      return (b.last ?? DateTime(0)).compareTo(a.last ?? DateTime(0));
-    });
+  final out =
+      map.entries
+          .map(
+            (e) => (
+              store: e.key,
+              totalUSD: e.value.total,
+              count: e.value.count,
+              last: e.value.last,
+            ),
+          )
+          .toList()
+        ..sort((a, b) {
+          final byTotal = b.totalUSD.compareTo(a.totalUSD);
+          if (byTotal != 0) return byTotal;
+          final byCount = b.count.compareTo(a.count);
+          if (byCount != 0) return byCount;
+          return (b.last ?? DateTime(0)).compareTo(a.last ?? DateTime(0));
+        });
   return out;
 }
 
@@ -220,7 +250,9 @@ List<Purchase> storeDetail(List<Purchase> purchases, String store) {
 }
 
 /// Último precio del producto por tienda (descarta quantity>1, barato primero).
-List<({String store, double priceUSD, DateTime date})> productStorePrices(Product p) {
+List<({String store, double priceUSD, DateTime date})> productStorePrices(
+  Product p,
+) {
   final byStore = <String, PriceRecord>{};
   for (final r in p.records) {
     if (r.quantity > 1) continue;
@@ -228,10 +260,17 @@ List<({String store, double priceUSD, DateTime date})> productStorePrices(Produc
     final cur = byStore[s];
     if (cur == null || r.date.isAfter(cur.date)) byStore[s] = r;
   }
-  final out = byStore.entries
-      .map((e) => (store: e.key.isEmpty ? 'Sin tienda' : e.key, priceUSD: e.value.price, date: e.value.date))
-      .toList()
-    ..sort((a, b) => a.priceUSD.compareTo(b.priceUSD));
+  final out =
+      byStore.entries
+          .map(
+            (e) => (
+              store: e.key.isEmpty ? 'Sin tienda' : e.key,
+              priceUSD: e.value.price,
+              date: e.value.date,
+            ),
+          )
+          .toList()
+        ..sort((a, b) => a.priceUSD.compareTo(b.priceUSD));
   return out;
 }
 

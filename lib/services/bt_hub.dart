@@ -108,7 +108,8 @@ class BtHubImpl {
     if (state == 'unavailable') return 'unavailable';
     if (state != 'on') return 'off';
 
-    final granted = await _m.invokeMethod<bool>('hasPermissions', {'scan': false}) ?? false;
+    final granted =
+        await _m.invokeMethod<bool>('hasPermissions', {'scan': false}) ?? false;
     if (!granted) {
       await _m.invokeMethod<void>('requestPermissions', {'scan': false});
       return 'permissions';
@@ -117,9 +118,11 @@ class BtHubImpl {
     // Emparejamiento previo (RFCOMM a un dispositivo sin emparejar falla
     // o dispara un diálogo a medias): se empareja PRIMERO y se espera el
     // resultado hasta 45 s.
-    final bonded = await _m.invokeMethod<bool>('isBonded', {'address': address}) ?? false;
+    final bonded =
+        await _m.invokeMethod<bool>('isBonded', {'address': address}) ?? false;
     if (!bonded) {
-      final started = await _m.invokeMethod<bool>('bond', {'address': address}) ?? false;
+      final started =
+          await _m.invokeMethod<bool>('bond', {'address': address}) ?? false;
       if (!started) return 'bt_connect';
       final ok = await _waitFor(
         _e.receiveBroadcastStream(),
@@ -138,16 +141,20 @@ class BtHubImpl {
       if (m['kind'] == 'connected') {
         if (!connected.isCompleted) connected.complete(null);
       } else if (m['kind'] == 'error') {
-        if (!connected.isCompleted) connected.complete('${m['code'] ?? 'bt_connect'}');
+        if (!connected.isCompleted)
+          connected.complete('${m['code'] ?? 'bt_connect'}');
       }
     });
-    final started = await _m.invokeMethod<bool>('connect', {'address': address}) ?? false;
+    final started =
+        await _m.invokeMethod<bool>('connect', {'address': address}) ?? false;
     if (!started) {
       await sub.cancel();
       return 'bt_connect';
     }
-    final err = await connected.future.timeout(kConnectTimeout,
-        onTimeout: () => 'bt_timeout');
+    final err = await connected.future.timeout(
+      kConnectTimeout,
+      onTimeout: () => 'bt_timeout',
+    );
     await sub.cancel();
     if (err != null) return err;
 
@@ -156,7 +163,9 @@ class BtHubImpl {
     _watchdog?.cancel();
     _watchdog = Timer.periodic(const Duration(seconds: 10), (_) {
       final last = _lastHostData;
-      if (!isHost && last != null && DateTime.now().difference(last) > kHostSilence) {
+      if (!isHost &&
+          last != null &&
+          DateTime.now().difference(last) > kHostSilence) {
         _watchdog?.cancel();
         _fail('host_lost');
       }
@@ -263,9 +272,13 @@ class BtHubImpl {
           try {
             final m = jsonDecode(utf8.decode(line));
             if (m is Map<String, dynamic>) {
-              _events.add(RoomEvent('${m['type'] ?? 'unknown'}', {...m, 'fromId': id}));
+              _events.add(
+                RoomEvent('${m['type'] ?? 'unknown'}', {...m, 'fromId': id}),
+              );
             }
-          } catch (_) {/* línea corrupta: se descarta */}
+          } catch (_) {
+            /* línea corrupta: se descarta */
+          }
         }
       }
     }
@@ -275,7 +288,10 @@ class BtHubImpl {
   // ── Emisión ──────────────────────────────────────────────────────────────
 
   /// Broadcast: el anfitrión escribe a TODOS sus pares; el invitado, al host.
-  Future<Map<String, dynamic>?> emit(String type, Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>?> emit(
+    String type,
+    Map<String, dynamic> payload,
+  ) async {
     if (isHost) {
       // Copia local: no mutar el mapa del llamante.
       for (final id in _peers()) {
@@ -288,17 +304,25 @@ class BtHubImpl {
 
   /// 1:1: [targetId] es un peer «btN» (anfitrión) o «host» (invitado).
   Future<Map<String, dynamic>?> emitTo(
-      String targetId, String type, Map<String, dynamic> payload) async {
+    String targetId,
+    String type,
+    Map<String, dynamic> payload,
+  ) async {
     if (!isHost && targetId != 'host') return null;
     return _sendTo(targetId, type, payload);
   }
 
   Future<Map<String, dynamic>?> _sendTo(
-      String id, String type, Map<String, dynamic> payload) async {
+    String id,
+    String type,
+    Map<String, dynamic> payload,
+  ) async {
     try {
       final line = jsonEncode({...payload, 'type': type});
       final bytes = Uint8List.fromList(utf8.encode('$line\n'));
-      final ok = await _m.invokeMethod<bool>('write', {'id': id, 'data': bytes}) ?? false;
+      final ok =
+          await _m.invokeMethod<bool>('write', {'id': id, 'data': bytes}) ??
+          false;
       return ok ? <String, dynamic>{'ok': true} : null;
     } on PlatformException {
       return null;
@@ -329,14 +353,16 @@ class BtHubImpl {
       _ads.add({'via': 'bt', 'error': 'off'});
       return;
     }
-    final granted = await _m.invokeMethod<bool>('hasPermissions', {'scan': true}) ?? false;
+    final granted =
+        await _m.invokeMethod<bool>('hasPermissions', {'scan': true}) ?? false;
     if (!granted) {
       await _m.invokeMethod<void>('requestPermissions', {'scan': true});
       _ads.add({'via': 'bt', 'error': 'permissions'});
       return;
     }
     // Los YA emparejados son candidatos inmediatos (sin esperar discovery).
-    final bonded = await _m.invokeMethod<List<dynamic>>('bondedDevices') ?? const [];
+    final bonded =
+        await _m.invokeMethod<List<dynamic>>('bondedDevices') ?? const [];
     for (final d in bonded) {
       if (d is Map) {
         final address = '${d['address'] ?? ''}';

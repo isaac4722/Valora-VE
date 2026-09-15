@@ -9,22 +9,38 @@ import 'currencies.dart';
 import 'models.dart';
 
 const List<String> kMeses = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
 ];
 
 const List<String> kDias = [
-  'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo',
+  'lunes',
+  'martes',
+  'miércoles',
+  'jueves',
+  'viernes',
+  'sábado',
+  'domingo',
 ];
-
-final NumberFormat _nfUs = NumberFormat.decimalPattern('en_US');
 
 /// Número es-VE: 1.234,56 (negativos con − inicial).
 String fmtNum(double v, {int decimals = 2}) {
   if (v.isNaN || v.isInfinite) return '—';
   final abs = v.abs();
   final nf = NumberFormat.decimalPatternDigits(
-      locale: 'es_VE', decimalDigits: decimals.clamp(0, 6));
+    locale: 'es_VE',
+    decimalDigits: decimals.clamp(0, 6),
+  );
   final s = nf.format(abs);
   return v < 0 ? '−$s' : s;
 }
@@ -46,7 +62,8 @@ String fmtCurrency(double v, Currency c, {bool withCode = false}) {
 }
 
 /// Alias del web: fmtMoney formatea tal cual sin símbolo.
-String fmtMoney(double v, Currency c) => fmtNum(v, decimals: smartDecimals(v, c));
+String fmtMoney(double v, Currency c) =>
+    fmtNum(v, decimals: smartDecimals(v, c));
 
 /// USD explícito.
 String fmtUSD(double v) => fmtCurrency(v, Currency.usd);
@@ -74,7 +91,20 @@ String fmtPct(double v, {int decimals = 1, bool forceSign = false}) {
 
 /// «02-feb-2026» (estilo del web es-VE).
 String fmtDate(DateTime d) {
-  const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const meses = [
+    'ene',
+    'feb',
+    'mar',
+    'abr',
+    'may',
+    'jun',
+    'jul',
+    'ago',
+    'sep',
+    'oct',
+    'nov',
+    'dic',
+  ];
   return '${d.day.toString().padLeft(2, '0')}-${meses[d.month - 1]}-${d.year}';
 }
 
@@ -99,9 +129,11 @@ String saludo(DateTime d) {
 /// Días completos desde [then].
 int daysSince(DateTime then, [DateTime? now]) {
   now ??= DateTime.now();
-  return DateTime(now.year, now.month, now.day)
-      .difference(DateTime(then.year, then.month, then.day))
-      .inDays;
+  return DateTime(
+    now.year,
+    now.month,
+    now.day,
+  ).difference(DateTime(then.year, then.month, then.day)).inDays;
 }
 
 /// «hace instantes / hace X min / hace X h / hace X d» (por fetchedAt).
@@ -126,11 +158,13 @@ String presentationLabel(Product p) {
       return 'Unidad';
     case Presentation.weight:
       final g = p.size;
-      if (g >= 1000) return '${fmtNum(g / 1000, decimals: g % 1000 == 0 ? 0 : 2)} kg';
+      if (g >= 1000)
+        return '${fmtNum(g / 1000, decimals: g % 1000 == 0 ? 0 : 2)} kg';
       return '${fmtNum(g, decimals: 0)} g';
     case Presentation.volume:
       final ml = p.size;
-      if (ml >= 1000) return '${fmtNum(ml / 1000, decimals: ml % 1000 == 0 ? 0 : 2)} L';
+      if (ml >= 1000)
+        return '${fmtNum(ml / 1000, decimals: ml % 1000 == 0 ? 0 : 2)} L';
       return '${fmtNum(ml, decimals: 0)} ml';
     case Presentation.pack:
       return 'Paquete · ${fmtNum(p.size, decimals: 0)} pzas';
@@ -139,11 +173,11 @@ String presentationLabel(Product p) {
 
 /// Unidad base del producto ('kg', 'L', 'pza'…).
 String baseUnitLabel(Product p) => switch (p.presentation) {
-      Presentation.unit => 'pza',
-      Presentation.weight => 'kg',
-      Presentation.volume => 'L',
-      Presentation.pack => 'pza',
-    };
+  Presentation.unit => 'pza',
+  Presentation.weight => 'kg',
+  Presentation.volume => 'L',
+  Presentation.pack => 'pza',
+};
 
 /// Precio por unidad base (USD): g→kg, ml→L, pzas→pza.
 double? pricePerBase(PriceRecord r, Product p) {
@@ -169,7 +203,10 @@ double? parseLocaleNum(String? raw) {
   if (s.isEmpty) return null;
   s = s.replaceAll(RegExp(r'[\s\u00A0]'), '');
   s = s.replaceAll(RegExp(r'[^0-9.,\u2212\-+]'), ''); // deja $ fuera
-  s = s.replaceAll(RegExp(r'^[.,]+'), ''); // «Bs. 40» → «40» (punto suelto inicial)
+  s = s.replaceAll(
+    RegExp(r'^[.,]+'),
+    '',
+  ); // «Bs. 40» → «40» (punto suelto inicial)
   if (s.isEmpty) return null;
   // Detección de separador decimal: la ÚLTIMA coma o punto gana.
   final lastComma = s.lastIndexOf(',');
@@ -214,6 +251,7 @@ String toCSV(List<List<String>> rows, {String delimiter = ','}) {
     }
     return s;
   }
+
   return rows.map((r) => r.map(esc).join(delimiter)).join('\n');
 }
 
@@ -231,8 +269,7 @@ List<List<String>> parseCSV(String text) {
   final cell = StringBuffer();
   var inQuotes = false;
   var i = 0;
-  String? peek(int ahead) =>
-      i + ahead < input.length ? input[i + ahead] : null;
+  String? peek(int ahead) => i + ahead < input.length ? input[i + ahead] : null;
   while (i < input.length) {
     final ch = input[i];
     if (inQuotes) {
@@ -292,9 +329,6 @@ String fold(String s) {
   }
   return sb.toString();
 }
-
-/// Números para formato «es» con _nfUs (helper interno para/export).
-String fmtPlain(double v, int decimals) => _nfUs.format(v);
 
 // ─── Fechas ISO locales ────────────────────────────────────────────────────
 

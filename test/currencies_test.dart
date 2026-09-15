@@ -8,18 +8,17 @@ import 'package:valorave/core/currencies.dart';
 RateContext ctx({
   Map<String, double>? rates,
   Map<Currency, String>? selected,
-}) =>
-    RateContext(
-      rates: rates ?? const {},
-      selected: selected ?? const {},
-    );
+}) => RateContext(rates: rates ?? const {}, selected: selected ?? const {});
 
 void main() {
   group('RateSource · 15 fuentes', () {
     test('catálogo exacto de fuentes', () {
       expect(RateSource.all.length, 15);
       expect(RateSource.byId['ves-bcv']!.category, SourceCategory.official);
-      expect(RateSource.byId['ves-parallel']!.category, SourceCategory.parallel);
+      expect(
+        RateSource.byId['ves-parallel']!.category,
+        SourceCategory.parallel,
+      );
       expect(RateSource.byId['ves-avg']!.live, isFalse);
       expect(RateSource.byId['ves-manual']!.category, SourceCategory.manual);
       expect(RateSource.sourcesFor(Currency.ves).length, 4);
@@ -37,8 +36,14 @@ void main() {
     });
 
     test('validSourceId rechaza ids muertos con fallback', () {
-      expect(RateSource.validSourceId(Currency.ves, 'fuente-inventada'), 'ves-bcv');
-      expect(RateSource.validSourceId(Currency.ves, 'ves-parallel'), 'ves-parallel');
+      expect(
+        RateSource.validSourceId(Currency.ves, 'fuente-inventada'),
+        'ves-bcv',
+      );
+      expect(
+        RateSource.validSourceId(Currency.ves, 'ves-parallel'),
+        'ves-parallel',
+      );
       expect(RateSource.validSourceId(Currency.ves, null), 'ves-bcv');
     });
 
@@ -68,11 +73,17 @@ void main() {
       );
       final plan = c.plan(Currency.cop, Currency.brl)!;
       expect(plan.path, [Currency.cop, Currency.usd, Currency.brl]);
-      expect(c.convert(100, Currency.cop, Currency.brl), closeTo(0.125, 0.0001));
+      expect(
+        c.convert(100, Currency.cop, Currency.brl),
+        closeTo(0.125, 0.0001),
+      );
     });
 
     test('inversa de arista directa (VES→USD)', () {
-      final c = ctx(rates: {'ves-bcv': 40}, selected: {Currency.ves: 'ves-bcv'});
+      final c = ctx(
+        rates: {'ves-bcv': 40},
+        selected: {Currency.ves: 'ves-bcv'},
+      );
       expect(c.convert(400, Currency.ves, Currency.usd), closeTo(10, 0.0001));
     });
 
@@ -146,7 +157,10 @@ void main() {
 
     test('ConversionPlan.direct: true solo en arista directa', () {
       // VES→USD con BCV: arista directa (inversa).
-      final c1 = ctx(rates: {'ves-bcv': 40}, selected: {Currency.ves: 'ves-bcv'});
+      final c1 = ctx(
+        rates: {'ves-bcv': 40},
+        selected: {Currency.ves: 'ves-bcv'},
+      );
       expect(c1.plan(Currency.ves, Currency.usd)!.direct, isTrue);
       expect(c1.plan(Currency.usd, Currency.ves)!.direct, isTrue);
       // COP→BRL: vía dólar → NO directa.
@@ -167,8 +181,12 @@ void main() {
       expect(plan.rate, closeTo(5.425, 0.001));
       expect(plan.direct, isFalse);
       // La ruta se pinta COMPLETA: EUR → VES → USD → BRL (4 tramos).
-      expect(
-          plan.path, [Currency.eur, Currency.ves, Currency.usd, Currency.brl]);
+      expect(plan.path, [
+        Currency.eur,
+        Currency.ves,
+        Currency.usd,
+        Currency.brl,
+      ]);
       expect(plan.sourceIds, ['eur-ves-oficial', 'ves-bcv', 'brl-br']);
     });
 
@@ -179,8 +197,12 @@ void main() {
       );
       final plan = c.plan(Currency.brl, Currency.eur)!;
       expect(plan.rate, closeTo(1 / 5.425, 0.001));
-      expect(
-          plan.path, [Currency.brl, Currency.usd, Currency.ves, Currency.eur]);
+      expect(plan.path, [
+        Currency.brl,
+        Currency.usd,
+        Currency.ves,
+        Currency.eur,
+      ]);
       expect(plan.sourceIds, ['brl-br', 'ves-bcv', 'eur-ves-oficial']);
     });
 
@@ -221,7 +243,10 @@ void main() {
     });
 
     test('from==to → NULL (v19: no existe X→X, no se ofrece 1 a 1)', () {
-      final c = ctx(rates: {'ves-bcv': 40}, selected: {Currency.ves: 'ves-bcv'});
+      final c = ctx(
+        rates: {'ves-bcv': 40},
+        selected: {Currency.ves: 'ves-bcv'},
+      );
       expect(c.plan(Currency.ves, Currency.ves), isNull);
       expect(c.plan(Currency.usd, Currency.usd), isNull);
       // convert() sigue siendo honesto: mismo monto, misma moneda.
@@ -236,13 +261,18 @@ void main() {
 
   group('Brecha y missing', () {
     test('gapPct: paralelo vs BCV', () {
-      final c = ctx(rates: {'ves-bcv': 40, 'ves-parallel': 45},
-          selected: {Currency.ves: 'ves-bcv'});
+      final c = ctx(
+        rates: {'ves-bcv': 40, 'ves-parallel': 45},
+        selected: {Currency.ves: 'ves-bcv'},
+      );
       expect(c.gapPct(), closeTo(12.5, 0.001));
     });
 
     test('gapPct null sin ambas fuentes', () {
-      final c = ctx(rates: {'ves-bcv': 40}, selected: {Currency.ves: 'ves-bcv'});
+      final c = ctx(
+        rates: {'ves-bcv': 40},
+        selected: {Currency.ves: 'ves-bcv'},
+      );
       expect(c.gapPct(), isNull);
     });
 

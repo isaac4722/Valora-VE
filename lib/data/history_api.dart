@@ -9,12 +9,14 @@ import 'package:dio/dio.dart';
 
 // (independiente del store: solo dio)
 
-final Dio _dio = Dio(BaseOptions(
-  connectTimeout: const Duration(seconds: 9),
-  receiveTimeout: const Duration(seconds: 9),
-  headers: {'Accept': 'application/json', 'User-Agent': 'ValoraVE/17'},
-  validateStatus: (s) => s != null && s < 500,
-));
+final Dio _dio = Dio(
+  BaseOptions(
+    connectTimeout: const Duration(seconds: 9),
+    receiveTimeout: const Duration(seconds: 9),
+    headers: {'Accept': 'application/json', 'User-Agent': 'ValoraVE/17'},
+    validateStatus: (s) => s != null && s < 500,
+  ),
+);
 
 Future<dynamic> _fetch(Uri uri) async {
   final res = await _dio.getUri<dynamic>(uri);
@@ -54,14 +56,18 @@ HistoryResult? _cached(String key) {
 void _store(String key, HistoryResult r) => _cache[key] = (DateTime.now(), r);
 
 /// Venezuela: USD (oficial/paralelo) o EUR (oficial/paralelo).
-Future<HistoryResult> veHistory(
-    {required bool eur, required bool paralelo, int days = 90}) async {
+Future<HistoryResult> veHistory({
+  required bool eur,
+  required bool paralelo,
+  int days = 90,
+}) async {
   final kind = eur ? 'euros' : 'dolares';
   final key = 've-$kind-${paralelo ? 'par' : 'of'}-$days';
   final cached = _cached(key);
   if (cached != null) return cached;
-  final rows =
-      await _fetch(Uri.parse('https://ve.dolarapi.com/v1/historicos/$kind'));
+  final rows = await _fetch(
+    Uri.parse('https://ve.dolarapi.com/v1/historicos/$kind'),
+  );
   if (rows is! List) throw Exception('formato inesperado');
   final fuente = paralelo ? 'paralelo' : 'oficial';
   final points = <HistPoint>[];
@@ -74,8 +80,9 @@ Future<HistoryResult> veHistory(
   }
   if (points.isEmpty) throw Exception('serie vacía');
   final res = HistoryResult(
-      points.sublist(points.length > days ? points.length - days : 0),
-      've.dolarapi.com');
+    points.sublist(points.length > days ? points.length - days : 0),
+    've.dolarapi.com',
+  );
   _store(key, res);
   return res;
 }
@@ -86,16 +93,18 @@ Future<HistoryResult> copHistory(int days) async {
   final cached = _cached(key);
   if (cached != null) return cached;
   final limit = days + 2 < 120 ? days + 2 : 120;
-  final data = await _fetch(Uri.parse(
-      'https://www.datos.gov.co/resource/32sa-8pi3.json?\$limit=$limit&\$order=vigenciadesde%20DESC'));
+  final data = await _fetch(
+    Uri.parse(
+      'https://www.datos.gov.co/resource/32sa-8pi3.json?\$limit=$limit&\$order=vigenciadesde%20DESC',
+    ),
+  );
   if (data is! List) throw Exception('sin datos');
   final points = <HistPoint>[];
   for (final row in data.whereType<Map>()) {
     final rate = num.tryParse('${row['valor']}');
     final fecha = '${row['vigenciadesde'] ?? ''}';
     if (!_ok(rate) || fecha.length < 10) continue;
-    points.add(
-        HistPoint(date: fecha.substring(0, 10), rate: rate!.toDouble()));
+    points.add(HistPoint(date: fecha.substring(0, 10), rate: rate!.toDouble()));
   }
   if (points.isEmpty) throw Exception('TRM sin puntos');
   final res = HistoryResult(points.reversed.toList(), 'datos.gov.co · TRM');
@@ -111,34 +120,42 @@ Future<HistoryResult> dailyHistory(String pair, int days) async {
   // 1) AwesomeAPI
   try {
     final capped = days < 180 ? days : 180;
-    final data = await _fetch(Uri.parse(
-        'https://economia.awesomeapi.com.br/json/daily/USD-$pair/$capped'));
+    final data = await _fetch(
+      Uri.parse(
+        'https://economia.awesomeapi.com.br/json/daily/USD-$pair/$capped',
+      ),
+    );
     if (data is List) {
       final points = <HistPoint>[];
       for (final row in data.whereType<Map>()) {
         final rate = num.tryParse('${row['bid']}');
         final ts = num.tryParse('${row['timestamp']}')?.toDouble();
         if (!_ok(rate) || ts == null || ts <= 0) continue;
-        final date = DateTime.fromMillisecondsSinceEpoch((ts * 1000).round())
-            .toIso8601String()
-            .substring(0, 10);
+        final date = DateTime.fromMillisecondsSinceEpoch(
+          (ts * 1000).round(),
+        ).toIso8601String().substring(0, 10);
         points.add(HistPoint(date: date, rate: rate!.toDouble()));
       }
       if (points.isNotEmpty) {
-        final res =
-            HistoryResult(points.reversed.toList(), 'AwesomeAPI · USD-$pair');
+        final res = HistoryResult(
+          points.reversed.toList(),
+          'AwesomeAPI · USD-$pair',
+        );
         _store(key, res);
         return res;
       }
     }
-  } catch (_) {/* sigue a Frankfurter */}
+  } catch (_) {
+    /* sigue a Frankfurter */
+  }
   // 2) Frankfurter
   final start = DateTime.now()
       .subtract(Duration(days: days + 12))
       .toIso8601String()
       .substring(0, 10);
-  final data = await _fetch(Uri.parse(
-      'https://api.frankfurter.dev/v1/$start..?base=USD&symbols=$pair'));
+  final data = await _fetch(
+    Uri.parse('https://api.frankfurter.dev/v1/$start..?base=USD&symbols=$pair'),
+  );
   final byDate = data is Map ? data['rates'] : null;
   if (byDate is! Map) throw Exception('sin datos');
   final points = <HistPoint>[];
@@ -176,8 +193,12 @@ Future<HistoryResult> seriesForSource(String sourceId, int days) async {
 /// v19 [preferLocal]: sin red se pregunta PRIMERO al libro local — cero
 /// esperas de 9 s fingiendo búsqueda (la tasa manual/personalizada no se
 /// trata como «offline»).
-Future<HistPoint?> rateOn(String sourceId, String date,
-    {HistPoint? Function(String, String)? localFallback, bool preferLocal = false}) async {
+Future<HistPoint?> rateOn(
+  String sourceId,
+  String date, {
+  HistPoint? Function(String, String)? localFallback,
+  bool preferLocal = false,
+}) async {
   if (preferLocal && localFallback != null) {
     final local = localFallback(sourceId, date);
     if (local != null) return local;

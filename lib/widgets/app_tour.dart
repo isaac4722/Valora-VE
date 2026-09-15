@@ -36,21 +36,31 @@ const String kTourDoneKey = 'valorave.tour-done';
 abstract final class TourKeys {
   // Inicio
   static final GlobalKey cotizacion = GlobalKey(debugLabel: 'tour-cotizacion');
-  static final GlobalKey divisasFoco = GlobalKey(debugLabel: 'tour-divisas-foco');
+  static final GlobalKey divisasFoco = GlobalKey(
+    debugLabel: 'tour-divisas-foco',
+  );
   // Divisas
   static final GlobalKey convFecha = GlobalKey(debugLabel: 'tour-conv-fecha');
   static final GlobalKey convFuente = GlobalKey(debugLabel: 'tour-conv-fuente');
   // Lista
-  static final GlobalKey listaAgregar = GlobalKey(debugLabel: 'tour-lista-agregar');
+  static final GlobalKey listaAgregar = GlobalKey(
+    debugLabel: 'tour-lista-agregar',
+  );
   static final GlobalKey listaSala = GlobalKey(debugLabel: 'tour-lista-sala');
   // Productos
-  static final GlobalKey prodBusqueda = GlobalKey(debugLabel: 'tour-prod-busqueda');
+  static final GlobalKey prodBusqueda = GlobalKey(
+    debugLabel: 'tour-prod-busqueda',
+  );
   // Análisis
   static final GlobalKey anclas = GlobalKey(debugLabel: 'tour-analisis-anclas');
   static final GlobalKey rango = GlobalKey(debugLabel: 'tour-analisis-rango');
   // Ajustes
-  static final GlobalKey conexion = GlobalKey(debugLabel: 'tour-ajustes-conexion');
-  static final GlobalKey tutorial = GlobalKey(debugLabel: 'tour-ajustes-tutorial');
+  static final GlobalKey conexion = GlobalKey(
+    debugLabel: 'tour-ajustes-conexion',
+  );
+  static final GlobalKey tutorial = GlobalKey(
+    debugLabel: 'tour-ajustes-tutorial',
+  );
 }
 
 /// ─── Modelo del tour ────────────────────────────────────────────────────────
@@ -108,17 +118,26 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         // Sin ancla: tarjeta centrada arriba — el mensaje es general y NO
         // debe enfocar los iconos de la cabecera (v18 lo hacía y el foco
         // no calzaba con el texto).
-        body: 'Las cotizaciones llegan de APIs públicas (BCV, paralelo, TRM, '
+        body:
+            'Las cotizaciones llegan de APIs públicas (BCV, paralelo, TRM, '
             'Banxico y Brasil) y se guardan aquí para consultarlas sin '
             'conexión. Tus listas, precios y compras nunca salen de este '
             'teléfono: sin cuentas, sin nube.',
-        flags: [Currency.ves, Currency.usd, Currency.eur, Currency.cop, Currency.brl, Currency.mxn],
+        flags: [
+          Currency.ves,
+          Currency.usd,
+          Currency.eur,
+          Currency.cop,
+          Currency.brl,
+          Currency.mxn,
+        ],
       ),
       TourStep(
         id: 'inicio.cotizacion',
         title: 'Elige tu tasa activa',
         anchor: TourKeys.cotizacion,
-        body: 'Cada fila de esta sección cambia la fuente con un toque: BCV, '
+        body:
+            'Cada fila de esta sección cambia la fuente con un toque: BCV, '
             'paralelo, promedio o tu manual. El dólar de arriba y todos los '
             'cálculos de la app usan la que actives aquí.',
       ),
@@ -126,14 +145,16 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'inicio.foco',
         title: 'Todas tus divisas',
         anchor: TourKeys.divisasFoco,
-        body: 'Aquí ves cada moneda del foco con su tasa activa. «Ir al '
+        body:
+            'Aquí ves cada moneda del foco con su tasa activa. «Ir al '
             'conversor» te lleva directo al cambio, con fecha y fuentes.',
       ),
       TourStep(
         id: 'inicio.navbar',
         title: 'Cinco pestañas, todo a un toque',
         anchor: kNavBarKey,
-        body: 'Inicio · Divisas · Lista · Productos · Análisis. La campana '
+        body:
+            'Inicio · Divisas · Lista · Productos · Análisis. La campana '
             'guarda tus avisos y la lupa busca en toda la app; los ajustes '
             'viven arriba a la derecha.',
       ),
@@ -147,7 +168,8 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'divisas.fecha',
         title: 'La tasa de otro día',
         anchor: TourKeys.convFecha,
-        body: '«Ayer» o «Elegir fecha» cargan la tasa REAL de ese día, '
+        body:
+            '«Ayer» o «Elegir fecha» cargan la tasa REAL de ese día, '
             'guardada en tu teléfono. «Volver a hoy» regresa al tablero '
             'vivo.',
       ),
@@ -155,7 +177,8 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'divisas.fuente',
         title: 'La fuente, siempre a la vista',
         anchor: TourKeys.convFuente,
-        body: 'La línea de arriba muestra la fuente de la tasa y su '
+        body:
+            'La línea de arriba muestra la fuente de la tasa y su '
             'frescura: tócala para ver todas las de la moneda y elegir '
             'cuál entra al cálculo.',
       ),
@@ -169,7 +192,8 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'lista.agregar',
         title: 'Agrega por nombre o escaneo',
         anchor: TourKeys.listaAgregar,
-        body: 'Escribe el producto, su precio y la moneda — o escanea el '
+        body:
+            'Escribe el producto, su precio y la moneda — o escanea el '
             'código de barras. La tienda es opcional y cada compra cerrada '
             'queda en tu historial.',
       ),
@@ -177,7 +201,8 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'lista.sala',
         title: 'Comparte la lista en vivo',
         anchor: TourKeys.listaSala,
-        body: '«Sala en vivo» crea un código de 6 letras: quien lo tenga ve '
+        body:
+            '«Sala en vivo» crea un código de 6 letras: quien lo tenga ve '
             'tu lista y sus cambios al instante, con o sin internet.',
       ),
     ],
@@ -190,7 +215,8 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'productos.busqueda',
         title: 'Tu libro de precios',
         anchor: TourKeys.prodBusqueda,
-        body: 'Busca por nombre o código de barras. En la ficha de cada '
+        body:
+            'Busca por nombre o código de barras. En la ficha de cada '
             'producto registras el precio de hoy, escaneas su código o '
             'fijas una META: te avisamos cuando baje de ella.',
       ),
@@ -204,7 +230,8 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'analisis.anclas',
         title: 'Brecha, inflación y gastos',
         anchor: TourKeys.anclas,
-        body: 'Cada ancla abre su gráfica con datos reales: brecha '
+        body:
+            'Cada ancla abre su gráfica con datos reales: brecha '
             'BCV↔paralelo, inflación personal, productos, canasta y los '
             'gastos de tus compras de Lista.',
       ),
@@ -212,7 +239,8 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'analisis.rango',
         title: 'La ventana de tiempo',
         anchor: TourKeys.rango,
-        body: 'Los chips cambian el rango de todas las gráficas. La '
+        body:
+            'Los chips cambian el rango de todas las gráficas. La '
             'cobertura disponible siempre se anuncia: nunca prometemos más '
             'de lo que hay.',
       ),
@@ -226,7 +254,8 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'ajustes.conexion',
         title: 'Tú decides cuándo consultar',
         anchor: TourKeys.conexion,
-        body: 'Con «No consultar API automáticamente» la app no toca la red: '
+        body:
+            'Con «No consultar API automáticamente» la app no toca la red: '
             'todo se lee de tu libro local y tus tasas manuales. El '
             'intervalo de consulta también se cambia aquí.',
       ),
@@ -234,7 +263,8 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'ajustes.tutorial',
         title: 'Este tour, cuando quieras',
         anchor: TourKeys.tutorial,
-        body: 'Repite el tutorial o la bienvenida desde aquí. Avisos con '
+        body:
+            'Repite el tutorial o la bienvenida desde aquí. Avisos con '
             'umbrales, biometría opcional y respaldo JSON completan los '
             'ajustes.',
         cta: 'Entendido',
@@ -244,7 +274,8 @@ final List<TourSegment> kTourSegments = <TourSegment>[
 ];
 
 /// ─── Seam puro para tests ───────────────────────────────────────────────────
-bool isTourDone(SharedPreferences prefs) => prefs.getBool(kTourDoneKey) ?? false;
+bool isTourDone(SharedPreferences prefs) =>
+    prefs.getBool(kTourDoneKey) ?? false;
 Future<void> markTourDone(SharedPreferences prefs) =>
     prefs.setBool(kTourDoneKey, true);
 
@@ -278,8 +309,7 @@ Future<void> runAppTour(BuildContext context) async {
   _tourRunning = true;
   try {
     final router = GoRouter.of(context);
-    final origin =
-        router.routerDelegate.currentConfiguration.uri.toString();
+    final origin = router.routerDelegate.currentConfiguration.uri.toString();
     final backTo = origin.isEmpty || origin == '/bienvenida' ? '/' : origin;
 
     // Índice global de pasos para «paso i de n» en las tarjetas.

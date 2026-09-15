@@ -25,7 +25,11 @@ void main() {
         expect(scopes.contains(t.scope), isTrue, reason: 'scope de «${t.id}»');
         expect(t.title.length, lessThan(40), reason: 'título corto');
         expect(t.body.length, greaterThan(60), reason: 'cuerpo con contexto');
-        expect(t.body.length, lessThan(220), reason: 'cuerpo no pared de texto');
+        expect(
+          t.body.length,
+          lessThan(220),
+          reason: 'cuerpo no pared de texto',
+        );
       }
     });
 
@@ -48,39 +52,50 @@ void main() {
       SharedPreferences.setMockInitialValues({
         kTourDoneKey: true,
         kSessionsKey: 5,
-        kTipLastAt: ahora.subtract(const Duration(hours: 2)).millisecondsSinceEpoch,
+        kTipLastAt: ahora
+            .subtract(const Duration(hours: 2))
+            .millisecondsSinceEpoch,
       });
       final prefs = await SharedPreferences.getInstance();
       expect(tipsEngineEnabled(prefs, now: ahora), isFalse, reason: 'hace 2 h');
-      final hace7h = ahora.subtract(const Duration(hours: 7)).millisecondsSinceEpoch;
+      final hace7h = ahora
+          .subtract(const Duration(hours: 7))
+          .millisecondsSinceEpoch;
       await prefs.setInt(kTipLastAt, hace7h);
       expect(tipsEngineEnabled(prefs, now: ahora), isTrue, reason: 'hace 7 h');
     });
   });
 
   group('Disparo en pantalla', () {
-    testWidgets('conversor: muestra UN tip la primera vez y no repite', (tester) async {
+    testWidgets('conversor: muestra UN tip la primera vez y no repite', (
+      tester,
+    ) async {
       SharedPreferences.setMockInitialValues({
         kTourDoneKey: true,
         kSessionsKey: 5,
       });
       final prefs = await SharedPreferences.getInstance();
       final store = AppStore.withData(const AppData());
-      await tester.pumpWidget(MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          Provider<SharedPreferences>.value(value: prefs),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          home: const Scaffold(body: ConverterScreen()),
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: store),
+            Provider<SharedPreferences>.value(value: prefs),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const Scaffold(body: ConverterScreen()),
+          ),
         ),
-      ));
+      );
       // El trigger dispara tras el primer frame; el overlay no tiene
       // animaciones infinitas → algunos frames y aparece.
-      for (var i = 0;
-          i < 20 && find.text('Escribe en cualquiera de los dos').evaluate().isEmpty;
-          i++) {
+      for (
+        var i = 0;
+        i < 20 &&
+            find.text('Escribe en cualquiera de los dos').evaluate().isEmpty;
+        i++
+      ) {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(find.text('Escribe en cualquiera de los dos'), findsOneWidget);
@@ -89,37 +104,44 @@ void main() {
       expect(isTipShown(prefs, 'conversor.inverso'), isTrue);
       // Entendido cierra.
       await tester.tap(find.text('Entendido'));
-      for (var i = 0;
-          i < 20 && find.text('Escribe en cualquiera de los dos').evaluate().isNotEmpty;
-          i++) {
+      for (
+        var i = 0;
+        i < 20 &&
+            find.text('Escribe en cualquiera de los dos').evaluate().isNotEmpty;
+        i++
+      ) {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(find.text('Escribe en cualquiera de los dos'), findsNothing);
       // Re-montar la pantalla NO vuelve a mostrarlo (id ya visto).
-      await tester.pumpWidget(MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          Provider<SharedPreferences>.value(value: prefs),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          home: const Scaffold(body: ConverterScreen()),
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: store),
+            Provider<SharedPreferences>.value(value: prefs),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const Scaffold(body: ConverterScreen()),
+          ),
         ),
-      ));
+      );
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(find.text('Escribe en cualquiera de los dos'), findsNothing);
     });
 
-    testWidgets('sin SharedPreferences en el árbol → silencio (no explota)', (tester) async {
+    testWidgets('sin SharedPreferences en el árbol → silencio (no explota)', (
+      tester,
+    ) async {
       final store = AppStore.withData(const AppData());
-      await tester.pumpWidget(MultiProvider(
-        providers: [ChangeNotifierProvider.value(value: store)],
-        child: const MaterialApp(
-          home: Scaffold(body: ConverterScreen()),
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [ChangeNotifierProvider.value(value: store)],
+          child: const MaterialApp(home: Scaffold(body: ConverterScreen())),
         ),
-      ));
+      );
       for (var i = 0; i < 6; i++) {
         await tester.pump(const Duration(milliseconds: 100));
       }

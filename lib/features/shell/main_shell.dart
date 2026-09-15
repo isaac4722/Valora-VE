@@ -23,10 +23,13 @@ import '../../widgets/app_router.dart' show kNavBarKey, kHeaderActionsKey;
 /// Ítems del ticker según modo: featured (protagonistas+EUR) / focus (orden
 /// usuario) / off (no se monta).
 List<({Currency flag, String label, double value, String unit, bool isEur})>
-    tickerItems(AppStore store) {
+tickerItems(AppStore store) {
   final ctx = store.contextOf();
   final b = store.board;
-  final items = <({Currency flag, String label, double value, String unit, bool isEur})>[];
+  final items =
+      <
+        ({Currency flag, String label, double value, String unit, bool isEur})
+      >[];
 
   final mode = store.settings.tickerMode;
   if (mode == 'featured') {
@@ -46,7 +49,13 @@ List<({Currency flag, String label, double value, String unit, bool isEur})>
     if (CountryX.from(store.settings.country) == Country.VE) {
       final pair = b.sources['eur-ves-oficial'];
       if (pair != null) {
-        items.add((flag: Currency.eur, label: 'Euro Oficial', value: pair.rate, unit: 'Bs', isEur: true));
+        items.add((
+          flag: Currency.eur,
+          label: 'Euro Oficial',
+          value: pair.rate,
+          unit: 'Bs',
+          isEur: true,
+        ));
       }
     }
     return items;
@@ -74,11 +83,36 @@ class MainShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
   static const List<_TabSpec> _tabs = [
-    _TabSpec(location: '/', icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Inicio'),
-    _TabSpec(location: '/conversor', icon: Icons.swap_horiz, activeIcon: Icons.swap_horiz, label: 'Divisas'),
-    _TabSpec(location: '/lista', icon: Icons.shopping_cart_outlined, activeIcon: Icons.shopping_cart, label: 'Lista'),
-    _TabSpec(location: '/productos', icon: Icons.inventory_2_outlined, activeIcon: Icons.inventory_2, label: 'Productos'),
-    _TabSpec(location: '/analisis', icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, label: 'Análisis'),
+    _TabSpec(
+      location: '/',
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home,
+      label: 'Inicio',
+    ),
+    _TabSpec(
+      location: '/conversor',
+      icon: Icons.swap_horiz,
+      activeIcon: Icons.swap_horiz,
+      label: 'Divisas',
+    ),
+    _TabSpec(
+      location: '/lista',
+      icon: Icons.shopping_cart_outlined,
+      activeIcon: Icons.shopping_cart,
+      label: 'Lista',
+    ),
+    _TabSpec(
+      location: '/productos',
+      icon: Icons.inventory_2_outlined,
+      activeIcon: Icons.inventory_2,
+      label: 'Productos',
+    ),
+    _TabSpec(
+      location: '/analisis',
+      icon: Icons.bar_chart_outlined,
+      activeIcon: Icons.bar_chart,
+      label: 'Análisis',
+    ),
   ];
 
   @override
@@ -96,7 +130,8 @@ class MainShell extends StatelessWidget {
     // app funciona normal y natural con SU tasa.
     final countryCur = CountryX.from(store.settings.country).currency;
     final manualActive =
-        RateSource.of(store.sourceFor(countryCur))?.category == SourceCategory.manual;
+        RateSource.of(store.sourceFor(countryCur))?.category ==
+        SourceCategory.manual;
     final chosenOffline = store.settings.offlineMode;
     final showHealth = !manualActive && !chosenOffline;
 
@@ -114,7 +149,10 @@ class MainShell extends StatelessWidget {
                 ? RateHealthBanner(
                     stale: poller.rateStale,
                     offline: poller.offlineNet,
-                    onRetry: poller.offlineNet ? null : () => poller.refreshNow())
+                    onRetry: poller.offlineNet
+                        ? null
+                        : () => poller.refreshNow(),
+                  )
                 : const SizedBox(width: double.infinity),
           ),
           if (current == 0) _HomeTicker(),
@@ -138,7 +176,10 @@ class MainShell extends StatelessWidget {
                     spec: _tabs[i],
                     active: i == current,
                     badge: i == 2 ? _cartCount(context) : 0,
-                    onTap: () => navigationShell.goBranch(i, initialLocation: i == current),
+                    onTap: () => navigationShell.goBranch(
+                      i,
+                      initialLocation: i == current,
+                    ),
                   ),
                 ),
             ],
@@ -182,7 +223,12 @@ class _TourTriggerState extends State<_TourTrigger> {
 }
 
 class _TabSpec {
-  const _TabSpec({required this.location, required this.icon, required this.activeIcon, required this.label});
+  const _TabSpec({
+    required this.location,
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
   final String location;
   final IconData icon;
   final IconData activeIcon;
@@ -190,7 +236,12 @@ class _TabSpec {
 }
 
 class _TabButton extends StatelessWidget {
-  const _TabButton({required this.spec, required this.active, required this.onTap, this.badge = 0});
+  const _TabButton({
+    required this.spec,
+    required this.active,
+    required this.onTap,
+    this.badge = 0,
+  });
 
   final _TabSpec spec;
   final bool active;
@@ -215,19 +266,31 @@ class _TabButton extends StatelessWidget {
                   height: 27,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: active ? scheme.primary.withValues(alpha: 0.20) : Colors.transparent,
+                    color: active
+                        ? scheme.primary.withValues(alpha: 0.20)
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(999),
-                    border: active ? Border.all(color: scheme.primary.withValues(alpha: 0.25)) : null,
+                    border: active
+                        ? Border.all(
+                            color: scheme.primary.withValues(alpha: 0.25),
+                          )
+                        : null,
                   ),
-                  child: Icon(active ? spec.activeIcon : spec.icon, size: 19,
-                      color: active ? scheme.primary : scheme.onSurfaceVariant),
+                  child: Icon(
+                    active ? spec.activeIcon : spec.icon,
+                    size: 19,
+                    color: active ? scheme.primary : scheme.onSurfaceVariant,
+                  ),
                 ),
                 if (badge > 0)
                   Positioned(
                     right: -4,
                     top: -3,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: scheme.primary,
                         borderRadius: BorderRadius.circular(999),
@@ -246,9 +309,15 @@ class _TabButton extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 2),
-            Text(spec.label, style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: -0.1,
-                color: active ? scheme.primary : scheme.onSurfaceVariant)),
+            Text(
+              spec.label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.1,
+                color: active ? scheme.primary : scheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       ),
@@ -298,60 +367,79 @@ class _Header extends StatelessWidget {
           height: 54,
           child: Padding(
             padding: const EdgeInsets.only(left: 16),
-            child: Row(children: [
-              // Marca tipográfica pura, patrón dp4: «Valora» + «VE» en
-              // tinta primaria. Tap → Inicio.
-              InkWell(
-                onTap: () => context.go('/'),
-                borderRadius: BorderRadius.circular(10),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                  child: RichText(
-                    text: TextSpan(
-                      style: VeText.displayNum(18, color: scheme.onSurface, weight: FontWeight.w700),
-                      children: <InlineSpan>[
-                        const TextSpan(text: 'Valora'),
-                        TextSpan(text: 'VE', style: TextStyle(color: scheme.primary)),
-                      ],
+            child: Row(
+              children: [
+                // Marca tipográfica pura, patrón dp4: «Valora» + «VE» en
+                // tinta primaria. Tap → Inicio.
+                InkWell(
+                  onTap: () => context.go('/'),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 6,
+                    ),
+                    child: RichText(
+                      text: TextSpan(
+                        style: VeText.displayNum(
+                          18,
+                          color: scheme.onSurface,
+                          weight: FontWeight.w700,
+                        ),
+                        children: <InlineSpan>[
+                          const TextSpan(text: 'Valora'),
+                          TextSpan(
+                            text: 'VE',
+                            style: TextStyle(color: scheme.primary),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const Spacer(),
-              Container(
-                key: kHeaderActionsKey,
-                child: Row(children: [
-                  _HeaderIcon(
-                    icon: Icons.search,
-                    tooltip: 'Buscar en la app',
-                    // dp4: búsqueda global como pantalla completa (módulos,
-                    // productos, compras con tienda y avisos).
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(builder: (_) => const GlobalSearchScreen()),
-                    ),
+                const Spacer(),
+                Container(
+                  key: kHeaderActionsKey,
+                  child: Row(
+                    children: [
+                      _HeaderIcon(
+                        icon: Icons.search,
+                        tooltip: 'Buscar en la app',
+                        // dp4: búsqueda global como pantalla completa (módulos,
+                        // productos, compras con tienda y avisos).
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const GlobalSearchScreen(),
+                          ),
+                        ),
+                      ),
+                      _HeaderIcon(
+                        icon: dark
+                            ? Icons.light_mode_outlined
+                            : Icons.dark_mode_outlined,
+                        tooltip: 'Cambiar tema',
+                        onTap: () => context.read<ThemeController>().setMode(
+                          dark ? ThemeMode.light : ThemeMode.dark,
+                          context.read<SharedPreferences>(),
+                        ),
+                      ),
+                      _HeaderIcon(
+                        icon: Icons.notifications_outlined,
+                        tooltip: 'Notificaciones',
+                        badge: unread,
+                        onTap: () => showNotificationCenter(context),
+                      ),
+                      _HeaderIcon(
+                        icon: Icons.settings_outlined,
+                        tooltip: 'Ajustes',
+                        onTap: () => context.go('/ajustes'),
+                      ),
+                    ],
                   ),
-                  _HeaderIcon(
-                    icon: dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                    tooltip: 'Cambiar tema',
-                    onTap: () => context.read<ThemeController>().setMode(
-                        dark ? ThemeMode.light : ThemeMode.dark,
-                        context.read<SharedPreferences>()),
-                  ),
-                  _HeaderIcon(
-                    icon: Icons.notifications_outlined,
-                    tooltip: 'Notificaciones',
-                    badge: unread,
-                    onTap: () => showNotificationCenter(context),
-                  ),
-                  _HeaderIcon(
-                    icon: Icons.settings_outlined,
-                    tooltip: 'Ajustes',
-                    onTap: () => context.go('/ajustes'),
-                  ),
-                ]),
-              ),
-              const SizedBox(width: 10),
-            ]),
+                ),
+                const SizedBox(width: 10),
+              ],
+            ),
           ),
         ),
       ),
@@ -360,7 +448,12 @@ class _Header extends StatelessWidget {
 }
 
 class _HeaderIcon extends StatelessWidget {
-  const _HeaderIcon({required this.icon, required this.onTap, this.tooltip, this.badge = 0});
+  const _HeaderIcon({
+    required this.icon,
+    required this.onTap,
+    this.tooltip,
+    this.badge = 0,
+  });
 
   final IconData icon;
   final VoidCallback onTap;
@@ -386,10 +479,23 @@ class _HeaderIcon extends StatelessWidget {
                 right: -4,
                 top: -3,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  decoration: BoxDecoration(color: scheme.primary, borderRadius: BorderRadius.circular(999)),
-                  child: Text(badge > 9 ? '9+' : '$badge',
-                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: scheme.onPrimary, fontFamily: 'Inter')),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.primary,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    badge > 9 ? '9+' : '$badge',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onPrimary,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -399,4 +505,3 @@ class _HeaderIcon extends StatelessWidget {
     return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
   }
 }
-

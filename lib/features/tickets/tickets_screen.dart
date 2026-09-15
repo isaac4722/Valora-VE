@@ -41,10 +41,11 @@ class TicketsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final scheme = Theme.of(context).colorScheme;
-    final withPhoto = store.purchases
-        .where((p) => p.ticketPhoto != null && p.ticketPhoto!.isNotEmpty)
-        .toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    final withPhoto =
+        store.purchases
+            .where((p) => p.ticketPhoto != null && p.ticketPhoto!.isNotEmpty)
+            .toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
 
     // v19: PushScreen — notch/barras respetadas + botón atrás visible.
     return PushScreen(
@@ -95,10 +96,12 @@ class TicketsScreen extends StatelessWidget {
   }
 
   void _openViewer(BuildContext context, AppStore store, Purchase p) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      fullscreenDialog: true,
-      builder: (_) => _TicketViewer(store: store, purchase: p),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => _TicketViewer(store: store, purchase: p),
+      ),
+    );
   }
 }
 
@@ -120,33 +123,47 @@ class _TicketTile extends StatelessWidget {
           'Ticket de ${purchase.date.day} de ${kMeses[purchase.date.month - 1]}${purchase.store == null || purchase.store!.isEmpty ? '' : ' · ${purchase.store}'}',
       child: TapScale(
         onTap: onTap,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                width: double.infinity,
-                color: scheme.surfaceContainerHigh.withValues(alpha: 0.5),
-                child: bytes == null
-                    ? Icon(Icons.image_not_supported_outlined,
-                        size: 26, color: scheme.onSurfaceVariant)
-                    : Image.memory(bytes,
-                        fit: BoxFit.cover, gaplessPlayback: true),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  width: double.infinity,
+                  color: scheme.surfaceContainerHigh.withValues(alpha: 0.5),
+                  child: bytes == null
+                      ? Icon(
+                          Icons.image_not_supported_outlined,
+                          size: 26,
+                          color: scheme.onSurfaceVariant,
+                        )
+                      : Image.memory(
+                          bytes,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                        ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 5),
-          Text(fmtDate(purchase.date),
+            const SizedBox(height: 5),
+            Text(
+              fmtDate(purchase.date),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  fontSize: 10.5, fontWeight: FontWeight.w700)),
-          Text(purchase.store?.isNotEmpty == true ? purchase.store! : 'Compra',
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              purchase.store?.isNotEmpty == true ? purchase.store! : 'Compra',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style:
-                  TextStyle(fontSize: 9.5, color: scheme.onSurfaceVariant)),
-        ]),
+              style: TextStyle(fontSize: 9.5, color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -171,12 +188,17 @@ class _TicketViewerState extends State<_TicketViewer> {
   Future<void> _share() async {
     final bytes = ticketBytes(widget.purchase.ticketPhoto);
     if (bytes == null) {
-      showToast(context, 'La foto no se puede leer para compartir.', kind: ToastKind.error);
+      showToast(
+        context,
+        'La foto no se puede leer para compartir.',
+        kind: ToastKind.error,
+      );
       return;
     }
     await sharePng(
-        bytes,
-        'ticket-valorave-${fmtDate(widget.purchase.date).replaceAll(' ', '-')}.png');
+      bytes,
+      'ticket-valorave-${fmtDate(widget.purchase.date).replaceAll(' ', '-')}.png',
+    );
   }
 
   Future<void> _removePhoto() async {
@@ -185,23 +207,32 @@ class _TicketViewerState extends State<_TicketViewer> {
       builder: (ctx) => AlertDialog(
         title: const Text('¿Quitar la foto del ticket?'),
         content: const Text(
-            'La compra y sus montos se quedan intactos; solo se quita la foto del recibo.'),
+          'La compra y sus montos se quedan intactos; solo se quita la foto del recibo.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancelar')),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Quitar foto')),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Quitar foto'),
+          ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
     widget.store.updatePurchase(
-        widget.purchase.id, widget.purchase.copyWith(clearTicket: true));
+      widget.purchase.id,
+      widget.purchase.copyWith(clearTicket: true),
+    );
     if (!mounted) return;
     setState(() => _removed = true);
-    showToast(context, 'Foto quitada. La compra sigue intacta.', kind: ToastKind.ok);
+    showToast(
+      context,
+      'Foto quitada. La compra sigue intacta.',
+      kind: ToastKind.ok,
+    );
     Navigator.of(context).pop();
   }
 
@@ -215,19 +246,28 @@ class _TicketViewerState extends State<_TicketViewer> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(fmtDateLong(p.date),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              fmtDateLong(p.date),
               style: const TextStyle(
-                  fontFamily: 'SpaceGrotesk',
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white)),
-          if (p.store?.isNotEmpty == true)
-            Text(p.store!,
+                fontFamily: 'SpaceGrotesk',
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            if (p.store?.isNotEmpty == true)
+              Text(
+                p.store!,
                 style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.72))),
-        ]),
+                  fontSize: 11,
+                  color: Colors.white.withValues(alpha: 0.72),
+                ),
+              ),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: 'Compartir imagen',
@@ -241,51 +281,72 @@ class _TicketViewerState extends State<_TicketViewer> {
           ),
         ],
       ),
-      body: Column(children: [
-        Expanded(
-          child: bytes == null
-              ? Center(
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.image_not_supported_outlined,
-                        size: 42, color: Colors.white.withValues(alpha: 0.5)),
-                    const SizedBox(height: 10),
-                    Text('Esta foto ya no está disponible.',
-                        style: TextStyle(
+      body: Column(
+        children: [
+          Expanded(
+            child: bytes == null
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.image_not_supported_outlined,
+                          size: 42,
+                          color: Colors.white.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Esta foto ya no está disponible.',
+                          style: TextStyle(
                             fontSize: 12.5,
-                            color: Colors.white.withValues(alpha: 0.72))),
-                  ]),
-                )
-              : InteractiveViewer(
-                  panEnabled: true,
-                  maxScale: 8,
-                  child: Center(child: Image.memory(bytes, fit: BoxFit.contain)),
+                            color: Colors.white.withValues(alpha: 0.72),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : InteractiveViewer(
+                    panEnabled: true,
+                    maxScale: 8,
+                    child: Center(
+                      child: Image.memory(bytes, fit: BoxFit.contain),
+                    ),
+                  ),
+          ),
+          // Franja de contexto de la compra: total pagado + equivalente Bs +
+          // tasa usada, tinta clara sobre negro.
+          Container(
+            width: double.infinity,
+            color: Colors.black,
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'TOTAL PAGADO',
+                  style: VeText.labelCaps(
+                    9,
+                    color: Colors.white.withValues(alpha: 0.55),
+                  ),
                 ),
-        ),
-        // Franja de contexto de la compra: total pagado + equivalente Bs +
-        // tasa usada, tinta clara sobre negro.
-        Container(
-          width: double.infinity,
-          color: Colors.black,
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('TOTAL PAGADO',
-                style: VeText.labelCaps(
-                    9, color: Colors.white.withValues(alpha: 0.55))),
-            const SizedBox(height: 3),
-            Text(
-              '${fmtMoney(p.paidUSD, Currency.usd)} · ${fmtMoney(p.totalBS, Currency.ves)} · 1 USD = ${fmtRate(p.rate)}',
-              style: VeText.displayNum(16, color: Colors.white),
+                const SizedBox(height: 3),
+                Text(
+                  '${fmtMoney(p.paidUSD, Currency.usd)} · ${fmtMoney(p.totalBS, Currency.ves)} · 1 USD = ${fmtRate(p.rate)}',
+                  style: VeText.displayNum(16, color: Colors.white),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Zoom con dos dedos hasta 8× · la compra vive en Historial',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: Colors.white.withValues(alpha: 0.55),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              'Zoom con dos dedos hasta 8× · la compra vive en Historial',
-              style: TextStyle(
-                  fontSize: 10.5,
-                  color: Colors.white.withValues(alpha: 0.55)),
-            ),
-          ]),
-        ),
-      ]),
+          ),
+        ],
+      ),
     );
   }
 }

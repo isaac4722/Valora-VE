@@ -36,7 +36,9 @@ void callbackDispatcher() {
               parallel: rates['ves-parallel'],
             );
           }
-        } catch (_) {/* sin red: nada */}
+        } catch (_) {
+          /* sin red: nada */
+        }
         // Recordatorio diario con app cerrada (precisión horaria; el claim
         // por día en AlertEngine evita duplicar con el camino in-app) +
         // METAS DE PRECIO de producto en 2º plano (17.7 · price_targets):
@@ -53,7 +55,9 @@ void callbackDispatcher() {
             persist: (kind, title, body) =>
                 store.pushNotification(kind: kind, title: title, body: body),
           );
-        } catch (_) {/* sin canal de notifs: no bloquea */}
+        } catch (_) {
+          /* sin canal de notifs: no bloquea */
+        }
         return true;
       case kBackupTask:
         await autoBackup(store);
@@ -67,9 +71,10 @@ void callbackDispatcher() {
 Future<Map<String, double>> fetchBoardSimple() async {
   final out = <String, double>{};
   try {
-    final client = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 8);
-    final req = await client.getUrl(Uri.parse('https://ve.dolarapi.com/v1/dolares'));
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+    final req = await client.getUrl(
+      Uri.parse('https://ve.dolarapi.com/v1/dolares'),
+    );
     final res = await req.close();
     if (res.statusCode == 200) {
       final body = await res.transform(utf8.decoder).join();
@@ -93,22 +98,26 @@ Future<void> autoBackup(AppStore store) async {
     await backups.create(recursive: true);
     final name =
         'backup-valorave-${DateTime.now().toIso8601String().substring(0, 10)}.json';
-    await File('${backups.path}/$name')
-        .writeAsString(const JsonEncoder.withIndent('  ').convert({
-      'version': 12,
-      'data': store.data.toJson(),
-      'savedAt': DateTime.now().toIso8601String(),
-    }));
+    await File('${backups.path}/$name').writeAsString(
+      const JsonEncoder.withIndent('  ').convert({
+        'version': 12,
+        'data': store.data.toJson(),
+        'savedAt': DateTime.now().toIso8601String(),
+      }),
+    );
     // Retención: deja los 4 más recientes.
-    final files = (await backups.list().toList())
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.json'))
-        .toList()
-      ..sort((a, b) => b.path.compareTo(a.path));
+    final files =
+        (await backups.list().toList())
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.json'))
+            .toList()
+          ..sort((a, b) => b.path.compareTo(a.path));
     for (final f in files.skip(4)) {
       await f.delete();
     }
-  } catch (_) {/* no bloquea */}
+  } catch (_) {
+    /* no bloquea */
+  }
 }
 
 Future<void> initWorkmanager() async {

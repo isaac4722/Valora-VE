@@ -64,6 +64,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
     if (_driver == 'to') return rate > 0 && _toTyped > 0 ? _toTyped / rate : 0;
     return _fromTyped;
   }
+
   String _dateMode = 'today'; // today | yesterday | week | custom
   DateTime? _customDate;
   Map<String, double>? _historicRates; // tasas históricas (sourceId → rate)
@@ -161,18 +162,31 @@ class _ConverterScreenState extends State<ConverterScreen> {
       }
       if (id == 'ves-avg') continue; // se deriva abajo (§3.1)
       try {
-        final point = await rateOn(id, day, preferLocal: offlineNet, localFallback: (sourceId, d) {
-          final local = store.snapshots.where((p) => p.sourceId == sourceId && p.day == d).toList()
-            ..sort((a, b) => a.day.compareTo(b.day));
-          return local.isEmpty ? null : HistPoint(date: local.last.day, rate: local.last.rate);
-        });
+        final point = await rateOn(
+          id,
+          day,
+          preferLocal: offlineNet,
+          localFallback: (sourceId, d) {
+            final local =
+                store.snapshots
+                    .where((p) => p.sourceId == sourceId && p.day == d)
+                    .toList()
+                  ..sort((a, b) => a.day.compareTo(b.day));
+            return local.isEmpty
+                ? null
+                : HistPoint(date: local.last.day, rate: local.last.rate);
+          },
+        );
         if (point != null) {
           rates[id] = point.rate;
           final pointDay = point.date.length == 10 ? point.date : day;
-          fetched.add(SnapshotPoint(
-              sourceId: id, day: pointDay, rate: point.rate));
+          fetched.add(
+            SnapshotPoint(sourceId: id, day: pointDay, rate: point.rate),
+          );
         }
-      } catch (_) {/* honesto: sin dato */}
+      } catch (_) {
+        /* honesto: sin dato */
+      }
     }
     if (fetched.isNotEmpty) {
       // Fusión ANTES de mutar la lista (remoto gana por día; local se
@@ -197,17 +211,19 @@ class _ConverterScreenState extends State<ConverterScreen> {
   RateContext _context(AppStore store) {
     final base = store.contextOf(module: RateModule.converter);
     if (_dateMode == 'today' || _historicRates == null) return base;
-    return RateContext(
-      rates: _historicRates!,
-      selected: base.selected,
-    );
+    return RateContext(rates: _historicRates!, selected: base.selected);
   }
 
   /// Intercambia los lados del par (botón swap o al elegir la divisa del
   /// otro lado). El NÚMERO se conserva: si el conductor era el resultado,
   /// ese valor pasa a ser el monto del nuevo par (comportamiento XE).
   void _swapSides(
-      AppStore store, Currency from, Currency to, ConversionPlan? plan, double result) {
+    AppStore store,
+    Currency from,
+    Currency to,
+    ConversionPlan? plan,
+    double result,
+  ) {
     final rate = plan?.rate ?? 0;
     final nuevo = _driver == 'to'
         ? _toTyped
@@ -218,15 +234,19 @@ class _ConverterScreenState extends State<ConverterScreen> {
       _toTyped = 0;
       _driver = 'from';
       // La nueva divisa FROM es la antigua `to`.
-      _fromCtrl.text =
-          fmtNum(_fromTyped, decimals: smartDecimals(_fromTyped, to));
+      _fromCtrl.text = fmtNum(
+        _fromTyped,
+        decimals: smartDecimals(_fromTyped, to),
+      );
     });
   }
 
   /// ¿Hay override de fuente propio del conversor para esta divisa?
-  bool _hasOverride(AppStore store, Currency c) =>
-      store.data.settings.rateSourcesByModule
-          .containsKey(moduleRateKey(RateModule.converter.code, c.code));
+  bool _hasOverride(AppStore store, Currency c) => store
+      .data
+      .settings
+      .rateSourcesByModule
+      .containsKey(moduleRateKey(RateModule.converter.code, c.code));
 
   /// Selector de fuente (chips y tabla de referencia). Si el id coincide con
   /// la fuente global se limpia el override (el conversor vuelve a seguir la
@@ -260,7 +280,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
       try {
         final res = await seriesForSource(id, 180);
         out.addAll(res.points.map((p) => p.date));
-      } catch (_) {/* sin red: cubren los locales */}
+      } catch (_) {
+        /* sin red: cubren los locales */
+      }
     }
     return out;
   }
@@ -323,8 +345,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final amount = _amountNow;
     if (plan == null || amount <= 0) return null;
     final result = amount * plan.rate;
-    final primaryId =
-        plan.sourceIds.isNotEmpty ? plan.sourceIds.first : ctx.sel(from);
+    final primaryId = plan.sourceIds.isNotEmpty
+        ? plan.sourceIds.first
+        : ctx.sel(from);
     final src = RateSource.of(primaryId);
     final label = convSourceNames[primaryId] ?? src?.label ?? primaryId;
     final cat = src?.category.label ?? '';
@@ -337,7 +360,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
       rateLine: '1 ${from.code} = ${fmtRate(plan.rate)} ${to.code}',
       sourceLabel: cat.isEmpty ? label : '$label · $cat',
       // Fecha de la tasa mostrada (hoy o la histórica elegida).
-      date: _dateMode == 'today' ? DateTime.now() : (_customDate ?? DateTime.now()),
+      date: _dateMode == 'today'
+          ? DateTime.now()
+          : (_customDate ?? DateTime.now()),
     );
   }
 
@@ -355,38 +380,42 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final text =
         '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} · '
         '1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} — ValoraVE';
-    await showShareMenu(context, title: 'Resultado ${from.code} → ${to.code}', actions: [
-      ShareMenuAction(
-        icon: Icons.subject_rounded,
-        label: 'Texto',
-        hint: 'Cifra y tasa listas para pegar en un chat',
-        onRun: () async {
-          await SharePlus.instance.share(ShareParams(text: text));
-          return null;
-        },
-      ),
-      ShareMenuAction(
-        icon: Icons.image_outlined,
-        label: 'Compartir imagen',
-        hint: 'Tarjeta de ValoraVE con la conversión',
-        onRun: () async {
-          final png = await _renderCard();
-          if (png == null) return 'No pude generar la tarjeta';
-          await sharePng(png, 'conversion-valorave.png');
-          return null;
-        },
-      ),
-      ShareMenuAction(
-        icon: Icons.download_rounded,
-        label: 'Descargar imagen',
-        hint: 'Guarda la tarjeta sin abrir el share',
-        onRun: () async {
-          final png = await _renderCard();
-          if (png == null) return 'No pude generar la tarjeta';
-          return runDownloadBytes(png, 'conversion-valorave.png');
-        },
-      ),
-    ]);
+    await showShareMenu(
+      context,
+      title: 'Resultado ${from.code} → ${to.code}',
+      actions: [
+        ShareMenuAction(
+          icon: Icons.subject_rounded,
+          label: 'Texto',
+          hint: 'Cifra y tasa listas para pegar en un chat',
+          onRun: () async {
+            await SharePlus.instance.share(ShareParams(text: text));
+            return null;
+          },
+        ),
+        ShareMenuAction(
+          icon: Icons.image_outlined,
+          label: 'Compartir imagen',
+          hint: 'Tarjeta de ValoraVE con la conversión',
+          onRun: () async {
+            final png = await _renderCard();
+            if (png == null) return 'No pude generar la tarjeta';
+            await sharePng(png, 'conversion-valorave.png');
+            return null;
+          },
+        ),
+        ShareMenuAction(
+          icon: Icons.download_rounded,
+          label: 'Descargar imagen',
+          hint: 'Guarda la tarjeta sin abrir el share',
+          onRun: () async {
+            final png = await _renderCard();
+            if (png == null) return 'No pude generar la tarjeta';
+            return runDownloadBytes(png, 'conversion-valorave.png');
+          },
+        ),
+      ],
+    );
   }
 
   /// Texto del resultado al portapapeles (acompaña a la tarjeta).
@@ -399,8 +428,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final amount = _amountNow;
     if (plan == null || amount <= 0) return;
     final result = amount * plan.rate;
-    final primaryId =
-        plan.sourceIds.isNotEmpty ? plan.sourceIds.first : ctx.sel(from);
+    final primaryId = plan.sourceIds.isNotEmpty
+        ? plan.sourceIds.first
+        : ctx.sel(from);
     final src = RateSource.of(primaryId);
     final label = convSourceNames[primaryId] ?? src?.label ?? primaryId;
     final cat = src?.category.label ?? '';
@@ -431,16 +461,21 @@ class _ConverterScreenState extends State<ConverterScreen> {
     // sola): el conductor conserva exactamente lo que el usuario tecleó.
     final passiveTo = _driver == 'from';
     final passiveTxt = passiveTo
-        ? (result > 0 ? fmtNum(result, decimals: smartDecimals(result, to)) : '')
-        : (amount > 0 ? fmtNum(amount, decimals: smartDecimals(amount, from)) : '');
+        ? (result > 0
+              ? fmtNum(result, decimals: smartDecimals(result, to))
+              : '')
+        : (amount > 0
+              ? fmtNum(amount, decimals: smartDecimals(amount, from))
+              : '');
     if ((passiveTo ? _toCtrl : _fromCtrl).text != passiveTxt) {
       (passiveTo ? _toCtrl : _fromCtrl).text = passiveTxt;
     }
 
     // Fuente activa del par + su frescura (v18.0: vive en la línea superior
     // del conversor, estilo XE/Wise).
-    final primaryId =
-        (plan != null && plan.sourceIds.isNotEmpty) ? plan.sourceIds.first : ctx.sel(from);
+    final primaryId = (plan != null && plan.sourceIds.isNotEmpty)
+        ? plan.sourceIds.first
+        : ctx.sel(from);
     final src = RateSource.of(primaryId);
     final entry = store.board.sources[primaryId];
     final when = entry?.updatedAt ?? store.board.fetchedAt;
@@ -454,90 +489,100 @@ class _ConverterScreenState extends State<ConverterScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           const TipsTrigger(scope: 'conversor'),
-          const PageHeader('Conversor', hint: 'Puente USD · EUR visible · ruta honesta'),
+          const PageHeader(
+            'Conversor',
+            hint: 'Puente USD · EUR visible · ruta honesta',
+          ),
           // Fecha de la tasa activa + selector histórico (calendario real).
           KeyedSubtree(
             key: TourKeys.convFecha,
             child: _FechaTasas(
-            mode: _dateMode,
-            customDate: _customDate,
-            loading: _historicLoading,
-            sinDatos: _historicRates != null &&
-                !_historicLoading &&
-                (plan == null || plan.rate <= 0),
-            onMode: (m) {
-              setState(() => _dateMode = m);
-              _applyRateContext();
-            },
-            onOpenCalendar: _openHistoricCalendar,
-          ),
+              mode: _dateMode,
+              customDate: _customDate,
+              loading: _historicLoading,
+              sinDatos:
+                  _historicRates != null &&
+                  !_historicLoading &&
+                  (plan == null || plan.rate <= 0),
+              onMode: (m) {
+                setState(() => _dateMode = m);
+                _applyRateContext();
+              },
+              onOpenCalendar: _openHistoricCalendar,
+            ),
           ),
           const SizedBox(height: 14),
           // Ancla del tour (v17.8): el card del par con su fuente de tasa.
           KeyedSubtree(
             key: TourKeys.convFuente,
             child: _DualInput(
-            fromCtrl: _fromCtrl,
-            toCtrl: _toCtrl,
-            from: from,
-            to: to,
-            result: result,
-            plan: plan,
-            ctx: ctx,
-            activeSourceId: primaryId,
-            frescura: frescura,
-            hasOverride: _hasOverride(store, from),
-            onFromInput: (v) => setState(() {
-              _fromTyped = v;
-              _driver = 'from';
-            }),
-            onToInput: (v) => setState(() {
-              _toTyped = v;
-              _driver = 'to';
-            }),
-            onAdjust: (v) {
-              // Los ajustes rápidos mueven el lado FROM (es el «monto»).
-              setState(() {
-                _fromTyped = v <= 0 ? 0 : v;
+              fromCtrl: _fromCtrl,
+              toCtrl: _toCtrl,
+              from: from,
+              to: to,
+              result: result,
+              plan: plan,
+              ctx: ctx,
+              activeSourceId: primaryId,
+              frescura: frescura,
+              hasOverride: _hasOverride(store, from),
+              onFromInput: (v) => setState(() {
+                _fromTyped = v;
                 _driver = 'from';
-                _fromCtrl.text = fmtNum(_fromTyped,
-                    decimals: smartDecimals(_fromTyped, from));
-              });
-            },
-            // Swap XE: elegir la divisa del otro lado INTERCAMBIA lados; el
-            // número escrito se queda (el resultado pasa a ser el monto).
-            onSwap: () => _swapSides(store, from, to, plan, result),
-            onFrom: (c) => c == to
-                ? _swapSides(store, from, to, plan, result)
-                : store.setConverterPair(c.code, to.code),
-            onTo: (c) => c == from
-                ? _swapSides(store, from, to, plan, result)
-                : store.setConverterPair(from.code, c.code),
-            onPickSource: _pickSource,
-            onClearOverride: () =>
-                store.setModuleRateSource(RateModule.converter, from, null),
-          ),
+              }),
+              onToInput: (v) => setState(() {
+                _toTyped = v;
+                _driver = 'to';
+              }),
+              onAdjust: (v) {
+                // Los ajustes rápidos mueven el lado FROM (es el «monto»).
+                setState(() {
+                  _fromTyped = v <= 0 ? 0 : v;
+                  _driver = 'from';
+                  _fromCtrl.text = fmtNum(
+                    _fromTyped,
+                    decimals: smartDecimals(_fromTyped, from),
+                  );
+                });
+              },
+              // Swap XE: elegir la divisa del otro lado INTERCAMBIA lados; el
+              // número escrito se queda (el resultado pasa a ser el monto).
+              onSwap: () => _swapSides(store, from, to, plan, result),
+              onFrom: (c) => c == to
+                  ? _swapSides(store, from, to, plan, result)
+                  : store.setConverterPair(c.code, to.code),
+              onTo: (c) => c == from
+                  ? _swapSides(store, from, to, plan, result)
+                  : store.setConverterPair(from.code, c.code),
+              onPickSource: _pickSource,
+              onClearOverride: () =>
+                  store.setModuleRateSource(RateModule.converter, from, null),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Row(children: [
-              FilledButton.tonalIcon(
-                onPressed: plan == null || result <= 0 ? null : _shareCard,
-                icon: const Icon(Icons.ios_share, size: 16),
-                label: const Text('Compartir'),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: plan == null || result <= 0 ? null : _copyResult,
-                icon: const Icon(Icons.copy_all, size: 16),
-                label: const Text('Copiar'),
-              ),
-            ]),
+            child: Row(
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: plan == null || result <= 0 ? null : _shareCard,
+                  icon: const Icon(Icons.ios_share, size: 16),
+                  label: const Text('Compartir'),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: plan == null || result <= 0 ? null : _copyResult,
+                  icon: const Icon(Icons.copy_all, size: 16),
+                  label: const Text('Copiar'),
+                ),
+              ],
+            ),
           ),
           Padding(
             padding: const EdgeInsets.only(top: 6),
-            child: Text('Tarjeta de marca 1080 px · se comparte desde memoria.',
-                style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
+            child: Text(
+              'Tarjeta de marca 1080 px · se comparte desde memoria.',
+              style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
+            ),
           ),
           _RutaCalculo(plan: plan),
           // REQ 5: fuentes disponibles por divisa implicada en el par.
@@ -545,7 +590,13 @@ class _ConverterScreenState extends State<ConverterScreen> {
           _TablaMontos(ctx: ctx, amount: amount, from: from),
           // dp6 · mejora 9: matriz completa de pares a un vistazo (plegada).
           _Matriz6(ctx: ctx),
-          _Recientes(from: from, to: to, amount: amount, result: result, plan: plan),
+          _Recientes(
+            from: from,
+            to: to,
+            amount: amount,
+            result: result,
+            plan: plan,
+          ),
           _Notas(ctrl: _notesCtrl),
         ],
       ),
@@ -580,70 +631,108 @@ class _FechaTasas extends StatelessWidget {
     final String periodo = switch (mode) {
       'yesterday' => 'de ayer',
       'week' => 'de hace 7 días',
-      _ => customDate == null ? 'del día elegido' : 'del ${fmtDate(customDate!)}',
+      _ =>
+        customDate == null ? 'del día elegido' : 'del ${fmtDate(customDate!)}',
     };
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Fila 1: presets de fecha (todos cargan histórico real) + calendario.
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            ChipTag('Hoy', selected: mode == 'today', onTap: () => onMode('today')),
-            ChipTag('Ayer', selected: mode == 'yesterday', onTap: () => onMode('yesterday')),
-            ChipTag('Hace 7 días', selected: mode == 'week', onTap: () => onMode('week')),
-            ChipTag('Elegir fecha', selected: mode == 'custom', onTap: onOpenCalendar),
-          ]),
-          // Banner histórico honesto (REQ 4/8).
-          if (mode != 'today') ...[
-            const SizedBox(height: 10),
-            if (loading)
-              const Row(children: [
-                SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2)),
-                SizedBox(width: 8),
-                Text('Buscando la tasa del día…',
-                    style: TextStyle(fontSize: 12)),
-              ])
-            else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: sem.warn.withValues(alpha: 0.09),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: sem.warn.withValues(alpha: 0.35)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Fila 1: presets de fecha (todos cargan histórico real) + calendario.
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                ChipTag(
+                  'Hoy',
+                  selected: mode == 'today',
+                  onTap: () => onMode('today'),
                 ),
-                child: Row(children: [
-                  Icon(Icons.history, size: 15, color: sem.warn),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      sinDatos
-                          ? 'Sin datos para esa fecha. Elige un día del calendario.'
-                          : 'Mostrando la tasa $periodo',
-                      style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: sem.warn),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                ChipTag(
+                  'Ayer',
+                  selected: mode == 'yesterday',
+                  onTap: () => onMode('yesterday'),
+                ),
+                ChipTag(
+                  'Hace 7 días',
+                  selected: mode == 'week',
+                  onTap: () => onMode('week'),
+                ),
+                ChipTag(
+                  'Elegir fecha',
+                  selected: mode == 'custom',
+                  onTap: onOpenCalendar,
+                ),
+              ],
+            ),
+            // Banner histórico honesto (REQ 4/8).
+            if (mode != 'today') ...[
+              const SizedBox(height: 10),
+              if (loading)
+                const Row(
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () => onMode('today'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    SizedBox(width: 8),
+                    Text(
+                      'Buscando la tasa del día…',
+                      style: TextStyle(fontSize: 12),
                     ),
-                    child: const Text('Volver a hoy', style: TextStyle(fontSize: 12)),
+                  ],
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
                   ),
-                ]),
-              ),
+                  decoration: BoxDecoration(
+                    color: sem.warn.withValues(alpha: 0.09),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: sem.warn.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.history, size: 15, color: sem.warn),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          sinDatos
+                              ? 'Sin datos para esa fecha. Elige un día del calendario.'
+                              : 'Mostrando la tasa $periodo',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: sem.warn,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => onMode('today'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          'Volver a hoy',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }
@@ -705,53 +794,67 @@ class _DualInput extends StatelessWidget {
     final src = RateSource.of(activeSourceId);
     final label =
         convSourceNames[activeSourceId] ?? src?.label ?? activeSourceId;
-    return Row(children: [
-      Expanded(
-        child: InkWell(
-          onTap: () => _openSourcesSheet(ctx),
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-            child: Row(children: [
-              if (src != null) ...[SourceDot(src.category), const SizedBox(width: 8)],
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    text: label,
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface),
-                    children: [
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            onTap: () => _openSourcesSheet(ctx),
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: Row(
+                children: [
+                  if (src != null) ...[
+                    SourceSeal(src.category),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text.rich(
                       TextSpan(
-                          text: ' · $frescura',
-                          style: TextStyle(
+                        text: label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: ' · $frescura',
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: scheme.onSurfaceVariant)),
-                    ],
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.expand_more,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ],
               ),
-              const SizedBox(width: 4),
-              Icon(Icons.expand_more, size: 18, color: scheme.onSurfaceVariant),
-            ]),
+            ),
           ),
         ),
-      ),
-      if (hasOverride)
-        TextButton(
-          onPressed: onClearOverride,
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        if (hasOverride)
+          TextButton(
+            onPressed: onClearOverride,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Seguir global', style: TextStyle(fontSize: 11)),
           ),
-          child: const Text('Seguir global', style: TextStyle(fontSize: 11)),
-        ),
-    ]);
+      ],
+    );
   }
 
   /// Hoja de fuentes de la divisa de origen (v19): el selector de TASA
@@ -780,24 +883,27 @@ class _DualInput extends StatelessWidget {
   /// divisa a la derecha — el orden de lectura de XE/Wise. Siempre editable,
   /// con formato de miles en vivo (MoneyField).
   Widget _montoRow(ColorScheme scheme) {
-    return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-      Expanded(
-        child: MoneyField(
-          controller: fromCtrl,
-          onChanged: onFromInput,
-          maxDecimals: 6,
-          style: VeText.displayNum(30, color: scheme.onSurface),
-          decoration: const InputDecoration(
-            hintText: 'Monto',
-            border: InputBorder.none,
-            isCollapsed: true,
-            contentPadding: EdgeInsets.symmetric(vertical: 8),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: MoneyField(
+            controller: fromCtrl,
+            onChanged: onFromInput,
+            maxDecimals: 6,
+            style: VeText.displayNum(30, color: scheme.onSurface),
+            decoration: const InputDecoration(
+              hintText: 'Monto',
+              border: InputBorder.none,
+              isCollapsed: true,
+              contentPadding: EdgeInsets.symmetric(vertical: 8),
+            ),
           ),
         ),
-      ),
-      const SizedBox(width: 8),
-      CurrencySelect(value: from, onChanged: onFrom),
-    ]);
+        const SizedBox(width: 8),
+        CurrencySelect(value: from, onChanged: onFrom),
+      ],
+    );
   }
 
   /// Fila de salida: resultado HÉROE (46 px), EDITABLE (v19 bidireccional):
@@ -805,43 +911,52 @@ class _DualInput extends StatelessWidget {
   /// símbolo local que confirma el número grande SIN repetir la divisa.
   Widget _resultadoRow(ColorScheme scheme) {
     final ok = plan != null && result > 0;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Expanded(
-          child: MoneyField(
-            controller: toCtrl,
-            onChanged: onToInput,
-            maxDecimals: 6,
-            style: VeText.displayNum(
-                46, color: ok ? scheme.onSurface : scheme.onSurfaceVariant),
-            decoration: InputDecoration(
-              hintText: 'Resultado',
-              border: InputBorder.none,
-              isCollapsed: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 8),
-              hintStyle: VeText.displayNum(
-                  46, color: scheme.onSurfaceVariant),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: MoneyField(
+                controller: toCtrl,
+                onChanged: onToInput,
+                maxDecimals: 6,
+                style: VeText.displayNum(
+                  46,
+                  color: ok ? scheme.onSurface : scheme.onSurfaceVariant,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Resultado',
+                  border: InputBorder.none,
+                  isCollapsed: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                  hintStyle: VeText.displayNum(
+                    46,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            CurrencySelect(value: to, onChanged: onTo),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 2),
+          child: Text(
+            ok ? '≈ ${fmtMoney(result, to)}' : 'sin tasa para este par',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: ok ? 12 : 10.5,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
             ),
           ),
         ),
-        const SizedBox(width: 8),
-        CurrencySelect(value: to, onChanged: onTo),
-      ]),
-      Padding(
-        padding: const EdgeInsets.only(left: 4, top: 2),
-        child: Text(
-          ok
-              ? '≈ ${fmtMoney(result, to)}'
-              : 'sin tasa para este par',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-              fontSize: ok ? 12 : 10.5,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant),
-        ),
-      ),
-    ]);
+      ],
+    );
   }
 
   @override
@@ -850,53 +965,61 @@ class _DualInput extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Column(children: [
-          _fuenteLine(context, scheme),
-          const Divider(height: 18),
-          _montoRow(scheme),
-          // Swap centrado y GRANDE (v18.0): el gesto firma del conversor.
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Row(children: [
-              const Expanded(child: SizedBox()),
-              TapScale(
-                onTap: onSwap,
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: scheme.primary.withValues(alpha: 0.08),
-                    border: Border.all(
-                        color: scheme.primary.withValues(alpha: 0.25)),
-                  ),
-                  child: Icon(Icons.swap_vert,
-                      size: 26, color: scheme.primary),
-                ),
-              ),
-              const Expanded(child: SizedBox()),
-            ]),
-          ),
-          _resultadoRow(scheme),
-          // REQ 6 · v18.0: ajustes rápidos al mismo ancho — 4 chips Expanded
-          // (±10 % · ±100) siempre alineados, sin Wrap que los reordene.
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Row(
-              children: [
-                for (final adj in quickAdjustments)
-                  Expanded(
-                    child: Center(
-                      child: ChipTag(
-                        adj.label,
-                        onTap: () =>
-                            onAdjust(adj.apply(_fromValueOf(result, plan))),
+        child: Column(
+          children: [
+            _fuenteLine(context, scheme),
+            const Divider(height: 18),
+            _montoRow(scheme),
+            // Swap centrado y GRANDE (v18.0): el gesto firma del conversor.
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  const Expanded(child: SizedBox()),
+                  TapScale(
+                    onTap: onSwap,
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: scheme.primary.withValues(alpha: 0.08),
+                        border: Border.all(
+                          color: scheme.primary.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.swap_vert,
+                        size: 26,
+                        color: scheme.primary,
                       ),
                     ),
                   ),
-              ],
+                  const Expanded(child: SizedBox()),
+                ],
+              ),
             ),
-          ),
-        ]),
+            _resultadoRow(scheme),
+            // REQ 6 · v18.0: ajustes rápidos al mismo ancho — 4 chips Expanded
+            // (±10 % · ±100) siempre alineados, sin Wrap que los reordene.
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(
+                children: [
+                  for (final adj in quickAdjustments)
+                    Expanded(
+                      child: Center(
+                        child: ChipTag(
+                          adj.label,
+                          onTap: () =>
+                              onAdjust(adj.apply(_fromValueOf(result, plan))),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

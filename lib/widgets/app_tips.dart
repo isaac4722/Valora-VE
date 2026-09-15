@@ -68,7 +68,8 @@ final List<TipRule> kTipRules = <TipRule>[
     scope: 'home',
     anchor: TourKeys.cotizacion,
     title: 'Sin red, sin problema',
-    body: 'Pega tu propia tasa: en «Cotización principal» toca la fila '
+    body:
+        'Pega tu propia tasa: en «Cotización principal» toca la fila '
         'Manual y escribe el valor. No necesitas ir a Ajustes y la app '
         'calcula con ella al instante.',
     when: (s) => s.data.manualRates.isEmpty && s.snapshots.isNotEmpty,
@@ -78,7 +79,8 @@ final List<TipRule> kTipRules = <TipRule>[
     scope: 'conversor',
     anchor: TourKeys.convFecha,
     title: 'La tasa de otro día',
-    body: 'Toca «Ayer» o «Elegir fecha» para calcular con la tasa REAL de '
+    body:
+        'Toca «Ayer» o «Elegir fecha» para calcular con la tasa REAL de '
         'ese día, guardada en tu teléfono — útil para cuentas pasadas.',
     when: (s) => s.snapshots.length >= 2,
   ),
@@ -87,7 +89,8 @@ final List<TipRule> kTipRules = <TipRule>[
     scope: 'conversor',
     anchor: TourKeys.convFuente,
     title: 'Escribe en cualquiera de los dos',
-    body: 'El campo de abajo también se edita: escribe lo que quieres '
+    body:
+        'El campo de abajo también se edita: escribe lo que quieres '
         'CONSEGUIR y la app te dice cuánto ENTREGAR. Perfecto para el '
         'vuelto.',
     when: (s) => true,
@@ -97,7 +100,8 @@ final List<TipRule> kTipRules = <TipRule>[
     scope: 'lista',
     anchor: TourKeys.listaSala,
     title: 'Cierra la compra',
-    body: 'Con la lista lista, «Finalizar compra» guarda tienda, monto y '
+    body:
+        'Con la lista lista, «Finalizar compra» guarda tienda, monto y '
         'ticket en tu historial — y alimenta los gastos de Análisis.',
     when: (s) => s.cart.length >= 5,
   ),
@@ -105,7 +109,8 @@ final List<TipRule> kTipRules = <TipRule>[
     id: 'lista.presupuesto',
     scope: 'lista',
     title: 'Presupuesto en tu moneda',
-    body: 'Fija el presupuesto en la divisa que uses: elígela junto al '
+    body:
+        'Fija el presupuesto en la divisa que uses: elígela junto al '
         'monto y la barra te dice cuánto llevas consumido.',
     when: (s) => s.data.budget.amount <= 0 && s.cart.length >= 3,
   ),
@@ -114,7 +119,8 @@ final List<TipRule> kTipRules = <TipRule>[
     scope: 'productos',
     anchor: TourKeys.prodBusqueda,
     title: 'Metas de precio',
-    body: 'En la ficha de un producto puedes fijar una META: cuando su '
+    body:
+        'En la ficha de un producto puedes fijar una META: cuando su '
         'último precio quede por debajo, te avisamos.',
     when: (s) => s.products.length >= 3,
   ),
@@ -128,7 +134,9 @@ bool tipsEngineEnabled(SharedPreferences prefs, {DateTime? now}) {
   final sessions = prefs.getInt(kSessionsKey) ?? 0;
   if (sessions < kTipMinSessions) return false;
   final last = prefs.getInt(kTipLastAt) ?? 0;
-  if (last > 0 && (now ?? DateTime.now()).millisecondsSinceEpoch - last < kTipCooldown.inMilliseconds) {
+  if (last > 0 &&
+      (now ?? DateTime.now()).millisecondsSinceEpoch - last <
+          kTipCooldown.inMilliseconds) {
     return false;
   }
   return true;

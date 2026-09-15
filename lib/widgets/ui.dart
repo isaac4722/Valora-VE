@@ -1,5 +1,5 @@
 /// ─── ValoraVE · Sistema de diseño «El Instrumento» (§8 + GUI dp4) ───────────
-/// Componentes firma: Stamp, ReadWindow, LedgerRow, RuleDouble, SourceDot,
+/// Componentes firma: Stamp, ReadWindow, LedgerRow, RuleDouble, SourceSeal,
 /// TrendBadge, SectionTitle, PageHeader, EmptyState, CategoryIcon, StatCard,
 /// StoreAvatar, Flag, AnimatedNumber (odómetro), LiveDot, ChipTag,
 /// SegmentedChips, RateTicker configurable, RateHealthBanner.
@@ -30,7 +30,12 @@ const Duration kEntranceDur = Duration(milliseconds: 600);
 
 /// Botón con escala en tap (TAP .96, 120 ms).
 class TapScale extends StatefulWidget {
-  const TapScale({super.key, required this.child, required this.onTap, this.scale = 0.96});
+  const TapScale({
+    super.key,
+    required this.child,
+    required this.onTap,
+    this.scale = 0.96,
+  });
 
   final Widget child;
   final VoidCallback? onTap;
@@ -46,7 +51,9 @@ class _TapScaleState extends State<TapScale> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: widget.onTap == null ? null : (_) => setState(() => _down = true),
+      onTapDown: widget.onTap == null
+          ? null
+          : (_) => setState(() => _down = true),
       onTapCancel: () => setState(() => _down = false),
       onTapUp: (_) => setState(() => _down = false),
       onTap: widget.onTap,
@@ -113,7 +120,9 @@ class Stamp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color c = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
-    final Widget? iconWidget = icon == null ? null : Icon(icon, size: 9, color: c);
+    final Widget? iconWidget = icon == null
+        ? null
+        : Icon(icon, size: 9, color: c);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
@@ -124,10 +133,7 @@ class Stamp extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (iconWidget != null) ...[
-            iconWidget,
-            const SizedBox(width: 3),
-          ],
+          if (iconWidget != null) ...[iconWidget, const SizedBox(width: 3)],
           Text(
             text.toUpperCase(),
             style: TextStyle(
@@ -147,7 +153,12 @@ class Stamp extends StatelessWidget {
 /// Ventana de lectura: pozo hundido donde se asienta la cifra héroe
 /// (Semantics en cifras protagonistas, §Fase 3).
 class ReadWindow extends StatelessWidget {
-  const ReadWindow({super.key, required this.child, this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 12), this.semanticLabel});
+  const ReadWindow({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    this.semanticLabel,
+  });
 
   final Widget child;
   final EdgeInsets padding;
@@ -164,12 +175,11 @@ class ReadWindow extends StatelessWidget {
             : VeColors.mutedLight.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(12),
         // §8 regla dura: bordes 100 % sólidos (nunca alpha parcial).
-        border: Border.all(color: dark ? VeColors.borderDark : VeColors.borderLight),
+        border: Border.all(
+          color: dark ? VeColors.borderDark : VeColors.borderLight,
+        ),
       ),
-      child: Semantics(
-        label: semanticLabel,
-        child: child,
-      ),
+      child: Semantics(label: semanticLabel, child: child),
     );
   }
 }
@@ -209,7 +219,11 @@ class LedgerRow extends StatelessWidget {
           Flexible(
             child: Text(
               label,
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: scheme.onSurface),
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           )
@@ -217,24 +231,39 @@ class LedgerRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: scheme.onSurface),
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
         if (dots) ...[
           const SizedBox(width: 6),
-          Expanded(child: _LedgerDots(color: scheme.onSurfaceVariant.withValues(alpha: 0.42))),
+          Expanded(
+            child: _LedgerDots(
+              color: scheme.onSurfaceVariant.withValues(alpha: 0.42),
+            ),
+          ),
         ],
         const SizedBox(width: 6),
         Text(
           value,
-          style: VeText.displayNum(14, color: valueColor ?? scheme.onSurface,
-              weight: boldValue ? FontWeight.w700 : FontWeight.w600),
+          style: VeText.displayNum(
+            14,
+            color: valueColor ?? scheme.onSurface,
+            weight: boldValue ? FontWeight.w700 : FontWeight.w600,
+          ),
         ),
       ],
     );
     if (onTap == null) return row;
-    return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(8), child: row);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: row,
+    );
   }
 }
 
@@ -244,21 +273,26 @@ class _LedgerDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, c) {
-      final int count = (c.maxWidth / 6).floor().clamp(0, 60);
-      return Row(
-        children: [
-          for (int i = 0; i < count; i++)
-            Expanded(
-              child: Container(
-                height: 1.4,
-                margin: const EdgeInsets.symmetric(horizontal: 1),
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    return LayoutBuilder(
+      builder: (context, c) {
+        final int count = (c.maxWidth / 6).floor().clamp(0, 60);
+        return Row(
+          children: [
+            for (int i = 0; i < count; i++)
+              Expanded(
+                child: Container(
+                  height: 1.4,
+                  margin: const EdgeInsets.symmetric(horizontal: 1),
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
               ),
-            ),
-        ],
-      );
-    });
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -270,46 +304,66 @@ class RuleDouble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool dark = Theme.of(context).brightness == Brightness.dark;
-    return Column(children: [
-      Container(height: 1, color: dark ? VeColors.borderDark : VeColors.borderLight),
-      const SizedBox(height: 2),
-      Container(height: 1, color: dark ? VeColors.mutedDark : VeColors.mutedLight),
-    ]);
+    return Column(
+      children: [
+        Container(
+          height: 1,
+          color: dark ? VeColors.borderDark : VeColors.borderLight,
+        ),
+        const SizedBox(height: 2),
+        Container(
+          height: 1,
+          color: dark ? VeColors.mutedDark : VeColors.mutedLight,
+        ),
+      ],
+    );
   }
 }
 
-/// Marca de categoría de fuente: barra 3×13 con formas distintas.
-class SourceDot extends StatelessWidget {
-  const SourceDot(this.cat, {super.key, this.color});
+/// Sello de categoría de tasa (v19.0 · orden del dueño): ICONO + PALABRA —
+/// la identidad no vive en una rayita de color («AI slop», fuera). Un sello
+/// se lee SIN colores y dice QUÉ es la tasa: OFICIAL 🏛 · MERCADO 🛒 ·
+/// PROMEDIO ⚖ · MANUAL ✎. El color queda solo como acento suave.
+class SourceSeal extends StatelessWidget {
+  const SourceSeal(this.cat, {super.key});
 
   final SourceCategory cat;
-  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final VeInk sem = VeColors.of(context);
-    final Color c = color ??
-        switch (cat) {
-          SourceCategory.official => sem.pos,
-          SourceCategory.mixed => sem.warn,
-          SourceCategory.parallel => sem.neg,
-          SourceCategory.manual => sem.manual,
-        };
+    final (icon, word, c) = switch (cat) {
+      SourceCategory.official => (
+        Icons.account_balance_rounded,
+        'OFICIAL',
+        sem.pos,
+      ),
+      SourceCategory.parallel => (Icons.storefront_rounded, 'MERCADO', sem.neg),
+      SourceCategory.mixed => (Icons.balance_rounded, 'PROMEDIO', sem.warn),
+      SourceCategory.manual => (Icons.edit_note_rounded, 'MANUAL', sem.manual),
+    };
     return Container(
-      width: 3,
-      height: 13,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
       decoration: BoxDecoration(
-        color: cat == SourceCategory.mixed ? Colors.transparent : c,
-        border: cat == SourceCategory.mixed ? Border.all(color: c, width: 1.6) : null,
-        borderRadius: switch (cat) {
-          SourceCategory.official => BorderRadius.circular(999),
-          SourceCategory.parallel => const BorderRadius.only(
-              topLeft: Radius.circular(0),
-              bottomLeft: Radius.circular(0),
-              topRight: Radius.circular(999),
-              bottomRight: Radius.circular(999)),
-          _ => BorderRadius.circular(2),
-        },
+        color: c.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: c.withValues(alpha: 0.38), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10.5, color: c),
+          const SizedBox(width: 4),
+          Text(
+            word,
+            style: TextStyle(
+              fontSize: 8.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+              color: c,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -329,26 +383,38 @@ class TrendBadge extends StatelessWidget {
     final bool up = pct > 0;
     final bool flat = pct.abs() < 0.01;
     final Color c = flat ? scheme.onSurfaceVariant : (up ? sem.neg : sem.pos);
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(flat ? Icons.remove : (up ? Icons.trending_up : Icons.trending_down),
-          size: dense ? 11 : 13, color: c),
-      const SizedBox(width: 3),
-      Text(
-        flat ? 'Igual' : fmtPct(pct),
-        style: TextStyle(
-          fontFamily: 'SpaceGrotesk',
-          fontSize: dense ? 10.5 : 12,
-          fontWeight: FontWeight.w700,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          flat ? Icons.remove : (up ? Icons.trending_up : Icons.trending_down),
+          size: dense ? 11 : 13,
           color: c,
         ),
-      ),
-    ]);
+        const SizedBox(width: 3),
+        Text(
+          flat ? 'Igual' : fmtPct(pct),
+          style: TextStyle(
+            fontFamily: 'SpaceGrotesk',
+            fontSize: dense ? 10.5 : 12,
+            fontWeight: FontWeight.w700,
+            color: c,
+          ),
+        ),
+      ],
+    );
   }
 }
 
 /// Chip pequeño con tinte (ChipTag).
 class ChipTag extends StatelessWidget {
-  const ChipTag(this.label, {super.key, this.color, this.selected = false, this.onTap});
+  const ChipTag(
+    this.label, {
+    super.key,
+    this.color,
+    this.selected = false,
+    this.onTap,
+  });
 
   final String label;
   final Color? color;
@@ -368,7 +434,8 @@ class ChipTag extends StatelessWidget {
           color: selected ? c.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-              color: selected ? c.withValues(alpha: 0.5) : scheme.outlineVariant),
+            color: selected ? c.withValues(alpha: 0.5) : scheme.outlineVariant,
+          ),
         ),
         child: Text(
           label,
@@ -416,7 +483,14 @@ class SegmentedChips<T> extends StatelessWidget {
 
 /// Índice + rótulo técnico + acción derecha.
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.title, {super.key, this.icon, this.actionLabel, this.onAction, this.index});
+  const SectionTitle(
+    this.title, {
+    super.key,
+    this.icon,
+    this.actionLabel,
+    this.onAction,
+    this.index,
+  });
 
   final String title;
   final IconData? icon;
@@ -429,40 +503,46 @@ class SectionTitle extends StatelessWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(top: 22, bottom: 10),
-      child: Row(children: [
-        if (index != null) ...[
-          Text(
-            index!.toString().padLeft(2, '0'),
-            style: TextStyle(
-              fontFamily: 'SpaceGrotesk',
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: scheme.primary.withValues(alpha: 0.8),
+      child: Row(
+        children: [
+          if (index != null) ...[
+            Text(
+              index!.toString().padLeft(2, '0'),
+              style: TextStyle(
+                fontFamily: 'SpaceGrotesk',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: scheme.primary.withValues(alpha: 0.8),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: scheme.primary),
+            const SizedBox(width: 6),
+          ],
+          Expanded(
+            child: Text(
+              title.toUpperCase(),
+              style: VeText.labelCaps(
+                11,
+                color: scheme.onSurface,
+                weight: FontWeight.w700,
+              ),
             ),
           ),
-          const SizedBox(width: 8),
-        ],
-        if (icon != null) ...[
-          Icon(icon, size: 14, color: scheme.primary),
-          const SizedBox(width: 6),
-        ],
-        Expanded(
-          child: Text(
-            title.toUpperCase(),
-            style: VeText.labelCaps(11, color: scheme.onSurface, weight: FontWeight.w700),
-          ),
-        ),
-        if (actionLabel != null && onAction != null)
-          TextButton(
-            onPressed: onAction,
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          if (actionLabel != null && onAction != null)
+            TextButton(
+              onPressed: onAction,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(actionLabel!, style: const TextStyle(fontSize: 12)),
             ),
-            child: Text(actionLabel!, style: const TextStyle(fontSize: 12)),
-          ),
-      ]),
+        ],
+      ),
     );
   }
 }
@@ -480,32 +560,54 @@ class PageHeader extends StatelessWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(top: 6, bottom: 14),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // §8: display en SpaceGrotesk (los números siguen tabulares).
-            Text(title,
-                style: TextStyle(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // §8: display en SpaceGrotesk (los números siguen tabulares).
+                Text(
+                  title,
+                  style: TextStyle(
                     fontFamily: 'SpaceGrotesk',
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: scheme.onSurface,
-                    height: 1.1)),
-            if (hint != null) ...[
-              const SizedBox(height: 3),
-              Text(hint!, style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-            ],
-          ]),
-        ),
-        ?action,
-      ]),
+                    height: 1.1,
+                  ),
+                ),
+                if (hint != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    hint!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          ?action,
+        ],
+      ),
     );
   }
 }
 
 /// Estado vacío: tile de icono + título + pista + CTA.
 class EmptyState extends StatelessWidget {
-  const EmptyState(this.title, {super.key, required this.icon, required this.hint, this.actionLabel, this.onAction});
+  const EmptyState(
+    this.title, {
+    super.key,
+    required this.icon,
+    required this.hint,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final IconData icon;
   final String title;
@@ -519,30 +621,43 @@ class EmptyState extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
-        child: Column(children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: scheme.primary.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(14),
+        child: Column(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, size: 24, color: scheme.primary),
             ),
-            child: Icon(icon, size: 24, color: scheme.primary),
-          ),
-          const SizedBox(height: 14),
-          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          Text(hint, textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, height: 1.45, color: scheme.onSurfaceVariant)),
-          if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: 14),
-            FilledButton.icon(
-              onPressed: onAction,
-              icon: const Icon(Icons.arrow_forward, size: 15),
-              label: Text(actionLabel!),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             ),
+            const SizedBox(height: 6),
+            Text(
+              hint,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.45,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: onAction,
+                icon: const Icon(Icons.arrow_forward, size: 15),
+                label: Text(actionLabel!),
+              ),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }
@@ -555,8 +670,13 @@ class EmptyState extends StatelessWidget {
 /// combo mentiroso que el dueño prohibió. Para skeletons de layout completo
 /// existe SkeletonPaper; este tile cubre bloques dentro de una pantalla.
 class LoadingState extends StatelessWidget {
-  const LoadingState(this.title,
-      {super.key, this.hint, this.actionLabel, this.onAction});
+  const LoadingState(
+    this.title, {
+    super.key,
+    this.hint,
+    this.actionLabel,
+    this.onAction,
+  });
 
   final String title;
   final String? hint;
@@ -569,31 +689,40 @@ class LoadingState extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
-        child: Column(children: [
-          SizedBox(
-            width: 26,
-            height: 26,
-            child: CircularProgressIndicator(
-                strokeWidth: 2.6, color: scheme.primary),
-          ),
-          const SizedBox(height: 14),
-          Text(title,
+        child: Column(
+          children: [
+            SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.6,
+                color: scheme.primary,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-          if (hint != null) ...[
-            const SizedBox(height: 6),
-            Text(hint!,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+            if (hint != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                hint!,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 12.5,
-                    height: 1.45,
-                    color: scheme.onSurfaceVariant)),
+                  fontSize: 12.5,
+                  height: 1.45,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 14),
+              GhostButton(actionLabel!, onPressed: onAction),
+            ],
           ],
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 14),
-            GhostButton(actionLabel!, onPressed: onAction),
-          ],
-        ]),
+        ),
       ),
     );
   }
@@ -602,8 +731,14 @@ class LoadingState extends StatelessWidget {
 /// Estado de ERROR (v17.6 · RECHECK R1-4): tile en tinta neg + pista + CTA
 /// de recuperación SIEMPRE visible (un error sin salida no es un estado).
 class ErrorState extends StatelessWidget {
-  const ErrorState(this.title,
-      {super.key, required this.hint, this.actionLabel, this.onAction, this.icon = Icons.error_outline});
+  const ErrorState(
+    this.title, {
+    super.key,
+    required this.hint,
+    this.actionLabel,
+    this.onAction,
+    this.icon = Icons.error_outline,
+  });
 
   final String title;
   final String hint;
@@ -618,32 +753,39 @@ class ErrorState extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
-        child: Column(children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: neg.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(14),
+        child: Column(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: neg.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, size: 24, color: neg),
             ),
-            child: Icon(icon, size: 24, color: neg),
-          ),
-          const SizedBox(height: 14),
-          Text(title,
+            const SizedBox(height: 14),
+            Text(
+              title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          Text(hint,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              hint,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.45,
-                  color: scheme.onSurfaceVariant)),
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 14),
-            GhostButton(actionLabel!, onPressed: onAction),
+                fontSize: 12.5,
+                height: 1.45,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 14),
+              GhostButton(actionLabel!, onPressed: onAction),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }
@@ -653,14 +795,16 @@ class ErrorState extends StatelessWidget {
 /// es-VE + salidas reales (reintentar · tasa manual). Solo este estado dice
 /// «sin conexión»; carga y datos guardados jamás lo mencionan.
 class OfflineState extends StatelessWidget {
-  const OfflineState(this.title,
-      {super.key,
-      required this.hint,
-      this.actionLabel,
-      this.onAction,
-      this.secondaryLabel,
-      this.onSecondary,
-      this.icon = Icons.cloud_off});
+  const OfflineState(
+    this.title, {
+    super.key,
+    required this.hint,
+    this.actionLabel,
+    this.onAction,
+    this.secondaryLabel,
+    this.onSecondary,
+    this.icon = Icons.cloud_off,
+  });
 
   final String title;
   final String hint;
@@ -676,41 +820,51 @@ class OfflineState extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
-        child: Column(children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: scheme.onSurfaceVariant.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(14),
+        child: Column(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, size: 24, color: scheme.onSurfaceVariant),
             ),
-            child: Icon(icon, size: 24, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 14),
-          Text(title,
+            const SizedBox(height: 14),
+            Text(
+              title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          Text(hint,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              hint,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.45,
-                  color: scheme.onSurfaceVariant)),
-          if ((actionLabel != null && onAction != null) ||
-              (secondaryLabel != null && onSecondary != null)) ...[
-            const SizedBox(height: 14),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              if (actionLabel != null && onAction != null) ...[
-                GhostButton(actionLabel!, onPressed: onAction),
-                if (secondaryLabel != null && onSecondary != null)
-                  const SizedBox(width: 8),
-              ],
-              if (secondaryLabel != null && onSecondary != null)
-                GhostButton(secondaryLabel!, onPressed: onSecondary),
-            ]),
+                fontSize: 12.5,
+                height: 1.45,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            if ((actionLabel != null && onAction != null) ||
+                (secondaryLabel != null && onSecondary != null)) ...[
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (actionLabel != null && onAction != null) ...[
+                    GhostButton(actionLabel!, onPressed: onAction),
+                    if (secondaryLabel != null && onSecondary != null)
+                      const SizedBox(width: 8),
+                  ],
+                  if (secondaryLabel != null && onSecondary != null)
+                    GhostButton(secondaryLabel!, onPressed: onSecondary),
+                ],
+              ),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }
@@ -735,7 +889,10 @@ class CategoryIcon extends StatelessWidget {
       ProductCategory.higiene => (Icons.soap_outlined, sem.manual),
       ProductCategory.farmacia => (Icons.medication_outlined, sem.neg),
       ProductCategory.tecnologia => (Icons.smartphone_outlined, sem.manual),
-      ProductCategory.otros => (Icons.inventory_2_outlined, scheme.onSurfaceVariant),
+      ProductCategory.otros => (
+        Icons.inventory_2_outlined,
+        scheme.onSurfaceVariant,
+      ),
     };
     return Container(
       width: size,
@@ -781,25 +938,35 @@ class StatCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(13),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            if (icon != null) ...[
-              Icon(icon, size: 13, color: toneColor),
-              const SizedBox(width: 5),
-            ],
-            Expanded(
-              child: Text(label.toUpperCase(),
-                  style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
-                  overflow: TextOverflow.ellipsis),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 13, color: toneColor),
+                  const SizedBox(width: 5),
+                ],
+                Expanded(
+                  child: Text(
+                    label.toUpperCase(),
+                    style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-          ]),
-          const SizedBox(height: 9),
-          Text(value, style: VeText.displayNum(21, color: scheme.onSurface)),
-          if (sub != null) ...[
-            const SizedBox(height: 4),
-            Text(sub!, style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 9),
+            Text(value, style: VeText.displayNum(21, color: scheme.onSurface)),
+            if (sub != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                sub!,
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              ),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }
@@ -816,7 +983,14 @@ class StoreAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final VeInk sem = VeColors.of(context);
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final List<Color> inks = [sem.pos, sem.cop, sem.manual, sem.brl, sem.mxn, sem.warn];
+    final List<Color> inks = [
+      sem.pos,
+      sem.cop,
+      sem.manual,
+      sem.brl,
+      sem.mxn,
+      sem.warn,
+    ];
     final Color ink = inks[name.hashCode.abs() % inks.length];
     final String initials = name
         .split(' ')
@@ -833,7 +1007,14 @@ class StoreAvatar extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: scheme.outlineVariant),
       ),
-      child: Text(initials, style: VeText.displayNum(size * 0.36, color: ink, weight: FontWeight.w700)),
+      child: Text(
+        initials,
+        style: VeText.displayNum(
+          size * 0.36,
+          color: ink,
+          weight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }
@@ -862,9 +1043,12 @@ class AnimatedNumber extends StatefulWidget {
   State<AnimatedNumber> createState() => _AnimatedNumberState();
 }
 
-class _AnimatedNumberState extends State<AnimatedNumber> with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl =
-      AnimationController(vsync: this, duration: widget.duration);
+class _AnimatedNumberState extends State<AnimatedNumber>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: widget.duration,
+  );
   late Animation<double> _anim = AlwaysStoppedAnimation(widget.value);
   double _from = 0, _to = 0;
 
@@ -880,8 +1064,10 @@ class _AnimatedNumberState extends State<AnimatedNumber> with SingleTickerProvid
     if (old.value != widget.value) {
       _from = _to;
       _to = widget.value;
-      _anim = Tween<double>(begin: _from, end: _to)
-          .animate(CurvedAnimation(parent: _ctrl, curve: kEaseVe));
+      _anim = Tween<double>(
+        begin: _from,
+        end: _to,
+      ).animate(CurvedAnimation(parent: _ctrl, curve: kEaseVe));
       _ctrl
         ..reset()
         ..forward();
@@ -901,8 +1087,14 @@ class _AnimatedNumberState extends State<AnimatedNumber> with SingleTickerProvid
       builder: (context, _) {
         final v = _anim.value;
         final dec = widget.decimals ?? 2;
-        final text = '${widget.prefix ?? ''}${fmtNum(v, decimals: dec)}${widget.suffix ?? ''}';
-        return Text(text, style: widget.style.copyWith(fontFeatures: const [FontFeature.tabularFigures()]));
+        final text =
+            '${widget.prefix ?? ''}${fmtNum(v, decimals: dec)}${widget.suffix ?? ''}';
+        return Text(
+          text,
+          style: widget.style.copyWith(
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        );
       },
     );
   }
@@ -944,19 +1136,34 @@ class LiveBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: sem.pos.withValues(alpha: 0.3)),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        LiveDot(color: sem.pos),
-        const SizedBox(width: 5),
-        Text(label ?? 'en vivo',
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: sem.pos)),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LiveDot(color: sem.pos),
+          const SizedBox(width: 5),
+          Text(
+            label ?? 'en vivo',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: sem.pos,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Píldora de fuente con SourceDot + etiqueta (RateBadge).
+/// Píldora de fuente con SourceSeal + etiqueta (RateBadge).
 class RateBadge extends StatelessWidget {
-  const RateBadge({super.key, required this.sourceId, this.trailing, this.onTap, this.selected = false});
+  const RateBadge({
+    super.key,
+    required this.sourceId,
+    this.trailing,
+    this.onTap,
+    this.selected = false,
+  });
 
   final String sourceId;
   final String? trailing;
@@ -978,18 +1185,43 @@ class RateBadge extends StatelessWidget {
               : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: selected
-                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
-                  : Theme.of(context).colorScheme.outlineVariant),
+            color: selected
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
+                : Theme.of(context).colorScheme.outlineVariant,
+          ),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          if (s != null) ...[SourceDot(s.category), const SizedBox(width: 6)],
-          Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-          if (trailing != null) ...[
-            const SizedBox(width: 6),
-            Text(trailing!, style: VeText.displayNum(12.5, color: Theme.of(context).colorScheme.onSurface)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (s != null) ...[
+              SourceSeal(s.category),
+              const SizedBox(width: 6),
+            ],
+            // Flexible: en pantallas angostas el nombre achica con ellipsis y
+            // la cifra NUNCA se sale del pill.
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: 6),
+              Text(
+                trailing!,
+                style: VeText.displayNum(
+                  12.5,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }
@@ -997,7 +1229,12 @@ class RateBadge extends StatelessWidget {
 
 /// Pills horizontales de fuentes (SourcePills).
 class SourcePills extends StatelessWidget {
-  const SourcePills({super.key, required this.sources, required this.value, required this.onChanged});
+  const SourcePills({
+    super.key,
+    required this.sources,
+    required this.value,
+    required this.onChanged,
+  });
 
   final List<String> sources;
   final String value;
@@ -1022,7 +1259,12 @@ class SourcePills extends StatelessWidget {
 
 /// Selector de moneda con banderas (CurrencySelect).
 class CurrencySelect extends StatelessWidget {
-  const CurrencySelect({super.key, required this.value, required this.onChanged, this.withUsd = true});
+  const CurrencySelect({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.withUsd = true,
+  });
 
   final Currency value;
   final ValueChanged<Currency> onChanged;
@@ -1030,7 +1272,9 @@ class CurrencySelect extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final options = CurrencyX.focusOrder(null).where((c) => withUsd || c != Currency.usd).toList();
+    final options = CurrencyX.focusOrder(
+      null,
+    ).where((c) => withUsd || c != Currency.usd).toList();
     return PopupMenuButton<Currency>(
       initialValue: value,
       onSelected: onChanged,
@@ -1038,11 +1282,13 @@ class CurrencySelect extends StatelessWidget {
         for (final c in options)
           PopupMenuItem(
             value: c,
-            child: Row(children: [
-              Flag(c, size: 18),
-              const SizedBox(width: 8),
-              Text(c.label, style: const TextStyle(fontSize: 13.5)),
-            ]),
+            child: Row(
+              children: [
+                Flag(c, size: 18),
+                const SizedBox(width: 8),
+                Text(c.label, style: const TextStyle(fontSize: 13.5)),
+              ],
+            ),
           ),
       ],
       child: Container(
@@ -1051,15 +1297,31 @@ class CurrencySelect extends StatelessWidget {
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
+            color: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.25),
+          ),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Flag(value, size: 18),
-          const SizedBox(width: 6),
-          Text(value.code, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800)),
-          const SizedBox(width: 2),
-          Icon(Icons.expand_more, size: 15, color: Theme.of(context).colorScheme.onSurfaceVariant),
-        ]),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flag(value, size: 18),
+            const SizedBox(width: 6),
+            Text(
+              value.code,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(
+              Icons.expand_more,
+              size: 15,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1103,19 +1365,26 @@ class PushScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(title,
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: 'SpaceGrotesk',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (subtitle != null)
+                Text(
+                  subtitle!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: 'SpaceGrotesk',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700)),
-              if (subtitle != null)
-                Text(subtitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 11.5, color: scheme.onSurfaceVariant)),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
             ],
           ),
         ),
@@ -1195,7 +1464,9 @@ class _MoneyFieldState extends State<MoneyField> {
   void initState() {
     super.initState();
     if (widget.controller == null) {
-      _own = TextEditingController(text: _format(_canon(widget.initialText ?? '')));
+      _own = TextEditingController(
+        text: _format(_canon(widget.initialText ?? '')),
+      );
     }
     _ctrl.addListener(_onCtrl);
   }
@@ -1302,7 +1573,8 @@ class _MoneyFieldState extends State<MoneyField> {
       _ctrl.value = TextEditingValue(
         text: formatted,
         selection: TextSelection.collapsed(
-            offset: _offsetAfter(formatted, keep).clamp(0, formatted.length)),
+          offset: _offsetAfter(formatted, keep).clamp(0, formatted.length),
+        ),
       );
     } finally {
       _formatting = false;
@@ -1326,14 +1598,13 @@ class _MoneyFieldState extends State<MoneyField> {
       style: widget.style,
       textInputAction: widget.textInputAction,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-      ],
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
       onChanged: _onUserInput,
       onSubmitted: widget.onSubmitted == null
           ? null
           : (v) => widget.onSubmitted!(v),
-      decoration: widget.decoration ??
+      decoration:
+          widget.decoration ??
           InputDecoration(
             hintText: widget.hintText,
             labelText: widget.labelText,
@@ -1348,7 +1619,12 @@ class _MoneyFieldState extends State<MoneyField> {
 ///   tasas guardadas siguen siendo la verdad y la red vuelve sola.
 /// · TASAS VIEJAS (>15 min con red): aviso con reintentar.
 class RateHealthBanner extends StatelessWidget {
-  const RateHealthBanner({super.key, required this.stale, this.offline = false, this.onRetry});
+  const RateHealthBanner({
+    super.key,
+    required this.stale,
+    this.offline = false,
+    this.onRetry,
+  });
 
   final bool stale;
   final bool offline;
@@ -1368,32 +1644,43 @@ class RateHealthBanner extends StatelessWidget {
             : sem.warn.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-            color: netDown ? sem.manual.withValues(alpha: 0.35) : sem.warn.withValues(alpha: 0.35)),
+          color: netDown
+              ? sem.manual.withValues(alpha: 0.35)
+              : sem.warn.withValues(alpha: 0.35),
+        ),
       ),
-      child: Row(children: [
-        Icon(netDown ? Icons.wifi_off : Icons.hourglass_top,
-            size: 14, color: netDown ? sem.manual : sem.warn),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
+      child: Row(
+        children: [
+          Icon(
+            netDown ? Icons.wifi_off : Icons.hourglass_top,
+            size: 14,
+            color: netDown ? sem.manual : sem.warn,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
               netDown
                   ? 'Sin conexión — tasas guardadas a la vista'
                   : 'Las tasas no se actualizan hace más de 15 min',
               style: TextStyle(
-                  fontSize: 12,
-                  color: netDown ? sem.manual : sem.warn,
-                  fontWeight: FontWeight.w600)),
-        ),
-        if (!netDown && onRetry != null)
-          TextButton(
-            onPressed: onRetry,
-            style: TextButton.styleFrom(
+                fontSize: 12,
+                color: netDown ? sem.manual : sem.warn,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (!netDown && onRetry != null)
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-            child: const Text('Reintentar', style: TextStyle(fontSize: 12)),
-          ),
-      ]),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('Reintentar', style: TextStyle(fontSize: 12)),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -1409,7 +1696,10 @@ class RateTicker extends StatefulWidget {
     required this.speed,
   });
 
-  final List<({Currency flag, String label, double value, String unit, bool isEur})> items;
+  final List<
+    ({Currency flag, String label, double value, String unit, bool isEur})
+  >
+  items;
   final String mode; // featured | focus | off
   final String size; // compact | normal | large
   final int speed; // 90 | 120 | 180
@@ -1418,8 +1708,12 @@ class RateTicker extends StatefulWidget {
   State<RateTicker> createState() => _RateTickerState();
 }
 
-class _RateTickerState extends State<RateTicker> with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 120))..repeat();
+class _RateTickerState extends State<RateTicker>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 120),
+  )..repeat();
 
   @override
   void dispose() {
@@ -1441,7 +1735,9 @@ class _RateTickerState extends State<RateTicker> with SingleTickerProviderStateM
       final bool dark = Theme.of(context).brightness == Brightness.dark;
       return Container(
         height: height,
-        color: (dark ? VeColors.mutedDark : VeColors.mutedLight).withValues(alpha: 0.4),
+        color: (dark ? VeColors.mutedDark : VeColors.mutedLight).withValues(
+          alpha: 0.4,
+        ),
         alignment: Alignment.center,
         child: Text(
           'Cargando cotizaciones…',
@@ -1453,43 +1749,74 @@ class _RateTickerState extends State<RateTicker> with SingleTickerProviderStateM
       );
     }
     _ctrl.duration = Duration(seconds: widget.speed);
-    final (double height, double labelSize, double valueSize) = switch (widget.size) {
+    final (
+      double height,
+      double labelSize,
+      double valueSize,
+    ) = switch (widget.size) {
       'compact' => (30.0, 11.0, 12.0),
       'large' => (48.0, 14.5, 16.0),
       _ => (38.0, 12.5, 13.5),
     };
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final row = Row(mainAxisSize: MainAxisSize.min, children: [
-      for (int i = 0; i < widget.items.length; i++)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Flag(widget.items[i].flag, size: 15),
-            const SizedBox(width: 6),
-            Text(widget.items[i].label,
-                style: TextStyle(fontSize: labelSize, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
-            const SizedBox(width: 6),
-            Text(
-              widget.items[i].isEur ? fmtEurRate(widget.items[i].value) : fmtRate(widget.items[i].value),
-              style: VeText.displayNum(valueSize, color: scheme.onSurface),
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (int i = 0; i < widget.items.length; i++)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flag(widget.items[i].flag, size: 15),
+                const SizedBox(width: 6),
+                Text(
+                  widget.items[i].label,
+                  style: TextStyle(
+                    fontSize: labelSize,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  widget.items[i].isEur
+                      ? fmtEurRate(widget.items[i].value)
+                      : fmtRate(widget.items[i].value),
+                  style: VeText.displayNum(valueSize, color: scheme.onSurface),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  widget.items[i].unit,
+                  style: TextStyle(
+                    fontSize: labelSize - 1,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 4),
-            Text(widget.items[i].unit,
-                style: TextStyle(fontSize: labelSize - 1, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
-          ]),
-        ),
-    ]);
+          ),
+      ],
+    );
 
     return Container(
       height: height,
-      color: (Theme.of(context).brightness == Brightness.dark ? VeColors.mutedDark : VeColors.mutedLight)
-          .withValues(alpha: 0.4),
+      color:
+          (Theme.of(context).brightness == Brightness.dark
+                  ? VeColors.mutedDark
+                  : VeColors.mutedLight)
+              .withValues(alpha: 0.4),
       child: AnimatedBuilder(
         animation: _ctrl,
         builder: (context, child) => ClipRect(
           child: FractionalTranslation(
             translation: Offset(-_ctrl.value * 0.5, 0),
-            child: OverflowBox(maxWidth: double.infinity, alignment: Alignment.centerLeft, child: child),
+            child: OverflowBox(
+              maxWidth: double.infinity,
+              alignment: Alignment.centerLeft,
+              child: child,
+            ),
           ),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [row, row]),
@@ -1515,7 +1842,9 @@ class SkeletonPaper extends StatelessWidget {
         color: scheme.surfaceContainerLow.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(12),
         // §8 regla dura: borde sólido (nunca alpha parcial).
-        border: Border.all(color: dark ? VeColors.borderDark : VeColors.borderLight),
+        border: Border.all(
+          color: dark ? VeColors.borderDark : VeColors.borderLight,
+        ),
       ),
     );
   }
@@ -1531,24 +1860,24 @@ class SkeletonPaper extends StatelessWidget {
 /// Tinta firma por divisa (§8): VES azul · USD rojo · EUR violeta ·
 /// COP oliva · BRL verde · MXN magenta.
 Color currencyInk(Currency c) => switch (c) {
-      Currency.ves => Color(0xFF2563EB),
-      Currency.usd => Color(0xFFCF4437),
-      Currency.eur => Color(0xFF6E5BB8),
-      Currency.cop => Color(0xFF5D6B13),
-      Currency.brl => Color(0xFF12873C),
-      Currency.mxn => Color(0xFFB03D90),
-    };
+  Currency.ves => Color(0xFF2563EB),
+  Currency.usd => Color(0xFFCF4437),
+  Currency.eur => Color(0xFF6E5BB8),
+  Currency.cop => Color(0xFF5D6B13),
+  Currency.brl => Color(0xFF12873C),
+  Currency.mxn => Color(0xFFB03D90),
+};
 
 /// Tinta por categoría de fuente de tasa (código string del enum
 /// SourceCategory: 'official' | 'mixed' | 'parallel' | 'manual').
 /// Tolerante: código desconocido → neutro (mutedFg claro).
 Color categoryInk(String sourceCategory) => switch (sourceCategory) {
-      'official' => VeColors.posLight,
-      'mixed' => VeColors.warnLight,
-      'parallel' => VeColors.negLight,
-      'manual' => VeColors.manualLight,
-      _ => VeColors.mutedFgLight,
-    };
+  'official' => VeColors.posLight,
+  'mixed' => VeColors.warnLight,
+  'parallel' => VeColors.negLight,
+  'manual' => VeColors.manualLight,
+  _ => VeColors.mutedFgLight,
+};
 
 /// Marca de la app: tile azul-noche con la «V» blanca en SpaceGrotesk bold.
 /// Tamaños fijados por §8 (header 24×24 radius 6).
@@ -1618,38 +1947,45 @@ void showToast(
   final Color toastFg = inv ? VeColors.fgLight : VeColors.fgDark;
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      elevation: 0,
-      backgroundColor: toastBg,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      content: Row(children: [
-        Icon(icon, size: 17, color: ink),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Text(msg,
-              style: TextStyle(
+    ..showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        elevation: 0,
+        backgroundColor: toastBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Row(
+          children: [
+            Icon(icon, size: 17, color: ink),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                msg,
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   height: 1.35,
-                  color: toastFg)),
-        ),
-        // Acción integrada (SnackBarAction no permite tinta propia en este
-        // Flutter): TextButton con la tinta de info sobre el fondo invertido.
-        if (actionLabel != null && onAction != null)
-          TextButton(
-            onPressed: onAction,
-            style: TextButton.styleFrom(
-              foregroundColor: infoInk,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  color: toastFg,
+                ),
+              ),
             ),
-            child: Text(actionLabel),
-          ),
-      ]),
-    ));
+            // Acción integrada (SnackBarAction no permite tinta propia en este
+            // Flutter): TextButton con la tinta de info sobre el fondo invertido.
+            if (actionLabel != null && onAction != null)
+              TextButton(
+                onPressed: onAction,
+                style: TextButton.styleFrom(
+                  foregroundColor: infoInk,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(actionLabel),
+              ),
+          ],
+        ),
+      ),
+    );
 }
 
 /// Etiqueta de divisa (v17.5 · sugerencia «USD vs Bs indistinguibles»):
@@ -1683,18 +2019,22 @@ class CurrencyTag extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: ink.withValues(alpha: 0.32)),
       ),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-              color: ink)),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6,
+          color: ink,
+        ),
+      ),
     );
   }
 }
 
 /// Genera un color estable a partir de un hash (para gráficas/tiendas).
-Color tintOf(String key, List<Color> palette) => palette[key.hashCode.abs() % palette.length];
+Color tintOf(String key, List<Color> palette) =>
+    palette[key.hashCode.abs() % palette.length];
 
 /// Paleta de 8 tintes para gráficas (var(--chart-1..8) del web).
 List<Color> chartPalette(BuildContext context) {
@@ -1712,7 +2052,8 @@ List<Color> chartPalette(BuildContext context) {
 }
 
 /// Helper: formatea moneda según el código string del modelo.
-String fmtMoneyCode(double v, String code) => fmtCurrency(v, CurrencyX.from(code));
+String fmtMoneyCode(double v, String code) =>
+    fmtCurrency(v, CurrencyX.from(code));
 
 /// math importado para usos futuros (proporciones de donut).
 double clamp01(double v) => math.min(1, math.max(0, v));
@@ -1723,7 +2064,7 @@ String fmtMesAno(DateTime d) => DateFormat.MMMM('es').format(d).substring(0, 3);
 // ═══════════════════════════════════════════════════════════════════════════
 // dp6 · Componentes adoptados del motor v17 «Consolidación nativa» (GUI dp6,
 // decisión del dueño: el actual manda, se integra lo que faltaba). Adaptados
-// a los tokens de ESTA rama (VeText/VeColors/SourceDot) — sin segundas
+// a los tokens de ESTA rama (VeText/VeColors/SourceSeal) — sin segundas
 // bibliotecas. Botones (Primary/Ghost), Sparkline, MiniRateCard, SectionCard,
 // SheetHeader, Paginator, Settle y CategoryLegend.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1741,15 +2082,15 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return FilledButton.icon(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: scheme.primary,
-          foregroundColor: scheme.onPrimary,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        icon: icon != null ? Icon(icon, size: 18) : null,
-        label: Text(text),
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      icon: icon != null ? Icon(icon, size: 18) : null,
+      label: Text(text),
     );
   }
 }
@@ -1757,7 +2098,13 @@ class PrimaryButton extends StatelessWidget {
 /// Botón fantasma con borde: acción secundaria visible, sin competir con el
 /// primario. [ink] tiñe texto y borde (para acciones destructivas/alerta).
 class GhostButton extends StatelessWidget {
-  const GhostButton(this.text, {super.key, this.onPressed, this.icon, this.ink});
+  const GhostButton(
+    this.text, {
+    super.key,
+    this.onPressed,
+    this.icon,
+    this.ink,
+  });
 
   final String text;
   final VoidCallback? onPressed;
@@ -1846,9 +2193,9 @@ class _SparklinePainter extends CustomPainter {
     }
     if (hi - lo < 1e-9) hi = lo + 1;
     Offset pt(int i) => Offset(
-          size.width * i / (values.length - 1),
-          size.height - 3 - (size.height - 6) * (values[i] - lo) / (hi - lo),
-        );
+      size.width * i / (values.length - 1),
+      size.height - 3 - (size.height - 6) * (values[i] - lo) / (hi - lo),
+    );
     final path = Path()..moveTo(pt(0).dx, pt(0).dy);
     for (var i = 1; i < values.length; i++) {
       path.lineTo(pt(i).dx, pt(i).dy);
@@ -1863,14 +2210,19 @@ class _SparklinePainter extends CustomPainter {
     // Punto «hoy» al final de la serie.
     canvas.drawCircle(pt(values.length - 1), 2.2, Paint()..color = ink);
     if (target != null && target! >= lo && target! <= hi) {
-      final y = size.height - 3 - (size.height - 6) * (target! - lo) / (hi - lo);
+      final y =
+          size.height - 3 - (size.height - 6) * (target! - lo) / (hi - lo);
       final dash = Paint()
         ..color = targetInk
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1;
       var x = 0.0;
       while (x < size.width) {
-        canvas.drawLine(Offset(x, y), Offset(math.min(x + 3, size.width), y), dash);
+        canvas.drawLine(
+          Offset(x, y),
+          Offset(math.min(x + 3, size.width), y),
+          dash,
+        );
         x += 6;
       }
     }
@@ -1918,16 +2270,26 @@ class MiniRateCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              if (leading != null) ...[leading!, const SizedBox(width: 5)],
-              Flexible(
-                child: Text(label,
+            Row(
+              children: [
+                if (leading != null) ...[leading!, const SizedBox(width: 5)],
+                Flexible(
+                  child: Text(
+                    label,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
-              ),
-            ]),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 4),
-            Text(value, style: VeText.displayNum(18, color: ink ?? scheme.onSurface)),
+            Text(
+              value,
+              style: VeText.displayNum(18, color: ink ?? scheme.onSurface),
+            ),
           ],
         ),
       ),
@@ -1968,14 +2330,18 @@ class SectionCard extends StatelessWidget {
           if (title != null || actions.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Row(children: [
-                if (title != null)
-                  Expanded(
-                    child: Text(title!,
-                        style: VeText.labelCaps(10.5, color: scheme.primary)),
-                  ),
-                ...actions,
-              ]),
+              child: Row(
+                children: [
+                  if (title != null)
+                    Expanded(
+                      child: Text(
+                        title!,
+                        style: VeText.labelCaps(10.5, color: scheme.primary),
+                      ),
+                    ),
+                  ...actions,
+                ],
+              ),
             ),
           child,
         ],
@@ -1995,22 +2361,25 @@ class SheetHeader extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 4, 12, 8),
-      child: Row(children: [
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
                 fontFamily: 'SpaceGrotesk',
                 fontSize: 17,
-                fontWeight: FontWeight.w700),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-        ),
-        IconButton(
-          tooltip: 'Cerrar',
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.close_rounded, color: scheme.onSurfaceVariant),
-        ),
-      ]),
+          IconButton(
+            tooltip: 'Cerrar',
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(Icons.close_rounded, color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2035,37 +2404,41 @@ class Paginator extends StatelessWidget {
     if (totalPages <= 1) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        IconButton(
-          tooltip: 'Página anterior',
-          onPressed: page > 1 ? () => onPage(page - 1) : null,
-          icon: const Icon(Icons.chevron_left_rounded),
-          style: IconButton.styleFrom(foregroundColor: scheme.primary),
-        ),
-        Semantics(
-          liveRegion: true,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              'Página $page de $totalPages',
-              style: TextStyle(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            tooltip: 'Página anterior',
+            onPressed: page > 1 ? () => onPage(page - 1) : null,
+            icon: const Icon(Icons.chevron_left_rounded),
+            style: IconButton.styleFrom(foregroundColor: scheme.primary),
+          ),
+          Semantics(
+            liveRegion: true,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                'Página $page de $totalPages',
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant),
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
             ),
           ),
-        ),
-        IconButton(
-          tooltip: 'Página siguiente',
-          onPressed: page < totalPages ? () => onPage(page + 1) : null,
-          icon: const Icon(Icons.chevron_right_rounded),
-          style: IconButton.styleFrom(foregroundColor: scheme.primary),
-        ),
-      ]),
+          IconButton(
+            tooltip: 'Página siguiente',
+            onPressed: page < totalPages ? () => onPage(page + 1) : null,
+            icon: const Icon(Icons.chevron_right_rounded),
+            style: IconButton.styleFrom(foregroundColor: scheme.primary),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2083,7 +2456,9 @@ class Settle extends StatefulWidget {
 
 class _SettleState extends State<Settle> with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 220));
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+  );
 
   @override
   void initState() {
@@ -2099,18 +2474,18 @@ class _SettleState extends State<Settle> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _c,
-        builder: (context, child) => Transform.translate(
-          offset: Offset(0, 4 * (1 - Curves.easeOutCubic.transform(_c.value))),
-          child: Opacity(opacity: _c.value, child: child),
-        ),
-        child: widget.child,
-      );
+    animation: _c,
+    builder: (context, child) => Transform.translate(
+      offset: Offset(0, 4 * (1 - Curves.easeOutCubic.transform(_c.value))),
+      child: Opacity(opacity: _c.value, child: child),
+    ),
+    child: widget.child,
+  );
 }
 
-/// Leyenda de categorías de tasa (Oficial/Promedio/Paralelo/Manual) con el
-/// SourceDot de la casa. Usada en Bienvenida y Ajustes para explicar de un
-/// vistazo qué significa cada color del libro.
+/// Leyenda de categorías de tasa con el SourceSeal de la casa (v19.0:
+/// icono + palabra). Usada en Bienvenida y Ajustes para explicar de un
+/// vistazo qué significa cada sello del libro.
 class CategoryLegend extends StatelessWidget {
   const CategoryLegend({super.key});
 
@@ -2121,10 +2496,10 @@ class CategoryLegend extends StatelessWidget {
       (
         SourceCategory.official,
         'Oficial',
-        'BCV · TRM · Banxico · Real · EUR oficial'
+        'BCV · TRM · Banxico · Real · EUR oficial',
       ),
-      (SourceCategory.mixed, 'Promedio', 'Entre oficial y paralelo'),
-      (SourceCategory.parallel, 'Paralelo', 'Mercado VES · COP · EUR'),
+      (SourceCategory.mixed, 'Promedio', 'Entre oficial y mercado'),
+      (SourceCategory.parallel, 'Mercado', 'Paralelo VES · COP · EUR'),
       (SourceCategory.manual, 'Manual', 'Tu propia tasa'),
     ];
     return Column(
@@ -2132,19 +2507,29 @@ class CategoryLegend extends StatelessWidget {
         for (final (cat, label, detail) in rows)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(children: [
-              SourceDot(cat),
-              const SizedBox(width: 8),
-              Text(label,
+            child: Row(
+              children: [
+                SourceSeal(cat),
+                const SizedBox(width: 8),
+                Text(
+                  label,
                   style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w700)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(detail,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    detail,
                     style: TextStyle(
-                        fontSize: 11, color: scheme.onSurfaceVariant)),
-              ),
-            ]),
+                      fontSize: 11,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
       ],
     );

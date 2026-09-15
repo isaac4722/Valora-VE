@@ -1,23 +1,19 @@
-/// ─── Sala en vivo · CONFIGURACIÓN de la sala (v18.0) ───────────────────────
-/// Esta pantalla arma la sala: 5 modos (Servidor · Cerca/Nearby · WiFi
-/// local · Hotspot · Bluetooth RFCOMM), servidor propio configurable,
-/// descubrimiento de salas públicas o entrada por código, verificación
-/// PIN+emoji en TODOS los caminos. Al CONECTAR te lleva a la Lista con un
-/// toast «En sala» — la sala se VIVE en su propia pantalla (/sala-viva,
-/// distinta de esta). Nada de datos móviles: los transportes directos
-/// (LAN/Hotspot/Nearby/BT) son 100% locales.
+/// ─── Sala · lobby de conexión (v19.0 · reescrita desde 0) ───────────────────
+/// TRES modos P2P sin internet (Cerca · WiFi o Hotspot · Bluetooth), cada
+/// uno con su tecnología. Crear = ser anfitrión; Unirse = código de 6 letras
+/// o una sala avistada en el escaneo. La sala EN VIVO se vive en su propia
+/// pantalla (/sala-viva); aquí solo se configura y entra.
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme.dart';
+import '../../room/room_controller.dart';
 import '../../room/room_transport.dart';
 import '../../widgets/ui.dart';
 
-/// Pantalla de configuración de la sala (ruta /sala).
 class RoomScreen extends StatefulWidget {
   const RoomScreen({super.key});
 
@@ -26,198 +22,703 @@ class RoomScreen extends StatefulWidget {
 }
 
 class _RoomScreenState extends State<RoomScreen> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _roomNameCtrl;
+  late final TextEditingController _codeCtrl;
+  String? _busyError;
+
+  @override
+  void initState() {
+    super.initState();
+    final room = context.read<RoomController>();
+    _nameCtrl = TextEditingController(text: room.myName);
+    _roomNameCtrl = TextEditingController(text: room.roomName);
+    _codeCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _roomNameCtrl.dispose();
+    _codeCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _run(Future<String?> Function() action) async {
+    setState(() => _busyError = null);
+    final err = await action();
+    if (!mounted) return;
+    if (err != null) {
+      setState(() => _busyError = err);
+      return;
+    }
+    // En sala: a la Lista (el strip «En sala» lleva a la Sala Viva).
+    if (context.read<RoomController>().connected) {
+      showToast(
+        context,
+        'En sala · la lista se sincroniza',
+        kind: ToastKind.ok,
+      );
+      context.go('/lista');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Controlador de APLICACIÓN (v18.0): la Sala Viva y la Lista lo comparten.
-    final ctrl = context.watch<RoomController>();
+    final room = context.watch<RoomController>();
+    final scheme = Theme.of(context).colorScheme;
+    final busy = room.status == RoomStatus.connecting;
 
-    // v19 (orden del dueño): PushScreen — respeta notch/barras del sistema,
-    // botón ATRÁS visible y separación uniforme entre secciones (antes los
-    // componentes iban pegados y el contenido caía tras la barra de Android).
-    return PushScreen(
-      title: 'Sala en vivo',
-      subtitle: 'Comparte tu lista sin internet, con quien esté cerca',
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+    return Scaffold(
+      backgroundColor: scheme.surfaceContainerLowest,
+      appBar: AppBar(
+        title: const Text('Sala en vivo'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          if (ctrl.lastError != null) ...[
-            _ErrorBanner(msg: ctrl.lastError!),
+          const PageHeader(
+            'Sala en vivo',
+            hint: 'Sincroniza la lista P2P — sin internet, sin cuentas',
+          ),
+          if (room.connected) _EnSalaBanner(room: room),
+          if (_busyError != null || room.lastError != null) ...[
+            _ErrorBanner(msg: _busyError ?? room.lastError!),
             const SizedBox(height: 10),
           ],
-          if (ctrl.connected) ...[
-            _EnSalaBanner(ctrl: ctrl),
-          ] else if (ctrl.needsPairing || ctrl.verifying) ...[
-            _PairingPanel(ctrl: ctrl),
-          ] else ...[
-            _ModePicker(ctrl: ctrl),
+          if (busy) ...[
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Conectando por ${room.modeLabel}…',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => room.leave(),
+                      child: const Text('Cancelar'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 10),
-            if (ctrl.mode == 'server') ...[
-              _ServerConfig(ctrl: ctrl),
-              const SizedBox(height: 10),
-            ],
-            _IdentityName(ctrl: ctrl),
-            const SizedBox(height: 10),
-            _HostOptions(ctrl: ctrl),
-            const SizedBox(height: 10),
-            _JoinByCode(ctrl: ctrl),
-            const SizedBox(height: 10),
-            _NearbyRooms(ctrl: ctrl),
           ],
+          _NameCard(ctrl: _nameCtrl),
+          _ModePicker(room: room),
+          if (room.mode == RoomMode.servidor) ...[
+            const SizedBox(height: 10),
+            _ServerCard(room: room),
+          ],
+          _CreateCard(
+            room: room,
+            nameCtrl: _nameCtrl,
+            roomNameCtrl: _roomNameCtrl,
+            busy: busy,
+            onRun: _run,
+          ),
+          _JoinCard(
+            room: room,
+            nameCtrl: _nameCtrl,
+            codeCtrl: _codeCtrl,
+            busy: busy,
+            onRun: _run,
+          ),
+          _ScanCard(room: room, nameCtrl: _nameCtrl, busy: busy, onRun: _run),
         ],
       ),
     );
   }
 }
 
-/// Post-join común (v18.0): toast + a la Lista — la sala se vive aparte.
-Future<void> _afterJoin(BuildContext context, String? err) async {
-  if (err != null) {
-    if (context.mounted) showToast(context, err, kind: ToastKind.error);
-    return;
-  }
-  if (context.mounted) {
-    showToast(context, 'En sala · la lista se sincroniza', kind: ToastKind.ok);
-    context.go('/lista');
-  }
-}
-
-// ─── Banner «En sala» (configuración) ───────────────────────────────
-
+/// Banner cuando YA hay sala activa: directo a la Sala Viva.
 class _EnSalaBanner extends StatelessWidget {
-  const _EnSalaBanner({required this.ctrl});
-  final RoomController ctrl;
+  const _EnSalaBanner({required this.room});
+
+  final RoomController room;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
-    final title = ctrl.roomName.isNotEmpty ? ctrl.roomName : 'Sala ${ctrl.code}';
+    final title = room.roomName.isNotEmpty
+        ? room.roomName
+        : 'Sala ${room.code}';
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(children: [
-          Row(children: [
-            const LiveBadge(live: true),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(title,
+      margin: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => context.push('/sala-viva'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              const LiveBadge(live: true, label: 'En sala'),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '$title · ${room.visibleMembers.length} en la sala',
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-            ),
-          ]),
-          const SizedBox(height: 4),
-          Text(
-            'Ya estás en sala (${ctrl.modeLabel}${ctrl.isHost ? ' · anfitrión' : ''}). '
-            'La lista se sincroniza sola; los miembros y roles se ven en la Sala Viva.',
-            style: TextStyle(fontSize: 12.5, height: 1.5, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 12),
-          Row(children: [
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: () => context.push('/sala-viva'),
-                icon: const Icon(Icons.groups_2_outlined, size: 18),
-                label: const Text('Abrir Sala Viva'),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.tonal(
-              style: FilledButton.styleFrom(
-                  backgroundColor: sem.neg.withValues(alpha: 0.14),
-                  foregroundColor: sem.neg),
-              onPressed: () async => ctrl.leave(),
-              child: const Text('Salir'),
-            ),
-          ]),
-        ]),
+              Icon(Icons.arrow_forward, size: 16, color: scheme.primary),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-// ─── Lobby ──────────────────────────────────────────────────────────────────
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.msg});
 
-String _modeName(String mode) => switch (mode) {
-      'lan' => 'WiFi local',
-      'hotspot' => 'Hotspot',
-      'nearby' => 'Cerca',
-      'bt' => 'Bluetooth',
-      _ => 'Servidor',
-    };
+  final String msg;
 
+  @override
+  Widget build(BuildContext context) {
+    final sem = VeColors.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: sem.neg.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: sem.neg.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, size: 16, color: sem.neg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              msg,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: sem.neg,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NameCard extends StatelessWidget {
+  const _NameCard({required this.ctrl});
+
+  final TextEditingController ctrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final room = context.read<RoomController>();
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'TU NOMBRE',
+              style: VeText.labelCaps(10.5, color: scheme.primary),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: ctrl,
+              maxLength: 24,
+              onChanged: room.setMyName,
+              decoration: const InputDecoration(
+                hintText: '¿Cómo te ven en la sala?',
+                counterText: '',
+                prefixIcon: Icon(Icons.badge_outlined),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// TRES modos P2P, cada uno con SU tecnología — nada de internet.
 class _ModePicker extends StatelessWidget {
-  const _ModePicker({required this.ctrl});
-  final RoomController ctrl;
+  const _ModePicker({required this.room});
 
-  static const _modes = <(String, IconData, String, String)>[
-    ('nearby', Icons.sensors_rounded, 'Cerca (sin internet)',
-        'WiFi Direct / Bluetooth del teléfono con Nearby Connections. Máximo 10 personas.'),
-    ('lan', Icons.wifi_rounded, 'WiFi local (LAN)',
-        'Con el router de la casa o del local: todo por la red local, sin internet.'),
-    ('hotspot', Icons.wifi_tethering_rounded, 'Hotspot (sin internet)',
-        'El anfitrión activa su punto de acceso y los invitados se conectan a él: misma red local, cero datos móviles.'),
-    ('server', Icons.dns_rounded, 'Servidor (sockets)',
-        'Conecta con tu propio servidor socket.io o usa este teléfono como servidor.'),
-    ('bt', Icons.bluetooth_rounded, 'Bluetooth directo (RFCOMM)',
-        'Bluetooth clásico teléfono a teléfono: emparejas y listo, sin internet ni WiFi. Varios invitados.'),
-  ];
+  final RoomController room;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Elige el modo'),
-      for (final m in _modes)
-        Card(
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: () => ctrl.setMode(m.$1),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-              child: Row(children: [
-                Icon(m.$2,
-                    size: 22,
-                    color: ctrl.mode == m.$1 ? scheme.primary : scheme.onSurfaceVariant),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(m.$3,
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 2),
-                    Text(m.$4,
-                        style: TextStyle(
-                            fontSize: 11.5,
-                            height: 1.35,
-                            color: scheme.onSurfaceVariant)),
-                  ]),
-                ),
-                if (ctrl.mode == m.$1)
-                  Icon(Icons.check_circle, size: 18, color: scheme.primary),
-              ]),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'CÓMO SE CONECTAN',
+              style: VeText.labelCaps(10.5, color: scheme.primary),
             ),
-          ),
+            const SizedBox(height: 4),
+            Text(
+              'Tres modos P2P sin internet — y tu propio servidor si lo prefieres.',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 10),
+            for (final m in RoomMode.values)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _ModeTile(
+                  mode: m,
+                  selected: room.mode == m,
+                  onTap: () => room.setMode(m),
+                ),
+              ),
+          ],
         ),
-    ]);
+      ),
+    );
   }
 }
 
-/// Config del servidor propio (solo modo server): host:puerto, token,
-/// probar conexión, guía y «usar este teléfono como servidor».
-class _ServerConfig extends StatefulWidget {
-  const _ServerConfig({required this.ctrl});
-  final RoomController ctrl;
+class _ModeTile extends StatelessWidget {
+  const _ModeTile({
+    required this.mode,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final RoomMode mode;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
-  State<_ServerConfig> createState() => _ServerConfigState();
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final icon = switch (mode) {
+      RoomMode.cerca => Icons.wifi_tethering,
+      RoomMode.wifi => Icons.router_outlined,
+      RoomMode.bt => Icons.bluetooth,
+      RoomMode.servidor => Icons.dns_rounded,
+    };
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: selected ? scheme.primary.withValues(alpha: 0.07) : null,
+          border: Border.all(
+            color: selected
+                ? scheme.primary.withValues(alpha: 0.4)
+                : scheme.outlineVariant,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: selected ? scheme.primary : scheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    mode.label,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    mode.tech,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    mode.hint,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_circle, size: 18, color: scheme.primary),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _ServerConfigState extends State<_ServerConfig> {
-  late final TextEditingController _addr =
-      TextEditingController(text: widget.ctrl.serverAddress);
-  late final TextEditingController _token =
-      TextEditingController(text: widget.ctrl.serverToken);
+typedef _RoomAction = Future<void> Function(Future<String?> Function() action);
+
+class _CreateCard extends StatelessWidget {
+  const _CreateCard({
+    required this.room,
+    required this.nameCtrl,
+    required this.roomNameCtrl,
+    required this.busy,
+    required this.onRun,
+  });
+
+  final RoomController room;
+  final TextEditingController nameCtrl;
+  final TextEditingController roomNameCtrl;
+  final bool busy;
+  final _RoomAction onRun;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'CREAR SALA',
+              style: VeText.labelCaps(10.5, color: scheme.primary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Tu teléfono es el anfitrión: comparte el código de 6 letras.',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: roomNameCtrl,
+              maxLength: 32,
+              onChanged: room.setRoomName,
+              decoration: const InputDecoration(
+                hintText: 'Nombre de la sala (opcional)',
+                counterText: '',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text(
+                'Sala pública',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                room.isPublic
+                    ? 'Aparece en el escaneo de salas cercanas'
+                    : 'Solo entra quien tenga el código',
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              ),
+              value: room.isPublic,
+              onChanged: room.setPublic,
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: busy
+                    ? null
+                    : () => onRun(
+                        () => room.create(
+                          name: nameCtrl.text,
+                          roomName: roomNameCtrl.text,
+                          isPublic: room.isPublic,
+                        ),
+                      ),
+                icon: const Icon(Icons.add_home_work, size: 17),
+                label: Text('Crear por ${room.modeLabel}'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _JoinCard extends StatelessWidget {
+  const _JoinCard({
+    required this.room,
+    required this.nameCtrl,
+    required this.codeCtrl,
+    required this.busy,
+    required this.onRun,
+  });
+
+  final RoomController room;
+  final TextEditingController nameCtrl;
+  final TextEditingController codeCtrl;
+  final bool busy;
+  final _RoomAction onRun;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'UNIRSE CON CÓDIGO',
+              style: VeText.labelCaps(10.5, color: scheme.primary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Pide el código de 6 letras al anfitrión.',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: codeCtrl,
+                    maxLength: 6,
+                    textCapitalization: TextCapitalization.characters,
+                    onChanged: (v) => codeCtrl.text = v.toUpperCase(),
+                    decoration: const InputDecoration(
+                      hintText: 'ABC123',
+                      counterText: '',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                FilledButton.tonal(
+                  onPressed: busy
+                      ? null
+                      : () => onRun(
+                          () => room.join(
+                            name: nameCtrl.text,
+                            code: codeCtrl.text,
+                          ),
+                        ),
+                  child: const Text('Unirse'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScanCard extends StatefulWidget {
+  const _ScanCard({
+    required this.room,
+    required this.nameCtrl,
+    required this.busy,
+    required this.onRun,
+  });
+
+  final RoomController room;
+  final TextEditingController nameCtrl;
+  final bool busy;
+  final _RoomAction onRun;
+
+  @override
+  State<_ScanCard> createState() => _ScanCardState();
+}
+
+class _ScanCardState extends State<_ScanCard> {
+  @override
+  void dispose() {
+    // Al salir del lobby, el escaneo muere (no gasta batería de regalo).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.room.stopScan();
+    });
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final room = context.watch<RoomController>();
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'SALAS CERCANAS',
+                    style: VeText.labelCaps(10.5, color: scheme.primary),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: widget.busy
+                      ? null
+                      : () =>
+                            room.scanning ? room.stopScan() : room.startScan(),
+                  icon: Icon(
+                    room.scanning ? Icons.stop_circle : Icons.radar,
+                    size: 17,
+                  ),
+                  label: Text(room.scanning ? 'Parar' : 'Escuchar'),
+                ),
+              ],
+            ),
+            Text(
+              'Salas públicas por ${room.modeLabel}. ${room.mode.hint}',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 10),
+            if (room.scanning && room.foundRooms.isEmpty)
+              Row(
+                children: [
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Buscando…',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            for (final ad in room.foundRooms)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: widget.busy
+                      ? null
+                      : () => widget.onRun(
+                          () => room.join(
+                            name: widget.nameCtrl.text,
+                            code: ad.code,
+                            ad: ad,
+                          ),
+                        ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: scheme.outlineVariant),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          switch (ad.mode) {
+                            RoomMode.cerca => Icons.wifi_tethering,
+                            RoomMode.wifi => Icons.router_outlined,
+                            RoomMode.bt => Icons.bluetooth,
+                            RoomMode.servidor => Icons.dns_rounded,
+                          },
+                          size: 18,
+                          color: scheme.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                ad.label,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                '${ad.code} · anfitrión ${ad.hostName}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.login, size: 16, color: scheme.primary),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ─── Servidor propio (v19 · devuelto por orden del dueño) ──────────────────
+/// Config del relay socket.io del usuario: URL host:puerto, token opcional,
+/// probar conexión y guía mínima del server.js de referencia. El modo NO se
+/// elimina: quien tenga su servidor lo usa con o sin internet.
+class _ServerCard extends StatefulWidget {
+  const _ServerCard({required this.room});
+
+  final RoomController room;
+
+  @override
+  State<_ServerCard> createState() => _ServerCardState();
+}
+
+class _ServerCardState extends State<_ServerCard> {
+  late final TextEditingController _addr = TextEditingController(
+    text: widget.room.serverAddress,
+  );
+  late final TextEditingController _token = TextEditingController(
+    text: widget.room.serverToken,
+  );
   String? _probeMsg;
+  bool _probing = false;
   bool _guide = false;
 
   @override
@@ -231,380 +732,122 @@ class _ServerConfigState extends State<_ServerConfig> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Card(
-      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Tu servidor (socket.io)',
-              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: scheme.onSurface)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _addr,
-            keyboardType: TextInputType.url,
-            decoration: const InputDecoration(
-                labelText: 'host:puerto',
-                hintText: '192.168.1.20:3000',
-                isDense: true),
-            onChanged: widget.ctrl.setServerAddress,
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _token,
-            decoration: const InputDecoration(
-                labelText: 'Token (opcional)', isDense: true),
-            onChanged: widget.ctrl.setServerToken,
-          ),
-          const SizedBox(height: 10),
-          Row(children: [
-            FilledButton.tonal(
-              onPressed: () async {
-                widget.ctrl.setServerAddress(_addr.text);
-                final msg = await widget.ctrl.probeServer();
-                setState(() => _probeMsg = msg ?? 'Conexión OK');
-              },
-              child: const Text('Probar conexión'),
-            ),
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: () => setState(() => _guide = !_guide),
-              child: Text(_guide ? 'Ocultar guía' : '¿Cómo monto mi servidor?'),
-            ),
-          ]),
-          if (_probeMsg != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Stamp(_probeMsg!,
-                  color: _probeMsg == 'Conexión OK' ? VeColors.of(context).pos : null),
-            ),
-          if (_guide) ...[
-            const SizedBox(height: 10),
-            Text(
-              '1. Instala Node.js y ejecuta: npm i socket.io\n'
-              '2. Crea un server.js que escuche el puerto (ej. 3000).\n'
-              '3. Abre host:puerto aquí. También puedes usar este teléfono '
-              'como servidor en modo WiFi local: crea la sala y comparte la '
-              'IP:puerto que aparece dentro.',
-              style: TextStyle(fontSize: 12, height: 1.5, color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ]),
-      ),
-    );
-  }
-}
-
-/// Nombre del participante.
-class _IdentityName extends StatefulWidget {
-  const _IdentityName({required this.ctrl});
-  final RoomController ctrl;
-
-  @override
-  State<_IdentityName> createState() => _IdentityNameState();
-}
-
-class _IdentityNameState extends State<_IdentityName> {
-  late final TextEditingController _c = TextEditingController(text: widget.ctrl.myName);
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: TextField(
-          controller: _c,
-          decoration: const InputDecoration(
-              labelText: 'Tu nombre en la sala', isDense: true),
-          onChanged: (v) => widget.ctrl.setMyName(v),
-        ),
-      ),
-    );
-  }
-}
-
-/// Opciones del anfitrión: nombre de sala + pública/privada + crear.
-class _HostOptions extends StatelessWidget {
-  const _HostOptions({required this.ctrl});
-  final RoomController ctrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(
-              child: Text('Crear una sala',
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: scheme.onSurface)),
-            ),
-            ChipTag('Pública',
-                selected: ctrl.isPublic,
-                onTap: () => ctrl.setPublic(true)),
-            const SizedBox(width: 6),
-            ChipTag('Privada',
-                selected: !ctrl.isPublic,
-                onTap: () => ctrl.setPublic(false)),
-          ]),
-          const SizedBox(height: 6),
-          Text(
-            ctrl.isPublic
-                ? 'Pública: aparece en «salas cercanas» de otros con la app.'
-                : 'Privada: solo se entra con el código.',
-            style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            onChanged: ctrl.setRoomName,
-            decoration: const InputDecoration(
-                labelText: 'Nombre de la sala (opcional)', isDense: true),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () async {
-                final err = await ctrl.join(name: ctrl.myName, code: '');
-                if (context.mounted) await _afterJoin(context, err);
-              },
-              icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Crear sala ahora'),
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
-}
-
-/// Unirse por código manual.
-class _JoinByCode extends StatefulWidget {
-  const _JoinByCode({required this.ctrl});
-  final RoomController ctrl;
-
-  @override
-  State<_JoinByCode> createState() => _JoinByCodeState();
-}
-
-class _JoinByCodeState extends State<_JoinByCode> {
-  final _code = TextEditingController();
-
-  @override
-  void dispose() {
-    _code.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Unirme con código',
-              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: TextField(
-                controller: _code,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                    labelText: 'Código de la sala', isDense: true),
-              ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.tonal(
-              onPressed: () async {
-                final err = await widget.ctrl
-                    .join(name: widget.ctrl.myName, code: _code.text.trim().toUpperCase());
-                if (context.mounted) await _afterJoin(context, err);
-              },
-              child: const Text('Entrar'),
-            ),
-          ]),
-        ]),
-      ),
-    );
-  }
-}
-
-/// Descubrimiento de salas públicas (Nearby + UDP LAN).
-class _NearbyRooms extends StatelessWidget {
-  const _NearbyRooms({required this.ctrl});
-  final RoomController ctrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final rooms = ctrl.foundRooms.where((r) => !r.stale).toList();
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Salas cercanas',
-          actionLabel: ctrl.scanning ? 'Buscando…' : 'Buscar',
-          onAction: ctrl.scanning
-              ? () => ctrl.stopScan()
-              : () async {
-                  await ctrl.startScan();
-                }),
-      if (rooms.isEmpty)
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Text(
-              'Sin salas a la vista. Quien cree una sala pública y esté cerca (o en tu misma red WiFi) aparecerá aquí.',
-              style: TextStyle(fontSize: 12.5, height: 1.45, color: scheme.onSurfaceVariant),
-            ),
-          ),
-        )
-      else
-        for (final r in rooms)
-          Card(
-            child: ListTile(
-              leading: Text(r.emoji, style: const TextStyle(fontSize: 22)),
-              title: Text(r.label,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
-              subtitle: Text('${_modeName(r.mode)} · anfitrión: ${r.hostName} · ${r.code}',
-                  style: const TextStyle(fontSize: 11.5)),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () async {
-                final err = await ctrl.joinAd(r, ctrl.myName);
-                if (context.mounted) await _afterJoin(context, err);
-              },
-            ),
-          ),
-    ]);
-  }
-}
-
-// ─── Verificación PIN + emoji (invitado) ────────────────────────────────────
-
-class _PairingPanel extends StatefulWidget {
-  const _PairingPanel({required this.ctrl});
-  final RoomController ctrl;
-
-  @override
-  State<_PairingPanel> createState() => _PairingPanelState();
-}
-
-class _PairingPanelState extends State<_PairingPanel> {
-  String _pin = '';
-  String? _emoji;
-
-  @override
-  Widget build(BuildContext context) {
-    final ctrl = widget.ctrl;
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(children: [
-          const Stamp('Verificación de sala', color: null),
-          const SizedBox(height: 10),
-          Text(
-            ctrl.verifying ? 'Verificando…' : 'Pide el PIN y el emoji al anfitrión',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Si el emoji no coincide con el del anfitrión, la conexión se cancela: así nadie interfiere entre salas distintas.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, height: 1.45, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 14),
-          // PIN 4 dígitos.
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            for (int i = 0; i < 4; i++)
-              Container(
-                width: 46,
-                height: 54,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: scheme.outlineVariant),
-                  color: scheme.surfaceContainerLow,
-                ),
-                child: Text(
-                  i < _pin.length ? _pin[i] : '',
-                  style: VeText.displayNum(24, color: scheme.onSurface, weight: FontWeight.w700),
-                ),
-              ),
-          ]),
-          const SizedBox(height: 10),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 6,
-            children: [
-              for (final d in '0123456789'.split(''))
-                InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: _pin.length < 4 ? () => setState(() => _pin += d) : null,
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    child: Text(d, style: VeText.displayNum(17, color: scheme.onSurface)),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.dns_rounded, size: 18, color: scheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Tu servidor (socket.io)',
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          const Text('¿Cuál es el emoji del anfitrión?',
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            children: [
-              for (final e in RoomPairing.emojis)
-                ChoiceChip(
-                  label: Text(e, style: const TextStyle(fontSize: 20)),
-                  selected: _emoji == e,
-                  onSelected: (_) => setState(() => _emoji = e),
-                ),
-            ],
-          ),
-          if (ctrl.pairingError != null) ...[
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'El servidor solo TRANSPORTA: la lista, los roles y la verificación '
+              'viven en el teléfono del anfitrión. Sirve para grupos lejos o con '
+              'datos móviles.',
+              style: TextStyle(
+                fontSize: 11.5,
+                height: 1.4,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _addr,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: 'URL del servidor',
+                hintText: 'http://192.168.1.20:3000',
+                isDense: true,
+              ),
+              onChanged: widget.room.setServerAddress,
+            ),
             const SizedBox(height: 8),
-            Text(ctrl.pairingError!,
-                style: TextStyle(color: VeColors.of(context).neg, fontSize: 12.5)),
+            TextField(
+              controller: _token,
+              decoration: const InputDecoration(
+                labelText: 'Token (opcional)',
+                isDense: true,
+              ),
+              onChanged: widget.room.setServerToken,
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                FilledButton.tonal(
+                  onPressed: _probing
+                      ? null
+                      : () async {
+                          setState(() => _probing = true);
+                          final msg = await widget.room.probeServer();
+                          if (!mounted) return;
+                          setState(() {
+                            _probing = false;
+                            _probeMsg = msg ?? 'Conexión OK';
+                          });
+                        },
+                  child: _probing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Probar conexión'),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => setState(() => _guide = !_guide),
+                  child: Text(
+                    _guide ? 'Ocultar guía' : '¿Cómo monto mi servidor?',
+                  ),
+                ),
+              ],
+            ),
+            if (_probeMsg != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  _probeMsg!,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: _probeMsg == 'Conexión OK'
+                        ? VeColors.of(context).pos
+                        : VeColors.of(context).neg,
+                  ),
+                ),
+              ),
+            if (_guide) ...[
+              const SizedBox(height: 10),
+              Text(
+                '1. Instala Node.js y ejecuta: npm i socket.io\n'
+                '2. server.js mínimo: al recibir `join` mete el socket al room '
+                'del código y responde {ok: true, id: socket.id}; reenvía '
+                '`room_event` a los demás del room (añadiendo from: socket.id) '
+                'y `room_event_to` solo al destino.\n'
+                '3. Abre la URL aquí y prueba la conexión. También puedes usar '
+                'el modo WiFi local con este teléfono como servidor.',
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.5,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ],
-          const SizedBox(height: 14),
-          FilledButton(
-            onPressed: (ctrl.verifying || _pin.length < 4 || _emoji == null)
-                ? null
-                : () {
-                    HapticFeedback.mediumImpact();
-                    ctrl.submitPairing(_pin, _emoji!);
-                  },
-            child: Text(ctrl.verifying ? 'Enviando…' : 'Verificar y entrar'),
-          ),
-        ]),
-      ),
-    );
-  }
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.msg});
-  final String msg;
-
-  @override
-  Widget build(BuildContext context) {
-    final sem = VeColors.of(context);
-    return Card(
-      color: sem.neg.withValues(alpha: 0.08),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(children: [
-          Icon(Icons.error_outline, size: 18, color: sem.neg),
-          const SizedBox(width: 8),
-          Expanded(child: Text(msg, style: TextStyle(fontSize: 12.5, color: sem.neg))),
-        ]),
+        ),
       ),
     );
   }

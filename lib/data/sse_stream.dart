@@ -44,52 +44,53 @@ class SseClient {
 
     dio
         .get<ResponseBody>(
-      url,
-      options: Options(
-        responseType: ResponseType.stream,
-        headers: {
-          'Accept': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          ...?headers,
-        },
-        // Sin timeout de receive: el stream vive hasta que muere.
-        receiveTimeout: null,
-        validateStatus: (s) => s != null && s < 500,
-      ),
-      cancelToken: _cancel,
-    )
+          url,
+          options: Options(
+            responseType: ResponseType.stream,
+            headers: {
+              'Accept': 'text/event-stream',
+              'Cache-Control': 'no-cache',
+              ...?headers,
+            },
+            // Sin timeout de receive: el stream vive hasta que muere.
+            receiveTimeout: null,
+            validateStatus: (s) => s != null && s < 500,
+          ),
+          cancelToken: _cancel,
+        )
         .then((res) {
-      // (sin campo: la respuesta se consume por su stream)
-      final body = res.data!;
-      body.stream.listen(
-        (bytes) {
-          buffer += utf8.decode(bytes, allowMalformed: true);
-          // SSE: eventos separados por \n\n.
-          while (true) {
-            final sep = buffer.indexOf('\n\n');
-            if (sep < 0) break;
-            final chunk = buffer.substring(0, sep);
-            buffer = buffer.substring(sep + 2);
-            for (final line in chunk.split('\n')) {
-              if (line.startsWith(':')) continue; // comentario/ping
-              if (line.startsWith('event:')) {
-                eventName = line.substring(6).trim();
-              } else if (line.startsWith('data:')) {
-                dataLines.add(line.substring(5).trimLeft());
+          // (sin campo: la respuesta se consume por su stream)
+          final body = res.data!;
+          body.stream.listen(
+            (bytes) {
+              buffer += utf8.decode(bytes, allowMalformed: true);
+              // SSE: eventos separados por \n\n.
+              while (true) {
+                final sep = buffer.indexOf('\n\n');
+                if (sep < 0) break;
+                final chunk = buffer.substring(0, sep);
+                buffer = buffer.substring(sep + 2);
+                for (final line in chunk.split('\n')) {
+                  if (line.startsWith(':')) continue; // comentario/ping
+                  if (line.startsWith('event:')) {
+                    eventName = line.substring(6).trim();
+                  } else if (line.startsWith('data:')) {
+                    dataLines.add(line.substring(5).trimLeft());
+                  }
+                }
+                if (dataLines.isNotEmpty) {
+                  controller.add(SseEvent(eventName, dataLines.join('\n')));
+                  eventName = 'message';
+                  dataLines.clear();
+                }
               }
-            }
-            if (dataLines.isNotEmpty) {
-              controller.add(SseEvent(eventName, dataLines.join('\n')));
-              eventName = 'message';
-              dataLines.clear();
-            }
-          }
-        },
-        onDone: controller.close,
-        onError: controller.addError,
-        cancelOnError: true,
-      );
-    }).catchError(controller.addError);
+            },
+            onDone: controller.close,
+            onError: controller.addError,
+            cancelOnError: true,
+          );
+        })
+        .catchError(controller.addError);
 
     controller.onCancel = () {
       _cancel.cancel();
@@ -121,15 +122,21 @@ class RatesStream {
   void start() {
     stop();
     _client = SseClient(dio);
-    _sub = _client!.connect(url).listen((ev) {
-      if (ev.event == 'rates' || ev.event == 'message') {
-        final j = ev.json;
-        if (j is Map) {
-          _connected = true;
-          _controller.add(Map<String, dynamic>.from(j));
-        }
-      }
-    }, onDone: () => _connected = false, onError: (_) => _connected = false);
+    _sub = _client!
+        .connect(url)
+        .listen(
+          (ev) {
+            if (ev.event == 'rates' || ev.event == 'message') {
+              final j = ev.json;
+              if (j is Map) {
+                _connected = true;
+                _controller.add(Map<String, dynamic>.from(j));
+              }
+            }
+          },
+          onDone: () => _connected = false,
+          onError: (_) => _connected = false,
+        );
   }
 
   void stop() {

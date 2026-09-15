@@ -4,7 +4,6 @@
 /// sus imports.
 part of 'converter_screen.dart';
 
-
 class _Recientes extends StatelessWidget {
   const _Recientes({
     required this.from,
@@ -33,33 +32,68 @@ class _Recientes extends StatelessWidget {
 
     if (recents.isEmpty) return const SizedBox.shrink();
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Recientes',
-          actionLabel: 'Vaciar', onAction: () => store.clearRecentConversions()),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(children: [
-            for (final r in recents.take(10))
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(children: [
-                  Flag(CurrencyX.from(r.from), size: 15),
-                  const SizedBox(width: 4),
-                  Text(fmtNum(r.amount, decimals: 2), style: VeText.displayNum(12.5, color: Theme.of(context).colorScheme.onSurface)),
-                  Icon(Icons.arrow_forward, size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  Flag(CurrencyX.from(r.to), size: 15),
-                  const SizedBox(width: 6),
-                  Text('${r.from} → ${r.to}',
-                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                  const Spacer(),
-                  Text(fmtDate(r.at), style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                ]),
-              ),
-          ]),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle(
+          'Recientes',
+          actionLabel: 'Vaciar',
+          onAction: () => store.clearRecentConversions(),
         ),
-      ),
-    ]);
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                for (final r in recents.take(10))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Flag(CurrencyX.from(r.from), size: 15),
+                        const SizedBox(width: 4),
+                        Text(
+                          fmtNum(r.amount, decimals: 2),
+                          style: VeText.displayNum(
+                            12.5,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        Icon(
+                          Icons.arrow_forward,
+                          size: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        Flag(CurrencyX.from(r.to), size: 15),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${r.from} → ${r.to}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          fmtDate(r.at),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -70,28 +104,33 @@ class _Notas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Notas',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle(
+          'Notas',
           actionLabel: 'Limpiar',
           onAction: () {
             ctrl.clear();
             store.writeConversionNotes('');
-          }),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: TextField(
-            controller: ctrl,
-            maxLines: 4,
-            maxLength: 5000,
-            decoration: const InputDecoration(
-              hintText: 'Apunta aquí: dónde vi la tasa, qué comparé…',
-              border: InputBorder.none,
+          },
+        ),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: ctrl,
+              maxLines: 4,
+              maxLength: 5000,
+              decoration: const InputDecoration(
+                hintText: 'Apunta aquí: dónde vi la tasa, qué comparé…',
+                border: InputBorder.none,
+              ),
             ),
           ),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 }
 
@@ -139,16 +178,18 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
     // FIX (v17.6): fusiona los días de la API cuando llegan. Si el equipo
     // apenas se instaló, el calendario pasa de 1-2 días locales a la serie
     // completa sin cerrar ni reabrir la hoja.
-    widget.futureDays?.then((extra) {
-      if (!mounted) return;
-      setState(() {
-        _days.addAll(extra);
-        _remotosPendientes = false;
-      });
-    }).catchError((_) {
-      if (!mounted) return;
-      setState(() => _remotosPendientes = false);
-    });
+    widget.futureDays
+        ?.then((extra) {
+          if (!mounted) return;
+          setState(() {
+            _days.addAll(extra);
+            _remotosPendientes = false;
+          });
+        })
+        .catchError((_) {
+          if (!mounted) return;
+          setState(() => _remotosPendientes = false);
+        });
   }
 
   DateTime? _ultimoDia() {
@@ -188,93 +229,117 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
       top: false,
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Elegir fecha histórica',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Elegir fecha histórica',
               style: TextStyle(
-                  fontFamily: 'SpaceGrotesk',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: scheme.onSurface)),
-          const SizedBox(height: 2),
-          Text('Fuentes: ${widget.sourceLabel}',
+                fontFamily: 'SpaceGrotesk',
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Fuentes: ${widget.sourceLabel}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
-          const SizedBox(height: 12),
-          if (_days.isEmpty && _remotosPendientes)
-            // FIX (v17.6): mientras la API responde NUNCA se muestra un
-            // calendario vacío — estado de carga explícito.
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 28),
-              child: Column(children: [
-                SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.4)),
-                SizedBox(height: 12),
-                Text('Consultando los días disponibles…',
-                    style: TextStyle(fontSize: 12.5)),
-              ]),
-            )
-          else if (_days.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: EmptyState(
-                'Aún no hay fechas guardadas',
-                icon: Icons.calendar_month,
-                hint: 'Sin conexión y sin snapshots locales todavía. La app '
-                    'guarda un snapshot por día cada vez que se refrescan '
-                    'las tasas; con internet este calendario llena sus 180 '
-                    'días al instante.',
-              ),
-            )
-          else ...[
-            Row(children: [
-              IconButton(
-                onPressed: puedePrev ? () => _mover(-1) : null,
-                icon: const Icon(Icons.chevron_left, size: 20),
-                tooltip: 'Mes anterior',
-              ),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    '${mes[0].toUpperCase()}${mes.substring(1)} ${_month.year}',
-                    style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onSurface),
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: puedeNext ? () => _mover(1) : null,
-                icon: const Icon(Icons.chevron_right, size: 20),
-                tooltip: 'Mes siguiente',
-              ),
-            ]),
-            const SizedBox(height: 4),
-            Row(children: [
-              for (final d in const ['L', 'M', 'X', 'J', 'V', 'S', 'D'])
-                Expanded(
-                  child: Center(
-                    child: Text(d,
-                        style: VeText.labelCaps(9.5,
-                            color: scheme.onSurfaceVariant)),
-                  ),
-                ),
-            ]),
-            const SizedBox(height: 4),
-            ..._semanas(scheme),
-            const SizedBox(height: 10),
-            Text(
-              _remotosPendientes
-                  ? 'Llegando más días desde la API…'
-                  : 'Los días sombreados vienen de la API y de tus '
-                      'snapshots guardados.',
-              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
             ),
+            const SizedBox(height: 12),
+            if (_days.isEmpty && _remotosPendientes)
+              // FIX (v17.6): mientras la API responde NUNCA se muestra un
+              // calendario vacío — estado de carga explícito.
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 28),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.4),
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      'Consultando los días disponibles…',
+                      style: TextStyle(fontSize: 12.5),
+                    ),
+                  ],
+                ),
+              )
+            else if (_days.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: EmptyState(
+                  'Aún no hay fechas guardadas',
+                  icon: Icons.calendar_month,
+                  hint:
+                      'Sin conexión y sin snapshots locales todavía. La app '
+                      'guarda un snapshot por día cada vez que se refrescan '
+                      'las tasas; con internet este calendario llena sus 180 '
+                      'días al instante.',
+                ),
+              )
+            else ...[
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: puedePrev ? () => _mover(-1) : null,
+                    icon: const Icon(Icons.chevron_left, size: 20),
+                    tooltip: 'Mes anterior',
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        '${mes[0].toUpperCase()}${mes.substring(1)} ${_month.year}',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: puedeNext ? () => _mover(1) : null,
+                    icon: const Icon(Icons.chevron_right, size: 20),
+                    tooltip: 'Mes siguiente',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  for (final d in const ['L', 'M', 'X', 'J', 'V', 'S', 'D'])
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          d,
+                          style: VeText.labelCaps(
+                            9.5,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              ..._semanas(scheme),
+              const SizedBox(height: 10),
+              Text(
+                _remotosPendientes
+                    ? 'Llegando más días desde la API…'
+                    : 'Los días sombreados vienen de la API y de tus '
+                          'snapshots guardados.',
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              ),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }
@@ -293,9 +358,12 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
     final semanas = (celdas.length / 7).ceil();
     return [
       for (var w = 0; w < semanas; w++)
-        Row(children: [
-          for (var i = 0; i < 7; i++) Expanded(child: _celda(celdas[w * 7 + i], scheme)),
-        ]),
+        Row(
+          children: [
+            for (var i = 0; i < 7; i++)
+              Expanded(child: _celda(celdas[w * 7 + i], scheme)),
+          ],
+        ),
     ];
   }
 
@@ -305,17 +373,18 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
     final key = SnapshotPoint.dayKey(date);
     final disponible = _days.contains(key);
     final esHoy = key == SnapshotPoint.dayKey(DateTime.now());
-    final elegido = widget.initial != null && SnapshotPoint.dayKey(widget.initial!) == key;
+    final elegido =
+        widget.initial != null && SnapshotPoint.dayKey(widget.initial!) == key;
     final fondo = elegido
         ? scheme.primary
         : disponible
-            ? scheme.primary.withValues(alpha: 0.08)
-            : Colors.transparent;
+        ? scheme.primary.withValues(alpha: 0.08)
+        : Colors.transparent;
     final tinta = elegido
         ? scheme.onPrimary
         : disponible
-            ? scheme.onSurface
-            : scheme.onSurfaceVariant.withValues(alpha: 0.4);
+        ? scheme.onSurface
+        : scheme.onSurfaceVariant.withValues(alpha: 0.4);
     return SizedBox(
       height: 42,
       child: Padding(
@@ -333,15 +402,21 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   border: esHoy && !elegido
-                      ? Border.all(color: scheme.primary.withValues(alpha: 0.55))
+                      ? Border.all(
+                          color: scheme.primary.withValues(alpha: 0.55),
+                        )
                       : null,
                 ),
-                child: Text('$day',
-                    style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight:
-                            elegido || esHoy ? FontWeight.w800 : FontWeight.w600,
-                        color: tinta)),
+                child: Text(
+                  '$day',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: elegido || esHoy
+                        ? FontWeight.w800
+                        : FontWeight.w600,
+                    color: tinta,
+                  ),
+                ),
               ),
             ),
           ),

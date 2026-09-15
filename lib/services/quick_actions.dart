@@ -33,7 +33,10 @@ class QuickActionsService {
       // de drawables que no existen en este árbol).
       await _plugin.setShortcutItems(<ShortcutItem>[
         const ShortcutItem(type: 'action_lista', localizedTitle: 'Lista'),
-        const ShortcutItem(type: 'action_conversor', localizedTitle: 'Conversor'),
+        const ShortcutItem(
+          type: 'action_conversor',
+          localizedTitle: 'Conversor',
+        ),
         const ShortcutItem(type: 'action_escanear', localizedTitle: 'Escanear'),
         const ShortcutItem(type: 'action_bcv', localizedTitle: 'Tasa BCV'),
       ]);

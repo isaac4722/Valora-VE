@@ -29,8 +29,10 @@ Future<void> shareTotalsText(
 }) async {
   final lines = <String>['Mi lista de compras — ValoraVE', ''];
   for (final item in store.cart) {
-    lines.add('• ${item.quantity} × ${item.name} · ${fmtCurrency(item.price, CurrencyX.from(item.currency))}'
-        '${item.checked ? ' ✓' : ''}');
+    lines.add(
+      '• ${item.quantity} × ${item.name} · ${fmtCurrency(item.price, CurrencyX.from(item.currency))}'
+      '${item.checked ? ' ✓' : ''}',
+    );
   }
   lines.add('');
   for (final e in totals.byCurrency.entries) {
@@ -43,7 +45,10 @@ Future<void> shareTotalsText(
 /// Captura un widget (RepaintBoundary) a PNG bytes 1080 px de ancho.
 /// Endurecido (v18.0): boundary muerto/desmontado/sin tamaño → null limpio
 /// en vez de excepción; el llamante decide el mensaje humano.
-Future<Uint8List?> captureWidget(GlobalKey key, {int targetWidth = 1080}) async {
+Future<Uint8List?> captureWidget(
+  GlobalKey key, {
+  int targetWidth = 1080,
+}) async {
   try {
     final boundary =
         key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
@@ -127,28 +132,41 @@ Future<Uint8List?> renderOffstagePng(
 
 /// Comparte PNG por WebShare nativo de Android.
 Future<void> sharePng(Uint8List bytes, String name) async {
-  await SharePlus.instance.share(ShareParams(files: [XFile.fromData(bytes, name: name, mimeType: 'image/png')]));
+  await SharePlus.instance.share(
+    ShareParams(
+      files: [XFile.fromData(bytes, name: name, mimeType: 'image/png')],
+    ),
+  );
 }
 
 /// Comparte un archivo de texto (CSV/JSON) con nombre sugerido.
-Future<void> showShareFile(BuildContext context, String name, String text) async {
-  await SharePlus.instance.share(ShareParams(
-    text: 'ValoraVE · $name',
-    files: [
-      XFile.fromData(
-        Uint8List.fromList(utf8.encode('\ufeff$text')),
-        name: name,
-        mimeType: name.endsWith('.json') ? 'application/json' : 'text/csv',
-      ),
-    ],
-  ));
+Future<void> showShareFile(
+  BuildContext context,
+  String name,
+  String text,
+) async {
+  await SharePlus.instance.share(
+    ShareParams(
+      text: 'ValoraVE · $name',
+      files: [
+        XFile.fromData(
+          Uint8List.fromList(utf8.encode('\ufeff$text')),
+          name: name,
+          mimeType: name.endsWith('.json') ? 'application/json' : 'text/csv',
+        ),
+      ],
+    ),
+  );
 }
 
 /// Descarga (guarda) bytes SIN abrir el share nativo: escribe en la carpeta
 /// externa de la app (Android/data/…/files/ValoraVE) y devuelve la ruta.
 /// El usuario la encuentra con la app «Archivos» del teléfono; compartir
 /// sigue disponible por separado (regla del dueño v17.2: nunca directo).
-Future<String?> downloadBytes(Uint8List bytes, {required String fileName}) async {
+Future<String?> downloadBytes(
+  Uint8List bytes, {
+  required String fileName,
+}) async {
   try {
     final dirs = await getExternalStorageDirectories();
     final base = dirs?.whereType<Directory>().firstOrNull?.path;
@@ -162,4 +180,3 @@ Future<String?> downloadBytes(Uint8List bytes, {required String fileName}) async
     return null;
   }
 }
-

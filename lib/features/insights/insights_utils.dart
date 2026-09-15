@@ -22,8 +22,13 @@ String fmtDayLabel(DateTime d) =>
     '${fmtDayShort(d)}${d.year == DateTime.now().year ? '' : ' ${d.year}'}';
 
 /// Nombre del rango solicitado (chips del módulo: 1 M · 6 M · 1 Año · Máximo).
-String rangeName(int days) =>
-    days <= 31 ? '1 M' : days <= 190 ? '6 M' : days <= 400 ? '1 Año' : 'Máximo';
+String rangeName(int days) => days <= 31
+    ? '1 M'
+    : days <= 190
+    ? '6 M'
+    : days <= 400
+    ? '1 Año'
+    : 'Máximo';
 
 /// ¿[d] cae dentro del rango? Máximo (3650+) = sin corte.
 bool _inRange(DateTime d, int days) =>
@@ -76,8 +81,12 @@ double _priceAt(Product p, DateTime day) {
   int measured,
   int skipped,
   List<BasketBreak> breaks,
-})? basketInflation(List<BasketItem> basket, List<Product> products,
-    {required int days}) {
+})?
+basketInflation(
+  List<BasketItem> basket,
+  List<Product> products, {
+  required int days,
+}) {
   final measured = <(Product, int, BasketBreak)>[]; // producto × qty × desglose
   var skipped = 0;
   for (final b in basket) {
@@ -115,8 +124,10 @@ double _priceAt(Product p, DateTime day) {
     final first = recordsInRange(p, days).first.date;
     if (first.isAfter(common)) common = first;
   }
-  final oldCost =
-      measured.fold<double>(0, (s, e) => s + e.$2 * _priceAt(e.$1, common));
+  final oldCost = measured.fold<double>(
+    0,
+    (s, e) => s + e.$2 * _priceAt(e.$1, common),
+  );
   final newCost = measured.fold<double>(0, (s, e) => s + e.$2 * e.$3.newPrice);
   if (oldCost <= 0) return null;
   return (
@@ -133,16 +144,20 @@ double _priceAt(Product p, DateTime day) {
 /// Inflación de PRODUCTOS (todos, no solo la canasta) en el rango: promedio
 /// SIMPLE de la variación de cada producto con ≥2 registros en el rango
 /// (reutiliza an.priceVariation). null si no hay ninguno medible.
-({double pct, int products})? productsInflation(List<Product> products,
-    {required int days}) {
+({double pct, int products})? productsInflation(
+  List<Product> products, {
+  required int days,
+}) {
   final pcts = <double>[];
   for (final p in products) {
     final v = variationInRange(p, days);
     if (v != null) pcts.add(v);
   }
   if (pcts.isEmpty) return null;
-  return (pct: pcts.fold<double>(0, (s, v) => s + v) / pcts.length,
-      products: pcts.length);
+  return (
+    pct: pcts.fold<double>(0, (s, v) => s + v) / pcts.length,
+    products: pcts.length,
+  );
 }
 
 /// Serie del COSTO de la canasta (USD) en el rango: para cada día con
@@ -150,8 +165,10 @@ double _priceAt(Product p, DateTime day) {
 /// vigente por producto (forward-fill). Arranca en el «snapshot más antiguo
 /// común»: antes de ese día la canasta incompleta NO se grafica.
 List<({DateTime day, double cost, int items})> basketCostSeries(
-    List<BasketItem> basket, List<Product> products,
-    {required int days}) {
+  List<BasketItem> basket,
+  List<Product> products, {
+  required int days,
+}) {
   final measured = <(Product, int)>[];
   for (final b in basket) {
     final p = products.where((x) => x.id == b.productId).firstOrNull;
@@ -176,7 +193,10 @@ List<({DateTime day, double cost, int items})> basketCostSeries(
   final out = <({DateTime day, double cost, int items})>[];
   for (final k in dayKeys.toList()..sort()) {
     final d = DateTime.parse(k);
-    final cost = measured.fold<double>(0, (s, e) => s + e.$2 * _priceAt(e.$1, d));
+    final cost = measured.fold<double>(
+      0,
+      (s, e) => s + e.$2 * _priceAt(e.$1, d),
+    );
     out.add((day: d, cost: cost, items: measured.length));
   }
   return out;
@@ -185,7 +205,10 @@ List<({DateTime day, double cost, int items})> basketCostSeries(
 /// Brecha % de un día (paralelo/BCV − 1). null si falta una de las dos tasas
 /// ese día o si alguna es ≤ 0 — NUNCA divide por cero.
 ({double bcv, double parallel, double pct})? gapForDay(
-    List<HistPoint> bcv, List<HistPoint> parallel, String day) {
+  List<HistPoint> bcv,
+  List<HistPoint> parallel,
+  String day,
+) {
   final b = bcv.where((p) => p.date == day).firstOrNull;
   final p = parallel.where((x) => x.date == day).firstOrNull;
   if (b == null || p == null || b.rate <= 0 || p.rate <= 0) return null;
@@ -215,13 +238,22 @@ String coverageText({
 // ── Rankings de compras (§9.7): por día de semana y por moneda ─────────────
 
 /// Días de la semana es-VE (índice = DateTime.weekday − 1, lunes primero).
-const List<String> kWeekdayLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const List<String> kWeekdayLabels = [
+  'Lun',
+  'Mar',
+  'Mié',
+  'Jue',
+  'Vie',
+  'Sáb',
+  'Dom',
+];
 
 /// Gasto por día de la semana (USD efectivo pagado, [Purchase.paidUSD]):
 /// distribución Lun→Dom con total y número de compras. Orden cronológico;
 /// el UI destaca el día con más gasto (el «ranking» honesto).
 List<({String day, double totalUSD, int count})> weekdaySpend(
-    List<Purchase> purchases) {
+  List<Purchase> purchases,
+) {
   final totals = List<double>.filled(7, 0);
   final counts = List<int>.filled(7, 0);
   for (final p in purchases) {
@@ -241,7 +273,7 @@ List<({String day, double totalUSD, int count})> weekdaySpend(
 /// con su equivalente USD (precio normalizado) para el ORDEN del ranking.
 /// Devuelve [] si no hay ítems.
 List<({String currency, double totalOriginal, double totalUSD, int items})>
-    currencySpend(List<Purchase> purchases) {
+currencySpend(List<Purchase> purchases) {
   final map = <String, ({double original, double usd, int items})>{};
   for (final p in purchases) {
     for (final it in p.items) {
@@ -254,15 +286,18 @@ List<({String currency, double totalOriginal, double totalUSD, int items})>
       );
     }
   }
-  final out = map.entries
-      .map((e) => (
-            currency: e.key,
-            totalOriginal: e.value.original,
-            totalUSD: e.value.usd,
-            items: e.value.items,
-          ))
-      .toList()
-    ..sort((a, b) => b.totalUSD.compareTo(a.totalUSD));
+  final out =
+      map.entries
+          .map(
+            (e) => (
+              currency: e.key,
+              totalOriginal: e.value.original,
+              totalUSD: e.value.usd,
+              items: e.value.items,
+            ),
+          )
+          .toList()
+        ..sort((a, b) => b.totalUSD.compareTo(a.totalUSD));
   return out;
 }
 
@@ -273,9 +308,8 @@ List<({String currency, double totalOriginal, double totalUSD, int items})>
 /// dampPhi (0.85) y acumulación LINEAL (v_k = último × (1 + diario × k)),
 /// exactamente como el motor predictPrice de productos. <2 puntos o <4 días
 /// de historia → null (estable, no se inventa tendencia).
-({List<({DateTime day, double value})> points, double dailyPct})? dampProjection(
-    List<({DateTime day, double value})> series,
-    {int days = 30}) {
+({List<({DateTime day, double value})> points, double dailyPct})?
+dampProjection(List<({DateTime day, double value})> series, {int days = 30}) {
   if (series.length < 2) return null;
   final sorted = [...series]..sort((a, b) => a.day.compareTo(b.day));
   final last = sorted.last;
@@ -308,7 +342,8 @@ List<({String currency, double totalOriginal, double totalUSD, int items})>
 /// con datos). Serie asc por día; el primer punto no tiene anterior.
 /// NUNCA divide por cero: días con tasa ≤ 0 se saltan.
 List<({String day, double pct})> devaluationDaily(
-    List<SnapshotPoint> bcvSeries) {
+  List<SnapshotPoint> bcvSeries,
+) {
   final sorted = [...bcvSeries]..sort((a, b) => a.day.compareTo(b.day));
   final out = <({String day, double pct})>[];
   for (var i = 1; i < sorted.length; i++) {
@@ -335,9 +370,12 @@ List<List<String>> gapCsvRows(List<HistPoint> bcv, List<HistPoint> parallel) {
       byDay[h.date] = (b: byDay[h.date]?.b ?? 0, p: h.rate);
     }
   }
-  final rows = <List<String>>[['Dia', 'BCV', 'Paralelo', 'Brecha %']];
-  final days = byDay.entries.where((e) => e.value.b > 0 && e.value.p > 0).toList()
-    ..sort((a, b) => a.key.compareTo(b.key));
+  final rows = <List<String>>[
+    ['Dia', 'BCV', 'Paralelo', 'Brecha %'],
+  ];
+  final days =
+      byDay.entries.where((e) => e.value.b > 0 && e.value.p > 0).toList()
+        ..sort((a, b) => a.key.compareTo(b.key));
   for (final e in days) {
     rows.add([
       e.key,
@@ -358,8 +396,9 @@ List<List<String>> gapCsvRows(List<HistPoint> bcv, List<HistPoint> parallel) {
 /// (por fecha del bucket, nunca por la etiqueta — 'abr' < 'ene' alfabético
 /// pero no en el calendario). Devuelve [] si no hay compras en la ventana.
 List<({String month, double totalUSD, int count})> monthSpend(
-    List<Purchase> purchases,
-    {int months = 6}) {
+  List<Purchase> purchases, {
+  int months = 6,
+}) {
   final now = DateTime.now();
   final first = DateTime(now.year, now.month - (months - 1), 1);
   final map = <String, ({double total, int count, DateTime bucket})>{};
@@ -386,8 +425,9 @@ List<({String month, double totalUSD, int count})> monthSpend(
 /// top [limit] tiendas por total; el resto se agrupa en «Otras».
 /// 'Sin tienda' bucket para compras sin nombre. Devuelve [] si no hay compras.
 List<({String store, double totalUSD, int count})> storeSpend(
-    List<Purchase> purchases,
-    {int limit = 6}) {
+  List<Purchase> purchases, {
+  int limit = 6,
+}) {
   final map = <String, double>{};
   final counts = <String, int>{};
   for (final p in purchases) {
@@ -415,10 +455,10 @@ List<({String store, double totalUSD, int count})> storeSpend(
     ];
   }
   final top = entries.take(limit).toList();
-  final restTotal =
-      entries.skip(limit).fold<double>(0, (a, e) => a + e.value);
-  final restCount =
-      entries.skip(limit).fold<int>(0, (a, e) => a + (counts[e.key] ?? 0));
+  final restTotal = entries.skip(limit).fold<double>(0, (a, e) => a + e.value);
+  final restCount = entries
+      .skip(limit)
+      .fold<int>(0, (a, e) => a + (counts[e.key] ?? 0));
   return [
     for (final e in top)
       (store: e.key, totalUSD: e.value, count: counts[e.key] ?? 0),

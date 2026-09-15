@@ -47,7 +47,7 @@ class LanHubImpl {
   String _roomCode = '';
   String _myName = 'Comprador';
   String _roomName = '';
-  String _emoji = '';
+  final String _emoji = '';
   bool _roomPublic = true;
   String? _hostIp;
 
@@ -68,7 +68,8 @@ class LanHubImpl {
       final ifs = await NetworkInterface.list();
       for (final i in ifs) {
         for (final a in i.addresses) {
-          if (a.type == InternetAddressType.IPv4 && !a.isLoopback) return a.address;
+          if (a.type == InternetAddressType.IPv4 && !a.isLoopback)
+            return a.address;
         }
       }
     } catch (_) {}
@@ -98,30 +99,39 @@ class LanHubImpl {
     return out.toList();
   }
 
-  /// Conecta como anfitrión (roomCode vacío) o invitado por código. El
-  /// invitado descubre al anfitrión por broadcast/sondas; para entrar directo
-  /// usa [connectToHost].
-  Future<void> connect({
+  /// v19.0 · rol EXPLÍCITO: el anfitrión llama [startHost] (anuncia su
+  /// código real) y el invitado [dial] — el rol YA NO se infiere de si el
+  /// código está vacío (ese seam ambiguo era el bug del «crear sala» que
+  /// nunca creaba: el host pasaba su código generado y el hub lo arrancaba
+  /// como descubridor).
+  Future<void> startHost({
     required String roomCode,
     required String myName,
     String roomName = '',
-    String emoji = '',
     bool isPublic = true,
   }) async {
     _myName = myName;
     _roomCode = roomCode;
     _roomName = roomName;
-    _emoji = emoji;
     _roomPublic = isPublic;
-    _isHost = roomCode.isEmpty;
+    _isHost = true;
     _setStatus(RoomStatus.connecting);
     try {
-      if (_isHost) {
-        await _startHost();
-      } else {
-        await _startGuestDiscovery();
-        _startProbes(_kWhoRoom);
-      }
+      await _startHost();
+    } catch (_) {
+      _setStatus(RoomStatus.error);
+    }
+  }
+
+  /// Invitado: descubre al anfitrión por código (broadcast + sondas WHO).
+  Future<void> dial({required String roomCode, required String myName}) async {
+    _myName = myName;
+    _roomCode = roomCode;
+    _isHost = false;
+    _setStatus(RoomStatus.connecting);
+    try {
+      await _startGuestDiscovery();
+      _startProbes(_kWhoRoom);
     } catch (_) {
       _setStatus(RoomStatus.error);
     }
@@ -155,31 +165,41 @@ class LanHubImpl {
     _server = await ServerSocket.bind(InternetAddress.anyIPv4, kTcpPort);
     _server!.listen(_onGuest, onError: (_) {});
     _hostIp = await localIPv4();
-    _udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, kUdpPort, reuseAddress: true);
+    _udp = await RawDatagramSocket.bind(
+      InternetAddress.anyIPv4,
+      kUdpPort,
+      reuseAddress: true,
+    );
     _udp!.broadcastEnabled = true;
     _udp!.listen((_) => _pumpUdp(_udp));
-    _announce = Timer.periodic(const Duration(seconds: 2), (_) => _announceRoom());
+    _announce = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => _announceRoom(),
+    );
     _setStatus(RoomStatus.connected);
-    _events.add(RoomEvent('room_created', {
-      'code': _roomCode,
-      'members': [
-        {'id': 'host', 'name': _myName}
-      ],
-      'items': <dynamic>[],
-    }));
+    _events.add(
+      RoomEvent('room_created', {
+        'code': _roomCode,
+        'members': [
+          {'id': 'host', 'name': _myName},
+        ],
+        'items': <dynamic>[],
+      }),
+    );
   }
 
   Map<String, dynamic> get _adPayload => {
-        'code': _roomCode,
-        'port': kTcpPort,
-        'name': _roomName,
-        'host': _myName,
-        'emoji': _emoji,
-        'pub': _roomPublic ? 1 : 0,
-      };
+    'code': _roomCode,
+    'port': kTcpPort,
+    'name': _roomName,
+    'host': _myName,
+    'emoji': _emoji,
+    'pub': _roomPublic ? 1 : 0,
+  };
 
   Future<void> _announceRoom() async {
-    if (_udp == null || !_roomPublic) return; // privadas: solo respuesta a WHO|CODE
+    if (_udp == null || !_roomPublic)
+      return; // privadas: solo respuesta a WHO|CODE
     final line = '$kAdPrefix${jsonEncode(_adPayload)}';
     final bytes = utf8.encode(line);
     for (final b in await _broadcastAddrs()) {
@@ -208,11 +228,20 @@ class LanHubImpl {
   void _onUdpHostPacket(Datagram d) {
     final msg = utf8.decode(d.data, allowMalformed: true).trim();
     if (msg == kWho) {
-      if (_roomPublic) _udp?.send(utf8.encode('$kAdPrefix${jsonEncode(_adPayload)}'), d.address, d.port);
+      if (_roomPublic)
+        _udp?.send(
+          utf8.encode('$kAdPrefix${jsonEncode(_adPayload)}'),
+          d.address,
+          d.port,
+        );
     } else if (msg.startsWith('$kWho|')) {
       // WHO|CODE: responde también a salas privadas si el código coincide.
       if (msg.substring(kWho.length + 1) == _roomCode) {
-        _udp?.send(utf8.encode('$kAdPrefix${jsonEncode(_adPayload)}'), d.address, d.port);
+        _udp?.send(
+          utf8.encode('$kAdPrefix${jsonEncode(_adPayload)}'),
+          d.address,
+          d.port,
+        );
       }
     }
   }
@@ -221,7 +250,11 @@ class LanHubImpl {
 
   Future<void> _startGuestDiscovery() async {
     if (_udp == null) {
-      _udp = await RawDatagramSocket.bind(InternetAddress.anyIPv4, kTcpPort, reuseAddress: true);
+      _udp = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        kTcpPort,
+        reuseAddress: true,
+      );
       _udp!.broadcastEnabled = true;
       _udp!.listen((_) => _pumpUdp(_udp));
     }
@@ -267,7 +300,9 @@ class LanHubImpl {
     try {
       if (raw.startsWith(kAdPrefix)) {
         final m = jsonDecode(raw.substring(kAdPrefix.length));
-        if (m is Map && m['code'] is String && (m['code'] as String).length >= 4) {
+        if (m is Map &&
+            m['code'] is String &&
+            (m['code'] as String).length >= 4) {
           return {
             'code': m['code'],
             'port': (m['port'] as num?)?.toInt() ?? kTcpPort,
@@ -300,13 +335,20 @@ class LanHubImpl {
     if (_joining || _guestSocket != null) return;
     _joining = true;
     try {
-      final socket = await Socket.connect(ip, int.tryParse(port) ?? kTcpPort,
-          timeout: const Duration(seconds: 6));
+      final socket = await Socket.connect(
+        ip,
+        int.tryParse(port) ?? kTcpPort,
+        timeout: const Duration(seconds: 6),
+      );
       _guestSocket = socket;
-      socket.listen(_onGuestData, onError: (_) {}, onDone: () {
-        _guestSocket = null;
-        _setStatus(RoomStatus.error);
-      });
+      socket.listen(
+        _onGuestData,
+        onError: (_) {},
+        onDone: () {
+          _guestSocket = null;
+          _setStatus(RoomStatus.error);
+        },
+      );
       _setStatus(RoomStatus.connected);
     } catch (_) {
       _setStatus(RoomStatus.error);
@@ -325,7 +367,9 @@ class LanHubImpl {
       try {
         final m = Map<String, dynamic>.from(jsonDecode(line) as Map);
         _events.add(RoomEvent.fromMap(m));
-      } catch (_) {/* línea corrupta: se descarta */}
+      } catch (_) {
+        /* línea corrupta: se descarta */
+      }
     }
   }
 
@@ -334,7 +378,8 @@ class LanHubImpl {
   /// Escucha pasiva + sondas WHO. Los anuncios llegan por [roomAds].
   Future<bool> startScan() async {
     if (_scanning) return true;
-    if (_status != RoomStatus.disconnected) return false; // no se escanea en sala activa
+    if (_status != RoomStatus.disconnected)
+      return false; // no se escanea en sala activa
     _scanning = true;
     try {
       await _startGuestDiscovery();
@@ -392,7 +437,8 @@ class LanHubImpl {
   }
 
   void _onHostData(String id, Uint8List data) {
-    _buffers[id] = (_buffers[id] ?? '') + utf8.decode(data, allowMalformed: true);
+    _buffers[id] =
+        (_buffers[id] ?? '') + utf8.decode(data, allowMalformed: true);
     int idx;
     while ((idx = _buffers[id]!.indexOf('\n')) >= 0) {
       final line = _buffers[id]!.substring(0, idx).trim();
@@ -408,7 +454,10 @@ class LanHubImpl {
 
   // ── Emisión ───────────────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>?> emit(String type, Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>?> emit(
+    String type,
+    Map<String, dynamic> payload,
+  ) async {
     final bytes = utf8.encode('${jsonEncode({'type': type, ...payload})}\n');
     if (_isHost) {
       for (final c in _clients.values) {
@@ -424,7 +473,11 @@ class LanHubImpl {
 
   /// Emisión 1:1 (solo tiene efecto en el anfitrión). El invitado cae al
   /// broadcast normal (su único par es el anfitrión).
-  Future<Map<String, dynamic>?> emitTo(String targetId, String type, Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>?> emitTo(
+    String targetId,
+    String type,
+    Map<String, dynamic> payload,
+  ) async {
     if (!_isHost) return emit(type, payload);
     final c = _clients[targetId];
     if (c == null) return null;

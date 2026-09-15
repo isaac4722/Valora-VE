@@ -45,14 +45,19 @@ void main() {
 
     test('fmtDateLong completo', () {
       // sábado 6 de septiembre de 2026
-      expect(fmtDateLong(DateTime(2026, 9, 5)),
-          'sábado, 5 de septiembre de 2026');
+      expect(
+        fmtDateLong(DateTime(2026, 9, 5)),
+        'sábado, 5 de septiembre de 2026',
+      );
     });
 
     test('timeAgo: instantes/min/horas/días', () {
       final now = DateTime(2026, 9, 10, 12);
       expect(timeAgo(now, now), 'hace instantes');
-      expect(timeAgo(now.subtract(const Duration(minutes: 5)), now), 'hace 5 min');
+      expect(
+        timeAgo(now.subtract(const Duration(minutes: 5)), now),
+        'hace 5 min',
+      );
       expect(timeAgo(now.subtract(const Duration(hours: 3)), now), 'hace 3 h');
       expect(timeAgo(now.subtract(const Duration(days: 2)), now), 'hace 2 d');
     });
@@ -130,18 +135,26 @@ void main() {
   group('presentationLabel', () {
     test('peso 1000 g → «1 kg»', () {
       final p = Product(
-        id: '1', name: 'Harina', category: ProductCategory.alimentos,
-        presentation: Presentation.weight, size: 1000,
-        createdAt: DateTime(2026), records: const [],
+        id: '1',
+        name: 'Harina',
+        category: ProductCategory.alimentos,
+        presentation: Presentation.weight,
+        size: 1000,
+        createdAt: DateTime(2026),
+        records: const [],
       );
       expect(presentationLabel(p), '1 kg');
     });
 
     test('volumen 2000 ml → «2 L»', () {
       final p = Product(
-        id: '2', name: 'Refresco', category: ProductCategory.bebidas,
-        presentation: Presentation.volume, size: 2000,
-        createdAt: DateTime(2026), records: const [],
+        id: '2',
+        name: 'Refresco',
+        category: ProductCategory.bebidas,
+        presentation: Presentation.volume,
+        size: 2000,
+        createdAt: DateTime(2026),
+        records: const [],
       );
       expect(presentationLabel(p), '2 L');
     });

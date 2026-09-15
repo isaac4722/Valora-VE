@@ -8,27 +8,35 @@ import 'package:valorave/core/models.dart';
 import 'package:valorave/data/history_api.dart';
 import 'package:valorave/features/insights/insights_utils.dart';
 
-Purchase _p(String id, DateTime date, List<PurchaseItem> items,
-        {double totalUSD = 0, String? paidCurrency}) =>
-    Purchase(
-      id: id,
-      date: date,
-      items: items,
-      totalUSD: totalUSD,
-      totalBS: 0,
-      rate: 1,
-      paidCurrency: paidCurrency,
-    );
+Purchase _p(
+  String id,
+  DateTime date,
+  List<PurchaseItem> items, {
+  double totalUSD = 0,
+  String? paidCurrency,
+}) => Purchase(
+  id: id,
+  date: date,
+  items: items,
+  totalUSD: totalUSD,
+  totalBS: 0,
+  rate: 1,
+  paidCurrency: paidCurrency,
+);
 
-PurchaseItem _item(String name, double original, String currency,
-        {double usd = 1, int qty = 1}) =>
-    PurchaseItem(
-      name: name,
-      quantity: qty,
-      priceUSD: usd,
-      originalPrice: original,
-      currency: currency,
-    );
+PurchaseItem _item(
+  String name,
+  double original,
+  String currency, {
+  double usd = 1,
+  int qty = 1,
+}) => PurchaseItem(
+  name: name,
+  quantity: qty,
+  priceUSD: usd,
+  originalPrice: original,
+  currency: currency,
+);
 
 void main() {
   _gastosGroup();
@@ -36,9 +44,15 @@ void main() {
     test('agrupa por weekday con total USD efectivo y conteo', () {
       // Lunes 2026-09-07 · viernes 2026-09-11 · lunes 2026-09-14.
       final ps = [
-        _p('a', DateTime(2026, 9, 7), [_item('x', 10, 'USD', usd: 10)], totalUSD: 10),
-        _p('b', DateTime(2026, 9, 11), [_item('y', 20, 'USD', usd: 20)], totalUSD: 20),
-        _p('c', DateTime(2026, 9, 14), [_item('z', 5, 'USD', usd: 5)], totalUSD: 5),
+        _p('a', DateTime(2026, 9, 7), [
+          _item('x', 10, 'USD', usd: 10),
+        ], totalUSD: 10),
+        _p('b', DateTime(2026, 9, 11), [
+          _item('y', 20, 'USD', usd: 20),
+        ], totalUSD: 20),
+        _p('c', DateTime(2026, 9, 14), [
+          _item('z', 5, 'USD', usd: 5),
+        ], totalUSD: 5),
       ];
       final rows = weekdaySpend(ps);
       expect(rows.length, 7);
@@ -98,17 +112,14 @@ void main() {
   group('dampProjection · proyección amortiguada (φ 0.85)', () {
     test('null con <2 puntos o <4 días (estable, no inventa)', () {
       expect(dampProjection([]), isNull);
+      expect(dampProjection([(day: DateTime(2026, 9, 1), value: 10)]), isNull);
       expect(
-          dampProjection([
-            (day: DateTime(2026, 9, 1), value: 10),
-          ]),
-          isNull);
-      expect(
-          dampProjection([
-            (day: DateTime(2026, 9, 1), value: 10),
-            (day: DateTime(2026, 9, 2), value: 11),
-          ]),
-          isNull); // 1 día de historia
+        dampProjection([
+          (day: DateTime(2026, 9, 1), value: 10),
+          (day: DateTime(2026, 9, 2), value: 11),
+        ]),
+        isNull,
+      ); // 1 día de historia
     });
 
     test('misma semántica que predictPrice: media por tramos amortiguada', () {
@@ -161,13 +172,16 @@ void main() {
 
   group('gapCsvRows · exportGapCsv', () {
     test('solo días con ambas tasas; brecha = paralelo/BCV − 1', () {
-      final rows = gapCsvRows([
-        const HistPoint(date: '2026-09-01', rate: 40),
-        const HistPoint(date: '2026-09-02', rate: 40),
-      ], [
-        const HistPoint(date: '2026-09-01', rate: 45),
-        const HistPoint(date: '2026-09-03', rate: 50), // sin BCV: fuera
-      ]);
+      final rows = gapCsvRows(
+        [
+          const HistPoint(date: '2026-09-01', rate: 40),
+          const HistPoint(date: '2026-09-02', rate: 40),
+        ],
+        [
+          const HistPoint(date: '2026-09-01', rate: 45),
+          const HistPoint(date: '2026-09-03', rate: 50), // sin BCV: fuera
+        ],
+      );
       expect(rows.length, 2); // encabezado + 01
       expect(rows[0], ['Dia', 'BCV', 'Paralelo', 'Brecha %']);
       expect(rows[1][0], '2026-09-01');
@@ -177,7 +191,9 @@ void main() {
     });
 
     test('encabezado solo cuando no hay pares completos', () {
-      final rows = gapCsvRows([], [const HistPoint(date: '2026-09-01', rate: 45)]);
+      final rows = gapCsvRows([], [
+        const HistPoint(date: '2026-09-01', rate: 45),
+      ]);
       expect(rows.length, 1);
       expect(rows.first.first, 'Dia');
     });
@@ -214,15 +230,17 @@ void _gastosGroup() {
     });
 
     test('fuera de la ventana: ni bucket ni suma', () {
-      final ps = [
-        _p('viejo', DateTime(2020, 1, 1), [], totalUSD: 999),
-      ];
+      final ps = [_p('viejo', DateTime(2020, 1, 1), [], totalUSD: 999)];
       expect(monthSpend(ps, months: 6), isEmpty);
     });
 
     test('usa el total EFECTIVO (paidUSD) cuando se ajustó el pago', () {
-      final p = _p('a', DateTime(2026, 9, 5), [], totalUSD: 100)
-          .copyWith(paidTotal: 90);
+      final p = _p(
+        'a',
+        DateTime(2026, 9, 5),
+        [],
+        totalUSD: 100,
+      ).copyWith(paidTotal: 90);
       final out = monthSpend([p], months: 6);
       expect(out.first.totalUSD, 90);
     });

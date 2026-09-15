@@ -19,12 +19,22 @@ import 'package:valorave/widgets/rate_sheet.dart';
 
 AppStore _storeConTablero() {
   final store = AppStore.withData(const AppData());
-  store.setRateBoard(RateBoard(sources: {
-    'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 9, 16, 10)),
-    'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime(2026, 9, 16, 10)),
-    'cop-trm': RateEntry(rate: 4200, updatedAt: DateTime(2026, 9, 16, 10)),
-    'eur-ves-oficial': RateEntry(rate: 45, updatedAt: DateTime(2026, 9, 16, 10)),
-  }));
+  store.setRateBoard(
+    RateBoard(
+      sources: {
+        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 9, 16, 10)),
+        'ves-parallel': RateEntry(
+          rate: 44,
+          updatedAt: DateTime(2026, 9, 16, 10),
+        ),
+        'cop-trm': RateEntry(rate: 4200, updatedAt: DateTime(2026, 9, 16, 10)),
+        'eur-ves-oficial': RateEntry(
+          rate: 45,
+          updatedAt: DateTime(2026, 9, 16, 10),
+        ),
+      },
+    ),
+  );
   return store;
 }
 
@@ -39,16 +49,23 @@ void main() {
 
   void noop() {}
 
-  testWidgets('Home: lista de cotización agrupada USD/EUR con filas visuales', (tester) async {
+  testWidgets('Home: lista de cotización agrupada USD/EUR con filas visuales', (
+    tester,
+  ) async {
     final store = _storeConTablero();
     final poller = await makePoller(store);
-    await tester.pumpWidget(MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: store),
-        ChangeNotifierProvider.value(value: poller),
-      ],
-      child: MaterialApp(theme: AppTheme.light(), home: const Scaffold(body: HomeScreen())),
-    ));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: store),
+          ChangeNotifierProvider.value(value: poller),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(body: HomeScreen()),
+        ),
+      ),
+    );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
     // Encabezados de grupo: USD y EUR (banderas + código).
     expect(find.text('USD'), findsWidgets); // héroe + encabezado de grupo
@@ -72,16 +89,23 @@ void main() {
     expect(store.sourceFor(Currency.ves), 'ves-parallel');
   });
 
-  testWidgets('Home: tasa manual desde la fila, SIN ir a Ajustes', (tester) async {
+  testWidgets('Home: tasa manual desde la fila, SIN ir a Ajustes', (
+    tester,
+  ) async {
     final store = _storeConTablero();
     final poller = await makePoller(store);
-    await tester.pumpWidget(MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: store),
-        ChangeNotifierProvider.value(value: poller),
-      ],
-      child: MaterialApp(theme: AppTheme.light(), home: const Scaffold(body: HomeScreen())),
-    ));
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: store),
+          ChangeNotifierProvider.value(value: poller),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(body: HomeScreen()),
+        ),
+      ),
+    );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
     // Lápiz de la fila Manual → editor inline con MoneyField.
     await tester.tap(find.byIcon(Icons.edit_outlined).first);
@@ -96,16 +120,32 @@ void main() {
     expect(store.sourceFor(Currency.ves), 'ves-manual');
   });
 
-  testWidgets('RateTile: precio + símbolo y estado sin definir', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.light(),
-      home: Scaffold(
-        body: ListView(children: <Widget>[
-          RateTile(sourceId: 'ves-bcv', rate: 40.25, selected: true, onTap: noop),
-          RateTile(sourceId: 'ves-manual', rate: 0, selected: false, onTap: noop),
-        ]),
+  testWidgets('RateTile: precio + símbolo y estado sin definir', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: ListView(
+            children: <Widget>[
+              RateTile(
+                sourceId: 'ves-bcv',
+                rate: 40.25,
+                selected: true,
+                onTap: noop,
+              ),
+              RateTile(
+                sourceId: 'ves-manual',
+                rate: 0,
+                selected: false,
+                onTap: noop,
+              ),
+            ],
+          ),
+        ),
       ),
-    ));
+    );
     expect(find.text('BCV'), findsWidgets); // héroe + fila
     expect(find.text('Manual'), findsOneWidget);
     expect(find.text('40,2500'), findsOneWidget); // fmtRate: 4 decimales ≥ 1

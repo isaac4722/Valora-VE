@@ -61,28 +61,55 @@ GoRouter buildRouter({required AppStore store}) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => MainShell(navigationShell: shell),
         branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/conversor', builder: (_, _) => const ConverterScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/lista', builder: (_, _) => const ListaScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/productos', builder: (_, _) => const ProductsScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/analisis', builder: (_, _) => const InsightsScreen()),
-          ]),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/', builder: (_, _) => const HomeScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/conversor',
+                builder: (_, _) => const ConverterScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: '/lista', builder: (_, _) => const ListaScreen()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/productos',
+                builder: (_, _) => const ProductsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/analisis',
+                builder: (_, _) => const InsightsScreen(),
+              ),
+            ],
+          ),
           // Rutas extra (sin tab, acceso por header/CTA).
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/historial', builder: (_, _) => const HistoryScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/ajustes', builder: (_, _) => const SettingsScreen()),
-          ]),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/historial',
+                builder: (_, _) => const HistoryScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/ajustes',
+                builder: (_, _) => const SettingsScreen(),
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(path: '/legal', builder: (_, _) => const LegalScreen()),

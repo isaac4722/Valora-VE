@@ -41,22 +41,37 @@ Future<void> showShareMenu(
     builder: (ctx) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          const Text('Elige cómo quieres salir de ValoraVE',
-              style: TextStyle(fontSize: 12, color: Colors.black54)),
-          const SizedBox(height: 10),
-          for (final a in actions)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              leading: Icon(a.icon, size: 22),
-              title: Text(a.label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-              subtitle: Text(a.hint, style: const TextStyle(fontSize: 11.5)),
-              onTap: () => Navigator.pop(ctx, a),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             ),
-        ]),
+            const SizedBox(height: 4),
+            const Text(
+              'Elige cómo quieres salir de ValoraVE',
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            const SizedBox(height: 10),
+            for (final a in actions)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                leading: Icon(a.icon, size: 22),
+                title: Text(
+                  a.label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                subtitle: Text(a.hint, style: const TextStyle(fontSize: 11.5)),
+                onTap: () => Navigator.pop(ctx, a),
+              ),
+          ],
+        ),
       ),
     ),
   );

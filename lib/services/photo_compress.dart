@@ -92,9 +92,7 @@ Future<void> compressOldTicketPhotos(
     if (reduction <= bytes.lengthInBytes * 0.20) continue; // <20 % → no vale.
     store.updatePurchase(
       p.id,
-      p.copyWith(
-          ticketPhoto:
-              'data:image/jpeg;base64,${base64Encode(out)}'),
+      p.copyWith(ticketPhoto: 'data:image/jpeg;base64,${base64Encode(out)}'),
     );
     saved += reduction;
     touched++;

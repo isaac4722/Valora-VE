@@ -53,7 +53,10 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          const PageHeader('Ajustes', hint: 'Todo lo que la app decide contigo'),
+          const PageHeader(
+            'Ajustes',
+            hint: 'Todo lo que la app decide contigo',
+          ),
           _Pais(store: store),
           _DatosConexion(store: store),
           _Personalizacion(store: store),
@@ -88,91 +91,138 @@ class _DatosConexion extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final s = store.settings;
     final poller = context.read<RatesPoller>();
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Datos y conexión'),
-      // Ancla del tour (v17.8): el paso «Datos y conexión» enfoca este card.
-      KeyedSubtree(
-        key: TourKeys.conexion,
-        child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: s.offlineMode,
-              onChanged: (v) {
-                store.setOfflineMode(v);
-                if (v) {
-                  poller.stopAuto(); // offline total: sin más consultas
-                } else {
-                  poller.markActive(); // reanuda el ciclo ya
-                  poller.refreshNow();
-                }
-              },
-              title: const Text('No consultar API automáticamente',
-                  style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800)),
-              subtitle: Text(
-                s.offlineMode
-                    ? 'Activo: la app NO consulta ninguna API. Todo se lee de tu libro local y tus tasas manuales.'
-                    : 'Desactivado: la app consulta las APIs de tasas según el intervalo de abajo.',
-                style: TextStyle(fontSize: 12, height: 1.4, color: scheme.onSurfaceVariant),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text('Intervalo de consulta de tasas',
-                style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
-            const SizedBox(height: 8),
-            Wrap(spacing: 6, runSpacing: 6, children: [
-              for (final e in _intervalos.entries)
-                ChipTag(e.value,
-                    selected: !s.offlineMode && s.pollMinutes == e.key,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle('Datos y conexión'),
+        // Ancla del tour (v17.8): el paso «Datos y conexión» enfoca este card.
+        KeyedSubtree(
+          key: TourKeys.conexion,
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: s.offlineMode,
+                    onChanged: (v) {
+                      store.setOfflineMode(v);
+                      if (v) {
+                        poller.stopAuto(); // offline total: sin más consultas
+                      } else {
+                        poller.markActive(); // reanuda el ciclo ya
+                        poller.refreshNow();
+                      }
+                    },
+                    title: const Text(
+                      'No consultar API automáticamente',
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    subtitle: Text(
+                      s.offlineMode
+                          ? 'Activo: la app NO consulta ninguna API. Todo se lee de tu libro local y tus tasas manuales.'
+                          : 'Desactivado: la app consulta las APIs de tasas según el intervalo de abajo.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Intervalo de consulta de tasas',
+                    style: VeText.labelCaps(
+                      9.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final e in _intervalos.entries)
+                        ChipTag(
+                          e.value,
+                          selected: !s.offlineMode && s.pollMinutes == e.key,
+                          onTap: s.offlineMode
+                              ? null
+                              : () {
+                                  store.setPollMinutes(e.key);
+                                  poller.markActive(); // reprograma el ciclo
+                                },
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // SSE en vivo (17.7): push opcional del despliegue web ValoraVE.
+                  // El polling SIEMPRE sigue como latido — esto lo acelera.
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    leading: Container(
+                      width: 10,
+                      height: 10,
+                      margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: s.sseUrl.isEmpty
+                            ? scheme.outlineVariant
+                            : (poller.sseConnected
+                                  ? VeColors.of(context).pos
+                                  : VeColors.of(context).warn),
+                      ),
+                    ),
+                    title: const Text(
+                      'SSE en vivo (opcional)',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    subtitle: Text(
+                      s.sseUrl.isEmpty
+                          ? 'Desactivado. Si despliegas el servidor web ValoraVE, pega su URL: el tablero llega por push sin esperar el intervalo'
+                          : '${s.sseUrl} · ${poller.sseConnected ? 'stream conectado' : 'sin conexión — el ciclo normal sigue'}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 1.35,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    trailing: Text(
+                      s.sseUrl.isEmpty ? 'Añadir' : 'Editar',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     onTap: s.offlineMode
                         ? null
-                        : () {
-                            store.setPollMinutes(e.key);
-                            poller.markActive(); // reprograma el ciclo
-                          }),
-            ]),
-            const SizedBox(height: 10),
-            // SSE en vivo (17.7): push opcional del despliegue web ValoraVE.
-            // El polling SIEMPRE sigue como latido — esto lo acelera.
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              leading: Container(
-                width: 10,
-                height: 10,
-                margin: const EdgeInsets.only(top: 4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: s.sseUrl.isEmpty
-                      ? scheme.outlineVariant
-                      : (poller.sseConnected
-                          ? VeColors.of(context).pos
-                          : VeColors.of(context).warn),
-                ),
+                        : () => _askSseUrl(context, store),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Las tasas descargadas se guardan en tu teléfono (una fila por fecha y fuente, sin duplicados) y siguen disponibles sin conexión.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      height: 1.45,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
-              title: const Text('SSE en vivo (opcional)',
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
-              subtitle: Text(
-                  s.sseUrl.isEmpty
-                      ? 'Desactivado. Si despliegas el servidor web ValoraVE, pega su URL: el tablero llega por push sin esperar el intervalo'
-                      : '${s.sseUrl} · ${poller.sseConnected ? 'stream conectado' : 'sin conexión — el ciclo normal sigue'}',
-                  style: TextStyle(fontSize: 11, height: 1.35, color: scheme.onSurfaceVariant)),
-              trailing: Text(s.sseUrl.isEmpty ? 'Añadir' : 'Editar',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-              onTap: s.offlineMode ? null : () => _askSseUrl(context, store),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Las tasas descargadas se guardan en tu teléfono (una fila por fecha y fuente, sin duplicados) y siguen disponibles sin conexión.',
-              style: TextStyle(fontSize: 11.5, height: 1.45, color: scheme.onSurfaceVariant),
-            ),
-          ]),
+          ),
         ),
-      ),
-      ),
-    ]);
+      ],
+    );
   }
 
   /// Diálogo de URL del servidor SSE (17.7): vacío = desactivar. El poller
@@ -183,22 +233,26 @@ class _DatosConexion extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Servidor SSE en vivo'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(
-            controller: ctrl,
-            autofocus: true,
-            keyboardType: TextInputType.url,
-            decoration: const InputDecoration(
-              hintText: 'https://tu-despliegue.valorave.app',
-              labelText: 'URL base del despliegue web',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                hintText: 'https://tu-despliegue.valorave.app',
+                labelText: 'URL base del despliegue web',
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          const Text(
+            const SizedBox(height: 10),
+            const Text(
               'La app se suscribe a /api/rates/stream de ese servidor. Si falla '
               'o lo dejas vacío, el ciclo de consulta normal sigue igual.',
-              style: TextStyle(fontSize: 11.5)),
-        ]),
+              style: TextStyle(fontSize: 11.5),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(null),
@@ -214,4 +268,3 @@ class _DatosConexion extends StatelessWidget {
     if (url != null) store.setSseUrl(url);
   }
 }
-

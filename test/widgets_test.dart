@@ -20,7 +20,7 @@ import 'package:valorave/features/products/products_screen.dart';
 import 'package:valorave/features/settings/settings_screen.dart';
 import 'package:valorave/features/shell/main_shell.dart';
 import 'package:valorave/features/shell/notifs_center.dart';
-import 'package:valorave/room/room_transport.dart';
+import 'package:valorave/room/room_controller.dart';
 import 'package:valorave/widgets/app_router.dart';
 import 'package:valorave/widgets/app_tour.dart';
 import 'package:valorave/features/welcome/welcome_screen.dart';
@@ -47,7 +47,11 @@ Future<void> _initServices(AppStore store) async {
   _poller = RatesPoller(store, _notifs, _alerts);
 }
 
-Widget _wrap(Widget child, {required AppStore store, ThemeMode mode = ThemeMode.light}) {
+Widget _wrap(
+  Widget child, {
+  required AppStore store,
+  ThemeMode mode = ThemeMode.light,
+}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider.value(value: store),
@@ -73,44 +77,56 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Componentes de ui.dart', () {
-    testWidgets('Stamp · ReadWindow · LedgerRow · TrendBadge renderizan', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: Column(children: const [
-            Stamp('bcv', icon: Icons.account_balance),
-            ReadWindow(child: Text('1.234,56')),
-            LedgerRow(label: 'Arroz', value: '\$ 1,00'),
-            TrendBadge(2.1),
-          ]),
+    testWidgets('Stamp · ReadWindow · LedgerRow · TrendBadge renderizan', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Column(
+              children: const [
+                Stamp('bcv', icon: Icons.account_balance),
+                ReadWindow(child: Text('1.234,56')),
+                LedgerRow(label: 'Arroz', value: '\$ 1,00'),
+                TrendBadge(2.1),
+              ],
+            ),
+          ),
         ),
-      ));
+      );
       expect(find.text('BCV'), findsOneWidget);
       expect(find.text('Arroz'), findsOneWidget);
       expect(find.text('+2,1 %'), findsOneWidget);
     });
 
     testWidgets('AnimatedNumber odómetro anima entre valores', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(),
-        home: const Scaffold(
-          body: AnimatedNumber(100, style: TextStyle(fontSize: 30)),
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: const Scaffold(
+            body: AnimatedNumber(100, style: TextStyle(fontSize: 30)),
+          ),
         ),
-      ));
+      );
       expect(find.text('100,00'), findsOneWidget);
     });
 
     testWidgets('CurrencySelect abre menú y emite selección', (tester) async {
       Currency picked = Currency.usd;
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: Center(child: CurrencySelect(
-            value: Currency.usd,
-            onChanged: (c) => picked = c,
-          )),
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Center(
+              child: CurrencySelect(
+                value: Currency.usd,
+                onChanged: (c) => picked = c,
+              ),
+            ),
+          ),
         ),
-      ));
+      );
       await tester.tap(find.byType(CurrencySelect));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Euro').last);
@@ -120,29 +136,37 @@ void main() {
 
     testWidgets('SegmentedChips marca el activo y notifica', (tester) async {
       var value = 'a';
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: StatefulBuilder(builder: (context, setState) => SegmentedChips<String>(
-            options: const ['a', 'b'],
-            value: value,
-            onChanged: (v) => setState(() => value = v),
-          )),
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) => SegmentedChips<String>(
+                options: const ['a', 'b'],
+                value: value,
+                onChanged: (v) => setState(() => value = v),
+              ),
+            ),
+          ),
         ),
-      ));
+      );
       await tester.tap(find.text('b'));
       await tester.pump();
       expect(value, 'b');
     });
 
-    testWidgets('MoneyField formatea miles en vivo (es-VE) y emite el número', (tester) async {
+    testWidgets('MoneyField formatea miles en vivo (es-VE) y emite el número', (
+      tester,
+    ) async {
       double? valor;
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: MoneyField(onChanged: (v) => valor = v, hintText: 'Monto'),
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: MoneyField(onChanged: (v) => valor = v, hintText: 'Monto'),
+          ),
         ),
-      ));
+      );
       final field = find.byType(TextField);
       // «1000» → «1.000»
       await tester.enterText(field, '1000');
@@ -174,29 +198,37 @@ void main() {
       await tester.pump();
       expect(valor, 0);
     });
-
-
   });
 
   group('Pantallas', () {
-    testWidgets('Bienvenida: 4 slides PageView, avanzar/retroceder y país', (tester) async {
+    testWidgets('Bienvenida: 4 slides PageView, avanzar/retroceder y país', (
+      tester,
+    ) async {
       final store = _pumpedStore(tester, dir: 'w1');
       await _initServices(store);
       final router2 = GoRouter(
         initialLocation: '/bienvenida',
         routes: [
-          GoRoute(path: '/bienvenida', builder: (_, _) => const WelcomeScreen()),
+          GoRoute(
+            path: '/bienvenida',
+            builder: (_, _) => const WelcomeScreen(),
+          ),
           GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
         ],
       );
-      await tester.pumpWidget(MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          ChangeNotifierProvider(create: (_) => ThemeController()),
-          ChangeNotifierProvider.value(value: _poller),
-        ],
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router2),
-      ));
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: store),
+            ChangeNotifierProvider(create: (_) => ThemeController()),
+            ChangeNotifierProvider.value(value: _poller),
+          ],
+          child: MaterialApp.router(
+            theme: AppTheme.light(),
+            routerConfig: router2,
+          ),
+        ),
+      );
       await tester.pump(const Duration(milliseconds: 300));
       // v19.0: la bienvenida es un PageView de 4 slides (orden del dueño).
       expect(find.byType(PageView), findsOneWidget);
@@ -227,20 +259,24 @@ void main() {
       expect(store.settings.onboarded, isTrue);
     });
 
-    testWidgets('Home: héroe + resumen de compras + herramientas', (tester) async {
+    testWidgets('Home: héroe + resumen de compras + herramientas', (
+      tester,
+    ) async {
       final store = _pumpedStore(tester, dir: 'w2');
       await _initServices(store);
       // v17.8: el resumen del mes se alimenta de COMPRAS (el módulo Finanzas
       // se retiró) — sin registro manual.
-      store.addPurchase(Purchase(
-        id: 'p1',
-        date: DateTime.now(),
-        store: 'Súper A',
-        items: const [],
-        totalUSD: 25,
-        totalBS: 1000,
-        rate: 40,
-      ));
+      store.addPurchase(
+        Purchase(
+          id: 'p1',
+          date: DateTime.now(),
+          store: 'Súper A',
+          items: const [],
+          totalUSD: 25,
+          totalBS: 1000,
+          rate: 40,
+        ),
+      );
       await tester.pumpWidget(_wrap(const HomeScreen(), store: store));
       // v17.6: con tablero vacío Home muestra LoadingState (spinner
       // INDEFINIDO) — pumpAndSettle nunca terminaría. Bombeo acotado.
@@ -252,10 +288,14 @@ void main() {
     testWidgets('Conversor: dual + swap + ruta + notas', (tester) async {
       final store = _pumpedStore(tester, dir: 'w3');
       await _initServices(store);
-      store.setRateBoard(RateBoard(sources: {
-        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
-        'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
-      }));
+      store.setRateBoard(
+        RateBoard(
+          sources: {
+            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
+            'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
+          },
+        ),
+      );
       await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
       await tester.pumpAndSettle();
       expect(find.text('Conversor'), findsOneWidget);
@@ -275,51 +315,70 @@ void main() {
       expect(find.text('RUTA DEL CÁLCULO'), findsOneWidget);
     });
 
-    testWidgets('Conversor BIDIRECCIONAL: escribir abajo calcula arriba + sin misma moneda', (tester) async {
-      final store = _pumpedStore(tester, dir: 'w3b');
-      await _initServices(store);
-      store.setRateBoard(RateBoard(sources: {
-        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
-        'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
-      }));
-      await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
-      await tester.pumpAndSettle();
-      // Par inicial USD → VES. Escribir 1000 arriba → abajo 40.000 en vivo.
-      final fields = find.byType(MoneyField);
-      await tester.enterText(fields.first, '1000');
-      await tester.pump();
-      expect(find.text('1.000'), findsOneWidget);
-      expect(find.text('40.000,00'), findsOneWidget);
-      // BIDIRECCIONAL: escribir 80.000 ABAJO → arriba 2.000.
-      await tester.enterText(fields.at(1), '80000');
-      await tester.pump();
-      expect(find.text('80.000'), findsOneWidget);
-      expect(find.text('2.000,00'), findsOneWidget);
-      // Elegir la divisa del OTRO lado INTERCAMBIA (jamás USD → USD).
-      final fromCode = store.data.converter.from;
-      final toCode = store.data.converter.to;
-      await tester.tap(find.byType(CurrencySelect).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(toCode == 'USD' ? 'Dólar' : 'Bolívar').last);
-      await tester.pumpAndSettle();
-      expect(store.data.converter.from, toCode);
-      expect(store.data.converter.to, fromCode);
-      expect(store.data.converter.from == store.data.converter.to, isFalse);
-    });
+    testWidgets(
+      'Conversor BIDIRECCIONAL: escribir abajo calcula arriba + sin misma moneda',
+      (tester) async {
+        final store = _pumpedStore(tester, dir: 'w3b');
+        await _initServices(store);
+        store.setRateBoard(
+          RateBoard(
+            sources: {
+              'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
+              'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
+            },
+          ),
+        );
+        await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
+        await tester.pumpAndSettle();
+        // Par inicial USD → VES. Escribir 1000 arriba → abajo 40.000 en vivo.
+        final fields = find.byType(MoneyField);
+        await tester.enterText(fields.first, '1000');
+        await tester.pump();
+        expect(find.text('1.000'), findsOneWidget);
+        expect(find.text('40.000,00'), findsOneWidget);
+        // BIDIRECCIONAL: escribir 80.000 ABAJO → arriba 2.000.
+        await tester.enterText(fields.at(1), '80000');
+        await tester.pump();
+        expect(find.text('80.000'), findsOneWidget);
+        expect(find.text('2.000,00'), findsOneWidget);
+        // Elegir la divisa del OTRO lado INTERCAMBIA (jamás USD → USD).
+        final fromCode = store.data.converter.from;
+        final toCode = store.data.converter.to;
+        await tester.tap(find.byType(CurrencySelect).first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(toCode == 'USD' ? 'Dólar' : 'Bolívar').last);
+        await tester.pumpAndSettle();
+        expect(store.data.converter.from, toCode);
+        expect(store.data.converter.to, fromCode);
+        expect(store.data.converter.from == store.data.converter.to, isFalse);
+      },
+    );
 
-    testWidgets('Lista: agregar producto, plantilla, vuelto, dividir', (tester) async {
+    testWidgets('Lista: agregar producto, plantilla, vuelto, dividir', (
+      tester,
+    ) async {
       final store = _pumpedStore(tester, dir: 'w4');
       await _initServices(store);
-      store.setRateBoard(RateBoard(sources: {
-        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
-        'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
-      }));
+      store.setRateBoard(
+        RateBoard(
+          sources: {
+            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
+            'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
+          },
+        ),
+      );
       await tester.pumpWidget(_wrap(const ListaScreen(), store: store));
       await tester.pumpAndSettle();
       expect(find.text('Lista de compras'), findsOneWidget);
       // agrega un ítem
-      await tester.enterText(find.widgetWithText(TextField, 'Producto'), 'Café');
-      await tester.enterText(find.widgetWithText(TextField, 'Precio unitario'), '40');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Producto'),
+        'Café',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Precio unitario'),
+        '40',
+      );
       await tester.tap(find.text('Agregar a la lista'));
       await tester.pumpAndSettle();
       expect(store.cart.length, 1);
@@ -333,7 +392,9 @@ void main() {
       expect(find.text('Dividir la cuenta'), findsNothing);
     });
 
-    testWidgets('Productos: semilla catálogo, filtro por chip, ficha', (tester) async {
+    testWidgets('Productos: semilla catálogo, filtro por chip, ficha', (
+      tester,
+    ) async {
       final store = _pumpedStore(tester, dir: 'w5');
       await _initServices(store);
       await tester.pumpWidget(_wrap(const ProductsScreen(), store: store));
@@ -341,7 +402,12 @@ void main() {
       // semilla de 21 productos en primer arranque (datos, no viewport)
       expect(store.products.length, 21);
       // filtro por categoría (datos)
-      expect(store.products.where((p) => p.category == ProductCategory.bebidas).length, 4);
+      expect(
+        store.products
+            .where((p) => p.category == ProductCategory.bebidas)
+            .length,
+        4,
+      );
       // v19: la ficha abre con las secciones en Cards y el precio usa
       // MoneyField (formato de miles en vivo).
       await tester.tap(find.text(store.products.first.name));
@@ -357,27 +423,33 @@ void main() {
       expect(find.text('AJUSTES DEL PRODUCTO'), findsOneWidget);
     });
 
-    testWidgets('Análisis: Gastos alimentado por compras de Lista', (tester) async {
+    testWidgets('Análisis: Gastos alimentado por compras de Lista', (
+      tester,
+    ) async {
       final store = _pumpedStore(tester, dir: 'w6');
       await _initServices(store);
-      store.addPurchase(Purchase(
-        id: 'p1',
-        date: DateTime.now(),
-        store: 'Súper A',
-        items: const [],
-        totalUSD: 25,
-        totalBS: 1000,
-        rate: 40,
-      ));
-      store.addPurchase(Purchase(
-        id: 'p2',
-        date: DateTime.now().subtract(const Duration(days: 1)),
-        store: 'Bodega B',
-        items: const [],
-        totalUSD: 10,
-        totalBS: 400,
-        rate: 40,
-      ));
+      store.addPurchase(
+        Purchase(
+          id: 'p1',
+          date: DateTime.now(),
+          store: 'Súper A',
+          items: const [],
+          totalUSD: 25,
+          totalBS: 1000,
+          rate: 40,
+        ),
+      );
+      store.addPurchase(
+        Purchase(
+          id: 'p2',
+          date: DateTime.now().subtract(const Duration(days: 1)),
+          store: 'Bodega B',
+          items: const [],
+          totalUSD: 10,
+          totalBS: 400,
+          rate: 40,
+        ),
+      );
       await tester.pumpWidget(_wrap(const InsightsScreen(), store: store));
       await tester.pumpAndSettle();
       // Ancla Gastos (v17.8): sin carga manual, con compras entra la vista.
@@ -411,14 +483,22 @@ void main() {
     testWidgets('Centro de notificaciones vacío honesto', (tester) async {
       final store = _pumpedStore(tester, dir: 'w8');
       await _initServices(store);
-      await tester.pumpWidget(_wrap(const Scaffold(body: SizedBox()), store: store));
-      await tester.pumpWidget(_wrap(
-        Builder(builder: (context) => Center(child: ElevatedButton(
-          onPressed: () => showNotificationCenter(context),
-          child: const Text('abrir'),
-        ))),
-        store: store,
-      ));
+      await tester.pumpWidget(
+        _wrap(const Scaffold(body: SizedBox()), store: store),
+      );
+      await tester.pumpWidget(
+        _wrap(
+          Builder(
+            builder: (context) => Center(
+              child: ElevatedButton(
+                onPressed: () => showNotificationCenter(context),
+                child: const Text('abrir'),
+              ),
+            ),
+          ),
+          store: store,
+        ),
+      );
       await tester.tap(find.text('abrir'));
       await tester.pumpAndSettle();
       expect(find.text('Todo tranquilo'), findsOneWidget);
@@ -426,10 +506,9 @@ void main() {
     });
 
     testWidgets('Legal: privacidad y licencias', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(),
-        home: const LegalScreen(),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(theme: AppTheme.light(), home: const LegalScreen()),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Privacidad'), findsOneWidget);
       expect(find.text('Licencias'), findsOneWidget);
@@ -440,35 +519,77 @@ void main() {
     testWidgets('navega 5 pestañas y badge de carrito', (tester) async {
       final store = _pumpedStore(tester, dir: 'w9');
       await _initServices(store);
-      store.addToCart(const CartItem(id: 'k', name: 'X', quantity: 3, price: 1, currency: 'USD'));
+      store.addToCart(
+        const CartItem(
+          id: 'k',
+          name: 'X',
+          quantity: 3,
+          price: 1,
+          currency: 'USD',
+        ),
+      );
       final router = GoRouter(
         initialLocation: '/',
         routes: [
           StatefulShellRoute.indexedStack(
             builder: (_, _, shell) => MainShell(navigationShell: shell),
             branches: [
-              StatefulShellBranch(routes: [GoRoute(path: '/', builder: (_, _) => const HomeScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: '/conversor', builder: (_, _) => const ConverterScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: '/lista', builder: (_, _) => const ListaScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: '/productos', builder: (_, _) => const ProductsScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: '/analisis', builder: (_, _) => const InsightsScreen())]),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: '/conversor',
+                    builder: (_, _) => const ConverterScreen(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: '/lista',
+                    builder: (_, _) => const ListaScreen(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: '/productos',
+                    builder: (_, _) => const ProductsScreen(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: '/analisis',
+                    builder: (_, _) => const InsightsScreen(),
+                  ),
+                ],
+              ),
             ],
           ),
         ],
       );
-      await tester.pumpWidget(MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          ChangeNotifierProvider(create: (_) => ThemeController()),
-          ChangeNotifierProvider.value(value: _poller),
-          // v18.0: la Lista lee el controlador de sala del árbol.
-          ChangeNotifierProvider(create: (_) => RoomController(store)),
-        ],
-        child: MaterialApp.router(
-          theme: AppTheme.light(),
-          routerConfig: router,
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: store),
+            ChangeNotifierProvider(create: (_) => ThemeController()),
+            ChangeNotifierProvider.value(value: _poller),
+            // v18.0: la Lista lee el controlador de sala del árbol.
+            ChangeNotifierProvider(create: (_) => RoomController(store)),
+          ],
+          child: MaterialApp.router(
+            theme: AppTheme.light(),
+            routerConfig: router,
+          ),
         ),
-      ));
+      );
       // v17.6: la rama Home del shell tiene board vacío → LoadingState
       // (spinner indefinido). Bombeo acotado en lugar de pumpAndSettle.
       await tester.pump();
@@ -483,7 +604,9 @@ void main() {
   });
 
   group('Ajustes v19: tasas manuales sin desbordes', () {
-    testWidgets('fila manual flexible con valor y editor compartido', (tester) async {
+    testWidgets('fila manual flexible con valor y editor compartido', (
+      tester,
+    ) async {
       final store = _pumpedStore(tester, dir: 'w13');
       await _initServices(store);
       store.setManualRate('ves-manual', 41.5);
@@ -509,17 +632,19 @@ void main() {
   });
 
   group('Banderas (v19): las 6 divisas cargan su asset real', () {
-    testWidgets('Flag de cada divisa pinta la imagen, no el fallback', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          body: Wrap(
-            children: [
-              for (final c in Currency.values) Flag(c, size: 24),
-            ],
+    testWidgets('Flag de cada divisa pinta la imagen, no el fallback', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Wrap(
+              children: [for (final c in Currency.values) Flag(c, size: 24)],
+            ),
           ),
         ),
-      ));
+      );
       // Las 6 divisas del foco tienen asset real (assets/flags): ninguna
       // cae al fallback (ColoredBox del errorBuilder).
       expect(find.byType(Image), findsNWidgets(Currency.values.length));
@@ -528,25 +653,35 @@ void main() {
   });
 
   group('Home v19: fecha simple, sin saltos y manual no es offline', () {
-    testWidgets('fecha corta «lun 15 sep · HH:MM» sin fecha larga', (tester) async {
+    testWidgets('fecha corta «lun 15 sep · HH:MM» sin fecha larga', (
+      tester,
+    ) async {
       final store = _pumpedStore(tester, dir: 'w11');
       await _initServices(store);
-      store.setRateBoard(RateBoard(sources: {
-        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
-        'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
-      }));
+      store.setRateBoard(
+        RateBoard(
+          sources: {
+            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
+            'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
+          },
+        ),
+      );
       await tester.pumpWidget(_wrap(const HomeScreen(), store: store));
       await tester.pumpAndSettle();
       // La fecha larga («lunes, 15 de septiembre de 2026») ya NO existe.
       expect(find.textContaining(' de septiembre de '), findsNothing);
       // El formato corto vive en UNA línea: «dia DD mes · HH:MM».
       expect(
-          find.textContaining(
-              RegExp(r'^[a-záéíóú]{3} \d{1,2} [a-z]{3} · \d{2}:\d{2}$')),
-          findsOneWidget);
+        find.textContaining(
+          RegExp(r'^[a-záéíóú]{3} \d{1,2} [a-z]{3} · \d{2}:\d{2}$'),
+        ),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('tasa manual activa → SIN banner de salud (no es offline)', (tester) async {
+    testWidgets('tasa manual activa → SIN banner de salud (no es offline)', (
+      tester,
+    ) async {
       final store = _pumpedStore(tester, dir: 'w12');
       await _initServices(store);
       store.setManualRate('ves-manual', 42);
@@ -563,9 +698,18 @@ void main() {
   group('Tour completo (v19.0 · motor propio, un solo tutorial)', () {
     test('integridad: 6 segmentos, ids únicos, anclas GlobalKeys', () {
       // El tour es UNO y cubre toda la app: 5 pestañas + Ajustes.
-      expect(kTourSegments.map((s) => s.location).toList(),
-          ['/', '/conversor', '/lista', '/productos', '/analisis', '/ajustes']);
-      final ids = [for (final s in kTourSegments) for (final st in s.steps) st.id];
+      expect(kTourSegments.map((s) => s.location).toList(), [
+        '/',
+        '/conversor',
+        '/lista',
+        '/productos',
+        '/analisis',
+        '/ajustes',
+      ]);
+      final ids = [
+        for (final s in kTourSegments)
+          for (final st in s.steps) st.id,
+      ];
       expect(ids.toSet().length, ids.length, reason: 'ids de pasos únicos');
       expect(ids.length, greaterThanOrEqualTo(12));
       // v19: SOLO la introducción va sin ancla (tarjeta centrada arriba);
@@ -575,15 +719,19 @@ void main() {
           for (final st in s.steps)
             if (st.anchor == null) st.id,
       ];
-      expect(sinAncla, ['inicio.bienvenida'],
-          reason: 'solo el primer paso es centrado; el resto enfoca zonas');
+      expect(sinAncla, [
+        'inicio.bienvenida',
+      ], reason: 'solo el primer paso es centrado; el resto enfoca zonas');
       // Las anclas son únicas (un GlobalKey no puede enfocar dos widgets).
       final anchors = [
         for (final s in kTourSegments)
           for (final st in s.steps) st.anchor,
       ];
-      expect(anchors.toSet().length, anchors.length,
-          reason: 'anclas sin duplicar');
+      expect(
+        anchors.toSet().length,
+        anchors.length,
+        reason: 'anclas sin duplicar',
+      );
     });
 
     test('flag una-sola-vez: marcar hecho y no repetir', () async {
@@ -594,7 +742,9 @@ void main() {
       expect(isTourDone(prefs), isTrue);
     });
 
-    testWidgets('arranca tras montar el shell, salta y restaura', (tester) async {
+    testWidgets('arranca tras montar el shell, salta y restaura', (
+      tester,
+    ) async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final store = _pumpedStore(tester, dir: 'w10');
@@ -602,30 +752,42 @@ void main() {
       // Onboarding YA hecho: el router arranca en '/' y el shell monta con
       // su _TourTrigger (el tour auto-arranca tras la bienvenida real).
       store.finishOnboarding();
-      store.setRateBoard(RateBoard(sources: {
-        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
-        'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
-      }));
+      store.setRateBoard(
+        RateBoard(
+          sources: {
+            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
+            'ves-parallel': RateEntry(rate: 44, updatedAt: DateTime.now()),
+          },
+        ),
+      );
       final router = buildRouter(store: store);
-      await tester.pumpWidget(MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          ChangeNotifierProvider(create: (_) => ThemeController()),
-          ChangeNotifierProvider.value(value: _poller),
-          Provider<SharedPreferences>.value(value: prefs),
-          // v18.0: el shell/Lista leen el controlador de sala del árbol.
-          ChangeNotifierProvider(create: (_) => RoomController(store)),
-        ],
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
-      ));
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: store),
+            ChangeNotifierProvider(create: (_) => ThemeController()),
+            ChangeNotifierProvider.value(value: _poller),
+            Provider<SharedPreferences>.value(value: prefs),
+            // v18.0: el shell/Lista leen el controlador de sala del árbol.
+            ChangeNotifierProvider(create: (_) => RoomController(store)),
+          ],
+          child: MaterialApp.router(
+            theme: AppTheme.light(),
+            routerConfig: router,
+          ),
+        ),
+      );
       // El shell monta → _TourTrigger dispara el tour. La cadena
       // (350 ms de respiro → ensureVisible → overlay) necesita algunos
       // frames: se espera por condición. El motor propio NO tiene
       // animaciones infinitas, pero el ticker del shell puede seguir vivo
       // — por eso condición y no pumpAndSettle.
-      for (var i = 0;
-          i < 30 && find.text('Tus datos viven en tu teléfono').evaluate().isEmpty;
-          i++) {
+      for (
+        var i = 0;
+        i < 30 &&
+            find.text('Tus datos viven en tu teléfono').evaluate().isEmpty;
+        i++
+      ) {
         await tester.pump(const Duration(milliseconds: 150));
       }
       expect(find.text('Tus datos viven en tu teléfono'), findsOneWidget);
@@ -634,9 +796,12 @@ void main() {
       expect(isTourDone(prefs), isTrue);
       // Saltar corta TODO el tour y restaura la petaña de origen.
       await tester.tap(find.text('Saltar'));
-      for (var i = 0;
-          i < 30 && find.text('Tus datos viven en tu teléfono').evaluate().isNotEmpty;
-          i++) {
+      for (
+        var i = 0;
+        i < 30 &&
+            find.text('Tus datos viven en tu teléfono').evaluate().isNotEmpty;
+        i++
+      ) {
         await tester.pump(const Duration(milliseconds: 150));
       }
       expect(find.text('Tus datos viven en tu teléfono'), findsNothing);

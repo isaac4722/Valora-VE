@@ -93,17 +93,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   ),
                   Expanded(
                     child: Center(
-                      child: _Dots(
-                        count: 4,
-                        index: _index,
-                        onTap: _go,
-                      ),
+                      child: _Dots(count: 4, index: _index, onTap: _go),
                     ),
                   ),
                   SizedBox(
                     width: 140,
                     child: FilledButton(
-                      onPressed: _index < 3 ? () => _go(_index + 1) : () => _finish(store),
+                      onPressed: _index < 3
+                          ? () => _go(_index + 1)
+                          : () => _finish(store),
                       child: Text(
                         _index < 3 ? 'Siguiente' : 'Comenzar',
                         maxLines: 1,
@@ -137,10 +135,17 @@ class _SlideMarca extends StatelessWidget {
           Center(
             child: RichText(
               text: TextSpan(
-                style: VeText.displayNum(44, color: scheme.onSurface, weight: FontWeight.w700),
+                style: VeText.displayNum(
+                  44,
+                  color: scheme.onSurface,
+                  weight: FontWeight.w700,
+                ),
                 children: <InlineSpan>[
                   const TextSpan(text: 'Valora'),
-                  TextSpan(text: 'VE', style: TextStyle(color: scheme.primary)),
+                  TextSpan(
+                    text: 'VE',
+                    style: TextStyle(color: scheme.primary),
+                  ),
                 ],
               ),
             ),
@@ -150,7 +155,11 @@ class _SlideMarca extends StatelessWidget {
             child: Text(
               'Precios y divisas de Venezuela',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 15.5,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(height: 6),
@@ -158,7 +167,11 @@ class _SlideMarca extends StatelessWidget {
             child: Text(
               'El instrumento para registrar, comparar y calcular.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(height: 34),
@@ -220,7 +233,14 @@ class _SlideQueHace extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           const SizedBox(height: 8),
-          Text('Lo que hace', style: VeText.displayNum(24, color: scheme.onSurface, weight: FontWeight.w700)),
+          Text(
+            'Lo que hace',
+            style: VeText.displayNum(
+              24,
+              color: scheme.onSurface,
+              weight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             'Tres cosas, bien hechas.',
@@ -231,14 +251,16 @@ class _SlideQueHace extends StatelessWidget {
             icon: Icons.swap_horiz,
             color: scheme.primary,
             title: 'Tasas con contexto',
-            body: 'Oficial, promedio y paralelo, siempre con la fuente a la vista.',
+            body:
+                'Oficial, promedio y paralelo, siempre con la fuente a la vista.',
           ),
           const SizedBox(height: 12),
           _WelcomeBullet(
             icon: Icons.receipt_long_outlined,
             color: sem.pos,
             title: 'Tu libro de precios',
-            body: 'Compras como asientos contables, con ticket y totales al cambio.',
+            body:
+                'Compras como asientos contables, con ticket y totales al cambio.',
           ),
           const SizedBox(height: 12),
           _WelcomeBullet(
@@ -266,7 +288,14 @@ class _SlideDatos extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           const SizedBox(height: 8),
-          Text('Tus datos, tuyos', style: VeText.displayNum(24, color: scheme.onSurface, weight: FontWeight.w700)),
+          Text(
+            'Tus datos, tuyos',
+            style: VeText.displayNum(
+              24,
+              color: scheme.onSurface,
+              weight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             'Sin cuentas, sin nube, sin claves.',
@@ -285,12 +314,20 @@ class _SlideDatos extends StatelessWidget {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    Icon(Icons.cloud_done_outlined, size: 20, color: scheme.primary),
+                    Icon(
+                      Icons.cloud_done_outlined,
+                      size: 20,
+                      color: scheme.primary,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Tasas en vivo, datos tuyos',
-                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: scheme.onSurface),
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
                       ),
                     ),
                   ],
@@ -302,7 +339,11 @@ class _SlideDatos extends StatelessWidget {
                   'para consultarlas sin conexión. Tus registros, listas y compras '
                   'viven solo aquí: sin cuentas ni claves. Sin red la app sigue '
                   'igual y acepta tasas manuales.',
-                  style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 const Divider(height: 22),
                 // Leyenda de categorías (dp6): el color dice qué es la tasa.
@@ -332,7 +373,14 @@ class _SlidePais extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           const SizedBox(height: 8),
-          Text('¿Desde dónde miras las tasas?', style: VeText.displayNum(24, color: scheme.onSurface, weight: FontWeight.w700)),
+          Text(
+            '¿Desde dónde miras las tasas?',
+            style: VeText.displayNum(
+              24,
+              color: scheme.onSurface,
+              weight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             'Define el tablero protagonista.',
@@ -342,7 +390,11 @@ class _SlidePais extends StatelessWidget {
           Text(
             'Lo puedes cambiar en Ajustes cuando quieras. Al tocar «Comenzar» '
             'verás el tutorial completo de la app.',
-            style: TextStyle(fontSize: 12.5, height: 1.45, color: scheme.onSurfaceVariant),
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.45,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -392,9 +444,7 @@ class _Dots extends StatelessWidget {
                 width: i == index ? 18 : 7,
                 height: 7,
                 decoration: BoxDecoration(
-                  color: i == index
-                      ? scheme.primary
-                      : scheme.outlineVariant,
+                  color: i == index ? scheme.primary : scheme.outlineVariant,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -407,7 +457,11 @@ class _Dots extends StatelessWidget {
 
 /// Chip compacto de país (bandera real).
 class _CountryChip extends StatelessWidget {
-  const _CountryChip({required this.country, required this.selected, required this.onTap});
+  const _CountryChip({
+    required this.country,
+    required this.selected,
+    required this.onTap,
+  });
 
   final Country country;
   final bool selected;
@@ -424,29 +478,43 @@ class _CountryChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: selected ? scheme.primary : scheme.outlineVariant,
-              width: selected ? 1.4 : 1),
-          color: selected ? scheme.primary.withValues(alpha: 0.07) : scheme.surface,
+            color: selected ? scheme.primary : scheme.outlineVariant,
+            width: selected ? 1.4 : 1,
+          ),
+          color: selected
+              ? scheme.primary.withValues(alpha: 0.07)
+              : scheme.surface,
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          // BANDERA REAL del país (assets/flags): "Global" usa ícono
-          // public porque USD no tiene bandera de país.
-          country == Country.US
-              ? Icon(Icons.public, size: 14, color: scheme.primary)
-              : Flag(country.currency, size: 14),
-          const SizedBox(width: 6),
-          Text(country.label,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // BANDERA REAL del país (assets/flags): "Global" usa ícono
+            // public porque USD no tiene bandera de país.
+            country == Country.US
+                ? Icon(Icons.public, size: 14, color: scheme.primary)
+                : Flag(country.currency, size: 14),
+            const SizedBox(width: 6),
+            Text(
+              country.label,
               style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500)),
-        ]),
+                fontSize: 12.5,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _WelcomeBullet extends StatelessWidget {
-  const _WelcomeBullet({required this.icon, required this.color, required this.title, required this.body});
+  const _WelcomeBullet({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.body,
+  });
 
   final IconData icon;
   final Color color;
@@ -480,12 +548,20 @@ class _WelcomeBullet extends StatelessWidget {
               children: <Widget>[
                 Text(
                   title,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: scheme.onSurface),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   body,
-                  style: TextStyle(fontSize: 12.5, height: 1.4, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

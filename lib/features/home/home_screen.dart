@@ -52,13 +52,13 @@ class HomeScreen extends StatelessWidget {
               duration: kLayoutDur,
               curve: kEaseVe,
               alignment: Alignment.topCenter,
-              child: Column(children: [
-                _RateHero(),
-                _WeekSpark(),
-              ]),
+              child: Column(children: [_RateHero(), _WeekSpark()]),
             ),
             // Anclas del tour completo (v17.8): cotización + divisas del foco.
-            KeyedSubtree(key: TourKeys.cotizacion, child: _CotizacionPrincipal()),
+            KeyedSubtree(
+              key: TourKeys.cotizacion,
+              child: _CotizacionPrincipal(),
+            ),
             KeyedSubtree(key: TourKeys.divisasFoco, child: _DivisasFoco()),
             _ResumenMes(),
             _AlertasPrecios(),
@@ -106,10 +106,11 @@ class _HeroState extends State<_Hero> {
       final today = store.board.sources[id]?.rate;
       if (today == null || today <= 0) continue;
       final day = SnapshotPoint.dayKey(_now.subtract(const Duration(days: 1)));
-      final yest = store.snapshots
-          .where((p) => p.sourceId == id && p.day == day)
-          .toList()
-        ..sort((a, b) => a.day.compareTo(b.day));
+      final yest =
+          store.snapshots
+              .where((p) => p.sourceId == id && p.day == day)
+              .toList()
+            ..sort((a, b) => a.day.compareTo(b.day));
       if (yest.isEmpty || yest.last.rate <= 0) continue;
       final pct = (today / yest.last.rate - 1) * 100;
       return (id == 'ves-parallel' ? 'Paralelo' : 'BCV', pct);
@@ -136,32 +137,42 @@ class _HeroState extends State<_Hero> {
 
     return Padding(
       padding: const EdgeInsets.only(top: 10, bottom: 14),
-      child: Row(children: [
-        // v19 (orden del dueño): la fecha LARGA se retira — una sola línea
-        // corta «lun 15 sep · 14:30» dice lo mismo sin ocupar el hero.
-        Expanded(
-          child: Text(
-            '${kDias[now.weekday - 1].substring(0, 3)} ${now.day} ${kMeses[now.month - 1].substring(0, 3)} · $hhmm',
-            style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: scheme.onSurface, height: 1.2),
-          ),
-        ),
-        if (widget.poller.loading)
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          )
-        else ...[
-          if (vsAyer != null) ...[
-            Tooltip(
-              message: '${vsAyer.$1} hoy vs ayer (snapshot local)',
-              child: TrendBadge(vsAyer.$2),
+      child: Row(
+        children: [
+          // v19 (orden del dueño): la fecha LARGA se retira — una sola línea
+          // corta «lun 15 sep · 14:30» dice lo mismo sin ocupar el hero.
+          Expanded(
+            child: Text(
+              '${kDias[now.weekday - 1].substring(0, 3)} ${now.day} ${kMeses[now.month - 1].substring(0, 3)} · $hhmm',
+              style: TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurface,
+                height: 1.2,
+              ),
             ),
-            const SizedBox(width: 6),
+          ),
+          if (widget.poller.loading)
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else ...[
+            if (vsAyer != null) ...[
+              Tooltip(
+                message: '${vsAyer.$1} hoy vs ayer (snapshot local)',
+                child: TrendBadge(vsAyer.$2),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              freshness ?? '',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
           ],
-          Text(freshness ?? '', style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
         ],
-      ]),
+      ),
     );
   }
 }
@@ -195,15 +206,20 @@ class _RateHero extends StatelessWidget {
     // Brecha real vs BCV cuando la activa NO es la oficial (sello del héroe).
     final double? bcv = store.board.sources['ves-bcv']?.rate;
     final double? gapPct =
-        (bcv != null && bcv > 0 && e.rate > 0 && activeId != 'ves-bcv') ? (e.rate / bcv - 1) * 100 : null;
+        (bcv != null && bcv > 0 && e.rate > 0 && activeId != 'ves-bcv')
+        ? (e.rate / bcv - 1) * 100
+        : null;
 
     // vs ayer: snapshot local del día anterior para la fuente activa.
     String? vsAyerLabel;
-    final String dayKey = SnapshotPoint.dayKey(DateTime.now().subtract(const Duration(days: 1)));
-    final yest = store.snapshots
-        .where((p) => p.sourceId == activeId && p.day == dayKey)
-        .toList()
-      ..sort((a, b) => a.day.compareTo(b.day));
+    final String dayKey = SnapshotPoint.dayKey(
+      DateTime.now().subtract(const Duration(days: 1)),
+    );
+    final yest =
+        store.snapshots
+            .where((p) => p.sourceId == activeId && p.day == dayKey)
+            .toList()
+          ..sort((a, b) => a.day.compareTo(b.day));
     if (yest.isNotEmpty && yest.last.rate > 0) {
       final double pct = (e.rate / yest.last.rate - 1) * 100;
       vsAyerLabel = 'vs ayer ${fmtPct(pct, forceSign: true)}';
@@ -213,96 +229,147 @@ class _RateHero extends StatelessWidget {
       key: kHeroRateKey,
       child: Padding(
         padding: const EdgeInsets.all(18),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(
-              child: Text(
-                s.currency == Currency.usd ? 'Dólar en Venezuela' : s.label,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: scheme.onSurface, height: 1.1),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(2.5),
-              decoration: BoxDecoration(
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Flag(Currency.ves, size: 13),
-            ),
-          ]),
-          const SizedBox(height: 14),
-          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Expanded(
-              child: Settle(
-                child: ReadWindow(
-                semanticLabel: '1 dólar igual a ${fmtRate(e.rate)} bolívares',
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Flexible(
-                      child: Text(fmtRate(e.rate),
-                          style: VeText.displayNum(38, color: scheme.onSurface),
-                          overflow: TextOverflow.ellipsis),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    s.currency == Currency.usd ? 'Dólar en Venezuela' : s.label,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurface,
+                      height: 1.1,
                     ),
-                    const SizedBox(width: 9),
-                    const Flag(Currency.usd, size: 21),
-                    const SizedBox(width: 6),
-                    Text('USD', style: VeText.displayNum(20, color: scheme.onSurfaceVariant, weight: FontWeight.w600)),
-                  ],
-                ),
-              ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            InkWell(
-              onTap: () => copiarAlPortapapeles(
-                  context, fmtRate(e.rate).replaceAll('.', ','), 'Tasa copiada'),
-              borderRadius: BorderRadius.circular(999),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: scheme.outlineVariant),
-                ),
-                child: Icon(Icons.copy_outlined, size: 14, color: scheme.onSurfaceVariant),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Stamp(s.category.label, color: catColor),
-              Stamp(s.detail, color: scheme.onSurfaceVariant),
-              if (gapPct != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                      color: sem.neg.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(999)),
-                  child: Text(
-                    'brecha ${fmtPct(gapPct)}',
-                    style: TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w700, fontFamily: 'SpaceGrotesk', color: sem.neg),
                   ),
                 ),
-              if (vsAyerLabel != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.all(2.5),
                   decoration: BoxDecoration(
-                      color: sem.pos.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(999)),
-                  child: Text(
-                    vsAyerLabel,
-                    style: TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w700, fontFamily: 'SpaceGrotesk', color: sem.pos),
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Flag(Currency.ves, size: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Settle(
+                    child: ReadWindow(
+                      semanticLabel:
+                          '1 dólar igual a ${fmtRate(e.rate)} bolívares',
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              fmtRate(e.rate),
+                              style: VeText.displayNum(
+                                38,
+                                color: scheme.onSurface,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 9),
+                          const Flag(Currency.usd, size: 21),
+                          const SizedBox(width: 6),
+                          Text(
+                            'USD',
+                            style: VeText.displayNum(
+                              20,
+                              color: scheme.onSurfaceVariant,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-            ],
-          ),
-        ]),
+                const SizedBox(width: 10),
+                InkWell(
+                  onTap: () => copiarAlPortapapeles(
+                    context,
+                    fmtRate(e.rate).replaceAll('.', ','),
+                    'Tasa copiada',
+                  ),
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: scheme.outlineVariant),
+                    ),
+                    child: Icon(
+                      Icons.copy_outlined,
+                      size: 14,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Stamp(s.category.label, color: catColor),
+                Stamp(s.detail, color: scheme.onSurfaceVariant),
+                if (gapPct != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: sem.neg.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      'brecha ${fmtPct(gapPct)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'SpaceGrotesk',
+                        color: sem.neg,
+                      ),
+                    ),
+                  ),
+                if (vsAyerLabel != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: sem.pos.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      vsAyerLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'SpaceGrotesk',
+                        color: sem.pos,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -336,14 +403,24 @@ class _WeekSpark extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Últimos 7 días',
-                        style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
+                    Text(
+                      'Últimos 7 días',
+                      style: VeText.labelCaps(
+                        9.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    LayoutBuilder(builder: (context, box) {
-                      final w = (box.maxWidth - 84).clamp(120.0, 220.0);
-                      return Sparkline(
-                          values: values, width: w.toDouble(), height: 30);
-                    }),
+                    LayoutBuilder(
+                      builder: (context, box) {
+                        final w = (box.maxWidth - 84).clamp(120.0, 220.0);
+                        return Sparkline(
+                          values: values,
+                          width: w.toDouble(),
+                          height: 30,
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -351,10 +428,21 @@ class _WeekSpark extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Ayer', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
+                  Text(
+                    'Ayer',
+                    style: VeText.labelCaps(
+                      9.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(fmtRate(ayer),
-                      style: VeText.displayNum(15, color: scheme.onSurfaceVariant)),
+                  Text(
+                    fmtRate(ayer),
+                    style: VeText.displayNum(
+                      15,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -382,70 +470,88 @@ class _CotizacionPrincipal extends StatelessWidget {
     final manualId = '${country.currency.code.toLowerCase()}-manual';
     final hasAny = !store.board.isEmpty || ctx.rates.containsKey(manualId);
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Cotización principal'),
-      if (!hasAny)
-        if (poller.offlineActive)
-          // Desconexión ELEGIDA (modo offline): cloud_off + guía local.
-          OfflineState(
-            'Modo offline activo',
-            hint: 'ValoraVE funciona 100% local. Pega tu tasa manual aquí '
-                'mismo, o desactiva el modo offline cuando quieras volver a '
-                'consultar las APIs.',
-            actionLabel: 'Tasa manual',
-            onAction: () => _editManual(context, store, manualId),
-          )
-        else if (poller.networkBlocked || poller.offlineNet)
-          // Sin red (señal viva v17.8) o red bloqueada SIN datos guardados:
-          // wifi_off + salidas reales — NUNCA spinner de 7 s que va a fallar.
-          OfflineState(
-            'Sin conexión · sin tasas guardadas todavía',
-            hint: 'No pierdes nada: todo lo demás de la app funciona igual '
-                'con los datos de tu teléfono. Cuando vuelva la red, las '
-                'tasas se descargan solas; o pega una tasa manual ahora.',
-            icon: Icons.wifi_off,
-            actionLabel: poller.loading ? 'Consultando…' : 'Reintentar',
-            onAction: poller.loading ? null : () => poller.retryNow(),
-            secondaryLabel: 'Tasa manual',
-            onSecondary: () => _editManual(context, store, manualId),
-          )
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle('Cotización principal'),
+        if (!hasAny)
+          if (poller.offlineActive)
+            // Desconexión ELEGIDA (modo offline): cloud_off + guía local.
+            OfflineState(
+              'Modo offline activo',
+              hint:
+                  'ValoraVE funciona 100% local. Pega tu tasa manual aquí '
+                  'mismo, o desactiva el modo offline cuando quieras volver a '
+                  'consultar las APIs.',
+              actionLabel: 'Tasa manual',
+              onAction: () => _editManual(context, store, manualId),
+            )
+          else if (poller.networkBlocked || poller.offlineNet)
+            // Sin red (señal viva v17.8) o red bloqueada SIN datos guardados:
+            // wifi_off + salidas reales — NUNCA spinner de 7 s que va a fallar.
+            OfflineState(
+              'Sin conexión · sin tasas guardadas todavía',
+              hint:
+                  'No pierdes nada: todo lo demás de la app funciona igual '
+                  'con los datos de tu teléfono. Cuando vuelva la red, las '
+                  'tasas se descargan solas; o pega una tasa manual ahora.',
+              icon: Icons.wifi_off,
+              actionLabel: poller.loading ? 'Consultando…' : 'Reintentar',
+              onAction: poller.loading ? null : () => poller.retryNow(),
+              secondaryLabel: 'Tasa manual',
+              onSecondary: () => _editManual(context, store, manualId),
+            )
+          else
+            // PRIMERA CARGA: spinner, cero iconografía de red.
+            LoadingState(
+              'Buscando tasas…',
+              hint:
+                  'Primera carga de tasas en curso. También puedes pegar '
+                  'una tasa manual ahora mismo.',
+              actionLabel: 'Tasa manual',
+              onAction: () => _editManual(context, store, manualId),
+            )
         else
-          // PRIMERA CARGA: spinner, cero iconografía de red.
-          LoadingState(
-            'Buscando tasas…',
-            hint: 'Primera carga de tasas en curso. También puedes pegar '
-                'una tasa manual ahora mismo.',
-            actionLabel: 'Tasa manual',
-            onAction: () => _editManual(context, store, manualId),
-          )
-      else
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(children: [
-              // ── Grupo USD: todas las fuentes «1 USD = X» ──
-              const RateGroupHeader(
-                Currency.usd,
-                hint: '1 USD = X · toca una fila para activarla',
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                children: [
+                  // ── Grupo USD: todas las fuentes «1 USD = X» ──
+                  const RateGroupHeader(
+                    Currency.usd,
+                    hint: '1 USD = X · toca una fila para activarla',
+                  ),
+                  ..._groupRows(context, store, ctx, [
+                    Currency.ves,
+                    Currency.cop,
+                    Currency.brl,
+                    Currency.mxn,
+                  ], country.currency),
+                  // ── Grupo EUR: aristas del euro (solo si alguna tiene valor) ──
+                  if (_visibleSources(ctx, const [
+                    Currency.eur,
+                  ], country.currency).isNotEmpty) ...<Widget>[
+                    const RateGroupHeader(Currency.eur, hint: '1 EUR = X'),
+                    ..._groupRows(context, store, ctx, const [
+                      Currency.eur,
+                    ], country.currency),
+                  ],
+                ],
               ),
-              ..._groupRows(context, store, ctx,
-                  [Currency.ves, Currency.cop, Currency.brl, Currency.mxn],
-                  country.currency),
-              // ── Grupo EUR: aristas del euro (solo si alguna tiene valor) ──
-              if (_visibleSources(ctx, const [Currency.eur], country.currency).isNotEmpty) ...<Widget>[
-                const RateGroupHeader(Currency.eur, hint: '1 EUR = X'),
-                ..._groupRows(context, store, ctx, const [Currency.eur], country.currency),
-              ],
-            ]),
+            ),
           ),
-        ),
-    ]);
+      ],
+    );
   }
 
   /// Fuentes visibles de [currencies]: con valor (>0) + SIEMPRE la Manual
   /// de la divisa del país (acceso rápido del dueño).
   List<RateSource> _visibleSources(
-      RateContext ctx, List<Currency> currencies, Currency countryCurrency) {
+    RateContext ctx,
+    List<Currency> currencies,
+    Currency countryCurrency,
+  ) {
     final out = <RateSource>[];
     for (final c in currencies) {
       for (final s in RateSource.sourcesFor(c)) {
@@ -458,8 +564,13 @@ class _CotizacionPrincipal extends StatelessWidget {
     return out;
   }
 
-  List<Widget> _groupRows(BuildContext context, AppStore store, RateContext ctx,
-      List<Currency> currencies, Currency countryCurrency) {
+  List<Widget> _groupRows(
+    BuildContext context,
+    AppStore store,
+    RateContext ctx,
+    List<Currency> currencies,
+    Currency countryCurrency,
+  ) {
     return <Widget>[
       for (final s in _visibleSources(ctx, currencies, countryCurrency))
         RateTile(
@@ -486,7 +597,10 @@ class _CotizacionPrincipal extends StatelessWidget {
 
   /// Editor manual inline: guarda y ACTIVA la fuente del país.
   Future<void> _editManual(
-      BuildContext context, AppStore store, String sourceId) async {
+    BuildContext context,
+    AppStore store,
+    String sourceId,
+  ) async {
     final s = RateSource.of(sourceId);
     if (s == null) return;
     final saved = await showManualRateEditor(context, sourceId: sourceId);
@@ -507,32 +621,47 @@ class _DivisasFoco extends StatelessWidget {
     final ctx = store.contextOf();
 
     final list = CurrencyX.focus.toList(growable: false);
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Divisas del foco',
-          actionLabel: 'Ir al conversor', onAction: () => context.go('/conversor')),
-      Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Column(children: [
-          for (int i = 0; i < list.length; i += 2)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(children: [
-                Expanded(
-                    child: _MiniCard(
-                        currency: list[i], rate: ctx.activeRate(list[i]))),
-                if (i + 1 < list.length) ...[
-                  const SizedBox(width: 10),
-                  Expanded(
-                      child: _MiniCard(
-                          currency: list[i + 1],
-                          rate: ctx.activeRate(list[i + 1]))),
-                ] else
-                  const Expanded(child: SizedBox.shrink()),
-              ]),
-            ),
-        ]),
-      ),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle(
+          'Divisas del foco',
+          actionLabel: 'Ir al conversor',
+          onAction: () => context.go('/conversor'),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Column(
+            children: [
+              for (int i = 0; i < list.length; i += 2)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _MiniCard(
+                          currency: list[i],
+                          rate: ctx.activeRate(list[i]),
+                        ),
+                      ),
+                      if (i + 1 < list.length) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _MiniCard(
+                            currency: list[i + 1],
+                            rate: ctx.activeRate(list[i + 1]),
+                          ),
+                        ),
+                      ] else
+                        const Expanded(child: SizedBox.shrink()),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -554,7 +683,9 @@ class _MiniCard extends StatelessWidget {
       SourceCategory.manual => sem.manual,
     };
     return MiniRateCard(
-      label: s == null ? currency.code : '${currency.code} · ${s.category.label}',
+      label: s == null
+          ? currency.code
+          : '${currency.code} · ${s.category.label}',
       value: rate > 0 ? fmtRate(rate) : '—',
       ink: rate > 0 ? catInk : null,
       leading: Flag(currency, size: 14),
@@ -585,73 +716,122 @@ class _AlertasPrecios extends StatelessWidget {
     final store = context.watch<AppStore>();
     final scheme = Theme.of(context).colorScheme;
     final sem = VeColors.of(context);
-    final targets = store.products
-        .where((p) => p.targetPrice != null && p.targetPrice! > 0)
-        .toList()
-      ..sort((a, b) => (b.latestRecord?.date ?? b.createdAt)
-          .compareTo(a.latestRecord?.date ?? a.createdAt));
+    final targets =
+        store.products
+            .where((p) => p.targetPrice != null && p.targetPrice! > 0)
+            .toList()
+          ..sort(
+            (a, b) => (b.latestRecord?.date ?? b.createdAt).compareTo(
+              a.latestRecord?.date ?? a.createdAt,
+            ),
+          );
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Alertas de precios',
-          actionLabel: 'Ver productos', onAction: () => context.go('/productos')),
-      if (targets.isEmpty)
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(children: [
-              Icon(Icons.notifications_none, size: 18, color: scheme.onSurfaceVariant),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text('Sin metas configuradas',
-                    style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant)),
-              ),
-              TextButton(
-                onPressed: () => context.go('/productos'),
-                child: const Text('Fijar una meta'),
-              ),
-            ]),
-          ),
-        )
-      else
-        Card(
-          child: Column(children: [
-            for (final p in targets.take(6))
-              InkWell(
-                onTap: () => context.go('/productos'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  child: Row(children: [
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(p.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                        Text(
-                            'Meta ${fmtUSD(p.targetPrice!)} · Último ${p.latestRecord != null ? fmtUSD(p.latestRecord!.price) : '—'}',
-                            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
-                      ]),
-                    ),
-                    const SizedBox(width: 8),
-                    if (an.computeTargetInfo(p).met)
-                      Stamp('¡bajo meta!', color: sem.pos)
-                    else
-                      Stamp('pendiente', color: scheme.onSurfaceVariant),
-                  ]),
-                ),
-              ),
-            if (targets.length > 6)
-              Padding(
-                padding: const EdgeInsets.only(left: 14, right: 14, bottom: 10),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('y ${targets.length - 6} metas más en Productos.',
-                      style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
-                ),
-              ),
-          ]),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle(
+          'Alertas de precios',
+          actionLabel: 'Ver productos',
+          onAction: () => context.go('/productos'),
         ),
-    ]);
+        if (targets.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.notifications_none,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Sin metas configuradas',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.go('/productos'),
+                    child: const Text('Fijar una meta'),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          Card(
+            child: Column(
+              children: [
+                for (final p in targets.take(6))
+                  InkWell(
+                    onTap: () => context.go('/productos'),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  p.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  'Meta ${fmtUSD(p.targetPrice!)} · Último ${p.latestRecord != null ? fmtUSD(p.latestRecord!.price) : '—'}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (an.computeTargetInfo(p).met)
+                            Stamp('¡bajo meta!', color: sem.pos)
+                          else
+                            Stamp('pendiente', color: scheme.onSurfaceVariant),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (targets.length > 6)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: 14,
+                      right: 14,
+                      bottom: 10,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'y ${targets.length - 6} metas más en Productos.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -687,63 +867,110 @@ class _ResumenMes extends StatelessWidget {
     final sorted = byStore.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Resumen del mes',
-          actionLabel: 'Ver en Análisis', onAction: () => context.go('/analisis')),
-      if (monthPurchases.isEmpty)
-        Card(
-          child: EmptyState('Sin compras este mes',
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle(
+          'Resumen del mes',
+          actionLabel: 'Ver en Análisis',
+          onAction: () => context.go('/analisis'),
+        ),
+        if (monthPurchases.isEmpty)
+          Card(
+            child: EmptyState(
+              'Sin compras este mes',
               icon: Icons.shopping_cart_outlined,
-              hint: 'Finaliza una compra en Lista y este resumen se llena solo: '
-                  'total del mes, tiendas y comparación con el mes anterior.'),
-        )
-      else
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Gastado en ${kMeses[now.month - 1]}',
-                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
-              const SizedBox(height: 6),
-              AnimatedNumber(spent,
-                  style: VeText.displayNum(30, color: scheme.onSurface),
-                  decimals: 2),
-              const SizedBox(height: 4),
-              Text('$deltaSub · ${monthPurchases.length} ${monthPurchases.length == 1 ? 'compra' : 'compras'}',
-                  style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(child: StatCard(label: 'Compras', value: '${monthPurchases.length}', icon: Icons.receipt_long, tone: StatTone.neutral)),
-                const SizedBox(width: 8),
-                Expanded(child: StatCard(
-                    label: 'Tienda top',
-                    value: sorted.first.key,
-                    sub: sorted.length > 1 ? 'y ${sorted.length - 1} tiendas más' : null,
-                    icon: Icons.storefront_outlined,
-                    tone: StatTone.pos)),
-              ]),
-              if (sorted.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                for (final e in sorted.take(5))
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: LedgerRow(
-                      label: e.key,
-                      value: fmtUSD(e.value),
-                      leading: CircleAvatar(
-                        radius: 12,
-                        backgroundColor: scheme.primary.withValues(alpha: 0.10),
-                        child: Text(an.storeInitials(e.key),
-                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: scheme.primary)),
-                      ),
-                      dots: true, // cierre del resumen: conserva puntos contables
+              hint:
+                  'Finaliza una compra en Lista y este resumen se llena solo: '
+                  'total del mes, tiendas y comparación con el mes anterior.',
+            ),
+          )
+        else
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Gastado en ${kMeses[now.month - 1]}',
+                    style: VeText.labelCaps(
+                      9.5,
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
-              ],
-            ]),
+                  const SizedBox(height: 6),
+                  AnimatedNumber(
+                    spent,
+                    style: VeText.displayNum(30, color: scheme.onSurface),
+                    decimals: 2,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$deltaSub · ${monthPurchases.length} ${monthPurchases.length == 1 ? 'compra' : 'compras'}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: StatCard(
+                          label: 'Compras',
+                          value: '${monthPurchases.length}',
+                          icon: Icons.receipt_long,
+                          tone: StatTone.neutral,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: StatCard(
+                          label: 'Tienda top',
+                          value: sorted.first.key,
+                          sub: sorted.length > 1
+                              ? 'y ${sorted.length - 1} tiendas más'
+                              : null,
+                          icon: Icons.storefront_outlined,
+                          tone: StatTone.pos,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (sorted.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    for (final e in sorted.take(5))
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: LedgerRow(
+                          label: e.key,
+                          value: fmtUSD(e.value),
+                          leading: CircleAvatar(
+                            radius: 12,
+                            backgroundColor: scheme.primary.withValues(
+                              alpha: 0.10,
+                            ),
+                            child: Text(
+                              an.storeInitials(e.key),
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: scheme.primary,
+                              ),
+                            ),
+                          ),
+                          dots:
+                              true, // cierre del resumen: conserva puntos contables
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
           ),
-        ),
-    ]);
+      ],
+    );
   }
 }
 
@@ -754,30 +981,41 @@ class _TusTiendas extends StatelessWidget {
     final stats = an.storeStats(store.purchases).take(4).toList();
     if (stats.isEmpty) return const SizedBox.shrink();
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Tus tiendas',
-          actionLabel: 'Ver historial', onAction: () => context.go('/historial')),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(children: [
-            for (final s in stats)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: InkWell(
-                  onTap: () => showStoreSheet(context, s.store),
-                  borderRadius: BorderRadius.circular(10),
-                  child: LedgerRow(
-                    label: s.store.isEmpty ? 'Sin tienda' : s.store,
-                    value: fmtUSD(s.totalUSD),
-                    leading: StoreAvatar(s.store.isEmpty ? 'Sin Tienda' : s.store, size: 28),
-                  ),
-                ),
-              ),
-          ]),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle(
+          'Tus tiendas',
+          actionLabel: 'Ver historial',
+          onAction: () => context.go('/historial'),
         ),
-      ),
-    ]);
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                for (final s in stats)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: InkWell(
+                      onTap: () => showStoreSheet(context, s.store),
+                      borderRadius: BorderRadius.circular(10),
+                      child: LedgerRow(
+                        label: s.store.isEmpty ? 'Sin tienda' : s.store,
+                        value: fmtUSD(s.totalUSD),
+                        leading: StoreAvatar(
+                          s.store.isEmpty ? 'Sin Tienda' : s.store,
+                          size: 28,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -802,33 +1040,69 @@ void showStoreSheet(BuildContext context, String storeName) {
           controller: scroll,
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           children: [
-            Row(children: [
-              StoreAvatar(storeName.isEmpty ? 'Sin Tienda' : storeName, size: 40),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                  if (stat != null)
-                    Text('${stat.count} compras · última ${stat.last == null ? '—' : fmtDate(stat.last!)}',
-                        style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-                ]),
-              ),
-            ]),
+            Row(
+              children: [
+                StoreAvatar(
+                  storeName.isEmpty ? 'Sin Tienda' : storeName,
+                  size: 40,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (stat != null)
+                        Text(
+                          '${stat.count} compras · última ${stat.last == null ? '—' : fmtDate(stat.last!)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 14),
             if (stat == null)
               Padding(
                 padding: const EdgeInsets.only(top: 30),
-                child: Text('Sin compras registradas de esta tienda.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
+                child: Text(
+                  'Sin compras registradas de esta tienda.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               )
             else ...[
               ReadWindow(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('GASTO ACUMULADO', style: VeText.labelCaps(9, color: scheme.onSurfaceVariant)),
-                  const SizedBox(height: 4),
-                  Text(fmtUSD(stat.totalUSD), style: VeText.displayNum(26, color: scheme.onSurface)),
-                ]),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'GASTO ACUMULADO',
+                      style: VeText.labelCaps(
+                        9,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      fmtUSD(stat.totalUSD),
+                      style: VeText.displayNum(26, color: scheme.onSurface),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
               for (final p in purchases.take(12))
@@ -843,8 +1117,13 @@ void showStoreSheet(BuildContext context, String storeName) {
               if (purchases.length > 12)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text('y ${purchases.length - 12} compras más en el Historial.',
-                      style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant)),
+                  child: Text(
+                    'y ${purchases.length - 12} compras más en el Historial.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
               const SizedBox(height: 14),
               SizedBox(
@@ -874,46 +1153,90 @@ class _RegistrosRecientes extends StatelessWidget {
       recents.add('Compra · ${p.store ?? 'Sin tienda'} · ${fmtDate(p.date)}');
     }
     for (final t in store.transactions.take(3)) {
-      recents.add('${t.isIncome ? 'Ingreso' : 'Gasto'} · ${t.category.label} · ${fmtDate(t.date)}');
+      recents.add(
+        '${t.isIncome ? 'Ingreso' : 'Gasto'} · ${t.category.label} · ${fmtDate(t.date)}',
+      );
     }
     if (recents.isEmpty) return const SizedBox.shrink();
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Registros recientes',
-          actionLabel: 'Ver historial', onAction: () => context.go('/historial')),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Column(children: [
-            for (final r in recents)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(children: [
-                  Icon(Icons.history, size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(r, style: const TextStyle(fontSize: 12.5))),
-                ]),
-              ),
-          ]),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle(
+          'Registros recientes',
+          actionLabel: 'Ver historial',
+          onAction: () => context.go('/historial'),
         ),
-      ),
-    ]);
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Column(
+              children: [
+                for (final r in recents)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.history,
+                          size: 14,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            r,
+                            style: const TextStyle(fontSize: 12.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
 class _Herramientas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Herramientas'),
-      Row(children: [
-        Expanded(child: _Tool(icon: Icons.calculate_outlined, label: 'Conversor', onTap: () => context.go('/conversor'))),
-        const SizedBox(width: 8),
-        Expanded(child: _Tool(icon: Icons.shopping_cart_outlined, label: 'Lista', onTap: () => context.go('/lista'))),
-        const SizedBox(width: 8),
-        Expanded(child: _Tool(icon: Icons.receipt_long_outlined, label: 'Historial', onTap: () => context.go('/historial'))),
-      ]),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionTitle('Herramientas'),
+        Row(
+          children: [
+            Expanded(
+              child: _Tool(
+                icon: Icons.calculate_outlined,
+                label: 'Conversor',
+                onTap: () => context.go('/conversor'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _Tool(
+                icon: Icons.shopping_cart_outlined,
+                label: 'Lista',
+                onTap: () => context.go('/lista'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _Tool(
+                icon: Icons.receipt_long_outlined,
+                label: 'Historial',
+                onTap: () => context.go('/historial'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
 
@@ -935,11 +1258,16 @@ class _Tool extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: scheme.outlineVariant),
         ),
-        child: Column(children: [
-          Icon(icon, size: 20, color: scheme.primary),
-          const SizedBox(height: 6),
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-        ]),
+        child: Column(
+          children: [
+            Icon(icon, size: 20, color: scheme.primary),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
       ),
     );
   }

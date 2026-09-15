@@ -34,13 +34,28 @@ DateTime? parseCsvDate(String raw) {
   if (s.isEmpty) return null;
   final iso = DateTime.tryParse(s);
   if (iso != null) return iso;
-  final m = RegExp(r'^(\d{1,2})[-/](\d{1,2}|[a-záéíúüñ]{3,})[-/](\d{2,4})$', caseSensitive: false)
-      .firstMatch(s);
+  final m = RegExp(
+    r'^(\d{1,2})[-/](\d{1,2}|[a-záéíúüñ]{3,})[-/](\d{2,4})$',
+    caseSensitive: false,
+  ).firstMatch(s);
   if (m == null) return null;
   final day = int.tryParse(m.group(1)!);
   var month = int.tryParse(m.group(2)!);
   if (month == null) {
-    const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const meses = [
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sep',
+      'oct',
+      'nov',
+      'dic',
+    ];
     final t = m.group(2)!.toLowerCase();
     final idx = meses.indexWhere((mm) => t.startsWith(mm));
     if (idx < 0) return null;
@@ -49,7 +64,8 @@ DateTime? parseCsvDate(String raw) {
   var year = int.tryParse(m.group(3)!);
   if (year == null) return null;
   if (year < 100) year += 2000;
-  if (day == null || day < 1 || day > 31 || month < 1 || month > 12) return null;
+  if (day == null || day < 1 || day > 31 || month < 1 || month > 12)
+    return null;
   return DateTime(year, month, day);
 }
 
@@ -139,7 +155,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final q = fold(_query.trim().toLowerCase());
     var list = store.products;
     if (q.isNotEmpty) {
-      list = list.where((p) => fold(p.name.toLowerCase()).contains(q) || (p.barcode ?? '').contains(_query)).toList();
+      list = list
+          .where(
+            (p) =>
+                fold(p.name.toLowerCase()).contains(q) ||
+                (p.barcode ?? '').contains(_query),
+          )
+          .toList();
     }
     if (_cat != null) list = list.where((p) => p.category == _cat).toList();
     if (_onlyUnavailable) list = list.where((p) => p.isUnavailable).toList();
@@ -166,54 +188,94 @@ class _ProductsScreenState extends State<ProductsScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
         children: [
           const TipsTrigger(scope: 'productos'),
-          PageHeader('Productos', hint: 'Tu libro de precios: qué pagas, dónde y cuándo',
-            action: Row(mainAxisSize: MainAxisSize.min, children: [
-              IconButton(
-                icon: const Icon(Icons.upload_file, size: 19),
-                tooltip: 'Importar CSV',
-                onPressed: () => _importCsv(context, store),
-              ),
-              IconButton(
-                icon: const Icon(Icons.ios_share, size: 19),
-                tooltip: 'Exportar CSV',
-                onPressed: () => _exportCsv(context, store),
-              ),
-            ])),
-          Row(children: [
-            Expanded(
-              child: KeyedSubtree(
-                key: TourKeys.prodBusqueda,
-                child: TextField(
-                controller: _searchCtrl,
-                onChanged: (v) {
-                  setState(() {
-                    _query = v;
-                    _page = 0;
-                  });
-                },
-                decoration: const InputDecoration(
-                  hintText: 'Buscar por nombre o código de barras',
-                  prefixIcon: Icon(Icons.search, size: 18),
+          PageHeader(
+            'Productos',
+            hint: 'Tu libro de precios: qué pagas, dónde y cuándo',
+            action: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.upload_file, size: 19),
+                  tooltip: 'Importar CSV',
+                  onPressed: () => _importCsv(context, store),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.ios_share, size: 19),
+                  tooltip: 'Exportar CSV',
+                  onPressed: () => _exportCsv(context, store),
+                ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: KeyedSubtree(
+                  key: TourKeys.prodBusqueda,
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: (v) {
+                      setState(() {
+                        _query = v;
+                        _page = 0;
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      hintText: 'Buscar por nombre o código de barras',
+                      prefixIcon: Icon(Icons.search, size: 18),
+                    ),
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                onPressed: _scanCode,
+                tooltip: 'Escanear código de barras',
+                icon: const Icon(Icons.qr_code_scanner, size: 20),
               ),
-            ),
-            const SizedBox(width: 8),
-            IconButton.filledTonal(
-              onPressed: _scanCode,
-              tooltip: 'Escanear código de barras',
-              icon: const Icon(Icons.qr_code_scanner, size: 20),
-            ),
-          ]),
+            ],
+          ),
           const SizedBox(height: 10),
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            ChipTag('Todas', selected: _cat == null, onTap: () => setState(() { _cat = null; _page = 0; })),
-            for (final c in ProductCategory.values)
-              ChipTag(c.label, selected: _cat == c, onTap: () => setState(() { _cat = c; _page = 0; })),
-            const SizedBox(width: 4),
-            ChipTag('No disponibles', selected: _onlyUnavailable, onTap: () => setState(() { _onlyUnavailable = !_onlyUnavailable; _page = 0; })),
-            ChipTag('Con meta', selected: _onlyTarget, onTap: () => setState(() { _onlyTarget = !_onlyTarget; _page = 0; })),
-          ]),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              ChipTag(
+                'Todas',
+                selected: _cat == null,
+                onTap: () => setState(() {
+                  _cat = null;
+                  _page = 0;
+                }),
+              ),
+              for (final c in ProductCategory.values)
+                ChipTag(
+                  c.label,
+                  selected: _cat == c,
+                  onTap: () => setState(() {
+                    _cat = c;
+                    _page = 0;
+                  }),
+                ),
+              const SizedBox(width: 4),
+              ChipTag(
+                'No disponibles',
+                selected: _onlyUnavailable,
+                onTap: () => setState(() {
+                  _onlyUnavailable = !_onlyUnavailable;
+                  _page = 0;
+                }),
+              ),
+              ChipTag(
+                'Con meta',
+                selected: _onlyTarget,
+                onTap: () => setState(() {
+                  _onlyTarget = !_onlyTarget;
+                  _page = 0;
+                }),
+              ),
+            ],
+          ),
           if (list.isEmpty) ...[
             const SizedBox(height: 14),
             EmptyState(
@@ -236,9 +298,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
             if (pages > 1)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text('${list.length} productos',
-                    style: TextStyle(
-                        fontSize: 11, color: scheme.onSurfaceVariant)),
+                child: Text(
+                  '${list.length} productos',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             Paginator(
               page: _page + 1,
@@ -257,15 +323,17 @@ class _ProductsScreenState extends State<ProductsScreen> {
       showToast(context, 'Regístrale precio primero', kind: ToastKind.warn);
       return;
     }
-    store.addToCart(CartItem(
-      id: '',
-      productId: p.id,
-      name: p.name,
-      quantity: 1,
-      price: last.originalPrice,
-      currency: last.currency,
-      barcode: p.barcode,
-    ));
+    store.addToCart(
+      CartItem(
+        id: '',
+        productId: p.id,
+        name: p.name,
+        quantity: 1,
+        price: last.originalPrice,
+        currency: last.currency,
+        barcode: p.barcode,
+      ),
+    );
     showToast(context, '${p.name} agregado a la lista', kind: ToastKind.ok);
   }
 
@@ -273,14 +341,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
   /// y comillas los maneja parseCSV). Dedupe por código o nombre dentro de
   /// store.importProducts → SnackBar honesta con importados vs duplicados.
   Future<void> _importCsv(BuildContext context, AppStore store) async {
-    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['csv', 'txt']);
+    final picked = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv', 'txt'],
+    );
     if (picked.isEmpty) return;
-    final raw = await picked.single.readAsBytes().then((b) => utf8.decode(b, allowMalformed: true));
+    final raw = await picked.single.readAsBytes().then(
+      (b) => utf8.decode(b, allowMalformed: true),
+    );
     final rows = parseCSV(raw);
     if (rows.length < 2) {
       if (context.mounted) {
-        showToast(context, 'El CSV no trae filas de datos '
-            '(se espera encabezado + filas, ej.: Codigo,Nombre,Fecha)', kind: ToastKind.warn);
+        showToast(
+          context,
+          'El CSV no trae filas de datos '
+          '(se espera encabezado + filas, ej.: Codigo,Nombre,Fecha)',
+          kind: ToastKind.warn,
+        );
       }
       return;
     }
@@ -292,10 +369,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
       }
       return -1;
     }
+
     final iName = findCol(['nombre', 'producto', 'name']);
     if (iName < 0) {
       if (context.mounted) {
-        showToast(context, 'Falta la columna «Nombre» en el CSV', kind: ToastKind.warn);
+        showToast(
+          context,
+          'Falta la columna «Nombre» en el CSV',
+          kind: ToastKind.warn,
+        );
       }
       return;
     }
@@ -315,30 +397,57 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
     if (valid.isEmpty) {
       if (context.mounted) {
-        showToast(context, 'Sin filas válidas: la columna «Nombre» no trae datos',
-            kind: ToastKind.warn);
+        showToast(
+          context,
+          'Sin filas válidas: la columna «Nombre» no trae datos',
+          kind: ToastKind.warn,
+        );
       }
       return;
     }
     final added = store.importProducts(valid);
     final dedupe = valid.length - added;
     if (!context.mounted) return;
-    showToast(context,
-        added > 0
-            ? (dedupe > 0 ? '$added importados · Ya están en libro: $dedupe' : '$added importados')
-            : 'Ya están en libro: $dedupe',
-        kind: added > 0 ? ToastKind.ok : ToastKind.info);
+    showToast(
+      context,
+      added > 0
+          ? (dedupe > 0
+                ? '$added importados · Ya están en libro: $dedupe'
+                : '$added importados')
+          : 'Ya están en libro: $dedupe',
+      kind: added > 0 ? ToastKind.ok : ToastKind.info,
+    );
   }
 
   void _exportCsv(BuildContext context, AppStore store) {
     final rows = <List<String>>[
-      ['Producto', 'Codigo', 'Categoria', 'PrecioUSD', 'PrecioOriginal', 'Moneda', 'Tienda', 'Tasa', 'Fuente', 'Fecha'],
+      [
+        'Producto',
+        'Codigo',
+        'Categoria',
+        'PrecioUSD',
+        'PrecioOriginal',
+        'Moneda',
+        'Tienda',
+        'Tasa',
+        'Fuente',
+        'Fecha',
+      ],
     ];
     for (final p in store.products) {
       for (final r in p.records) {
-        rows.add([p.name, p.barcode ?? '', p.category.label,
-          r.price.toStringAsFixed(4), r.originalPrice.toStringAsFixed(2),
-          r.currency, r.store ?? '', r.rate.toStringAsFixed(4), r.sourceId, fmtDate(r.date)]);
+        rows.add([
+          p.name,
+          p.barcode ?? '',
+          p.category.label,
+          r.price.toStringAsFixed(4),
+          r.originalPrice.toStringAsFixed(2),
+          r.currency,
+          r.store ?? '',
+          r.rate.toStringAsFixed(4),
+          r.sourceId,
+          fmtDate(r.date),
+        ]);
       }
     }
     final text = toCSV(rows);
@@ -352,7 +461,11 @@ void exportTextFile(BuildContext context, String name, String text) {
 }
 
 class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.product, required this.onTap, required this.onAddCart});
+  const _ProductCard({
+    required this.product,
+    required this.onTap,
+    required this.onAddCart,
+  });
 
   final Product product;
   final VoidCallback onTap;
@@ -372,63 +485,99 @@ class _ProductCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              CategoryIcon(cat: product.category, size: 32),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(product.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                  Text(
-                    '${presentationLabel(product)}'
-                    '${(product.barcode ?? '').trim().isNotEmpty ? ' · ${product.barcode}' : ''}',
-                    style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CategoryIcon(cat: product.category, size: 32),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          '${presentationLabel(product)}'
+                          '${(product.barcode ?? '').trim().isNotEmpty ? ' · ${product.barcode}' : ''}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ]),
+                  if (product.isUnavailable)
+                    Stamp('no disponible', color: VeColors.of(context).neg)
+                  else if (target.met)
+                    Stamp('¡bajo meta!', color: VeColors.of(context).pos),
+                ],
               ),
-              if (product.isUnavailable)
-                Stamp('no disponible', color: VeColors.of(context).neg)
-              else if (target.met)
-                Stamp('¡bajo meta!', color: VeColors.of(context).pos),
-            ]),
-            const SizedBox(height: 10),
-            Row(children: [
-              if (last != null)
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(fmtUSD(last.price), style: VeText.displayNum(17, color: scheme.onSurface)),
-                  Text(
-                    '${last.store ?? 'Sin tienda'} · ${fmtDate(last.date)}'
-                    '${last.currency != 'USD' ? ' · pagó ${fmtMoney(last.originalPrice, CurrencyX.from(last.currency))}' : ''}',
-                    style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
-                  ),
-                ])
-              else
-                Text('Sin precio aún', style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant)),
-              const Spacer(),
-              if (product.records.length >= 2) ...[
-                // Sparkline compartida del sistema (dp6): misma semántica
-                // visual (sube = neg, baja = pos) sin duplicado local.
-                Sparkline(
-                  values: product.records.map((r) => r.price).toList(),
-                  width: 64,
-                  height: 21,
-                ),
-                const SizedBox(width: 10),
-                TrendBadge(variation, dense: true),
-              ],
-              if (product.targetPrice != null) ...[
-                const SizedBox(width: 10),
-                Tooltip(
-                  message: 'Meta: ${fmtUSD(product.targetPrice!)}',
-                  child: Icon(Icons.adjust, size: 15, color: scheme.primary),
-                ),
-              ],
-            ]),
-          ]),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  if (last != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          fmtUSD(last.price),
+                          style: VeText.displayNum(17, color: scheme.onSurface),
+                        ),
+                        Text(
+                          '${last.store ?? 'Sin tienda'} · ${fmtDate(last.date)}'
+                          '${last.currency != 'USD' ? ' · pagó ${fmtMoney(last.originalPrice, CurrencyX.from(last.currency))}' : ''}',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Text(
+                      'Sin precio aún',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  const Spacer(),
+                  if (product.records.length >= 2) ...[
+                    // Sparkline compartida del sistema (dp6): misma semántica
+                    // visual (sube = neg, baja = pos) sin duplicado local.
+                    Sparkline(
+                      values: product.records.map((r) => r.price).toList(),
+                      width: 64,
+                      height: 21,
+                    ),
+                    const SizedBox(width: 10),
+                    TrendBadge(variation, dense: true),
+                  ],
+                  if (product.targetPrice != null) ...[
+                    const SizedBox(width: 10),
+                    Tooltip(
+                      message: 'Meta: ${fmtUSD(product.targetPrice!)}',
+                      child: Icon(
+                        Icons.adjust,
+                        size: 15,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
-

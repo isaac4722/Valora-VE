@@ -22,8 +22,14 @@ void main() {
         createdAt: DateTime(2026),
         records: [
           PriceRecord(
-            id: 'r1', price: 1.2, originalPrice: 48, currency: 'VES',
-            quantity: 1, store: 'Bicentenario', rate: 40, sourceId: 'ves-parallel',
+            id: 'r1',
+            price: 1.2,
+            originalPrice: 48,
+            currency: 'VES',
+            quantity: 1,
+            store: 'Bicentenario',
+            rate: 40,
+            sourceId: 'ves-parallel',
             date: DateTime(2026, 1, 1),
           ),
         ],
@@ -48,8 +54,14 @@ void main() {
         date: DateTime(2026, 2, 1),
         store: 'Mercal',
         items: [
-          PurchaseItem(name: 'Arroz', quantity: 2, priceUSD: 1.0,
-              originalPrice: 40, currency: 'VES', productId: 'p1'),
+          PurchaseItem(
+            name: 'Arroz',
+            quantity: 2,
+            priceUSD: 1.0,
+            originalPrice: 40,
+            currency: 'VES',
+            productId: 'p1',
+          ),
         ],
         totalUSD: 2.0,
         totalBS: 80,
@@ -66,34 +78,48 @@ void main() {
       expect(back.rateSourceId, 'ves-parallel');
     });
 
-    test('respaldo VIEJO con clave de impuesto extinta (v17.8): parsea y descarta', () {
-      // Los backups pre-v17.8 traían un booleano de impuesto que el motor
-      // jamás aplicó. fromJson lo ignora: nada se rompe, nada se pierde.
-      final back = Purchase.fromJson({
-        'id': 'vieja',
-        'date': '2025-11-02T10:00:00.000',
-        'store': 'Bodega',
-        'items': <Map<String, dynamic>>[
-          {'name': 'Café', 'quantity': 1, 'priceUSD': 3.0,
-           'originalPrice': 120, 'currency': 'VES'},
-        ],
-        'totalUSD': 3.0,
-        'totalBS': 120,
-        'rate': 40,
-        'clave_extinta_v14': true, // campo v14 retirado: debe sobrar sin romper nada
-        'notes': 'respaldo viejo',
-      });
-      expect(back.totalUSD, 3.0);
-      expect(back.paidUSD, 3.0);
-      expect(back.notes, 'respaldo viejo');
-      // Round-trip v17.8: la clave extinta no se re-escribe.
-      expect(back.toJson().containsKey('clave_extinta_v14'), isFalse);
-    });
+    test(
+      'respaldo VIEJO con clave de impuesto extinta (v17.8): parsea y descarta',
+      () {
+        // Los backups pre-v17.8 traían un booleano de impuesto que el motor
+        // jamás aplicó. fromJson lo ignora: nada se rompe, nada se pierde.
+        final back = Purchase.fromJson({
+          'id': 'vieja',
+          'date': '2025-11-02T10:00:00.000',
+          'store': 'Bodega',
+          'items': <Map<String, dynamic>>[
+            {
+              'name': 'Café',
+              'quantity': 1,
+              'priceUSD': 3.0,
+              'originalPrice': 120,
+              'currency': 'VES',
+            },
+          ],
+          'totalUSD': 3.0,
+          'totalBS': 120,
+          'rate': 40,
+          'clave_extinta_v14':
+              true, // campo v14 retirado: debe sobrar sin romper nada
+          'notes': 'respaldo viejo',
+        });
+        expect(back.totalUSD, 3.0);
+        expect(back.paidUSD, 3.0);
+        expect(back.notes, 'respaldo viejo');
+        // Round-trip v17.8: la clave extinta no se re-escribe.
+        expect(back.toJson().containsKey('clave_extinta_v14'), isFalse);
+      },
+    );
 
     test('Transaction con amountUSD (§12.1)', () {
       final t = Transaction(
-        id: 't1', type: 'income', category: FinanceCategory.salario,
-        amount: 100, currency: 'USD', amountUSD: 100, date: DateTime(2026),
+        id: 't1',
+        type: 'income',
+        category: FinanceCategory.salario,
+        amount: 100,
+        currency: 'USD',
+        amountUSD: 100,
+        date: DateTime(2026),
       );
       final back = Transaction.fromJson(t.toJson());
       expect(back.amountUSD, 100);
@@ -101,42 +127,58 @@ void main() {
     });
 
     test('CartItem con checked/checkedBy (§12.1)', () {
-      final c = CartItem(id: 'c1', name: 'Café', quantity: 1, price: 5,
-          currency: 'USD', checked: true, checkedBy: 'Comprador 88');
+      final c = CartItem(
+        id: 'c1',
+        name: 'Café',
+        quantity: 1,
+        price: 5,
+        currency: 'USD',
+        checked: true,
+        checkedBy: 'Comprador 88',
+      );
       final back = CartItem.fromJson(c.toJson());
       expect(back.checked, isTrue);
       expect(back.checkedBy, 'Comprador 88');
     });
 
-    test('Settings SIN theme (§12.1) con rateTargetAlerts y salary anidados', () {
-      final s = Settings(
-        country: 'CO',
-        spikeThreshold: 1,
-        targetBcv: 200,
-        salaryAmount: 130,
-        salaryCurrency: 'USD',
-        tickerSize: 'large',
-        tickerSpeed: 90,
-        currencyOrder: const ['EUR', 'USD'],
-      );
-      final back = Settings.fromJson(s.toJson());
-      expect(back.country, 'CO');
-      expect(back.targetBcv, 200);
-      expect(back.salaryAmount, 130);
-      expect(back.tickerSize, 'large');
-      expect(back.tickerSpeed, 90);
-      expect(back.currencyOrder, ['EUR', 'USD']);
-    });
+    test(
+      'Settings SIN theme (§12.1) con rateTargetAlerts y salary anidados',
+      () {
+        final s = Settings(
+          country: 'CO',
+          spikeThreshold: 1,
+          targetBcv: 200,
+          salaryAmount: 130,
+          salaryCurrency: 'USD',
+          tickerSize: 'large',
+          tickerSpeed: 90,
+          currencyOrder: const ['EUR', 'USD'],
+        );
+        final back = Settings.fromJson(s.toJson());
+        expect(back.country, 'CO');
+        expect(back.targetBcv, 200);
+        expect(back.salaryAmount, 130);
+        expect(back.tickerSize, 'large');
+        expect(back.tickerSpeed, 90);
+        expect(back.currencyOrder, ['EUR', 'USD']);
+      },
+    );
 
     test('fromJson NUNCA lanza con datos corruptos', () {
       final product = Product.fromJson(const {
-        'id': 'x', 'name': 'X', 'records': 'no-soy-lista', 'size': 'junk',
+        'id': 'x',
+        'name': 'X',
+        'records': 'no-soy-lista',
+        'size': 'junk',
       });
       expect(product.name, 'X');
       expect(product.records, isEmpty);
 
       final board = RateBoard.fromJson(const {
-        'sources': {'ves-bcv': 'no-soy-mapa', 'basura': {'rate': 1}},
+        'sources': {
+          'ves-bcv': 'no-soy-mapa',
+          'basura': {'rate': 1},
+        },
       });
       expect(board.sources, isEmpty); // purga ids desconocidos y basura
     });
@@ -163,42 +205,117 @@ void main() {
   group('Backup · mergeBackupData (§4)', () {
     final local = AppData(
       products: [
-        Product(id: 'p1', name: 'Local', category: ProductCategory.otros,
-            presentation: Presentation.unit, size: 1, createdAt: DateTime(2026),
-            records: [
-              PriceRecord(id: 'r1', price: 1.0, originalPrice: 40, currency: 'VES',
-                  quantity: 1, rate: 40, sourceId: 'ves-bcv', date: DateTime(2026, 1, 1)),
-            ]),
-        Product(id: 'p2', name: 'Solo local', category: ProductCategory.otros,
-            presentation: Presentation.unit, size: 1, createdAt: DateTime(2026), records: const []),
+        Product(
+          id: 'p1',
+          name: 'Local',
+          category: ProductCategory.otros,
+          presentation: Presentation.unit,
+          size: 1,
+          createdAt: DateTime(2026),
+          records: [
+            PriceRecord(
+              id: 'r1',
+              price: 1.0,
+              originalPrice: 40,
+              currency: 'VES',
+              quantity: 1,
+              rate: 40,
+              sourceId: 'ves-bcv',
+              date: DateTime(2026, 1, 1),
+            ),
+          ],
+        ),
+        Product(
+          id: 'p2',
+          name: 'Solo local',
+          category: ProductCategory.otros,
+          presentation: Presentation.unit,
+          size: 1,
+          createdAt: DateTime(2026),
+          records: const [],
+        ),
       ],
-      transactions: [Transaction(id: 't1', type: 'expense',
-          category: FinanceCategory.alimentacion, amount: 10, currency: 'USD',
-          amountUSD: 10, date: DateTime(2026))],
-      purchases: [Purchase(id: 'c1', date: DateTime(2026), items: const [],
-          totalUSD: 1, totalBS: 40, rate: 40)],
+      transactions: [
+        Transaction(
+          id: 't1',
+          type: 'expense',
+          category: FinanceCategory.alimentacion,
+          amount: 10,
+          currency: 'USD',
+          amountUSD: 10,
+          date: DateTime(2026),
+        ),
+      ],
+      purchases: [
+        Purchase(
+          id: 'c1',
+          date: DateTime(2026),
+          items: const [],
+          totalUSD: 1,
+          totalBS: 40,
+          rate: 40,
+        ),
+      ],
       templates: const [],
       stores: const ['Tienda A', 'Común'],
-      cart: [const CartItem(id: 'k1', name: 'Carrito local', quantity: 1, price: 1, currency: 'USD')],
+      cart: [
+        const CartItem(
+          id: 'k1',
+          name: 'Carrito local',
+          quantity: 1,
+          price: 1,
+          currency: 'USD',
+        ),
+      ],
       settings: const Settings(country: 'VE'),
     );
 
     test('unión por id, empate=local, records fusionados', () {
       final incoming = AppData(
         products: [
-          Product(id: 'p1', name: 'Remoto', category: ProductCategory.alimentos,
-              presentation: Presentation.weight, size: 500, createdAt: DateTime(2026),
-              records: [
-                // mismo id r1 (duplicado → no se repite)
-                PriceRecord(id: 'r1', price: 1.0, originalPrice: 40, currency: 'VES',
-                    quantity: 1, rate: 40, sourceId: 'ves-bcv', date: DateTime(2026, 1, 1)),
-                // nuevo record remoto MÁS RECIENTE → meta remota gana
-                PriceRecord(id: 'r2', price: 0.9, originalPrice: 36, currency: 'VES',
-                    quantity: 1, rate: 40, sourceId: 'ves-bcv', date: DateTime(2026, 2, 1)),
-              ],
-              targetPrice: 0.8, targetCurrency: 'USD'),
-          Product(id: 'p3', name: 'Solo remoto', category: ProductCategory.otros,
-              presentation: Presentation.unit, size: 1, createdAt: DateTime(2026), records: const []),
+          Product(
+            id: 'p1',
+            name: 'Remoto',
+            category: ProductCategory.alimentos,
+            presentation: Presentation.weight,
+            size: 500,
+            createdAt: DateTime(2026),
+            records: [
+              // mismo id r1 (duplicado → no se repite)
+              PriceRecord(
+                id: 'r1',
+                price: 1.0,
+                originalPrice: 40,
+                currency: 'VES',
+                quantity: 1,
+                rate: 40,
+                sourceId: 'ves-bcv',
+                date: DateTime(2026, 1, 1),
+              ),
+              // nuevo record remoto MÁS RECIENTE → meta remota gana
+              PriceRecord(
+                id: 'r2',
+                price: 0.9,
+                originalPrice: 36,
+                currency: 'VES',
+                quantity: 1,
+                rate: 40,
+                sourceId: 'ves-bcv',
+                date: DateTime(2026, 2, 1),
+              ),
+            ],
+            targetPrice: 0.8,
+            targetCurrency: 'USD',
+          ),
+          Product(
+            id: 'p3',
+            name: 'Solo remoto',
+            category: ProductCategory.otros,
+            presentation: Presentation.unit,
+            size: 1,
+            createdAt: DateTime(2026),
+            records: const [],
+          ),
         ],
         stores: const ['Común', 'Tienda B'],
       );
@@ -218,12 +335,19 @@ void main() {
     });
 
     test('importBackup: estructura inválida y JSON inválido', () {
-      expect(importBackup(local, 'no-json', merge: false).error, 'JSON inválido');
-      expect(importBackup(local, '{"data":{}}', merge: false).error, 'Estructura no válida');
+      expect(
+        importBackup(local, 'no-json', merge: false).error,
+        'JSON inválido',
+      );
+      expect(
+        importBackup(local, '{"data":{}}', merge: false).error,
+        'Estructura no válida',
+      );
     });
 
     test('importBackup replace: conserva tablero vivo y sanea rateSource', () {
-      final raw = '{"version":12,"data":{"products":[],"transactions":[],"cart":[],'
+      final raw =
+          '{"version":12,"data":{"products":[],"transactions":[],"cart":[],'
           '"purchases":[],"budget":{},"basket":[],"stores":[],"templates":[],'
           '"rateSource":{"VES":"basura","COP":"cop-trm"},"settings":{}}}';
       final r = importBackup(local, raw, merge: false);
@@ -244,13 +368,17 @@ void main() {
   group('rate-history (§4)', () {
     test('appendSnapshots: dedupe día, última gana', () {
       final store = <SnapshotPoint>[];
-      final b1 = RateBoard(sources: {
-        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 1, 1)),
-      });
+      final b1 = RateBoard(
+        sources: {
+          'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 1, 1)),
+        },
+      );
       appendSnapshots(store, b1, now: DateTime(2026, 1, 1));
-      final b2 = RateBoard(sources: {
-        'ves-bcv': RateEntry(rate: 41, updatedAt: DateTime(2026, 1, 1, 18)),
-      });
+      final b2 = RateBoard(
+        sources: {
+          'ves-bcv': RateEntry(rate: 41, updatedAt: DateTime(2026, 1, 1, 18)),
+        },
+      );
       appendSnapshots(store, b2, now: DateTime(2026, 1, 1, 20));
       final bcv = store.where((p) => p.sourceId == 'ves-bcv').toList();
       expect(bcv.length, 1);
@@ -258,9 +386,13 @@ void main() {
     });
 
     test('mergeSeries: día duplicado gana REMOTO', () {
-      final local = [SnapshotPoint(sourceId: 'ves-bcv', day: '2026-01-01', rate: 40)];
-      final remote = [SnapshotPoint(sourceId: 'ves-bcv', day: '2026-01-01', rate: 42),
-        SnapshotPoint(sourceId: 'ves-bcv', day: '2026-01-02', rate: 43)];
+      final local = [
+        SnapshotPoint(sourceId: 'ves-bcv', day: '2026-01-01', rate: 40),
+      ];
+      final remote = [
+        SnapshotPoint(sourceId: 'ves-bcv', day: '2026-01-01', rate: 42),
+        SnapshotPoint(sourceId: 'ves-bcv', day: '2026-01-02', rate: 43),
+      ];
       final merged = mergeSeries(remote, local);
       expect(merged.length, 2);
       expect(merged.firstWhere((p) => p.day == '2026-01-01').rate, 42);
@@ -270,10 +402,19 @@ void main() {
     test('poda a 180 días', () {
       final store = <SnapshotPoint>[];
       for (int i = 0; i < 200; i++) {
-        final b = RateBoard(sources: {
-          'ves-bcv': RateEntry(rate: 40.0 + i, updatedAt: DateTime(2026, 1, 1).add(Duration(days: i))),
-        });
-        appendSnapshots(store, b, now: DateTime(2026, 1, 1).add(Duration(days: i)));
+        final b = RateBoard(
+          sources: {
+            'ves-bcv': RateEntry(
+              rate: 40.0 + i,
+              updatedAt: DateTime(2026, 1, 1).add(Duration(days: i)),
+            ),
+          },
+        );
+        appendSnapshots(
+          store,
+          b,
+          now: DateTime(2026, 1, 1).add(Duration(days: i)),
+        );
       }
       expect(store.where((p) => p.sourceId == 'ves-bcv').length, 180);
     });
@@ -282,8 +423,20 @@ void main() {
   group('Analítica (§3.2)', () {
     test('cartTotals + conversión a USD', () {
       final cart = [
-        const CartItem(id: 'a', name: 'Arroz', quantity: 2, price: 40, currency: 'VES'),
-        const CartItem(id: 'b', name: 'Café', quantity: 1, price: 5, currency: 'USD'),
+        const CartItem(
+          id: 'a',
+          name: 'Arroz',
+          quantity: 2,
+          price: 40,
+          currency: 'VES',
+        ),
+        const CartItem(
+          id: 'b',
+          name: 'Café',
+          quantity: 1,
+          price: 5,
+          currency: 'USD',
+        ),
       ];
       final r = an.cartTotals(cart, (c) => c == Currency.ves ? 40 : 1);
       expect(r.byCurrency['VES'], 80);
@@ -293,9 +446,19 @@ void main() {
     });
 
     test('computeChange vuelto y faltante', () {
-      final r = an.computeChange(totalBS: 400, paidUSD: 0, paidBS: 500, rate: 40);
+      final r = an.computeChange(
+        totalBS: 400,
+        paidUSD: 0,
+        paidBS: 500,
+        rate: 40,
+      );
       expect(r.change, closeTo(100, 0.001));
-      final r2 = an.computeChange(totalBS: 400, paidUSD: 0, paidBS: 300, rate: 40);
+      final r2 = an.computeChange(
+        totalBS: 400,
+        paidUSD: 0,
+        paidBS: 300,
+        rate: 40,
+      );
       expect(r2.missing, closeTo(2.5, 0.001)); // faltante en USD (100 Bs)
     });
 
@@ -316,8 +479,12 @@ void main() {
 
     test('metas: TARGET_EPS y metSince (§9.4)', () {
       final p = Product(
-        id: 'p', name: 'P', category: ProductCategory.otros,
-        presentation: Presentation.unit, size: 1, createdAt: DateTime(2026),
+        id: 'p',
+        name: 'P',
+        category: ProductCategory.otros,
+        presentation: Presentation.unit,
+        size: 1,
+        createdAt: DateTime(2026),
         targetPrice: 1.0,
         records: [
           _record(DateTime(2026, 1, 1), 0.99), // 1% bajo meta > eps
@@ -325,8 +492,12 @@ void main() {
       );
       expect(an.computeTargetInfo(p).met, isTrue);
       final p2 = Product(
-        id: 'p2', name: 'P2', category: ProductCategory.otros,
-        presentation: Presentation.unit, size: 1, createdAt: DateTime(2026),
+        id: 'p2',
+        name: 'P2',
+        category: ProductCategory.otros,
+        presentation: Presentation.unit,
+        size: 1,
+        createdAt: DateTime(2026),
         targetPrice: 1.0,
         records: [_record(DateTime(2026, 1, 1), 0.998)], // dentro del eps
       );
@@ -345,16 +516,32 @@ void main() {
       final stats = an.storeStats(purchases);
       expect(stats.first.store, 'A'); // mayor total
       expect(stats.first.totalUSD, 150.0);
-      expect(an.findSimilarStore('cafe central', ['Café Central']), 'Café Central');
+      expect(
+        an.findSimilarStore('cafe central', ['Café Central']),
+        'Café Central',
+      );
       expect(an.findSimilarStore('ca', ['Café Central']), isNull); // q<3 → []
     });
   });
 }
 
 PriceRecord _record(DateTime d, double usd) => PriceRecord(
-    id: 'r${d.millisecondsSinceEpoch}', price: usd, originalPrice: usd,
-    currency: 'USD', quantity: 1, rate: 40, sourceId: 'ves-bcv', date: d);
+  id: 'r${d.millisecondsSinceEpoch}',
+  price: usd,
+  originalPrice: usd,
+  currency: 'USD',
+  quantity: 1,
+  rate: 40,
+  sourceId: 'ves-bcv',
+  date: d,
+);
 
 Purchase _purchase(String store, double usd, DateTime d) => Purchase(
-    id: 'c${d.millisecondsSinceEpoch}', date: d, store: store.isEmpty ? null : store,
-    items: const [], totalUSD: usd, totalBS: usd * 40.0, rate: 40.0);
+  id: 'c${d.millisecondsSinceEpoch}',
+  date: d,
+  store: store.isEmpty ? null : store,
+  items: const [],
+  totalUSD: usd,
+  totalBS: usd * 40.0,
+  rate: 40.0,
+);

@@ -17,7 +17,7 @@ import '../data/board.dart';
 import '../data/rate_history.dart';
 import '../data/sse_stream.dart';
 import '../data/store.dart';
-import '../room/room_transport.dart';
+import '../room/room_controller.dart';
 import '../services/alerts.dart';
 import '../services/connectivity.dart';
 import '../services/widget_service.dart';
@@ -37,7 +37,11 @@ class ThemeController extends ChangeNotifier {
 
   Future<void> load(SharedPreferences prefs) async {
     final s = prefs.getString('valorave.themeMode') ?? 'system';
-    _mode = switch (s) { 'light' => ThemeMode.light, 'dark' => ThemeMode.dark, _ => ThemeMode.system };
+    _mode = switch (s) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
     _dynamicColor = prefs.getBool('valorave.dynamicColor') ?? false;
     notifyListeners();
   }
@@ -69,7 +73,12 @@ class ThemeController extends ChangeNotifier {
 /// `/api/rates/stream` (push del servidor); el polling SIGUE como latido y
 /// respaldo — si el stream muere, la app no se entera de nada malo.
 class RatesPoller extends ChangeNotifier {
-  RatesPoller(this._store, this._notifs, this._alerts, {ConnectivityService? connectivity}) {
+  RatesPoller(
+    this._store,
+    this._notifs,
+    this._alerts, {
+    ConnectivityService? connectivity,
+  }) {
     _store.addListener(_onStoreChanged);
     _connectivity = connectivity;
     // Estado INICIAL de red (v17.8): si la app arranca SIN red no habrá
@@ -153,7 +162,8 @@ class RatesPoller extends ChangeNotifier {
   /// (regla §5: la caída se declara cuando hubo frescura y desapareció;
   /// sin primera vista no hay «caída», hay «sin datos» → networkBlocked).
   bool get rateStale =>
-      _lastBoardOk != null && DateTime.now().difference(_lastBoardOk!).inMinutes > 15;
+      _lastBoardOk != null &&
+      DateTime.now().difference(_lastBoardOk!).inMinutes > 15;
 
   /// Última lista de fuentes cambiadas (para flashes del tablero).
   List<String> lastChanged = [];
@@ -182,10 +192,12 @@ class RatesPoller extends ChangeNotifier {
           _store.pushNotification(kind: kind, title: title, body: body),
     );
     // Widget BCV 4×1 (home_widget).
-    unawaited(WidgetService.updateBcv(
-      bcv: board.sources['ves-bcv']?.rate,
-      parallel: board.sources['ves-parallel']?.rate,
-    ));
+    unawaited(
+      WidgetService.updateBcv(
+        bcv: board.sources['ves-bcv']?.rate,
+        parallel: board.sources['ves-parallel']?.rate,
+      ),
+    );
     _networkBlocked = false;
   }
 
@@ -222,41 +234,44 @@ class RatesPoller extends ChangeNotifier {
     if (url.isEmpty || _store.settings.offlineMode || _offlineNet) return;
     _sseLiveUrl = url;
     _sse = RatesStream(dio: Dio(), url: url);
-    _sseSub = _sse!.boards.listen((board) {
-      if (_disposed) return;
-      // Payload del servidor web: {sources, providers, degraded}. Se
-      // normaliza con el MISMO parser del store (ids desconocidos fuera,
-      // tasas ≤ 0 fuera) y entra por la ingesta común.
-      final sources = <String, RateEntry>{};
-      final raw = board['sources'];
-      if (raw is Map) {
-        for (final e in raw.entries) {
-          final v = e.value;
-          if (v is Map) {
-            final entry =
-                RateEntry.tryParse(Map<String, dynamic>.from(v));
-            if (entry != null) sources['$e.key'] = entry;
+    _sseSub = _sse!.boards.listen(
+      (board) {
+        if (_disposed) return;
+        // Payload del servidor web: {sources, providers, degraded}. Se
+        // normaliza con el MISMO parser del store (ids desconocidos fuera,
+        // tasas ≤ 0 fuera) y entra por la ingesta común.
+        final sources = <String, RateEntry>{};
+        final raw = board['sources'];
+        if (raw is Map) {
+          for (final e in raw.entries) {
+            final v = e.value;
+            if (v is Map) {
+              final entry = RateEntry.tryParse(Map<String, dynamic>.from(v));
+              if (entry != null) sources['$e.key'] = entry;
+            }
           }
         }
-      }
-      if (sources.isEmpty) return; // payload vacío: nada que ingerir
-      final changed = _changedVs(sources);
-      final now = DateTime.now();
-      _ingestBoard(
-        RateBoard(
-          sources: sources,
-          providers: const ['sse'],
-          degraded: const [],
-          lastUpdate: now,
-          fetchedAt: now,
-        ),
-        changed,
-      );
-      if (!_sseConnected) {
-        _sseConnected = true;
-        notifyListeners();
-      }
-    }, onDone: _sseDown, onError: (_) => _sseDown());
+        if (sources.isEmpty) return; // payload vacío: nada que ingerir
+        final changed = _changedVs(sources);
+        final now = DateTime.now();
+        _ingestBoard(
+          RateBoard(
+            sources: sources,
+            providers: const ['sse'],
+            degraded: const [],
+            lastUpdate: now,
+            fetchedAt: now,
+          ),
+          changed,
+        );
+        if (!_sseConnected) {
+          _sseConnected = true;
+          notifyListeners();
+        }
+      },
+      onDone: _sseDown,
+      onError: (_) => _sseDown(),
+    );
     _sse!.start();
   }
 
@@ -408,9 +423,12 @@ List<SingleChildWidget> appProviders({
     ChangeNotifierProvider.value(value: theme),
     Provider.value(value: notifs),
     Provider<SharedPreferences>.value(value: prefs),
-    if (connectivity != null) Provider<ConnectivityService>.value(value: connectivity),
+    if (connectivity != null)
+      Provider<ConnectivityService>.value(value: connectivity),
     ChangeNotifierProvider(
-        create: (_) => RatesPoller(store, notifs, alerts, connectivity: connectivity)),
+      create: (_) =>
+          RatesPoller(store, notifs, alerts, connectivity: connectivity),
+    ),
     Provider<AlertEngine>.value(value: alerts),
     // v18.0 · Sala Viva: controlador de APLICACIÓN — la Lista, la
     // configuración de sala y la Sala Viva comparten el MISMO estado.

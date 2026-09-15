@@ -169,7 +169,9 @@ class _CoachOverlayState extends State<_CoachOverlay> {
         below = false;
         top = topSafe;
         maxH = hole.top - 14 - topSafe;
-      } else if (!below && maxH < 150 && (bottomSafe - (hole.bottom + 14)) > maxH) {
+      } else if (!below &&
+          maxH < 150 &&
+          (bottomSafe - (hole.bottom + 14)) > maxH) {
         below = true;
         top = hole.bottom + 14;
         maxH = bottomSafe - top;
@@ -256,49 +258,62 @@ class _CoachCardBody extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(children: <Widget>[
-          if (card.segment != null) ...<Widget>[
-            Expanded(
-              child: Text(
-                card.segment!,
-                style: TextStyle(
-                  fontFamily: 'SpaceGrotesk',
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.1,
-                  color: scheme.primary,
+        Row(
+          children: <Widget>[
+            if (card.segment != null) ...<Widget>[
+              Expanded(
+                child: Text(
+                  card.segment!,
+                  style: TextStyle(
+                    fontFamily: 'SpaceGrotesk',
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                    color: scheme.primary,
+                  ),
                 ),
               ),
-            ),
-          ],
-          if (card.stepLabel != null)
-            Text(
-              card.stepLabel!,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
-                color: scheme.onSurfaceVariant,
+            ],
+            if (card.stepLabel != null)
+              Text(
+                card.stepLabel!,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const <FontFeature>[
+                    FontFeature.tabularFigures(),
+                  ],
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
-            ),
-        ]),
+          ],
+        ),
         if (card.flags.isNotEmpty) ...<Widget>[
           const SizedBox(height: 8),
-          Row(children: <Widget>[
-            for (final c in card.flags)
-              Padding(
-                padding: const EdgeInsets.only(right: 5),
-                child: Flag(c, size: 16),
-              ),
-          ]),
+          Row(
+            children: <Widget>[
+              for (final c in card.flags)
+                Padding(
+                  padding: const EdgeInsets.only(right: 5),
+                  child: Flag(c, size: 16),
+                ),
+            ],
+          ),
         ],
         const SizedBox(height: 8),
-        Text(card.title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+        Text(
+          card.title,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
         const SizedBox(height: 6),
-        Text(card.body,
-            style: TextStyle(
-                fontSize: 13, height: 1.5, color: scheme.onSurfaceVariant)),
+        Text(
+          card.body,
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.5,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }
@@ -315,17 +330,16 @@ class _CoachCardButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasCta = card.cta != null;
-    return Row(children: <Widget>[
-      TextButton(
-        onPressed: () => onDone(false),
-        child: const Text('Saltar'),
-      ),
-      const Spacer(),
-      FilledButton(
-        onPressed: () => onDone(true),
-        child: Text(hasCta ? card.cta! : 'Siguiente'),
-      ),
-    ]);
+    return Row(
+      children: <Widget>[
+        TextButton(onPressed: () => onDone(false), child: const Text('Saltar')),
+        const Spacer(),
+        FilledButton(
+          onPressed: () => onDone(true),
+          child: Text(hasCta ? card.cta! : 'Siguiente'),
+        ),
+      ],
+    );
   }
 }
 

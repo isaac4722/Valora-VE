@@ -46,9 +46,10 @@ void main() {
     svc.dispose();
   });
 
-  testWidgets('arranque SIN red: el flag nace verdadero y NO se consulta', (tester) async {
-    final fake = _FakeConnPlatform()
-      ..state = const [ConnectivityResult.none];
+  testWidgets('arranque SIN red: el flag nace verdadero y NO se consulta', (
+    tester,
+  ) async {
+    final fake = _FakeConnPlatform()..state = const [ConnectivityResult.none];
     ConnectivityPlatform.instance = fake;
     final svc = ConnectivityService();
     await svc.init();
@@ -57,8 +58,12 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final store = AppStore.withData(const AppData());
-    final poller = RatesPoller(store, NotificationsService(), AlertEngine(prefs),
-        connectivity: svc);
+    final poller = RatesPoller(
+      store,
+      NotificationsService(),
+      AlertEngine(prefs),
+      connectivity: svc,
+    );
     expect(poller.offlineNet, isTrue, reason: 'nace sin red, sin transición');
 
     var notifications = 0;
@@ -74,9 +79,10 @@ void main() {
     await fake._changes.close();
   });
 
-  testWidgets('vuelve la red: refresco automático y estado honesto', (tester) async {
-    final fake = _FakeConnPlatform()
-      ..state = const [ConnectivityResult.none];
+  testWidgets('vuelve la red: refresco automático y estado honesto', (
+    tester,
+  ) async {
+    final fake = _FakeConnPlatform()..state = const [ConnectivityResult.none];
     ConnectivityPlatform.instance = fake;
     final svc = ConnectivityService();
     await svc.init();
@@ -84,8 +90,12 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final store = AppStore.withData(const AppData());
-    final poller = RatesPoller(store, NotificationsService(), AlertEngine(prefs),
-        connectivity: svc);
+    final poller = RatesPoller(
+      store,
+      NotificationsService(),
+      AlertEngine(prefs),
+      connectivity: svc,
+    );
     addTearDown(svc.dispose);
     addTearDown(fake._changes.close);
 
@@ -99,8 +109,11 @@ void main() {
     // fuentes fallan y se ingiere un tablero VACÍO (fallo por fuente, no
     // de red) — la evidencia del intento es el reloj de frescura vivo.
     await tester.pump(const Duration(milliseconds: 700));
-    expect(poller.lastBoardOk, isNotNull,
-        reason: 'consultó al volver la red (ciclo completo)');
+    expect(
+      poller.lastBoardOk,
+      isNotNull,
+      reason: 'consultó al volver la red (ciclo completo)',
+    );
     expect(poller.loading, isFalse);
     expect(poller.offlineNet, isFalse);
     // El latido auto quedó programado (startAuto): se cancela ANTES del
@@ -109,29 +122,39 @@ void main() {
     poller.dispose();
   });
 
-  testWidgets('modo offline ELEGIDO sigue mandando: la red que vuelve no consulta', (tester) async {
-    final fake = _FakeConnPlatform()
-      ..state = const [ConnectivityResult.none];
-    ConnectivityPlatform.instance = fake;
-    final svc = ConnectivityService();
-    await svc.init();
+  testWidgets(
+    'modo offline ELEGIDO sigue mandando: la red que vuelve no consulta',
+    (tester) async {
+      final fake = _FakeConnPlatform()..state = const [ConnectivityResult.none];
+      ConnectivityPlatform.instance = fake;
+      final svc = ConnectivityService();
+      await svc.init();
 
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final store = AppStore.withData(const AppData());
-    store.setOfflineMode(true); // decisión del dueño: NADA de consultas
-    final poller = RatesPoller(store, NotificationsService(), AlertEngine(prefs),
-        connectivity: svc);
-    addTearDown(svc.dispose);
-    addTearDown(fake._changes.close);
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final store = AppStore.withData(const AppData());
+      store.setOfflineMode(true); // decisión del dueño: NADA de consultas
+      final poller = RatesPoller(
+        store,
+        NotificationsService(),
+        AlertEngine(prefs),
+        connectivity: svc,
+      );
+      addTearDown(svc.dispose);
+      addTearDown(fake._changes.close);
 
-    fake.state = const [ConnectivityResult.wifi];
-    fake.emit();
-    await tester.pump(const Duration(milliseconds: 700));
-    // Volvió la red pero el modo offline manda: ni consulta (reloj de
-    // frescura intacto) ni loading. Dispose en el cuerpo: cero timers.
-    expect(poller.lastBoardOk, isNull, reason: 'modo offline manda sobre la red');
-    expect(poller.loading, isFalse);
-    poller.dispose();
-  });
+      fake.state = const [ConnectivityResult.wifi];
+      fake.emit();
+      await tester.pump(const Duration(milliseconds: 700));
+      // Volvió la red pero el modo offline manda: ni consulta (reloj de
+      // frescura intacto) ni loading. Dispose en el cuerpo: cero timers.
+      expect(
+        poller.lastBoardOk,
+        isNull,
+        reason: 'modo offline manda sobre la red',
+      );
+      expect(poller.loading, isFalse);
+      poller.dispose();
+    },
+  );
 }

@@ -72,11 +72,18 @@ Future<void> main({String? documentsDir}) async {
     // workmanager puede fallar en tests/emuladores sin servicios de Google.
   }
 
-  runApp(MultiProvider(
-    providers: appProviders(
-        store: store, theme: theme, notifs: notifs, prefs: prefs, connectivity: connectivity),
-    child: ValoraApp(store: store),
-  ));
+  runApp(
+    MultiProvider(
+      providers: appProviders(
+        store: store,
+        theme: theme,
+        notifs: notifs,
+        prefs: prefs,
+        connectivity: connectivity,
+      ),
+      child: ValoraApp(store: store),
+    ),
+  );
 }
 
 class ValoraApp extends StatefulWidget {
@@ -133,8 +140,9 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
 
   Future<bool> _tryUnlock() async {
     try {
-      return await BiometricService()
-          .authenticate(reason: 'Desbloquea ValoraVE para ver tus tasas y tus datos');
+      return await BiometricService().authenticate(
+        reason: 'Desbloquea ValoraVE para ver tus tasas y tus datos',
+      );
     } catch (_) {
       return true; // degradación honesta: sin canal, no bloquea
     }
@@ -169,15 +177,19 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
             title: 'ValoraVE',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light(
-                theme.dynamicColor ? lightDynamic?.harmonized() : null),
+              theme.dynamicColor ? lightDynamic?.harmonized() : null,
+            ),
             darkTheme: AppTheme.dark(
-                theme.dynamicColor ? darkDynamic?.harmonized() : null),
+              theme.dynamicColor ? darkDynamic?.harmonized() : null,
+            ),
             themeMode: theme.mode,
             locale: const Locale('es', 'VE'),
-            home: _BiometricLockScreen(onRetry: () async {
-              final ok = await _tryUnlock();
-              if (mounted) setState(() => _locked = !ok);
-            }),
+            home: _BiometricLockScreen(
+              onRetry: () async {
+                final ok = await _tryUnlock();
+                if (mounted) setState(() => _locked = !ok);
+              },
+            ),
           );
         },
       );
@@ -195,9 +207,11 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
           title: 'ValoraVE',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(
-              theme.dynamicColor ? lightDynamic?.harmonized() : null),
+            theme.dynamicColor ? lightDynamic?.harmonized() : null,
+          ),
           darkTheme: AppTheme.dark(
-              theme.dynamicColor ? darkDynamic?.harmonized() : null),
+            theme.dynamicColor ? darkDynamic?.harmonized() : null,
+          ),
           themeMode: theme.mode,
           locale: const Locale('es', 'VE'),
           routerConfig: _router,
@@ -221,32 +235,54 @@ class _BiometricLockScreen extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            RichText(
-              text: TextSpan(
-                style: VeText.displayNum(40, color: scheme.onSurface, weight: FontWeight.w700),
-                children: <InlineSpan>[
-                  const TextSpan(text: 'Valora'),
-                  TextSpan(text: 'VE', style: TextStyle(color: scheme.primary)),
-                ],
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              RichText(
+                text: TextSpan(
+                  style: VeText.displayNum(
+                    40,
+                    color: scheme.onSurface,
+                    weight: FontWeight.w700,
+                  ),
+                  children: <InlineSpan>[
+                    const TextSpan(text: 'Valora'),
+                    TextSpan(
+                      text: 'VE',
+                      style: TextStyle(color: scheme.primary),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            Icon(Icons.fingerprint, size: 42, color: scheme.primary),
-            const SizedBox(height: 12),
-            Text('Tus datos viven solo aquí',
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: scheme.onSurface)),
-            const SizedBox(height: 4),
-            Text('Desbloquea con tu huella o tu PIN de pantalla para entrar.',
+              const SizedBox(height: 10),
+              Icon(Icons.fingerprint, size: 42, color: scheme.primary),
+              const SizedBox(height: 12),
+              Text(
+                'Tus datos viven solo aquí',
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Desbloquea con tu huella o tu PIN de pantalla para entrar.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12.5, height: 1.45, color: scheme.onSurfaceVariant)),
-            const SizedBox(height: 22),
-            FilledButton.icon(
-              onPressed: () => onRetry(),
-              icon: const Icon(Icons.lock_open, size: 16),
-              label: const Text('Desbloquear'),
-            ),
-          ]),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.45,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 22),
+              FilledButton.icon(
+                onPressed: () => onRetry(),
+                icon: const Icon(Icons.lock_open, size: 16),
+                label: const Text('Desbloquear'),
+              ),
+            ],
+          ),
         ),
       ),
     );

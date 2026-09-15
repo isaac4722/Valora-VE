@@ -28,13 +28,13 @@ class MergeCounts {
   });
 
   Map<String, int> toMap() => {
-        'products': products,
-        'records': records,
-        'transactions': transactions,
-        'purchases': purchases,
-        'templates': templates,
-        'stores': stores,
-      };
+    'products': products,
+    'records': records,
+    'transactions': transactions,
+    'purchases': purchases,
+    'templates': templates,
+    'stores': stores,
+  };
 }
 
 class BackupMergeResult {
@@ -44,7 +44,8 @@ class BackupMergeResult {
 }
 
 /// Export: {version:12, data:{13 claves}, savedAt} (web §2.5).
-String exportBackupJson(AppData data) => const JsonEncoder.withIndent('  ').convert({
+String exportBackupJson(AppData data) =>
+    const JsonEncoder.withIndent('  ').convert({
       'version': kDataVersion,
       'data': data.toJson(),
       'savedAt': DateTime.now().toIso8601String(),
@@ -75,10 +76,12 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
     final mergedRecords = [...localP.records];
     for (final r in incomingP.records) {
       if (byId.containsKey(r.id)) continue;
-      final dup = mergedRecords.any((x) =>
-          SnapshotPoint.dayKey(x.date) == SnapshotPoint.dayKey(r.date) &&
-          x.price == r.price &&
-          x.originalPrice == r.originalPrice);
+      final dup = mergedRecords.any(
+        (x) =>
+            SnapshotPoint.dayKey(x.date) == SnapshotPoint.dayKey(r.date) &&
+            x.price == r.price &&
+            x.originalPrice == r.originalPrice,
+      );
       if (dup) continue;
       mergedRecords.add(r);
       addedRecords++;
@@ -91,17 +94,30 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
       id: localP.id,
       name: incomingP.name.isNotEmpty ? incomingP.name : localP.name,
       barcode: incomingP.barcode ?? localP.barcode,
-      category: incomingLast.isAfter(localLast) ? incomingP.category : localP.category,
-      presentation: incomingLast.isAfter(localLast) ? incomingP.presentation : localP.presentation,
+      category: incomingLast.isAfter(localLast)
+          ? incomingP.category
+          : localP.category,
+      presentation: incomingLast.isAfter(localLast)
+          ? incomingP.presentation
+          : localP.presentation,
       size: incomingLast.isAfter(localLast) ? incomingP.size : localP.size,
-      sizeUnit: incomingLast.isAfter(localLast) ? incomingP.sizeUnit : localP.sizeUnit,
+      sizeUnit: incomingLast.isAfter(localLast)
+          ? incomingP.sizeUnit
+          : localP.sizeUnit,
       createdAt: localP.createdAt,
       records: mergedRecords,
-      unavailableSince:
-          incomingLast.isAfter(localLast) ? incomingP.unavailableSince : localP.unavailableSince,
-      targetPrice: incomingLast.isAfter(localLast) ? incomingP.targetPrice : localP.targetPrice,
-      targetCurrency: incomingLast.isAfter(localLast) ? incomingP.targetCurrency : localP.targetCurrency,
-      metSince: incomingLast.isAfter(localLast) ? incomingP.metSince : localP.metSince,
+      unavailableSince: incomingLast.isAfter(localLast)
+          ? incomingP.unavailableSince
+          : localP.unavailableSince,
+      targetPrice: incomingLast.isAfter(localLast)
+          ? incomingP.targetPrice
+          : localP.targetPrice,
+      targetCurrency: incomingLast.isAfter(localLast)
+          ? incomingP.targetCurrency
+          : localP.targetCurrency,
+      metSince: incomingLast.isAfter(localLast)
+          ? incomingP.metSince
+          : localP.metSince,
     );
     products[merged.id] = merged;
   }
@@ -158,7 +174,10 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
     final key = s.toLowerCase();
     if (seen.add(key)) stores.add(s);
   }
-  final addedStores = (stores.length - local.stores.length).clamp(0, stores.length);
+  final addedStores = (stores.length - local.stores.length).clamp(
+    0,
+    stores.length,
+  );
 
   final merged = AppData(
     version: kDataVersion,
@@ -199,11 +218,7 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
 /// · merge: fusiona por id y no toca cart/budget/board/settings.
 typedef BackupResult = ({bool ok, String? error, Map<String, int>? counts});
 
-BackupResult importBackup(
-  AppData local,
-  String raw, {
-  required bool merge,
-}) {
+BackupResult importBackup(AppData local, String raw, {required bool merge}) {
   dynamic decoded;
   try {
     decoded = const JsonDecoder().convert(raw);
@@ -256,7 +271,10 @@ BackupResult importBackup(
     error: null,
     counts: {
       'products': incoming.products.length,
-      'records': incoming.products.fold<int>(0, (acc, p) => acc + p.records.length),
+      'records': incoming.products.fold<int>(
+        0,
+        (acc, p) => acc + p.records.length,
+      ),
       'transactions': incoming.transactions.length,
       'purchases': incoming.purchases.length,
       'templates': incoming.templates.length,
