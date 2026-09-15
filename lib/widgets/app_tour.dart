@@ -1,24 +1,18 @@
-/// ─── Tour guiado completo (v18.0 · UN solo tutorial, rejugable) ──────────
-/// Sustituye a los DOS sistemas anteriores (slides PageView de la bienvenida
-/// + recorridos por módulo v17.2 + puntas Ola 1), cuyos defectos eran:
-/// · Dos overlays a la vez (walkthrough del módulo + punta con 900 ms de
-///   respiro que no alcanzaba) — capturas del dueño: «2 al mismo tiempo».
-/// · Burbujas fuera de pantalla (altura estimada fija de 150 px).
-/// · Una LISTA de recorridos en Ajustes en vez de un tutorial completo.
+/// ─── Tour guiado completo (v19.0 · motor propio, un solo tutorial) ──────────
+/// UN tutorial por instalación, rejugable desde Ajustes. Motor: coach_mark.dart
+/// (overlay de la casa — sustituye a tutorial_coach_mark, retirado por:
+/// tarjetas cortadas fuera de pantalla, focos sobre rects incorrectos y
+/// overlays cuyos botones quedaban inalcanzables → tutorial congelado).
 ///
-/// Motor: `tutorial_coach_mark` 1.3.4 (pub.dev) — v18.0: UN overlay POR PASO
-/// (no por segmento). Antes de cada tarjeta el motor arrastra el ancla a la
-/// zona visible (`Scrollable.ensureVisible` 400 ms + 450 ms de respiro): el
-/// overlay nunca mide un rect que el usuario no está viendo — lección de la
-/// captura «tarjeta cortada». Ancla no montada → el paso se salta, no se
-/// fuerza un foco muerto.
-///
-/// El tour cruza pestañas solo: navega con go_router, espera el layout y
-/// encadena pasos; «Saltar» corta TODO y devuelve al usuario a donde estaba.
-///
-/// Semántica: UNA oportunidad automática por instalación (flag
-/// `valorave.tour-done`, se marca ANTES de mostrar — si algo interrumpe,
-/// no vuelve a molestar) y replay libre desde Ajustes → Tutorial.
+/// Reglas del recorrido:
+/// · Cruza pestañas navegando con go_router; antes de cada paso arrastra el
+///   ancla a la zona visible (ensureVisible) y espera el frame: el foco se
+///   mide del rect REAL, después de que el scroll terminó.
+/// · Ancla no montada → el paso se SALTA (jamás se enfoca un rect muerto).
+/// · UN overlay a la vez (guard global); «Saltar» corta TODO y devuelve al
+///   usuario a su pestaña de origen.
+/// · UNA oportunidad automática por instalación (flag `valorave.tour-done`,
+///   marcado ANTES de mostrar: si algo interrumpe, no vuelve a molestar).
 library;
 
 import 'dart:async';
@@ -27,18 +21,18 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 import '../core/currencies.dart';
-import 'app_router.dart' show kNavBarKey, kHeaderActionsKey;
-import 'ui.dart';
+import 'app_router.dart' show kNavBarKey;
+import 'coach_mark.dart';
 
 /// Clave de la preferencia «ya vi el tour completo».
 const String kTourDoneKey = 'valorave.tour-done';
 
 /// ─── Registro central de anclas ─────────────────────────────────────────────
-/// Las pantallas attachean estas claves; el tour las enfoca. Una clave = un
-/// widget en toda la app (los branches del shell viven tras primer visit).
+/// Las pantallas attachean estas claves; el tour enfoca su rect real. Una
+/// clave = un widget en toda la app (los branches del shell viven tras el
+/// primer visit, y si no están montados el paso se salta).
 abstract final class TourKeys {
   // Inicio
   static final GlobalKey cotizacion = GlobalKey(debugLabel: 'tour-cotizacion');
@@ -67,18 +61,25 @@ class TourStep {
     required this.body,
     this.anchor,
     this.flags = const <Currency>[],
+    this.cta,
   });
 
   /// Identificador único (tests de integridad).
   final String id;
   final String title;
+
+  /// Cuerpo con el contexto EXACTO de la zona enfocada (v19: reescritos
+  /// paso a paso contra las pantallas reales — nada de consejos genéricos).
   final String body;
 
-  /// Ancla del paso; null = tarjeta centrada arriba (sin foco).
+  /// Ancla del paso; null = tarjeta arriba centrada (sin foco).
   final GlobalKey? anchor;
 
   /// Banderas REALES (assets/flags) que encabezan la tarjeta.
   final List<Currency> flags;
+
+  /// Texto del botón principal (por defecto «Siguiente»).
+  final String? cta;
 }
 
 class TourSegment {
@@ -94,8 +95,7 @@ class TourSegment {
   final List<TourStep> steps;
 }
 
-/// El tour completo: 6 segmentos, 13 pasos, de Inicio a Ajustes. El
-/// contenido de los slides de la bienvenida (extintos, v17.8) vive aquí.
+/// El tour completo: 6 segmentos, 13 pasos, de Inicio a Ajustes.
 /// NO const: las anclas son GlobalKeys vivas (static finals del registro).
 final List<TourSegment> kTourSegments = <TourSegment>[
   TourSegment(
@@ -104,37 +104,38 @@ final List<TourSegment> kTourSegments = <TourSegment>[
     steps: [
       TourStep(
         id: 'inicio.bienvenida',
-        title: 'Tu tablero, sin cuentas ni nube',
-        // Ancla: acciones de la cabecera — SIEMPRE montadas en el shell.
-        anchor: kHeaderActionsKey,
+        title: 'Tus datos viven en tu teléfono',
+        // Sin ancla: tarjeta centrada arriba — el mensaje es general y NO
+        // debe enfocar los iconos de la cabecera (v18 lo hacía y el foco
+        // no calzaba con el texto).
         body: 'Las cotizaciones llegan de APIs públicas (BCV, paralelo, TRM, '
-            'Banxico, Banco Central de Brasil) y TODO lo tuyo vive solo en '
-            'este teléfono. Funciona sin conexión desde el primer arranque.',
+            'Banxico y Brasil) y se guardan aquí para consultarlas sin '
+            'conexión. Tus listas, precios y compras nunca salen de este '
+            'teléfono: sin cuentas, sin nube.',
         flags: [Currency.ves, Currency.usd, Currency.eur, Currency.cop, Currency.brl, Currency.mxn],
       ),
       TourStep(
         id: 'inicio.cotizacion',
         title: 'Elige tu tasa activa',
         anchor: TourKeys.cotizacion,
-        body: 'Cada fila de «Cotización principal» cambia la fuente con un '
-            'toque: BCV, paralelo, promedio o tu manual. La tarjeta del dólar '
-            'de arriba usa la que actives aquí, con la brecha vs BCV y la '
-            'comparación con ayer.',
+        body: 'Cada fila de esta sección cambia la fuente con un toque: BCV, '
+            'paralelo, promedio o tu manual. El dólar de arriba y todos los '
+            'cálculos de la app usan la que actives aquí.',
       ),
       TourStep(
         id: 'inicio.foco',
         title: 'Todas tus divisas',
         anchor: TourKeys.divisasFoco,
-        body: '«Divisas del foco» abre el conversor con cada moneda; más abajo '
-            '«Resumen del mes» y «Tus tiendas» se alimentan solos de tus '
-            'compras reales.',
+        body: 'Aquí ves cada moneda del foco con su tasa activa. «Ir al '
+            'conversor» te lleva directo al cambio, con fecha y fuentes.',
       ),
       TourStep(
         id: 'inicio.navbar',
         title: 'Cinco pestañas, todo a un toque',
         anchor: kNavBarKey,
-        body: 'Inicio · Divisas · Lista · Productos · Análisis. La campana de '
-            'arriba guarda tus avisos y la lupa busca en toda la app.',
+        body: 'Inicio · Divisas · Lista · Productos · Análisis. La campana '
+            'guarda tus avisos y la lupa busca en toda la app; los ajustes '
+            'viven arriba a la derecha.',
       ),
     ],
   ),
@@ -144,19 +145,19 @@ final List<TourSegment> kTourSegments = <TourSegment>[
     steps: [
       TourStep(
         id: 'divisas.fecha',
-        title: 'Conversor con fecha',
+        title: 'La tasa de otro día',
         anchor: TourKeys.convFecha,
-        body: '¿Cuánto valía tu plata ayer o hace una semana? «Elegir fecha» '
-            'abre el calendario con los días guardados: la tasa de ESE día '
-            'entra al cálculo, con su ruta y su fuente a la vista.',
+        body: '«Ayer» o «Elegir fecha» cargan la tasa REAL de ese día, '
+            'guardada en tu teléfono. «Volver a hoy» regresa al tablero '
+            'vivo.',
       ),
       TourStep(
         id: 'divisas.fuente',
-        title: 'La fuente de la tasa, a la mano',
+        title: 'La fuente, siempre a la vista',
         anchor: TourKeys.convFuente,
-        body: 'La fila «Fuente de tasa» te deja elegir entre las tasas que da '
-            'la API para esa moneda. Tu elección vive solo en el conversor; '
-            'comparte el resultado con tu marca desde «Compartir».',
+        body: 'La línea de arriba muestra la fuente de la tasa y su '
+            'frescura: tócala para ver todas las de la moneda y elegir '
+            'cuál entra al cálculo.',
       ),
     ],
   ),
@@ -166,22 +167,18 @@ final List<TourSegment> kTourSegments = <TourSegment>[
     steps: [
       TourStep(
         id: 'lista.agregar',
-        title: 'Escanea solo lo que importa',
+        title: 'Agrega por nombre o escaneo',
         anchor: TourKeys.listaAgregar,
-        body: 'Agrega por nombre o escaneando el código de barras: el escáner '
-            'procesa únicamente el recuadro de apuntado y, si el código no '
-            'existe, te ofrece crearlo. Al editar un ítem puedes capturar el '
-            'peso (600 g, 1,5 l) y su tienda: la app calcula cuánto vale el '
-            'kilo o el litro por ti.',
+        body: 'Escribe el producto, su precio y la moneda — o escanea el '
+            'código de barras. La tienda es opcional y cada compra cerrada '
+            'queda en tu historial.',
       ),
       TourStep(
         id: 'lista.sala',
-        title: 'Comparte la lista y cierra la compra',
+        title: 'Comparte la lista en vivo',
         anchor: TourKeys.listaSala,
-        body: '«Sala en vivo» crea un código de 6 letras: quien lo tenga ve tu '
-            'lista y sus cambios al instante, con o sin internet. Al final, '
-            '«Finalizar compra» abre el modal con tienda única o varias, cuenta '
-            'ajustada, nota y foto del ticket — y entra al historial sola.',
+        body: '«Sala en vivo» crea un código de 6 letras: quien lo tenga ve '
+            'tu lista y sus cambios al instante, con o sin internet.',
       ),
     ],
   ),
@@ -193,10 +190,9 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'productos.busqueda',
         title: 'Tu libro de precios',
         anchor: TourKeys.prodBusqueda,
-        body: 'El buscador filtra por nombre o código de barras. En la ficha de '
-            'cada producto registras el precio de hoy, escaneas el código o '
-            'fijas una META: cuando el último registro quede por debajo, te '
-            'avisamos. Importa tu catálogo en CSV.',
+        body: 'Busca por nombre o código de barras. En la ficha de cada '
+            'producto registras el precio de hoy, escaneas su código o '
+            'fijas una META: te avisamos cuando baje de ella.',
       ),
     ],
   ),
@@ -208,18 +204,17 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'analisis.anclas',
         title: 'Brecha, inflación y gastos',
         anchor: TourKeys.anclas,
-        body: 'Seis anclas: Divisas (brecha BCV↔paralelo), Inflación personal, '
-            'Productos, Canasta, GASTOS y Tasa histórica. Toca cualquier punto '
-            'de las gráficas para ver la cifra exacta de ese día.',
+        body: 'Cada ancla abre su gráfica con datos reales: brecha '
+            'BCV↔paralelo, inflación personal, productos, canasta y los '
+            'gastos de tus compras de Lista.',
       ),
       TourStep(
         id: 'analisis.rango',
-        title: 'Gastos automáticos y rango honesto',
+        title: 'La ventana de tiempo',
         anchor: TourKeys.rango,
-        body: '«Gastos» se alimenta SOLO de tus compras de Lista: total, '
-            'donut por tienda y barras por mes, sin registro manual. Los chips '
-            'cambian la ventana de todas las gráficas y la cobertura real '
-            'siempre se anuncia — nunca prometemos más de lo que hay.',
+        body: 'Los chips cambian el rango de todas las gráficas. La '
+            'cobertura disponible siempre se anuncia: nunca prometemos más '
+            'de lo que hay.',
       ),
     ],
   ),
@@ -231,17 +226,18 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         id: 'ajustes.conexion',
         title: 'Tú decides cuándo consultar',
         anchor: TourKeys.conexion,
-        body: 'En «Datos y conexión» decides si la app consulta APIs y cada '
-            'cuánto. Todo lo descargado queda guardado en tu teléfono; con '
-            'respaldo JSON con fusión y widgets de tasa en el escritorio.',
+        body: 'Con «No consultar API automáticamente» la app no toca la red: '
+            'todo se lee de tu libro local y tus tasas manuales. El '
+            'intervalo de consulta también se cambia aquí.',
       ),
       TourStep(
         id: 'ajustes.tutorial',
         title: 'Este tour, cuando quieras',
         anchor: TourKeys.tutorial,
-        body: 'Repite el tutorial completo desde aquí — también la bienvenida. '
-            'Avisos con umbrales propios, biometría opcional y diagnóstico de '
-            'fuentes completan la configuración.',
+        body: 'Repite el tutorial o la bienvenida desde aquí. Avisos con '
+            'umbrales, biometría opcional y respaldo JSON completan los '
+            'ajustes.',
+        cta: 'Entendido',
       ),
     ],
   ),
@@ -268,15 +264,15 @@ Future<void> maybeRunTourOnce(BuildContext context) async {
   await runAppTour(context);
 }
 
-/// Guard anti-reentrada: jamás dos tours a la vez (la lección de las
+/// Guard anti-reentrada: jamás dos overlays a la vez (la lección de las
 /// capturas del dueño — nada se apila sobre nada).
 bool _tourRunning = false;
 bool get tourRunning => _tourRunning;
 
-/// Ejecuta el tour completo: navega segmento a segmento, y POR CADA PASO
-/// arrastra el ancla a la vista antes de mostrar su overlay. Devuelve al
-/// usuario a su pestaña de origen (o a Inicio si venía de la bienvenida).
-/// «Saltar» corta el resto y restaura igual.
+/// Ejecuta el tour completo: navega segmento a segmento y POR CADA PASO
+/// arrastra el ancla a la vista antes de medir su rect. Devuelve al usuario
+/// a su pestaña de origen (o a Inicio si venía de la bienvenida). «Saltar»
+/// corta el resto y restaura igual.
 Future<void> runAppTour(BuildContext context) async {
   if (_tourRunning) return;
   _tourRunning = true;
@@ -298,25 +294,39 @@ Future<void> runAppTour(BuildContext context) async {
       await Future<void>.delayed(const Duration(milliseconds: 350));
       if (!context.mounted) return;
       for (final step in seg.steps) {
-        // Ancla no montada (pe. rama del shell aún sin visitar): el paso se
-        // SALTA — jamás se enfoca un rect que no existe.
+        // v19: paso SIN ancla → tarjeta centrada (se muestra igual); paso
+        // CON ancla no montada (rama del shell sin visitar) → se SALTA:
+        // jamás se enfoca un rect que no existe.
         final anchorCtx = step.anchor?.currentContext;
-        if (anchorCtx == null || !anchorCtx.mounted) {
+        if (step.anchor != null && (anchorCtx == null || !anchorCtx.mounted)) {
           index++;
           continue;
         }
         // El ancla puede vivir DENTRO de un scroll y quedar bajo el pliegue:
-        // se arrastra a la zona visible (alignment 0.45 ≈ un poco sobre el
-        // centro) y se espera a que el arrastre TERMINA antes de medir.
-        await Scrollable.ensureVisible(
-          anchorCtx,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOut,
-          alignment: 0.45,
-        );
-        await Future<void>.delayed(const Duration(milliseconds: 450));
+        // se arrastra a la zona visible y se espera a que el arrastre
+        // TERMINA antes de medir el rect (el overlay mide DESPUÉS de esto).
+        if (anchorCtx != null) {
+          await Scrollable.ensureVisible(
+            anchorCtx,
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOut,
+            alignment: 0.45,
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 80));
+        }
         if (!context.mounted) return;
-        final finished = await _runStep(context, seg, step, index, total);
+        final finished = await showCoachMark(
+          context,
+          anchor: step.anchor,
+          card: CoachCardData(
+            segment: seg.title,
+            title: step.title,
+            body: step.body,
+            flags: step.flags,
+            stepLabel: '${index + 1}/$total',
+            cta: step.cta,
+          ),
+        );
         if (!finished) break loop; // «Saltar»: se corta el tour completo.
         index++;
       }
@@ -325,182 +335,5 @@ Future<void> runAppTour(BuildContext context) async {
     if (context.mounted) router.go(backTo);
   } finally {
     _tourRunning = false;
-  }
-}
-
-/// Corre UN paso: un TutorialCoachMark con UN solo TargetFocus. Devuelve
-/// true si se completó, false si se saltó.
-Future<bool> _runStep(
-    BuildContext context, TourSegment seg, TourStep step, int index, int total) {
-  final done = Completer<bool>();
-  TutorialCoachMark(
-    targets: [_targetFor(context, seg, step, index, total)],
-    colorShadow: Colors.black,
-    opacityShadow: 0.78,
-    paddingFocus: 12,
-    hideSkip: true, // Saltar vive DENTRO de la tarjeta propia
-    useSafeArea: true,
-    pulseEnable: true,
-    focusAnimationDuration: const Duration(milliseconds: 420),
-    unFocusAnimationDuration: const Duration(milliseconds: 260),
-    onFinish: () {
-      if (!done.isCompleted) done.complete(true);
-    },
-    onSkip: () {
-      if (!done.isCompleted) done.complete(false);
-      return true;
-    },
-  ).show(context: context);
-  return done.future;
-}
-
-/// Construye el TargetFocus del paso: ancla → alineación calculada con
-/// el rect REAL (tarjeta abajo si hay sitio, arriba si el ancla está baja —
-/// nunca estimada, nunca fuera de pantalla). [index] es la posición global
-/// del paso dentro del tour completo (para «paso i de n»). El ancla YA está
-/// en la zona visible: `runAppTour` la arrastró antes de llamarnos.
-TargetFocus _targetFor(
-    BuildContext context, TourSegment seg, TourStep step, int index, int total) {
-  final screen = MediaQuery.of(context).size;
-  return TargetFocus(
-    identify: step.id,
-    keyTarget: step.anchor,
-    shape: ShapeLightFocus.RRect,
-    radius: 14,
-    paddingFocus: 10,
-    contents: [
-      TargetContent(
-        align: _alignFor(step.anchor, screen),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        builder: (ctx, controller) => _TourCard(
-          segment: seg.title,
-          step: step,
-          stepIndex: index,
-          totalSteps: total,
-          onNext: () => controller.next(),
-          onSkip: () => controller.skip(),
-        ),
-      ),
-    ],
-  );
-}
-
-/// Alineación según la posición real del ancla: centro por debajo del 55 %
-/// de la pantalla → tarjeta ARRIBA; si no, abajo. Sin ancla → arriba.
-ContentAlign _alignFor(GlobalKey? anchor, Size screen) {
-  if (anchor == null) return ContentAlign.top;
-  final ctx = anchor.currentContext;
-  if (ctx == null) return ContentAlign.top;
-  final box = ctx.findRenderObject() as RenderBox?;
-  if (box == null || !box.attached || !box.hasSize) return ContentAlign.top;
-  final rect = box.localToGlobal(Offset.zero) & box.size;
-  return rect.center.dy > screen.height * 0.55
-      ? ContentAlign.top
-      : ContentAlign.bottom;
-}
-
-/// ─── Tarjeta del paso (estética VeInk, la del walkthrough v17.2) ────────────
-/// StatefulWidget por el guard `_busy`: un doble toque en «Siguiente» no
-/// debe avanzar dos veces (el cierre del overlay es asíncrono y un segundo
-/// `next()` en el último paso duplicaría el onFinish).
-class _TourCard extends StatefulWidget {
-  const _TourCard({
-    required this.segment,
-    required this.step,
-    required this.stepIndex,
-    required this.totalSteps,
-    required this.onNext,
-    required this.onSkip,
-  });
-
-  final String segment;
-  final TourStep step;
-  final int stepIndex;
-  final int totalSteps;
-  final VoidCallback onNext;
-  final VoidCallback onSkip;
-
-  @override
-  State<_TourCard> createState() => _TourCardState();
-}
-
-class _TourCardState extends State<_TourCard> {
-  bool _busy = false;
-
-  void _advance(VoidCallback cb) {
-    if (_busy) return;
-    setState(() => _busy = true);
-    cb();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isLast = widget.stepIndex == widget.totalSteps - 1;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.outlineVariant),
-        boxShadow: const [
-          BoxShadow(color: Color(0x42000000), blurRadius: 22, offset: Offset(0, 8)),
-        ],
-      ),
-      constraints: const BoxConstraints(maxWidth: 380),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Expanded(
-              child: Text(widget.segment,
-                  style: TextStyle(
-                      fontFamily: 'SpaceGrotesk',
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.1,
-                      color: scheme.primary)),
-            ),
-            Text('${widget.stepIndex + 1}/${widget.totalSteps}',
-                style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                    color: scheme.onSurfaceVariant)),
-          ]),
-          if (widget.step.flags.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Row(children: [
-              for (final c in widget.step.flags)
-                Padding(
-                  padding: const EdgeInsets.only(right: 5),
-                  child: Flag(c, size: 16),
-                ),
-            ]),
-          ],
-          const SizedBox(height: 8),
-          Text(widget.step.title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 6),
-          Text(widget.step.body,
-              style: TextStyle(fontSize: 13, height: 1.5, color: scheme.onSurfaceVariant)),
-          const SizedBox(height: 14),
-          Row(children: [
-            TextButton(
-              onPressed: _busy ? null : () => _advance(widget.onSkip),
-              child: const Text('Saltar'),
-            ),
-            const Spacer(),
-            FilledButton(
-              onPressed: _busy ? null : () => _advance(widget.onNext),
-              child: Text(isLast ? 'Entendido' : 'Siguiente'),
-            ),
-          ]),
-        ],
-      ),
-    );
   }
 }

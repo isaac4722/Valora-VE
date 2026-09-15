@@ -429,7 +429,7 @@ void main() {
     });
   });
 
-  group('Tour completo (v17.8 · tutorial_coach_mark, un solo tutorial)', () {
+  group('Tour completo (v19.0 · motor propio, un solo tutorial)', () {
     test('integridad: 6 segmentos, ids únicos, anclas GlobalKeys', () {
       // El tour es UNO y cubre toda la app: 5 pestañas + Ajustes.
       expect(kTourSegments.map((s) => s.location).toList(),
@@ -437,13 +437,15 @@ void main() {
       final ids = [for (final s in kTourSegments) for (final st in s.steps) st.id];
       expect(ids.toSet().length, ids.length, reason: 'ids de pasos únicos');
       expect(ids.length, greaterThanOrEqualTo(12));
-      // Todo paso lleva ancla (nada flota sin foco — nada fuera de pantalla).
-      for (final s in kTourSegments) {
-        for (final st in s.steps) {
-          expect(st.anchor, isA<GlobalKey>(),
-              reason: '«${st.id}» sin ancla');
-        }
-      }
+      // v19: SOLO la introducción va sin ancla (tarjeta centrada arriba);
+      // todo lo demás enfoca su zona real — nada de focos muertos.
+      final sinAncla = [
+        for (final s in kTourSegments)
+          for (final st in s.steps)
+            if (st.anchor == null) st.id,
+      ];
+      expect(sinAncla, ['inicio.bienvenida'],
+          reason: 'solo el primer paso es centrado; el resto enfoca zonas');
       // Las anclas son únicas (un GlobalKey no puede enfocar dos widgets).
       final anchors = [
         for (final s in kTourSegments)
@@ -486,26 +488,27 @@ void main() {
         child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
       ));
       // El shell monta → _TourTrigger dispara el tour. La cadena
-      // (350 ms de respiro → overlay → postFrame → animación de foco
-      // 420 ms → build de la tarjeta) necesita VARIOS frames: se espera por
-      // condición, NUNCA pumpAndSettle (el pulso del foco es infinito).
+      // (350 ms de respiro → ensureVisible → overlay) necesita algunos
+      // frames: se espera por condición. El motor propio NO tiene
+      // animaciones infinitas, pero el ticker del shell puede seguir vivo
+      // — por eso condición y no pumpAndSettle.
       for (var i = 0;
-          i < 30 && find.text('Tu tablero, sin cuentas ni nube').evaluate().isEmpty;
+          i < 30 && find.text('Tus datos viven en tu teléfono').evaluate().isEmpty;
           i++) {
         await tester.pump(const Duration(milliseconds: 150));
       }
-      expect(find.text('Tu tablero, sin cuentas ni nube'), findsOneWidget);
+      expect(find.text('Tus datos viven en tu teléfono'), findsOneWidget);
       expect(find.text('1/13'), findsOneWidget);
       // Se marcó ANTES de mostrarse (una oportunidad, no un bucle).
       expect(isTourDone(prefs), isTrue);
-      // Saltar corta TODO el tour y restaura la pestaña de origen.
+      // Saltar corta TODO el tour y restaura la petaña de origen.
       await tester.tap(find.text('Saltar'));
       for (var i = 0;
-          i < 30 && find.text('Tu tablero, sin cuentas ni nube').evaluate().isNotEmpty;
+          i < 30 && find.text('Tus datos viven en tu teléfono').evaluate().isNotEmpty;
           i++) {
         await tester.pump(const Duration(milliseconds: 150));
       }
-      expect(find.text('Tu tablero, sin cuentas ni nube'), findsNothing);
+      expect(find.text('Tus datos viven en tu teléfono'), findsNothing);
       expect(router.routerDelegate.currentConfiguration.uri.toString(), '/');
     });
   });
