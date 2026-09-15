@@ -23,6 +23,7 @@ import '../../data/store.dart';
 import '../../room/room_transport.dart';
 import '../../services/quick_actions.dart' show scanRequest;
 import '../../services/sharing.dart';
+import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/ui.dart';
 import 'checkout_modal.dart';
@@ -247,6 +248,7 @@ class _ListaScreenState extends State<ListaScreen> {
               icon: const Icon(Icons.receipt_long, size: 20),
               onPressed: () => context.push('/historial'),
             )),
+          const TipsTrigger(scope: 'lista'),
           // v18.0 · Sala Viva: si estás en sala, la lista lo sabe — el strip
           // vive arriba de TODO y lleva a la pantalla de la sala.
           const _EnSalaStrip(),

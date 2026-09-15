@@ -20,6 +20,7 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import 'product_sheet.dart';
+import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/ui.dart';
 import '../../services/sharing.dart';
@@ -164,6 +165,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
         children: [
+          const TipsTrigger(scope: 'productos'),
           PageHeader('Productos', hint: 'Tu libro de precios: qué pagas, dónde y cuándo',
             action: Row(mainAxisSize: MainAxisSize.min, children: [
               IconButton(

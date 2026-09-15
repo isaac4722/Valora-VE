@@ -21,6 +21,7 @@ import '../../data/rate_history.dart' show snapshotSeries;
 import '../../data/store.dart';
 import '../../state/app_state.dart';
 import '../../widgets/app_router.dart' show kHeroRateKey;
+import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/ui.dart';
 
@@ -39,6 +40,7 @@ class HomeScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           children: [
+            const TipsTrigger(scope: 'home'),
             _Hero(poller: poller),
             _RateHero(),
             _WeekSpark(),

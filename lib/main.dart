@@ -25,6 +25,7 @@ import 'services/widget_service.dart';
 import 'services/workmanager_service.dart';
 import 'state/app_state.dart';
 import 'widgets/app_router.dart';
+import 'widgets/app_tips.dart' show kSessionsKey;
 
 /// [documentsDir] es un seam de pruebas: null en producción (path_provider
 /// resuelve el directorio); en tests/host se pasa un directorio temporal
@@ -36,6 +37,10 @@ Future<void> main({String? documentsDir}) async {
   final store = AppStore();
   await store.hydrate(testDir: documentsDir);
   final prefs = await SharedPreferences.getInstance();
+  // Sesiones para el motor de tips (v19): los tips contextuales empiezan a
+  // partir de la SEGUNDA apertura — nunca «de una vez» tras el tutorial.
+  final sessions = prefs.getInt(kSessionsKey) ?? 0;
+  await prefs.setInt(kSessionsKey, sessions + 1);
   final theme = ThemeController();
   await theme.load(prefs);
   // Señal de red (v17.8): tolerante — si el canal no existe (host de

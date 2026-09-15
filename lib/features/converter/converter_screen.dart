@@ -24,6 +24,7 @@ import '../../data/history_api.dart';
 import '../../data/rate_history.dart';
 import '../../data/store.dart';
 import '../../services/sharing.dart';
+import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/share_card.dart';
 import '../../widgets/share_menu.dart';
@@ -373,6 +374,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
+          const TipsTrigger(scope: 'conversor'),
           const PageHeader('Conversor', hint: 'Puente USD · EUR visible · ruta honesta'),
           // Fecha de la tasa activa + selector histórico (calendario real).
           KeyedSubtree(

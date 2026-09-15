@@ -6,6 +6,8 @@
 /// anfitrión cierra la sala y todos vuelven solos.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +16,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/theme.dart';
 import '../../room/room_transport.dart';
+import '../../widgets/app_tips.dart';
 import '../../widgets/ui.dart';
 
 /// Ruta de la Sala Viva (push desde la Lista o la configuración de sala).
@@ -37,13 +40,28 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
   }
 
   /// Regreso automático: sin sala no hay nada que ver aquí — a la Lista.
+  /// Tip de bienvenida a la sala (v19): la PRIMERA vez que se entra a una
+  /// sala, UN tip enseña el código+QR — reglas del motor de tips.
   void _onRoomChanged() {
     final ctrl = _ctrl;
     if (ctrl == null || !mounted) return;
+    if (ctrl.connected && !_salutedTip) {
+      _salutedTip = true;
+      unawaited(maybeShowTipOnce(
+        context,
+        id: 'sala.qr',
+        title: 'Invita con el código o el QR',
+        body: 'Quien tenga el código de 6 letras —o escanee el QR de esta '
+            'pantalla— entra a tu sala y ve la lista en vivo, con o sin '
+            'internet.',
+      ));
+    }
     if (!ctrl.connected && ctrl.status != RoomStatus.connecting) {
       context.go('/lista');
     }
   }
+
+  bool _salutedTip = false;
 
   @override
   Widget build(BuildContext context) {

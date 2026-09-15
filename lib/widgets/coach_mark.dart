@@ -148,49 +148,66 @@ class _CoachOverlayState extends State<_CoachOverlay> {
     final topSafe = safe.top + 12;
     final bottomSafe = size.height - safe.bottom - 12;
 
-    // ¿Cabe la tarjeta ABAJO del foco? Regla: foco en el tercio alto de la
-    // pantalla → abajo; si no → arriba. Sin foco → arriba centrada.
+    // ¿Cabe la tarjeta ABAJO del foco? Regla: foco en la mitad alta de la
+    // pantalla → abajo; si no → arriba (la tarjeta ocupa el espacio libre
+    // superior, desde topSafe hasta el foco). Sin foco → arriba centrada.
     bool below = false;
     double top;
+    double maxH;
     if (hole == null) {
       top = topSafe + 18;
+      maxH = bottomSafe - top;
     } else {
       below = hole.center.dy < size.height * 0.55;
       top = below ? hole.bottom + 14 : topSafe;
-      if (!below) {
-        // La tarjeta se ancla por SU borde inferior al hueco libre superior:
-        // se pinta en un Column invertido (ver abajo).
-        top = topSafe;
-      }
-      // Si el lado elegido no tiene espacio mínimo (140 px), se cambia al
-      // otro lado; si tampoco, se centra abajo (scroll interno salva).
-      if (below && (bottomSafe - top) < 140) {
+      maxH = below ? bottomSafe - top : hole.top - 14 - topSafe;
+      // Si el lado elegido no tiene espacio mínimo (150 px), se cambia al
+      // otro lado. Si NINGUNO tiene, se queda en el lado más grande: la
+      // tarjeta se scrollea y sus botones viven FIJOS al pie (ver tarjeta)
+      // — alcanzables SIEMPRE.
+      if (below && maxH < 150 && (hole.top - 14 - topSafe) > maxH) {
         below = false;
         top = topSafe;
-      } else if (!below && (hole.top - 14 - topSafe) < 140) {
+        maxH = hole.top - 14 - topSafe;
+      } else if (!below && maxH < 150 && (bottomSafe - (hole.bottom + 14)) > maxH) {
         below = true;
         top = hole.bottom + 14;
+        maxH = bottomSafe - top;
       }
     }
-    final maxH = (below ? bottomSafe - top : (hole == null ? bottomSafe - top : hole.top - 14 - topSafe))
-        .clamp(120.0, size.height);
+    maxH = maxH.clamp(150.0, size.height);
 
+    // Tarjeta: contenido scrolleable + BOTONES FIJOS al pie. Aunque el
+    // espacio sea justo, «Saltar»/«Siguiente» quedan visibles y tocables
+    // (el contenido es lo que se scrollea, nunca los botones).
     final card = Material(
       color: scheme.surfaceContainerHighest,
       elevation: 6,
       shadowColor: Colors.black54,
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        constraints: BoxConstraints(maxWidth: maxW, maxHeight: maxH),
+        constraints: BoxConstraints(maxWidth: maxW),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: scheme.outlineVariant),
         ),
-        child: SingleChildScrollView(
-          // Si el contenido no cabe en el espacio disponible, SE SCROLLA:
-          // los botones quedan alcanzables SIEMPRE (fin de los congelados).
-          padding: const EdgeInsets.all(18),
-          child: _CoachCardBody(card: widget.card, onDone: _finish),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+                  child: _CoachCardBody(card: widget.card),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 4, 18, 14),
+                child: _CoachCardButtons(card: widget.card, onDone: _finish),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -208,22 +225,15 @@ class _CoachOverlayState extends State<_CoachOverlay> {
                 child: const SizedBox.expand(),
               ),
             ),
-            // Tarjeta: posicionada y clamped.
+            // Tarjeta: posicionada y con alto MÁXIMO = espacio elegido.
+            // El Column interno (contenido Flexible + botones fijos) garantiza
+            // que quepa: si el texto es largo, el CONTENIDO se scrollea.
             Positioned(
               left: (size.width - maxW) / 2,
               top: top,
               width: maxW,
-              child: below
-                  ? Align(alignment: Alignment.topCenter, child: card)
-                  // Caso «arriba»: el alto disponible termina en el foco.
-                  : ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxHeight: hole == null
-                            ? maxH
-                            : (hole.top - 14 - topSafe).clamp(120.0, size.height),
-                      ),
-                      child: card,
-                    ),
+              height: maxH,
+              child: card,
             ),
           ],
         ),
@@ -232,21 +242,16 @@ class _CoachOverlayState extends State<_CoachOverlay> {
   }
 }
 
-/// Cuerpo de la tarjeta (segmento · pasos · banderas · título · cuerpo ·
-/// botones Saltar/Siguiente).
+/// Cuerpo scrolleable de la tarjeta: segmento · pasos · banderas ·
+/// título · texto. Los BOTONES viven aparte, fijos al pie (_CoachCardButtons).
 class _CoachCardBody extends StatelessWidget {
-  const _CoachCardBody({
-    required this.card,
-    required this.onDone,
-  });
+  const _CoachCardBody({required this.card});
 
   final CoachCardData card;
-  final ValueChanged<bool> onDone;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final hasCta = card.cta != null;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,20 +299,33 @@ class _CoachCardBody extends StatelessWidget {
         Text(card.body,
             style: TextStyle(
                 fontSize: 13, height: 1.5, color: scheme.onSurfaceVariant)),
-        const SizedBox(height: 14),
-        Row(children: <Widget>[
-          TextButton(
-            onPressed: () => onDone(false),
-            child: const Text('Saltar'),
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: () => onDone(true),
-            child: Text(hasCta ? card.cta! : 'Siguiente'),
-          ),
-        ]),
       ],
     );
+  }
+}
+
+/// Botones de la tarjeta, FIJOS al pie: alcanzables aunque el contenido
+/// se scrollee — el tutorial no se puede congelar.
+class _CoachCardButtons extends StatelessWidget {
+  const _CoachCardButtons({required this.card, required this.onDone});
+
+  final CoachCardData card;
+  final ValueChanged<bool> onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasCta = card.cta != null;
+    return Row(children: <Widget>[
+      TextButton(
+        onPressed: () => onDone(false),
+        child: const Text('Saltar'),
+      ),
+      const Spacer(),
+      FilledButton(
+        onPressed: () => onDone(true),
+        child: Text(hasCta ? card.cta! : 'Siguiente'),
+      ),
+    ]);
   }
 }
 
