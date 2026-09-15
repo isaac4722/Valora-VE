@@ -30,26 +30,37 @@ class _RoomScreenState extends State<RoomScreen> {
   Widget build(BuildContext context) {
     // Controlador de APLICACIÓN (v18.0): la Sala Viva y la Lista lo comparten.
     final ctrl = context.watch<RoomController>();
-    final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: scheme.surfaceContainerLowest,
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+    // v19 (orden del dueño): PushScreen — respeta notch/barras del sistema,
+    // botón ATRÁS visible y separación uniforme entre secciones (antes los
+    // componentes iban pegados y el contenido caía tras la barra de Android).
+    return PushScreen(
+      title: 'Sala en vivo',
+      subtitle: 'Comparte tu lista sin internet, con quien esté cerca',
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         children: [
-          const PageHeader('Sala en vivo',
-              hint: 'Comparte tu lista sin internet, con quien esté cerca'),
-          if (ctrl.lastError != null) _ErrorBanner(msg: ctrl.lastError!),
+          if (ctrl.lastError != null) ...[
+            _ErrorBanner(msg: ctrl.lastError!),
+            const SizedBox(height: 10),
+          ],
           if (ctrl.connected) ...[
             _EnSalaBanner(ctrl: ctrl),
           ] else if (ctrl.needsPairing || ctrl.verifying) ...[
             _PairingPanel(ctrl: ctrl),
           ] else ...[
             _ModePicker(ctrl: ctrl),
-            if (ctrl.mode == 'server') _ServerConfig(ctrl: ctrl),
+            const SizedBox(height: 10),
+            if (ctrl.mode == 'server') ...[
+              _ServerConfig(ctrl: ctrl),
+              const SizedBox(height: 10),
+            ],
             _IdentityName(ctrl: ctrl),
+            const SizedBox(height: 10),
             _HostOptions(ctrl: ctrl),
+            const SizedBox(height: 10),
             _JoinByCode(ctrl: ctrl),
+            const SizedBox(height: 10),
             _NearbyRooms(ctrl: ctrl),
           ],
         ],
@@ -158,7 +169,6 @@ class _ModePicker extends StatelessWidget {
       SectionTitle('Elige el modo'),
       for (final m in _modes)
         Card(
-          margin: const EdgeInsets.only(bottom: 8),
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
             onTap: () => ctrl.setMode(m.$1),
@@ -221,7 +231,7 @@ class _ServerConfigState extends State<_ServerConfig> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Card(
-      margin: const EdgeInsets.only(top: 4, bottom: 8),
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -304,7 +314,6 @@ class _IdentityNameState extends State<_IdentityName> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: TextField(
@@ -327,7 +336,6 @@ class _HostOptions extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -396,7 +404,6 @@ class _JoinByCodeState extends State<_JoinByCode> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -458,7 +465,6 @@ class _NearbyRooms extends StatelessWidget {
       else
         for (final r in rooms)
           Card(
-            margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
               leading: Text(r.emoji, style: const TextStyle(fontSize: 22)),
               title: Text(r.label,
@@ -591,7 +597,6 @@ class _ErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final sem = VeColors.of(context);
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
       color: sem.neg.withValues(alpha: 0.08),
       child: Padding(
         padding: const EdgeInsets.all(12),

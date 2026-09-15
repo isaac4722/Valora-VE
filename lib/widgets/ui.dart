@@ -1065,6 +1065,69 @@ class CurrencySelect extends StatelessWidget {
   }
 }
 
+/// ─── Pantalla completa EMPUJADA (v19) ────────────────────────────────────────
+/// Envoltorio para rutas push (Sala, Sala Viva, Tickets…): respeta la notch
+/// y las barras del sistema ARRIBA (AppBar con back) y ABAJO (SafeArea sobre
+/// el cuerpo), título de marca y subtítulo. Fin del contenido pegado al borde
+/// o escondido tras la barra de navegación de Android.
+class PushScreen extends StatelessWidget {
+  const PushScreen({
+    super.key,
+    required this.title,
+    this.subtitle,
+    required this.child,
+    this.action,
+  });
+
+  final String title;
+  final String? subtitle;
+
+  /// Cuerpo scrolleable (típicamente un ListView sin Scaffold propio).
+  final Widget child;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: scheme.surfaceContainerLowest,
+      appBar: AppBar(
+        backgroundColor: scheme.surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0.5,
+        elevation: 0,
+        centerTitle: false,
+        titleSpacing: 0,
+        title: Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontFamily: 'SpaceGrotesk',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700)),
+              if (subtitle != null)
+                Text(subtitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 11.5, color: scheme.onSurfaceVariant)),
+            ],
+          ),
+        ),
+        actions: <Widget>[?action],
+      ),
+      // SafeArea inferior: el contenido NUNCA queda tras la barra de
+      // navegación de Android (el teclado sigue respetándose via scaffold).
+      body: SafeArea(top: false, child: child),
+    );
+  }
+}
+
 /// ─── Campo de monto con formato es-VE EN VIVO (v19, orden del dueño) ───────
 /// Mientras escribes, los miles se separan con puntos («1000» → «1.000», un
 /// millón → «1.000.000») y la COMA es el único separador decimal (punto

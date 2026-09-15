@@ -46,12 +46,13 @@ class TicketsScreen extends StatelessWidget {
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
 
-    return Scaffold(
-      backgroundColor: scheme.surfaceContainerLowest,
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+    // v19: PushScreen — notch/barras respetadas + botón atrás visible.
+    return PushScreen(
+      title: 'Tickets',
+      subtitle: 'Fotos de tus recibos, siempre a mano',
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         children: [
-          PageHeader('Tickets', hint: 'Fotos de tus recibos, siempre a mano'),
           if (withPhoto.isEmpty)
             EmptyState(
               'Sin tickets todavía',

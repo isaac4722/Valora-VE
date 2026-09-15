@@ -74,19 +74,27 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
     final sem = VeColors.of(context);
     final members = ctrl.visibleMembers;
 
-    return Scaffold(
-      backgroundColor: scheme.surfaceContainerLowest,
-      body: ListenableBuilder(
+    // v19 (orden del dueño): PushScreen — notch/barras respetadas, botón
+    // ATRÁS visible y separación clara entre tarjetas.
+    return PushScreen(
+      title: ctrl.roomName.isNotEmpty
+          ? ctrl.roomName
+          : (ctrl.code.isNotEmpty ? 'Sala ${ctrl.code}' : 'Sala en vivo'),
+      subtitle: 'En vivo · ${ctrl.modeLabel}',
+      action: const Padding(
+        padding: EdgeInsets.only(right: 12),
+        child: LiveBadge(live: true),
+      ),
+      child: ListenableBuilder(
         listenable: ctrl,
         builder: (context, _) {
-          final title = ctrl.roomName.isNotEmpty
-              ? ctrl.roomName
-              : (ctrl.code.isNotEmpty ? 'Sala ${ctrl.code}' : 'Sala en vivo');
           return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
-              PageHeader(title, hint: 'En vivo · ${ctrl.modeLabel}'),
-              if (ctrl.lastError != null) _ErrorBanner(msg: ctrl.lastError!),
+              if (ctrl.lastError != null) ...[
+                _ErrorBanner(msg: ctrl.lastError!),
+                const SizedBox(height: 10),
+              ],
               if (!ctrl.connected) ...[
                 Card(
                   child: Padding(
@@ -112,7 +120,7 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
               ] else ...[
                 _CodigoQrCard(ctrl: ctrl),
                 const SizedBox(height: 10),
-                if (ctrl.isViewer)
+                if (ctrl.isViewer) ...[
                   Card(
                     color: sem.warn.withValues(alpha: 0.08),
                     child: Padding(
@@ -135,6 +143,8 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
                       ]),
                     ),
                   ),
+                  const SizedBox(height: 10),
+                ],
                 _MiembrosCard(ctrl: ctrl, members: members),
                 const SizedBox(height: 12),
                 if (ctrl.canAdmin) ...[
