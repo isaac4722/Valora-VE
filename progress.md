@@ -669,3 +669,28 @@ con la plantilla de `AGENT.md`.
 - Siguiente: push → poll CI+Build hasta verde → verificar los 4 APK
   valorave-v1.8.0-build-{fecha}-{abi}.apk → merge a main SOLO con orden
   expresa del dueño.
+---
+## [TASK-20] v19.0 · 21 encargos del dueño: onboarding en slides, tour propio, tips con reglas, selector de tasa visual, conversor bidireccional, miles en vivo, 1 consulta/región, hive_ce y pantallas reconstruidas · 2026-09-16
+- Agente: Super Z (GLM)
+- Hecho:
+  - Bienvenida PageView 4 slides (avanzar/retroceder, dots, swipe; país se conserva).
+  - coach_mark.dart propio (tutorial_coach_mark retirado): foco del rect real, tarjeta con clamping y botones fijos al pie (no se congela); 13 textos reescritos contra pantallas reales; paso sin ancla = tarjeta centrada.
+  - app_tips.dart: tips con reglas (tour manda, 2ª sesión, cooldown 6 h, una vez cada uno); 7 tips + sala.qr; TipsTrigger en 4 pantallas + disparador en Sala Viva.
+  - rate_sheet.dart: RateTile [Bandera][Nombre][Precio+símbolo] + grupos USD/EUR + showRateSheet + editor manual inline (MoneyField). Inicio/Conversor/Lista/hoja de divisas usan EL MISMO selector; manual accesible desde cualquier interfaz (Ajustes se conserva).
+  - Conversor bidireccional (escribir abajo calcula arriba), divisa del otro lado intercambia lados (jamás X→X; plan(from==to)=null + guard en setConverterPair), swap conserva el número.
+  - MoneyField (ui.dart): miles en vivo, canon 2 pasadas (setText programáticos ya no se mutilan), onChanged solo con entrada del usuario.
+  - board.dart: CO 1 llamada (/v1/cotizaciones) + TRM; BR 1 (/v1/cotacoes). Smoke real: 10 fuentes vivas, 0 degradadas. Conversor histórico persiste puntos consultados (mergeSeries, fix de cascada).
+  - hive → hive_ce (2.20.0/2.3.4), misma API, cero migración.
+  - PushScreen (ui.dart) para rutas empujadas: notch/barras + botón atrás + espaciado. Sala, Sala Viva y Tickets migradas; 5 modos intactos (Servidor incluido).
+  - Ficha de producto: secciones en Cards con divisores + MoneyField; alta agrupada.
+  - Lista: total + ≈ USD al lado; Vuelto/Dividir → modal de checkout (AL PAGAR); presupuesto conserva moneda (bug store) + MoneyField.
+  - Ajustes: manuales en fila flexible (ancho fijo desbordaba a 320 px — testeado) + editor compartido.
+  - Home: fecha «lun 15 sep · 14:30»; héroe/banner con AnimatedSize (cero saltos); manual activa u offline elegido → sin banner de salud; rateOn(preferLocal) sin red.
+  - Banderas auditadas: 6/6 assets reales (test), último selector viejo unificado.
+- Decisiones:
+  - Motor propio vs tutorial_coach_mark: los bugs del dueño (tarjetas cortadas, focos muertos, congelones) venían del paquete; la casa necesita control total del posicionamiento. Sin dependencia extra.
+  - plan(from==to)=null cambia el test «rate 1»: la nueva semántica es orden expresa del dueño (100 Bs son 100 Bs).
+  - setBudget conserva la moneda con monto 0: el bug real era el reset a VES.
+  - Tips por sesiones+cooldown (no inmediatos): «no de una vez tras el tutorial».
+- Verificado: analyze 0 issues · 159 tests verdes (nuevos: MoneyField, bienvenida slides, tour propio, tips, rate sheet, push screens, ajustes 320px, banderas, conversor bidireccional) · smoke de red real (10 fuentes) · 15 commits.
+- Falta: merge a main PROHIBIDO sin orden expresa del dueño (pase las pruebas).

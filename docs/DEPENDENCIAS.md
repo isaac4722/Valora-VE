@@ -7,7 +7,7 @@ Resueltas con Flutter 3.47.3 stable (canal stable sin pin en CI). El gate
 |---|---|---|
 | provider | ^6.1.5 | estado + DI (decisión cerrada del dueño §4) |
 | go_router | ^16.3.0 | shell 8 rutas + ramas stateful (GUI dp4) |
-| hive + hive_flutter | ^2.2.3 / ^1.1.0 | persistencia offline-first (JSON en cajas) |
+| hive_ce + hive_ce_flutter | ^2.20.0 / ^2.3.4 | persistencia offline-first (JSON en cajas) — Community Edition (v19) |
 | path_provider | ^2.1.5 | rutas de datos |
 | **path_provider_android (override)** | **2.2.17** | §trap 3: 2.3.x arrastra jni/NDK C++ (2.4 GB); 2.2.17 es Kotlin puro |
 | shared_preferences | ^2.3.2 | prefs UI (tema, tips, recientes) |
@@ -28,7 +28,6 @@ Resueltas con Flutter 3.47.3 stable (canal stable sin pin en CI). El gate
 | syncfusion_flutter_charts | ^27.1.48 | brecha, evolución, histórico, donut, barras |
 | dynamic_color | ^1.7.0 | Material You (opcional) |
 | qr_flutter | ^4.1.0 | QR de sala |
-| tutorial_coach_mark | ^1.3.4 | tour guiado completo (v17.8): foco anclado, sin apilar ni salirse |
 | pdf + printing | ^3.11.1 / ^5.13.2 | constancias PDF |
 | intl | ^0.19.0 | formato es-VE |
 | nested | ^1.0.0 | (tipado de listas de providers) |
