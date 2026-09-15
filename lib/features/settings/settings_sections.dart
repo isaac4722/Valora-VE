@@ -256,7 +256,10 @@ class _ModuleSource extends StatelessWidget {
   }
 }
 
-/// Editor de tasa manual por fuente + banner de salud.
+/// Editor de tasa manual por fuente (v19 reconstruido): fila flexible
+/// [categoría] [nombre + valor] [lápiz] que abre el editor compartido
+/// (MoneyField con miles en vivo) — el ancho fijo de 120 px desbordaba en
+/// pantallas angostas y el texto se salía.
 class _ManualRates extends StatelessWidget {
   const _ManualRates();
 
@@ -270,52 +273,52 @@ class _ManualRates extends StatelessWidget {
   }
 }
 
-class _ManualField extends StatefulWidget {
+class _ManualField extends StatelessWidget {
   const _ManualField({required this.store, required this.sourceId});
   final AppStore store;
   final String sourceId;
 
   @override
-  State<_ManualField> createState() => _ManualFieldState();
-}
-
-class _ManualFieldState extends State<_ManualField> {
-  late final TextEditingController _ctrl =
-      TextEditingController(text: widget.store.data.manualRates[widget.sourceId] == null
-          ? ''
-          : '${widget.store.data.manualRates[widget.sourceId]}');
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final s = RateSource.of(widget.sourceId)!;
+    final scheme = Theme.of(context).colorScheme;
+    final s = RateSource.of(sourceId)!;
+    final value = store.data.manualRates[sourceId];
+    final set = value != null && value > 0;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(children: [
-        SourceDot(SourceCategory.manual),
-        const SizedBox(width: 8),
-        Expanded(child: Text('Tasa manual ${s.currency.code}', style: const TextStyle(fontSize: 12.5))),
-        SizedBox(
-          width: 120,
-          child: TextField(
-            controller: _ctrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(hintText: '${s.base.code}→${s.quote.code}'),
-          ),
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: InkWell(
+        onTap: () => showManualRateEditor(context, sourceId: sourceId),
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          child: Row(children: [
+            SourceDot(SourceCategory.manual),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Tasa manual ${s.currency.code}',
+                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+            ),
+            // Flexible: en pantallas angostas achica con ellipsis — NUNCA
+            // desborda (el valor con 4 decimales es largo).
+            Flexible(
+              child: Text(
+                set
+                    ? '1 ${s.base.code} = ${fmtRate(value)} ${s.quote.code}'
+                    : 'sin definir',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: set ? scheme.onSurface : scheme.onSurfaceVariant),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.edit_outlined, size: 15, color: scheme.onSurfaceVariant),
+          ]),
         ),
-        TextButton(
-          onPressed: () {
-            final v = parseLocaleNum(_ctrl.text) ?? 0;
-            widget.store.setManualRate(widget.sourceId, v);
-          },
-          child: const Text('Guardar'),
-        ),
-      ]),
+      ),
     );
   }
 }

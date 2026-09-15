@@ -17,6 +17,7 @@ import 'package:valorave/features/insights/insights_screen.dart';
 import 'package:valorave/features/legal/legal_screen.dart';
 import 'package:valorave/features/lista/lista_screen.dart';
 import 'package:valorave/features/products/products_screen.dart';
+import 'package:valorave/features/settings/settings_screen.dart';
 import 'package:valorave/features/shell/main_shell.dart';
 import 'package:valorave/features/shell/notifs_center.dart';
 import 'package:valorave/room/room_transport.dart';
@@ -478,6 +479,32 @@ void main() {
       await tester.tap(find.text('Lista'));
       await tester.pumpAndSettle();
       expect(find.text('Lista de compras'), findsOneWidget);
+    });
+  });
+
+  group('Ajustes v19: tasas manuales sin desbordes', () {
+    testWidgets('fila manual flexible con valor y editor compartido', (tester) async {
+      final store = _pumpedStore(tester, dir: 'w13');
+      await _initServices(store);
+      store.setManualRate('ves-manual', 41.5);
+      // Pantalla angosta (320 px, el caso que desbordaba con ancho fijo).
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(_wrap(const SettingsScreen(), store: store));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      // Scroll hasta la sección de manuales.
+      await tester.scrollUntilVisible(
+        find.text('Tasa manual VES'),
+        400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.textContaining('1 USD = 41,5'), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'sin desbordes a 320 px');
+      // Tocar abre el editor compartido (MoneyField).
+      await tester.tap(find.text('Tasa manual VES'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      expect(find.text('Tasa manual VES', findRichText: true), findsWidgets);
     });
   });
 

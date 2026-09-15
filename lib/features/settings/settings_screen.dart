@@ -27,6 +27,7 @@ import '../../services/notifications.dart';
 import '../../services/sharing.dart';
 import '../../state/app_state.dart';
 import '../../widgets/app_tour.dart';
+import '../../widgets/rate_sheet.dart';
 import '../../widgets/ui.dart';
 import '../../core/version.dart';
 
