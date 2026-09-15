@@ -1,14 +1,12 @@
-/// ─── Onboarding (§9.9 · v18.0) ──────────────────────────────────────────────
-/// UNA sola pantalla: marca + lo que hace + datos tuyos + país con banderas.
-/// El PageView de 3 páginas (dp4) se RETIRÓ por orden del dueño (v18.0
-/// RECHECK): entre la bienvenida paginada y el walkthrough completo la app
-/// tenía DOS tutoriales — ahora la bienvenida es una pantalla corta y el
-/// ÚNICO tutorial es el walkthrough (app_tour.dart), que arranca solo al
-/// terminar la bienvenida y se repite desde Ajustes → Tutorial.
+/// ─── Onboarding (§9.9 · v19.0 · orden del dueño: slides) ─────────────────────
+/// Bienvenida en PageView de 4 slides con avanzar/retroceder (botones y
+/// gesto de swipe): marca → lo que hace → datos tuyos → país con banderas.
+/// El botón final «Comenzar en {país}» fija el país, cierra el onboarding y
+/// deja pasar al tutorial completo (que arranca solo al montar el shell).
 ///
-/// Flujo: pantalla única (chips preseleccionan el país) → «Comenzar» fija el
-/// país → «Todo listo» → a la app. No rejugable como tutorial (decisión del
-/// dueño): «Volver a ver la bienvenida» en Ajustes la reabre.
+/// La última vez (v18.0) esto era UN scroll — el dueño pidió volver a
+/// slides. El tutorial sigue siendo UNO (app_tour.dart); la bienvenida NO
+/// se repite sola (replay en Ajustes → «Volver a ver la bienvenida»).
 ///
 /// Sin logotipo gráfico: la marca es tipografía pura «ValoraVE».
 library;
@@ -30,185 +28,177 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
-  int _step = 0; // 0 pantalla única · 1 done
+  final PageController _page = PageController();
+  int _index = 0;
   Country _country = Country.VE;
 
-  Future<void> _finish(BuildContext context, AppStore store) async {
+  @override
+  void dispose() {
+    _page.dispose();
+    super.dispose();
+  }
+
+  void _go(int i) {
+    final target = i.clamp(0, 3);
+    _page.animateToPage(
+      target,
+      duration: const Duration(milliseconds: 320),
+      curve: kEaseVe,
+    );
+  }
+
+  Future<void> _finish(AppStore store) async {
+    store.setCountry(_country);
     store.finishOnboarding();
-    if (context.mounted) context.go('/');
+    if (mounted) context.go('/');
   }
 
   @override
   Widget build(BuildContext context) {
     final store = context.read<AppStore>();
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
+      backgroundColor: scheme.surfaceContainerLowest,
       body: SafeArea(
-        child: _step == 0
-            ? _SingleWelcome(
-                country: _country,
-                onPickCountry: (c) => setState(() => _country = c),
-                onBegin: () {
-                  store.setCountry(_country);
-                  setState(() => _step = 1);
-                },
-              )
-            : _DoneScreen(country: _country, onFinish: () => _finish(context, store)),
+        child: Column(
+          children: <Widget>[
+            Expanded(
+              child: PageView(
+                controller: _page,
+                physics: const PageScrollPhysics(),
+                onPageChanged: (i) => setState(() => _index = i),
+                children: <Widget>[
+                  const _SlideMarca(),
+                  const _SlideQueHace(),
+                  const _SlideDatos(),
+                  _SlidePais(
+                    country: _country,
+                    onPickCountry: (c) => setState(() => _country = c),
+                  ),
+                ],
+              ),
+            ),
+            // Barra de control: atrás · puntos · siguiente/comenzar.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: 88,
+                    child: TextButton(
+                      onPressed: _index == 0 ? null : () => _go(_index - 1),
+                      child: const Text('Atrás'),
+                    ),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: _Dots(
+                        count: 4,
+                        index: _index,
+                        onTap: _go,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 140,
+                    child: FilledButton(
+                      onPressed: _index < 3 ? () => _go(_index + 1) : () => _finish(store),
+                      child: Text(
+                        _index < 3 ? 'Siguiente' : 'Comenzar',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// ─── Pantalla única ─────────────────────────────────────────────────────────
-/// Todo el contenido de las 3 páginas del dp4 condensado en UN scroll corto:
-/// marca arriba, tres viñetas, tarjeta «datos reales» y el país con banderas.
-class _SingleWelcome extends StatelessWidget {
-  const _SingleWelcome({
-    required this.country,
-    required this.onPickCountry,
-    required this.onBegin,
-  });
-
-  final Country country;
-  final ValueChanged<Country> onPickCountry;
-  final VoidCallback onBegin;
+/// ─── Slide 1 · Marca ─────────────────────────────────────────────────────────
+class _SlideMarca extends StatelessWidget {
+  const _SlideMarca();
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
-
-    return Column(
-      children: <Widget>[
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(26, 18, 26, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 30),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Center(
+            child: RichText(
+              text: TextSpan(
+                style: VeText.displayNum(44, color: scheme.onSurface, weight: FontWeight.w700),
+                children: <InlineSpan>[
+                  const TextSpan(text: 'Valora'),
+                  TextSpan(text: 'VE', style: TextStyle(color: scheme.primary)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              'Precios y divisas de Venezuela',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Center(
+            child: Text(
+              'El instrumento para registrar, comparar y calcular.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
+            ),
+          ),
+          const SizedBox(height: 34),
+          // Las seis divisas del foco, con banderas reales (assets/flags).
+          Center(
+            child: Wrap(
+              spacing: 14,
+              runSpacing: 14,
+              alignment: WrapAlignment.center,
               children: <Widget>[
-                const SizedBox(height: 16),
-                // Marca (dp4: tipografía pura, sin logo).
-                Center(
-                  child: RichText(
-                    text: TextSpan(
-                      style: VeText.displayNum(40, color: scheme.onSurface, weight: FontWeight.w700),
-                      children: <InlineSpan>[
-                        const TextSpan(text: 'Valora'),
-                        TextSpan(text: 'VE', style: TextStyle(color: scheme.primary)),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Center(
-                  child: Text(
-                    'Precios y divisas de Venezuela',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant),
-                  ),
-                ),
-                Center(
-                  child: Text(
-                    'El instrumento para registrar, comparar y calcular.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
-                  ),
-                ),
-                const SizedBox(height: 22),
-                _WelcomeBullet(
-                  icon: Icons.swap_horiz,
-                  color: scheme.primary,
-                  title: 'Tasas con contexto',
-                  body: 'Oficial, promedio y paralelo, siempre con la fuente a la vista.',
-                ),
-                const SizedBox(height: 12),
-                _WelcomeBullet(
-                  icon: Icons.receipt_long_outlined,
-                  color: sem.pos,
-                  title: 'Tu libro de precios',
-                  body: 'Compras como asientos contables, con ticket y totales al cambio.',
-                ),
-                const SizedBox(height: 12),
-                _WelcomeBullet(
-                  icon: Icons.calculate_outlined,
-                  color: sem.warn,
-                  title: 'Cálculos que sirven',
-                  body: 'Sueldo en divisas, vuelto, presupuesto y análisis del mes.',
-                ),
-                const SizedBox(height: 18),
-                // Datos reales (adaptación del aviso «prototipo» del dp4).
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: scheme.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: scheme.outlineVariant),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Icon(Icons.cloud_done_outlined, size: 20, color: scheme.primary),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Tasas en vivo, datos tuyos',
-                              style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: scheme.onSurface),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Las cotizaciones llegan de APIs públicas (BCV, paralelo, TRM, '
-                        'Banxico, Banco Central de Brasil). Tus registros, listas y '
-                        'compras viven solo en este teléfono: sin cuentas ni claves. '
-                        'Sin conexión la app sigue igual y acepta tasas manuales.',
-                        style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
-                      ),
-                      const Divider(height: 22),
-                      // Leyenda de categorías (dp6).
-                      CategoryLegend(),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // País EN la bienvenida con BANDERAS reales (assets/flags).
-                Center(child: _Kicker('¿Desde dónde miras las tasas?')),
-                const SizedBox(height: 10),
-                Center(
-                  child: Text(
-                    'Define el tablero protagonista. Lo puedes cambiar en Ajustes.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12.5, height: 1.4, color: scheme.onSurfaceVariant),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    for (final c in Country.values)
-                      _CountryChip(
-                        country: c,
-                        selected: country == c,
-                        onTap: () => onPickCountry(c),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 14),
+                for (final c in CurrencyX.focus) _FlagPill(currency: c),
               ],
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(26, 4, 26, 18),
-          child: SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: onBegin,
-              child: Text('Comenzar en ${country.label}'),
-            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Banderita grande con el código debajo (slide 1).
+class _FlagPill extends StatelessWidget {
+  const _FlagPill({required this.currency});
+  final Currency currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Flag(currency, size: 34),
+        const SizedBox(height: 6),
+        Text(
+          currency.code,
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+            color: scheme.onSurfaceVariant,
           ),
         ),
       ],
@@ -216,39 +206,201 @@ class _SingleWelcome extends StatelessWidget {
   }
 }
 
-/// ─── Cierre ─────────────────────────────────────────────────────────────────
-class _DoneScreen extends StatelessWidget {
-  const _DoneScreen({required this.country, required this.onFinish});
-
-  final Country country;
-  final VoidCallback onFinish;
+/// ─── Slide 2 · Lo que hace ───────────────────────────────────────────────────
+class _SlideQueHace extends StatelessWidget {
+  const _SlideQueHace();
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 34),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.check_circle_outline, size: 56, color: scheme.primary),
-          const SizedBox(height: 18),
-          Text('Todo listo', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: scheme.onSurface)),
+    final sem = VeColors.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(26, 18, 26, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
           const SizedBox(height: 8),
+          Text('Lo que hace', style: VeText.displayNum(24, color: scheme.onSurface, weight: FontWeight.w700)),
+          const SizedBox(height: 4),
           Text(
-            'Tu tablero queda configurado para ${country.label}. Sin conexión funciona igual: registra tasas manuales en Ajustes cuando no haya red. El tutorial completo de la app arranca ahora — y lo puedes repetir desde Ajustes cuando quieras.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13.5, height: 1.55, color: scheme.onSurfaceVariant),
+            'Tres cosas, bien hechas.',
+            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
           ),
-          const SizedBox(height: 26),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: onFinish,
-              child: const Text('Empezar a usar ValoraVE'),
+          const SizedBox(height: 18),
+          _WelcomeBullet(
+            icon: Icons.swap_horiz,
+            color: scheme.primary,
+            title: 'Tasas con contexto',
+            body: 'Oficial, promedio y paralelo, siempre con la fuente a la vista.',
+          ),
+          const SizedBox(height: 12),
+          _WelcomeBullet(
+            icon: Icons.receipt_long_outlined,
+            color: sem.pos,
+            title: 'Tu libro de precios',
+            body: 'Compras como asientos contables, con ticket y totales al cambio.',
+          ),
+          const SizedBox(height: 12),
+          _WelcomeBullet(
+            icon: Icons.calculate_outlined,
+            color: sem.warn,
+            title: 'Cálculos que sirven',
+            body: 'Sueldo en divisas, vuelto, presupuesto y análisis del mes.',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ─── Slide 3 · Datos tuyos ───────────────────────────────────────────────────
+class _SlideDatos extends StatelessWidget {
+  const _SlideDatos();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(26, 18, 26, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const SizedBox(height: 8),
+          Text('Tus datos, tuyos', style: VeText.displayNum(24, color: scheme.onSurface, weight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+            'Sin cuentas, sin nube, sin claves.',
+            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Icon(Icons.cloud_done_outlined, size: 20, color: scheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Tasas en vivo, datos tuyos',
+                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: scheme.onSurface),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Las cotizaciones llegan de APIs públicas (BCV, paralelo, TRM, '
+                  'Banxico, Banco Central de Brasil) y se guardan en tu teléfono '
+                  'para consultarlas sin conexión. Tus registros, listas y compras '
+                  'viven solo aquí: sin cuentas ni claves. Sin red la app sigue '
+                  'igual y acepta tasas manuales.',
+                  style: TextStyle(fontSize: 13, height: 1.45, color: scheme.onSurfaceVariant),
+                ),
+                const Divider(height: 22),
+                // Leyenda de categorías (dp6): el color dice qué es la tasa.
+                const CategoryLegend(),
+              ],
             ),
           ),
-        ]),
+        ],
       ),
+    );
+  }
+}
+
+/// ─── Slide 4 · País (banderas reales) + Comenzar ─────────────────────────────
+class _SlidePais extends StatelessWidget {
+  const _SlidePais({required this.country, required this.onPickCountry});
+
+  final Country country;
+  final ValueChanged<Country> onPickCountry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(26, 18, 26, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const SizedBox(height: 8),
+          Text('¿Desde dónde miras las tasas?', style: VeText.displayNum(24, color: scheme.onSurface, weight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+            'Define el tablero protagonista.',
+            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Lo puedes cambiar en Ajustes cuando quieras. Al tocar «Comenzar» '
+            'verás el tutorial completo de la app.',
+            style: TextStyle(fontSize: 12.5, height: 1.45, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
+            children: <Widget>[
+              for (final c in Country.values)
+                _CountryChip(
+                  country: c,
+                  selected: country == c,
+                  onTap: () => onPickCountry(c),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Puntos de posición tocables (4 slides).
+class _Dots extends StatelessWidget {
+  const _Dots({required this.count, required this.index, required this.onTap});
+
+  final int count;
+  final int index;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        for (var i = 0; i < count; i++)
+          GestureDetector(
+            onTap: () => onTap(i),
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              width: 22,
+              height: 22,
+              alignment: Alignment.center,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: kEaseVe,
+                width: i == index ? 18 : 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: i == index
+                      ? scheme.primary
+                      : scheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -288,27 +440,6 @@ class _CountryChip extends StatelessWidget {
                   fontSize: 12.5,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w500)),
         ]),
-      ),
-    );
-  }
-}
-
-/// Rótulo pequeño de sección.
-class _Kicker extends StatelessWidget {
-  const _Kicker(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    return Text(
-      text.toUpperCase(),
-      style: TextStyle(
-        fontSize: 11.5,
-        letterSpacing: 1.2,
-        fontWeight: FontWeight.w700,
-        color: scheme.primary,
       ),
     );
   }

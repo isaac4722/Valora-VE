@@ -178,7 +178,7 @@ void main() {
   });
 
   group('Pantallas', () {
-    testWidgets('Bienvenida: país obligatorio y flujo completo', (tester) async {
+    testWidgets('Bienvenida: 4 slides PageView, avanzar/retroceder y país', (tester) async {
       final store = _pumpedStore(tester, dir: 'w1');
       await _initServices(store);
       final router2 = GoRouter(
@@ -197,26 +197,32 @@ void main() {
         child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router2),
       ));
       await tester.pump(const Duration(milliseconds: 300));
-      // v18.0: SIN PageView — la bienvenida es UNA sola pantalla; el país
-      // se preselecciona con chips de bandera y «Comenzar en …» lo fija.
-      expect(find.byType(PageView), findsNothing);
-      expect(find.text('Comenzar en Venezuela'), findsOneWidget);
-      // El chip de Colombia puede quedar bajo el pliegue: scroll hasta él.
-      await tester.scrollUntilVisible(
-        find.text('Colombia'),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
+      // v19.0: la bienvenida es un PageView de 4 slides (orden del dueño).
+      expect(find.byType(PageView), findsOneWidget);
+      // Slide 1: marca (RichText «Valora»+«VE») y su subtítulo.
+      expect(find.text('Precios y divisas de Venezuela'), findsOneWidget);
+      expect(find.text('Siguiente'), findsOneWidget);
+      // Avanzar slide por slide hasta el país.
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.text('Siguiente'));
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      }
+      // Slide 4: chips de país con banderas + botón Comenzar.
+      expect(find.text('Comenzar'), findsOneWidget);
+      expect(find.text('Atrás'), findsOneWidget);
       await tester.tap(find.text('Colombia'));
       await tester.pump();
-      expect(find.text('Comenzar en Colombia'), findsOneWidget);
-      await tester.tap(find.text('Comenzar en Colombia'));
+      // Retroceder y volver: el país elegido se conserva.
+      await tester.tap(find.text('Atrás'));
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      await tester.tap(find.text('Siguiente'));
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      await tester.tap(find.text('Comenzar'));
       await tester.pump(const Duration(milliseconds: 300));
       expect(store.settings.country, 'CO');
-      // v18.0: del país se pasa directo al cierre.
-      expect(find.text('Todo listo'), findsOneWidget);
-      await tester.tap(find.text('Empezar a usar ValoraVE'));
-      await tester.pump(const Duration(milliseconds: 300));
       expect(store.settings.onboarded, isTrue);
     });
 
