@@ -31,17 +31,17 @@ AppStore _storeConTablero() {
 void main() {
   final notifs = NotificationsService();
 
-  Future<RatesPoller> _poller(AppStore store) async {
+  Future<RatesPoller> makePoller(AppStore store) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     return RatesPoller(store, notifs, AlertEngine(prefs));
   }
 
-  void _noop() {}
+  void noop() {}
 
   testWidgets('Home: lista de cotización agrupada USD/EUR con filas visuales', (tester) async {
     final store = _storeConTablero();
-    final poller = await _poller(store);
+    final poller = await makePoller(store);
     await tester.pumpWidget(MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: store),
@@ -74,7 +74,7 @@ void main() {
 
   testWidgets('Home: tasa manual desde la fila, SIN ir a Ajustes', (tester) async {
     final store = _storeConTablero();
-    final poller = await _poller(store);
+    final poller = await makePoller(store);
     await tester.pumpWidget(MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: store),
@@ -101,8 +101,8 @@ void main() {
       theme: AppTheme.light(),
       home: Scaffold(
         body: ListView(children: <Widget>[
-          RateTile(sourceId: 'ves-bcv', rate: 40.25, selected: true, onTap: _noop),
-          RateTile(sourceId: 'ves-manual', rate: 0, selected: false, onTap: _noop),
+          RateTile(sourceId: 'ves-bcv', rate: 40.25, selected: true, onTap: noop),
+          RateTile(sourceId: 'ves-manual', rate: 0, selected: false, onTap: noop),
         ]),
       ),
     ));
