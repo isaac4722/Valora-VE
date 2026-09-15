@@ -21,8 +21,8 @@ dependencies:
   go_router: ^16.3.0                # shell 8 rutas + ramas stateful (GUI dp4)
 
   # ── Persistencia offline-first ───────────────────────────────────────────
-  hive: ^2.2.3                      # libro, snapshots, outbox, migraciones
-  hive_flutter: ^1.1.0
+  hive_ce: ^2.20.0                  # libro, snapshots, outbox (Community Edition, v19)
+  hive_ce_flutter: ^2.3.4           # initFlutter (path_provider integrado)
   path_provider: ^2.1.5             # rutas de datos (+ override abajo)
   shared_preferences: ^2.3.2        # prefs UI (ticker, tema, tips)
 
