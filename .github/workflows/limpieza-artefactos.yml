@@ -1,0 +1,71 @@
+# Limpieza de artefactos · ValoraVE
+# ─────────────────────────────────────────────────────────────────────────────
+# POR QUÉ EXISTE (incidente 2026-09-16): el quota de almacenamiento de
+# artefactos de Actions (500 MB en repo privado) se llenó con 4,3 GB de
+# APKs viejos y los Upload de builds NUEVOS fallaban con
+# «Artifact storage quota has been hit» — los 4 APK se compilaban bien
+# pero nadie podía descargarlos (Regla 9 de AGENT.md rota).
+#
+# POLÍTICA: conservar los 3 artefactos más recientes POR NOMBRE (los 4
+# APK de las últimas 3 rondas de build, ~270 MB peor caso) y borrar el
+# resto. El job de release (tags) descarga artefactos de SU PROPIO run,
+# que siempre son los más nuevos — nunca se tocan.
+#
+# Corre diario (04:23 UTC = 00:23 Venezuela) y a mano vía workflow_dispatch.
+name: Limpieza de artefactos
+
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  actions: write
+
+concurrency:
+  group: limpieza-artefactos
+  cancel-in-progress: false
+
+jobs:
+  limpiar:
+    if: github.repository == 'isaac4722/Valora-VE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Conservar los 3 más recientes por nombre, borrar el resto
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "Artefactos antes:"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+            --jq '"\(.total_count) artefactos · \(([.artifacts[].size_in_bytes] | add // 0) / 1000000 | round) MB aprox"'
+
+          # Más recientes primero → mapa nombre→[ids] (nuevo→viejo) →
+          # conservar 3 por nombre → los que sobran se borran. Se usa
+          # reduce (no group_by) porque group_by NO garantiza el orden
+          # relativo dentro de cada grupo.
+          IDS=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+            --jq '[.artifacts[]] | sort_by(.created_at) | reverse
+                  | reduce .[] as $a ({}; .[$a.name] = ((.[$a.name] // []) + [$a.id]))
+                  | [ .[] | .[3:] ] | flatten | .[]')
+
+          if [ -z "${IDS}" ]; then
+            echo "Nada que borrar — dentro de la política (3 por nombre)."
+            exit 0
+          fi
+
+          BORRADOS=0
+          for id in ${IDS}; do
+            if gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}"; then
+              BORRADOS=$((BORRADOS + 1))
+              echo "borrado: artefacto ${id}"
+            else
+              echo "::warning::No se pudo borrar el artefacto ${id}"
+            fi
+          done
+          echo "Borrados: ${BORRADOS}"
+
+          echo "Artefactos después:"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+            --jq '"\(.total_count) artefactos · \(([.artifacts[].size_in_bytes] | add // 0) / 1000000 | round) MB aprox"'

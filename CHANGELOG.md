@@ -1,6 +1,29 @@
 # Changelog
 
 
+## 1.9.1-beta+19 · v19.1 — saneamiento del storage de Actions (cierre v19.0)
+
+Incidente del 2026-09-16: los APK de la v19.0 (SHA 2b0ce40) compilaban
+en las 4 ABI pero los Upload fallaban con «Artifact storage quota has
+been hit» — el repo arrastraba 4,3 GB de artefactos legacy (75, de
+rondas v17 con sets de 117-123 MB y retención de 30 días) contra un
+quota de 500 MB del repo privado. La Regla 9 de AGENT.md (los 4 APK
+siempre disponibles para CUALQUIER dispositivo) quedaba rota sin que
+el código tuviera la culpa.
+
+- **Limpieza quirúrgica**: 69 artefactos legacy borrados (4,2 GB).
+  Conservados los 4 APK de la v18.0 (enlaces del dueño) y los del run
+  v19.0 vigente.
+- **Workflow `limpieza-artefactos.yml`** (nuevo): diario 04:23 UTC +
+  botón manual; conserva los 3 artefactos más recientes POR NOMBRE
+  (≈ las últimas 3 rondas de APK, ~270 MB peor caso) y borra el resto.
+  El job de release (tags) descarga artefactos de su propio run —
+  siempre los más nuevos — así que jamás se toca. Validado con datos
+  reales de la API antes de commitear.
+- **Bump 1.9.1-beta+19 · kAppVersionVisible 19.1**: los APK finales de
+  esta ronda se distinguen de los 1.9.0-beta+18 de prueba.
+
+
 ## 1.9.0-beta+18 · ronda v19.0 — la gran ronda de UI, tasas y persistencia
 
 21 encargos del dueño en un ciclo: bienvenida en slides, tutorial propio

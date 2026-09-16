@@ -764,3 +764,48 @@ con la plantilla de `AGENT.md`.
     RoomLink más (socket.io) con su configuración propia.
   - CI del remoto conservado (toolchain 3.47.4 fijado + pubspec.lock).
 - Verificado: analyze 0 · suite completa verde tras la integración.
+  - Push fef3046+2b0ce40 → CI verde; Build: arm64/v7a verdes, x86_64 y
+    universal murieron 2× por shutdown del runner (exit 143, infra).
+---
+## [TASK-21] Saneamiento del quota de artefactos de Actions · 2026-09-16
+- Agente: Super Z (GLM)
+- Contexto: cierre del paso 8 (compilar en Actions hasta verde) de la
+  TASK-20-B. Los 4 APK de 2b0ce40 compilaban pero el Upload caía.
+- Diagnóstico (3 intentos, 3 causas distintas de infra):
+  1. Attempts 1-2: «The runner has received a shutdown signal» (exit
+     143) a mitad de Gradle — kill de infra, ya visto en v17.8/v18.0.
+  2. Attempt 3: los builds COMPILARON BIEN; el paso Upload falló con
+     «Artifact storage quota has been hit» (500 MB del repo privado).
+     Causa raíz: 75 artefactos acumulados = 4.335 MB (legacy de Sept
+     8-15: 20× «valorave-binarios» ~117 MB, 9× «pwa-original» 23 MB,
+     8× 123 MB de v16, sets v17.x y pre-merge df2347c0/fef30468).
+- Hecho:
+  - Limpieza quirúrgica vía API (scripts/limpiar_artefactos.py fuera del
+    repo): 69 artefactos borrados (4.214 MB). Conservados: 4 APK de
+    v18.0 (run 34848972529 — el dueño tiene esos enlaces) y arm64+v7a
+    del run v19.0 vigente. Bug propio corregido en el script: la regex
+    del token capturaba «//usuario:» → 401 Bad credentials.
+  - Attempt 4 tras liberar: x86_64 murió por OTRO shutdown del runner
+    (10:43 UTC) y el universal volvió a chocar con el quota (10:46 UTC)
+    — GitHub recalcula el uso cada 6-12 h, el borrado aún no cuenta.
+  - Preventivo (este commit): workflow limpieza-artefactos.yml — diario
+    04:23 UTC + manual; conserva los 3 artefactos más recientes por
+    NOMBRE (~270 MB peor caso) y borra el resto. jq validado con los
+    datos reales de la API (reduce, no group_by: este no garantiza el
+    orden relativo). El job de release (tags) usa artefactos de su
+    propio run — siempre los más nuevos — jamás se toca.
+  - Bump 1.9.1-beta+19 + kAppVersionVisible 19.1 + CHANGELOG.
+- Decisiones:
+  - Política «3 por nombre» (no «N días»): determinística y acotada —
+    la cadencia real de pushes (~2/día) con 3 días daría 540 MB y
+    volvería a romper el quota; por nombre nunca supera ~270 MB.
+  - Se conserva retention-days: 30 del build.yml — la limpieza diaria
+    vence antes y sin cambiar el workflow de build.
+  - NO se toca main (777b169) — merge SOLO con orden expresa del dueño.
+- Gates: analyze 0 issues · test suite sin cambios (172 verdes, sin
+  tocar lib/ salvo la constante de versión) · build=paso 8 en curso.
+- Bloqueos: el recálculo del quota (6-12 h desde las 10:27 UTC) es la
+  única incógnita — este push arranca un run fresco; si sus Uploads
+  caen por storage se re-lanzan failed-jobs hasta verde.
+- Siguiente: poll del Build de 1.9.1-beta+19 hasta los 4 APK verdes →
+  reportar al dueño con enlaces → merge a main SOLO si él lo dice.
