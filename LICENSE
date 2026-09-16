@@ -1,0 +1,90 @@
+LICENCIA DE SOFTWARE PROPIETARIO — VALORAVE
+=============================================
+
+Copyright (c) 2026 isaac4722 (en adelante, «el Titular»).
+Todos los derechos reservados.
+
+Este documento constituye el acuerdo de licencia (la «Licencia») entre el
+Titular —propietario exclusivo del software ValoraVE, incluido su código
+fuente, diseños, marcas, textos y assets— y cualquier persona que acceda,
+visualice o descargue parte o la totalidad del mismo (el «Usuario»).
+
+1. PROPIEDAD EXCLUSIVA
+   ValoraVE y todo su contenido —código fuente, código objeto, interfaz,
+   iconografía, documentación, flujos, ideas embebidas y derivados— son y
+   seguirán siendo propiedad exclusiva del Titular. Esta Licencia NO
+   transfiere propiedad alguna: solo otorga un permiso limitado y
+   revocable según los términos siguientes.
+
+2. USO PERMITIDO
+   2.1 Queda prohibido el uso público, comercial, institucional o de
+       redistribución de este software.
+   2.2 El único uso autorizado es el PERSONAL y PRIVADO del Titular y de
+       las personas físicas que el Titular autorice EXPRESAMENTE y por
+       ESCRITO (la «Lista Autorizada»), en dispositivos de su propiedad.
+   2.3 La instalación, copia o uso por cualquier persona ajena a la
+       Lista Autorizada —incluyendo el simple uso de prueba— está
+       PROHIBIDO sin permiso previo y escrito del Titular.
+
+3. PROHIBICIONES EXPRESSAS
+   Sin autorización previa, expresa y por escrito del Titular, queda
+   PROHIBIDO a cualquier Usuario:
+   a) Copiar, reproducir, distribuir, publicar, sublicenciar, vender,
+      alquilar o comercializar el software, en todo o en parte.
+   b) Modificar, adaptar, traducir, crear obras derivadas, aplicar
+      ingeniería inversa, descompilar o intentar derivar el código
+      fuente de cualquier binario (APK/AAB) del software.
+   c) Publicar el código, total o parcialmente, en cualquier
+      plataforma, repositorio, foro o medio, público o privado.
+   d) Usar el software —o cualquier parte de él— para entrenar,
+      evaluar o alimentar sistemas de aprendizaje automático o
+      cualquier producto de inteligencia artificial.
+   e) Usar marcas, nombres, logotipos o identidad visual del proyecto
+      sin permiso del Titular.
+   f) Retirar, ocultar o alterar cualquier aviso de propiedad,
+      copyright o atribución presente en el software.
+
+4. ACCESO AL REPOSITORIO
+   La eventual visibilidad pública del repositorio NO constituye
+   autorización de uso: el código está expuesto únicamente por decisión
+   operativa del Titular y permanece sujeto a esta Licencia en su
+   totalidad. Ver NO es licencia para usar.
+
+5. SIN GARANTÍAS
+   El software se provee «TAL CUAL», sin garantía de ningún tipo,
+   expresa o implícita, incluyendo pero no limitado a garantías de
+   comerciabilidad, adecuación para un propósito particular y no
+   infracción. El Titular no responde por daños, pérdidas de datos,
+   decisiones financieras ni consecuencias derivadas del uso o la
+   imposibilidad de uso del software.
+
+6. LIMITACIÓN DE RESPONSABILIDAD
+   En ningún caso el Titular será responsable por reclamaciones,
+   daños u otras responsabilidades, ya sea en acción contractual, culpa
+   o cualquier otra teoría, que surjan de o en conexión con el software
+   o su uso.
+
+7. REVOCACIÓN
+   Esta Licencia es revocable. Ante cualquier incumplimiento, el
+   permiso de uso termina de inmediato, sin necesidad de notificación,
+   y el Usuario debe dejar de usar el software y destruir toda copia en
+   su poder.
+
+8. ACEPTACIÓN
+   El acceso, la descarga o el uso del software implica la aceptación
+   PLENA e INCONDICIONAL de esta Licencia. Quien no acepte estos
+   términos debe abstenerse de usar el software y eliminar toda copia.
+
+9. CAMBIOS
+   El Titular puede modificar esta Licencia en cualquier momento. La
+   versión vigente es la publicada en el repositorio oficial del
+   proyecto.
+
+10. LEGISLACIÓN
+    Esta Licencia se rige por las leyes aplicables de la República
+    Bolivariana de Venezuela, con exclusión de la Convención de las
+    Naciones Unidas sobre Contratos de Compraventa Internacional de
+    Mercaderías.
+
+Contacto para autorizaciones escritas: vía el canal privado del
+Titular en GitHub (@isaac4722).
