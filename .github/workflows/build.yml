@@ -243,11 +243,15 @@ jobs:
       - name: Armar paquete (LEEME + ZIP + símbolos)
         run: |
           set -euo pipefail
-          # Sin checkout: la versión viaja en los nombres de los binarios.
+          # Sin checkout: la versión y la fecha viajan en los nombres de
+          # los binarios (los generó el job apk desde el pubspec). El
+          # prefijo del APK arm64 ES el nombre del ZIP — sin regex, a
+          # prueba de guiones en versiones tipo «1.9.2-beta».
           APK=$(find dist -name 'valorave-v*-arm64-v8a.apk' | head -1)
           test -n "$APK" || { echo "ERROR: falta el APK arm64"; exit 1; }
-          VERSION=$(basename "$APK" | sed -E 's/valorave-v([^-]+)-build-.*/\1/')
-          DATE=$(TZ=America/Caracas date +%Y%m%d)
+          BASE="${APK##*/}"
+          BASE="${BASE%-arm64-v8a.apk}"
+          ZIP="${BASE}-completo.zip"
 
           mkdir -p paquete simbolos
           find dist -name 'valorave-v*.apk' -exec cp {} paquete/ \;
@@ -295,7 +299,6 @@ jobs:
 
           (cd paquete && sha256sum *.apk *.aab > checksums.sha256)
 
-          ZIP="valorave-v${VERSION}-build-${DATE}-completo.zip"
           (cd paquete && zip -X "../${ZIP}" LEEME.txt checksums.sha256 *.apk *.aab)
 
           echo "== contenido del ZIP =="

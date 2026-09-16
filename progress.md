@@ -861,3 +861,10 @@ con la plantilla de `AGENT.md`.
     compilación de script (los 5 jobs de build cayeron en el primer
     push): migrado a compilerOptions con JvmTarget tipado
     (kotl.in/u1r8ln), import org.jetbrains.kotlin.gradle.dsl.JvmTarget.
+  - [fix 14:35 UTC] El ZIP salió con nombre roto
+    (valorave-vvalorave-v…): la regex de versión fallaba con los guiones
+    de «1.9.2-beta». Reescrito sin regex: el prefijo del nombre del APK
+    arm64 ES el nombre del ZIP (bash puro, ${APK##*/} y ${BASE%-arm64-…}).
+    Simulado LOCALMENTE con archivos falsos antes de push (script
+    scripts/test_paquete_local.sh, fuera del repo): nombre, 4 APK, AAB,
+    LEEME y checksums verificados en sandbox.
