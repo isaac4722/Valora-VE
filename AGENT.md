@@ -58,14 +58,21 @@ Prohibido saltar pasos o declarar «terminado» antes del 9.
 8. Si te bloqueas >2 intentos en algo: déjalo registrado en progress.md
    §Bloqueos y continúa con otra pieza; no inventes soluciones mudas.
 9. Los builds de release cubren CUALQUIER dispositivo Android (orden
-   explícita del dueño · v17.9): la matriz de APK de
-   `.github/workflows/build.yml` produce SIEMPRE `armeabi-v7a`
-   (androids viejos), `arm64-v8a` (nuevos), `x86_64` (emuladores e
-   Intel) y `universal` (todo-en-uno, instala sin saber la arquitectura),
-   más el AAB en tags. Prohibido retirar un ABI de la matriz o dejar de
-   publicar sus artefactos sin orden expresa del dueño. Nota técnica:
-   Flutter no distribuye motor para x86 de 32 bits — ese ABI no es
-   construible y no cuenta como cobertura faltante.
+   explícita del dueño · v17.9, ampliada v19.2): cada push a main/fix
+   produce SIEMPRE, con los compiladores estándar de GitHub Actions
+   (ubuntu-latest + Temurin 17 + Flutter estable fijado), los 4 APK
+   (`armeabi-v7a` androids viejos · `arm64-v8a` nuevos · `x86_64`
+   emuladores e Intel · `universal` todo-en-uno) MÁS el AAB de Play
+   Store, y TODO se entrega en UN solo artefacto ZIP
+   `valorave-v{versión}-build-{fecha}-completo.zip` (con LEEME.txt y
+   checksums) más los símbolos de ofuscación aparte. En tags v*, la
+   Release adjunta los 6 archivos (4 APK + AAB + ZIP). Prohibido
+   retirar un ABI de la matriz, el AAB o el ZIP, o dejar de publicar
+   sus artefactos, sin orden expresa del dueño. Nota técnica: Flutter
+   no distribuye motor para x86 de 32 bits — ese ABI no es
+   construible y no cuenta como cobertura faltante. El software es
+   PROPIETARIO (LICENSE, orden del dueño v19.2): licencia de titular
+   privado, sin uso público ni redistribución.
 
 ## Definición de hecho (por pieza)
 - Código + test que lo cubre + `analyze`/`test` verdes + entrada en

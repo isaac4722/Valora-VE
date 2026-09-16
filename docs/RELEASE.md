@@ -28,12 +28,13 @@ flutter test integration_test/app_test.dart -d <emulador>
 - [ ] Commit con conventional commit es-VE (`feat:`, `fix:`, `chore:`…).
 - [ ] Push a `main` (el Build de main valida binarios sin publicar Release).
 - [ ] `git tag v…` + push del tag → `build.yml` publica la GitHub Release
-      con 4 APK (armeabi-v7a · arm64-v8a · x86_64 · **universal
-      todo-en-uno**) + AAB, firmados con el keystore de secrets y
-      ofuscados (`--obfuscate --split-debug-info`). El job `release`
-      descarga los APK de la matriz del mismo run y exige que estén los
-      5 archivos (`fail_on_unmatched_files: true`): nada se publica a
-      medias.
+      con los 6 archivos: 4 APK (armeabi-v7a · arm64-v8a · x86_64 ·
+      **universal todo-en-uno**) + AAB + **ZIP completo**
+      (`valorave-v…-completo.zip` con LEEME.txt y checksums), firmados
+      con el keystore de secrets y ofuscados (`--obfuscate
+      --split-debug-info`). El job `paquete` junta TODO del mismo run y
+      el job `release` exige los 5 binarios antes de publicar
+      (`fail_on_unmatched_files: true`): nada se publica a medias.
 - [ ] Verificar Actions verde; si falla: causa raíz (PROHIBIDO desactivar gates).
 - [ ] Descargar artefactos y verificar: APK instala · `apksigner verify` OK.
 

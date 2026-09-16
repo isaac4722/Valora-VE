@@ -6,5 +6,5 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v19.1 · saneamiento CI sobre la v19.0).
-const String kAppVersionVisible = '19.1';
+/// Versión visible (ronda v19.2 · licencia + paquete único ZIP).
+const String kAppVersionVisible = '19.2';

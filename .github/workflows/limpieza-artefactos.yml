@@ -6,10 +6,17 @@
 # «Artifact storage quota has been hit» — los 4 APK se compilaban bien
 # pero nadie podía descargarlos (Regla 9 de AGENT.md rota).
 #
+# DESDE 2026-09-16 el repo es PÚBLICO (decisión del dueño): el storage
+# de artefactos es gratis e ilimitado, así que este workflow es ahora
+# una RED DE SEGURIDAD por si el repo vuelve a privado — mientras sea
+# público es inofensivo (no-op si no hay exceso).
+#
 # POLÍTICA: conservar los 3 artefactos más recientes POR NOMBRE (los 4
-# APK de las últimas 3 rondas de build, ~270 MB peor caso) y borrar el
-# resto. El job de release (tags) descarga artefactos de SU PROPIO run,
-# que siempre son los más nuevos — nunca se tocan.
+# APK + ZIP + símbolos de las últimas 3 rondas) y borrar el resto.
+# Nota v19.2: los intermedios de la matriz (valorave-apk-* y valorave-aab)
+# ya viven solo 1 día por diseño; este workflow solo barre los de
+# retención larga. El job de release (tags) descarga el ZIP del MISMO
+# run — siempre el más nuevo — nunca se toca.
 #
 # Corre diario (04:23 UTC = 00:23 Venezuela) y a mano vía workflow_dispatch.
 name: Limpieza de artefactos

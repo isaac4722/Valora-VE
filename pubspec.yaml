@@ -2,11 +2,11 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y salas con su propia tecnología. Offline-first."
 publish_to: 'none'
 
-# 1.9.1-beta+19 · v19.1 — cierre de la ronda v19.0: saneamiento del
-# quota de artefactos de Actions (4,3 GB legacy borrados) + workflow de
-# limpieza preventiva (3 rondas de APK por nombre) para que el Upload
-# de las 4 ABI jamás vuelva a caer por storage (Regla 9 de AGENT.md).
-version: 1.9.1-beta+19
+# 1.9.2-beta+20 · v19.2 — licencia propietaria (LICENSE), repo público,
+# paquete único: cada build entrega UN ZIP con los 4 APK + el AAB
+# (+ LEEME.txt y checksums). Kotlin 2.3.20 + NDK 28.2.13676358.
+# (Regla 5 de AGENT.md · 1.x.y-beta+z · Regla 9: cobertura total + ZIP).
+version: 1.9.2-beta+20
 
 environment:
   sdk: ^3.9.2

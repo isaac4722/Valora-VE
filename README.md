@@ -90,3 +90,11 @@ Nada más. Sin FCM: las notificaciones son locales (canales
 Sin cuentas, sin telemetría, sin nube: todo vive en tu teléfono. Los
 respaldos son JSON tuyos. Fuentes de tasas: dolarapi.com (VE/CO/MX/BR),
 pydolarve.org, datos.gov.co, AwesomeAPI — consultas anónimas directas.
+
+## Licencia
+Software **PROPIETARIO** — Copyright (c) 2026 isaac4722. Todos los
+derechos reservados. Sin uso público, sin distribución, sin
+modificación ni reutilización de código sin autorización previa,
+expresa y por escrito del titular. Ver el archivo
+[LICENSE](LICENSE) completo. La visibilidad pública de este
+repositorio NO es una autorización de uso.

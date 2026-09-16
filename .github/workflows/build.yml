@@ -1,5 +1,5 @@
 # Build release: APK firmados por ABI en MATRIZ paralela (anti-SIGTERM v17.6)
-# → artifacts (retención 30) → en tags v*: AAB + GitHub Release.
+# + AAB (v19.2) → PAQUETE ÚNICO: un solo ZIP con los 4 APK + el AAB.
 #
 # POR QUÉ MATRIZ: el runner hosted mató 6 jobs con SIGTERM a los ~16-19 min
 # (reloj consistente). Un job único con Gradle frío (setup 4.5 + Gradle
@@ -9,14 +9,20 @@
 #
 # v17.9 — CUALQUIER dispositivo (orden del dueño, AGENT.md Regla 9): la
 # matriz produce SIEMPRE armeabi-v7a (androids viejos), arm64-v8a
-# (nuevos), x86_64 (emuladores e Intel; antes solo en tags) y universal
-# (todo-en-uno ~45 MB: instala sin saber la arquitectura). Nota técnica:
-# Flutter no distribuye motor para x86 de 32 bits — ese ABI no existe; un
-# emulador 32-bit no puede correr la app (los modernos son x86_64/arm64).
+# (nuevos), x86_64 (emuladores e Intel) y universal (todo-en-uno ~45 MB).
+# Nota técnica: Flutter no distribuye motor para x86 de 32 bits — ese ABI
+# no existe; un emulador 32-bit no puede correr la app.
 #
-# v18.0 — NOMBRES CON SEMÁNTICA (orden del dueño): cada APK sale como
-# valorave-v{versión}-build-{AAAAMMDD Caracas}-{abi}.apk — al descargarlo
-# se sabe QUÉ es, de QUÉ ronda y de QUÉ día, sin abrir la web.
+# v18.0 — NOMBRES CON SEMÁNTICA (orden del dueño): cada binario sale como
+# valorave-v{versión}-build-{AAAAMMDD Caracas}-{abi}.apk/.aab.
+#
+# v19.2 — UN ZIP CON TODO (orden del dueño): el job `paquete` junta los
+# 4 APK + el AAB + un LEEME.txt y entrega UN solo artefacto
+# valorave-v{versión}-build-{fecha}-completo.zip. El AAB pasa de
+# solo-tags a CADA ronda. Los artefactos intermedios de la matriz viven
+# 1 día (solo sirven para que `paquete` los junte); el ZIP y los símbolos
+# de ofuscación viven 30. Compiladores estándar: ubuntu-latest + temurin
+# 17 + Flutter estable fijado (3.47.4).
 name: Build
 
 on:
@@ -44,7 +50,7 @@ jobs:
           # Androids viejos (ARM 32-bit, API 21+).
           - abi: armeabi-v7a
             platform: android-arm
-          # Emuladores e Intel 64-bit (antes solo se compilaba en tags).
+          # Emuladores e Intel 64-bit.
           - abi: x86_64
             platform: android-x64
           # TODO-EN-UNO: los 3 ABI embebidos. El APK que instala en
@@ -127,12 +133,14 @@ jobs:
           echo "Renombrado -> $(basename "$DST")"
 
       # Upload INMEDIATO: si el reaper llega, lo que ya subió queda a salvo.
+      # INTERMEDIO (v19.2): solo vive 1 día — su único consumidor es el job
+      # `paquete` de este mismo run; el artefacto final es el ZIP.
       - name: Upload APK ${{ matrix.abi }}
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: valorave-apk-${{ matrix.abi }}
-          retention-days: 30
+          retention-days: 1
           if-no-files-found: ignore
           path: |
             build/app/outputs/flutter-apk/valorave-v*.apk
@@ -140,17 +148,10 @@ jobs:
             build/app/outputs/flutter-apk/app-release.apk
             build/symbols/apk/
 
-  # AAB (Play Store) + GitHub Release: SOLO tags. Los builds de rama no
-  # pagan ese tiempo.
-  #
-  # v17.9: los 4 APK ya los construyó la matriz de ESTE run — aquí solo se
-  # descargan (download-artifact) y se adjuntan a la Release. Antes este
-  # job construía solo el x86_64 pero referenciaba también los APK v7a y
-  # arm64, que nunca existieron en su workspace: softprops los saltaba en
-  # silencio (fail_on_unmatched_files: false) y la Release salía mutilada.
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: apk
+  # AAB (Google Play) — v19.2: en CADA ronda de build (antes solo en
+  # tags). El dueño pidió el paquete completo siempre: 4 APK + AAB.
+  aab:
+    name: AAB (Play Store)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -207,40 +208,155 @@ jobs:
              "build/app/outputs/bundle/release/valorave-v${VERSION}-build-${DATE}.aab"
           ls -la build/app/outputs/bundle/release/
 
-      # Los 4 APK de la matriz de este MISMO run, aplanados a una carpeta.
-      - name: Descargar APK de la matriz
-        uses: actions/download-artifact@v4
-        with:
-          pattern: valorave-apk-*
-          merge-multiple: true
-          path: dist
-
-      - name: Aplanar y listar los 4 APK
-        run: |
-          mkdir -p release-assets
-          find dist -name '*.apk' -exec cp {} release-assets/ \;
-          ls -la release-assets/
-
-      - name: Upload AAB, APK y símbolos
+      - name: Upload AAB (intermedio)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: valorave-aab
-          retention-days: 30
+          retention-days: 1
           if-no-files-found: ignore
           path: |
             build/app/outputs/bundle/release/valorave-v*.aab
-            release-assets/
             build/symbols/aab/
+
+  # PAQUETE ÚNICO (v19.2, orden del dueño): junta los 4 APK + el AAB,
+  # escribe un LEEME y entrega UN solo artefacto ZIP. Sin Flutter ni
+  # Gradle: solo descargar, ordenar y comprimir (~2 min).
+  paquete:
+    name: ZIP todo-en-uno
+    needs: [apk, aab]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar binarios de la matriz
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'valorave-apk-*'
+          merge-multiple: true
+          path: dist
+
+      - name: Descargar AAB
+        uses: actions/download-artifact@v4
+        with:
+          name: valorave-aab
+          path: dist
+
+      - name: Armar paquete (LEEME + ZIP + símbolos)
+        run: |
+          set -euo pipefail
+          # Sin checkout: la versión viaja en los nombres de los binarios.
+          APK=$(find dist -name 'valorave-v*-arm64-v8a.apk' | head -1)
+          test -n "$APK" || { echo "ERROR: falta el APK arm64"; exit 1; }
+          VERSION=$(basename "$APK" | sed -E 's/valorave-v([^-]+)-build-.*/\1/')
+          DATE=$(TZ=America/Caracas date +%Y%m%d)
+
+          mkdir -p paquete simbolos
+          find dist -name 'valorave-v*.apk' -exec cp {} paquete/ \;
+          find dist -name 'valorave-v*.aab' -exec cp {} paquete/ \;
+          find dist -name '*.symbols' -exec cp {} simbolos/ \;
+
+          echo "Binarios del paquete:"
+          ls -la paquete/
+          # Exigir los 5: si un rerun parcial dejara un hueco, falla AQUÍ
+          # y no en manos del dueño.
+          for f in arm64-v8a armeabi-v7a x86_64 universal; do
+            ls paquete/valorave-v*-build-*-"$f".apk > /dev/null
+          done
+          ls paquete/valorave-v*-build-*.aab > /dev/null
+
+          cat > paquete/LEEME.txt <<'LEEME'
+          VALORAVE — paquete completo de instalación
+          ===========================================
+
+          CONTENIDO (elige el que necesitas):
+          - *-arm64-v8a.apk    → Teléfonos Android MODERNOS (64-bit). El
+                                 más común: si no sabes cuál, prueba este.
+          - *-armeabi-v7a.apk  → Teléfonos Android VIEJOS (32-bit).
+          - *-x86_64.apk       → EMULADORES de PC y dispositivos Intel.
+          - *-universal.apk    → TODO-EN-UNO: instala en cualquier
+                                 dispositivo (pesa más).
+          - *.aab              → SOLO para subir a Google Play. No se
+                                 instala directo en el teléfono.
+
+          CÓMO INSTALAR UN APK:
+          1. Copia el APK al teléfono y ábrelo desde el administrador
+             de archivos.
+          2. Si pide permiso de «instalar apps desconocidas», otórgalo
+             al administrador de archivos.
+          3. Instala y abre. Todos vienen firmados con la misma clave.
+
+          INTEGRIDAD: checksums.sha256 verifica que ningún archivo se
+          corrompió al descargar (opcional):
+          sha256sum -c checksums.sha256
+
+          LICENCIA: software PROPIETARIO — todos los derechos reservados.
+          Uso personal del titular y de quienes él autorice por escrito.
+          Ver LICENSE en el repositorio.
+          LEEME
+
+          (cd paquete && sha256sum *.apk *.aab > checksums.sha256)
+
+          ZIP="valorave-v${VERSION}-build-${DATE}-completo.zip"
+          (cd paquete && zip -X "../${ZIP}" LEEME.txt checksums.sha256 *.apk *.aab)
+
+          echo "== contenido del ZIP =="
+          unzip -l "${ZIP}"
+
+      - name: Upload ZIP completo
+        uses: actions/upload-artifact@v4
+        with:
+          name: valorave-completo
+          retention-days: 30
+          if-no-files-found: error
+          path: valorave-v*-completo.zip
+
+      # Símbolos de ofuscación (para des-ofuscar stacktraces): aparte del
+      # ZIP — no son instalables.
+      - name: Upload símbolos de ofuscación
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: valorave-simbolos
+          retention-days: 30
+          if-no-files-found: ignore
+          path: simbolos/
+
+  # Release (SOLO tags): ya no compila nada — descarga el ZIP del job
+  # `paquete` de este MISMO run y adjunta los 6 archivos (4 APK + AAB +
+  # el ZIP todo-en-uno). v17.9: exigir TODOS (fail_on_unmatched_files)
+  # para que una Release jamás salga mutilada en silencio.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: paquete
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar paquete completo
+        uses: actions/download-artifact@v4
+        with:
+          name: valorave-completo
+          path: dist
+
+      - name: Descomprimir y verificar
+        run: |
+          set -euo pipefail
+          unzip -o dist/valorave-v*-completo.zip -d release-assets/
+          echo "== assets de la release =="
+          ls -la release-assets/
+          test -n "$(find release-assets -name '*-arm64-v8a.apk')"
+          test -n "$(find release-assets -name '*-armeabi-v7a.apk')"
+          test -n "$(find release-assets -name '*-x86_64.apk')"
+          test -n "$(find release-assets -name '*-universal.apk')"
+          test -n "$(find release-assets -name '*.aab')"
 
       - name: GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release-assets/valorave-v*-armeabi-v7a.apk
             release-assets/valorave-v*-arm64-v8a.apk
+            release-assets/valorave-v*-armeabi-v7a.apk
             release-assets/valorave-v*-x86_64.apk
             release-assets/valorave-v*-universal.apk
-            build/app/outputs/bundle/release/valorave-v*.aab
+            release-assets/valorave-v*.aab
+            dist/valorave-v*-completo.zip
           fail_on_unmatched_files: true
           generate_release_notes: true
         env:

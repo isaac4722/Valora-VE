@@ -20,6 +20,11 @@ android {
     namespace = "ve.valorave.app"
     compileSdk = flutter.compileSdkVersion
 
+    // NDK que piden los plugins (integration_test: 28.2.13676358). El
+    // default de Flutter (27.0.12077973) chocaba con un warning en cada
+    // build — las NDK son backward compatibles: se usa la más alta.
+    ndkVersion = "28.2.13676358"
+
     compileOptions {
         // flutter_local_notifications exige core library desugaring.
         isCoreLibraryDesugaringEnabled = true

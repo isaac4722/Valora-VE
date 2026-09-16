@@ -809,3 +809,51 @@ con la plantilla de `AGENT.md`.
   caen por storage se re-lanzan failed-jobs hasta verde.
 - Siguiente: poll del Build de 1.9.1-beta+19 hasta los 4 APK verdes →
   reportar al dueño con enlaces → merge a main SOLO si él lo dice.
+---
+## [TASK-22] Licencia propietaria + paquete único ZIP (4 APK + AAB) + fixes de toolchain · 2026-09-16
+- Agente: Super Z (GLM)
+- Contexto: el dueño pasó el repo a PÚBLICO (fin del quota de
+  artefactos) y pidió: (1) licencia de propietario sin uso público,
+  (2) que cada build compile los 4 APK + 1 AAB y entregue TODO en un
+  ZIP, con compiladores estándar de GitHub Actions.
+- Hecho:
+  - LICENSE nueva (propietaria, es-VE): copyright 2026 isaac4722, uso
+    personal + Lista Autorizada por escrito; prohibidos copia,
+    distribución, modificación, derivados, ingeniería inversa,
+    publicación y entrenamiento de IA; visibilidad pública ≠
+    autorización. Sección «Licencia» en README; nota en AGENT.md Regla 9.
+  - build.yml reescrito: job `aab` NUEVO en cada push (antes
+    solo-tags); job `paquete` NUEVO (needs apk+aab) que junta los 5
+    binarios + LEEME.txt (qué ABI para qué dispositivo + instalación +
+    licencia) + checksums.sha256 y entrega UN artefacto
+    valorave-v{versión}-build-{fecha}-completo.zip; exige los 5
+    binarios antes de comprimir. Release (tags) ya no compila:
+    descarga el ZIP del mismo run y adjunta 6 assets con
+    fail_on_unmatched_files. Intermedios retention 1 día; ZIP y
+    símbolos de ofuscación 30 días.
+  - Mini-errores de toolchain: Kotlin 2.2.20 → 2.3.20 (aviso del
+    propio Flutter) y ndkVersion = 28.2.13676358 (la que exige
+    integration_test; NDKs backward compatibles). Gradle 8.14 y AGP
+    8.11.1 compatibles con Kotlin 2.3.x.
+  - limpieza-artefactos.yml re-documentado: red de seguridad por si el
+    repo vuelve a privado (público = storage gratis).
+  - AGENT.md Regla 9 ampliada (ZIP + AAB siempre + licencia);
+    docs/RELEASE.md checklist actualizado (6 assets).
+  - Watcher del quota detenido (obsoleto: el push nuevo trae run
+    fresco y el repo público no tiene quota).
+  - Bump 1.9.2-beta+20 · kAppVersionVisible 19.2 · CHANGELOG.
+- Decisiones:
+  - Símbolos de ofuscación FUERA del ZIP (no son instalables) pero en
+    artefacto aparte valorave-simbolos (30 días) para des-ofuscar
+    stacktraces si el dueño reporta crashes.
+  - La versión para el nombre del ZIP se extrae del nombre del APK
+    (el job paquete no hace checkout: más rápido, sin state).
+  - El AAB de rama no va a Release — solo en tags (Play Store usa
+    tags), pero SÍ está en el ZIP de cada ronda (orden del dueño).
+- Gates: analyze/test delegados al workflow CI del mismo push (sin
+  SDK Flutter local esta sesión; único cambio en lib/ = constante de
+  versión). Build = paso 8 en curso (verificación hasta verde).
+- Bloqueos: ninguno.
+- Siguiente: poll de CI+Build hasta verde → verificar el ZIP (5
+  binarios + LEEME + checksums) → reportar enlaces al dueño → merge a
+  main SOLO con orden expresa del dueño.
