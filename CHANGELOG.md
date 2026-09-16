@@ -25,9 +25,10 @@ ZIP, con los compiladores estándar de GitHub Actions.
   descarga el ZIP del mismo run y adjunta los 6 archivos (4 APK +
   AAB + ZIP), siempre con `fail_on_unmatched_files: true`.
 - **Mini-errores de los builds corregidos**: Kotlin 2.2.20 → 2.3.20
-  (el propio Flutter avisaba que dejaría de soportarlo) y
-  `ndkVersion = 28.2.13676358` (la que exige integration_test; el
-  default 27.0.12077973 chocaba en cada build).
+  (el propio Flutter avisaba que dejaría de soportarlo), con la
+  migración de DSL que 2.3 exige (kotlinOptions → compilerOptions con
+  JvmTarget tipado), y `ndkVersion = 28.2.13676358` (la que exige
+  integration_test; el default 27.0.12077973 chocaba en cada build).
 - **Higiene de artefactos**: los intermedios de la matriz (apk-*) y
   el aab viven 1 día (solo alimentan al `paquete` del mismo run); el
   ZIP y los símbolos de ofuscación viven 30. Con el repo público el

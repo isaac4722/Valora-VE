@@ -857,3 +857,7 @@ con la plantilla de `AGENT.md`.
 - Siguiente: poll de CI+Build hasta verde → verificar el ZIP (5
   binarios + LEEME + checksums) → reportar enlaces al dueño → merge a
   main SOLO con orden expresa del dueño.
+  - [fix 14:15 UTC] Kotlin 2.3.20 convirtió kotlinOptions en ERROR de
+    compilación de script (los 5 jobs de build cayeron en el primer
+    push): migrado a compilerOptions con JvmTarget tipado
+    (kotl.in/u1r8ln), import org.jetbrains.kotlin.gradle.dsl.JvmTarget.

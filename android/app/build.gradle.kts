@@ -9,6 +9,9 @@ plugins {
 // NUNCA versionado — AGENT.md §5 y .gitignore).
 import java.util.Properties
 import java.io.FileInputStream
+// Kotlin 2.3 eliminó el DSL viejo kotlinOptions (ahora es error): se
+// usa compilerOptions con JvmTarget tipado.
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -30,10 +33,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
     defaultConfig {
@@ -71,6 +70,14 @@ android {
                 "proguard-rules.pro"
             )
         }
+    }
+}
+
+// Kotlin 2.3: el DSL kotlinOptions murió (error en compilación del
+// script) — se declara el target del compilador aquí, tipado.
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_11
     }
 }
 
