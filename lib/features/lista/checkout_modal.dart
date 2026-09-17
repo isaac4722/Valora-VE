@@ -476,11 +476,17 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         color: scheme.primary,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        entry.key,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
+                      // Expanded + ellipsis: nombre de tienda libre del
+                      // usuario; con ~45 caracteres desbordaba (fix).
+                      Expanded(
+                        child: Text(
+                          entry.key,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ],
@@ -616,8 +622,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Foto del ticket (JPEG 1024 .72 + compress).
-                Row(
+                // Foto del ticket (JPEG 1024 .72 + compress). Wrap: con foto
+                // adjunta a textScale alto la fila superaba el ancho (fix).
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     OutlinedButton.icon(
                       onPressed: _picking ? null : _pickTicket,
@@ -636,20 +646,21 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       ),
                     ),
                     if (_ticketDataUrl != null) ...[
-                      const SizedBox(width: 8),
                       Icon(Icons.photo, size: 14, color: scheme.primary),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Ticket adjunto (~200 KB)',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: scheme.onSurfaceVariant,
-                          ),
+                      Text(
+                        'Ticket adjunto (~200 KB)',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
                       TextButton(
                         onPressed: () => setState(() => _ticketDataUrl = null),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
                         child: const Text(
                           'Quitar',
                           style: TextStyle(fontSize: 12),

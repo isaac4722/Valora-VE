@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "humanizer": {
+      "source": "./agent-skills/humanizer",
+      "sourceType": "local",
+      "computedHash": "d70628be4fc857bbc92e94b7397e715e986d13d61663d3a0bfd7f93a5a9d2527"
+    }
+  }
+}

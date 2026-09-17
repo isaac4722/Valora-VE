@@ -1990,7 +1990,12 @@ class _HeatmapCalendar extends StatelessWidget {
                 ),
               ),
             // Leyenda: el color SOLO significa dirección del movimiento.
-            Row(
+            // Wrap: la fila suma ~301 px fijos y desbordaba en <=330 dp
+            // y a textScale >=1.1 (fix overflow) — envuelve por pares.
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 _legendBox(ink.pos.withValues(alpha: 0.7)),
                 const SizedBox(width: 4),

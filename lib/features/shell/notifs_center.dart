@@ -90,12 +90,18 @@ class _NotificationCenterSheetState extends State<NotificationCenterSheet> {
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Notificaciones',
-                  style: TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w800,
-                    color: Theme.of(context).colorScheme.onSurface,
+                // Flexible + ellipsis: con badge y 2 acciones la fila supera
+                // los 324 px útiles de un sheet a 360 dp (fix overflow).
+                Flexible(
+                  child: Text(
+                    'Notificaciones',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ),
                 if (unread > 0) ...[
@@ -124,12 +130,20 @@ class _NotificationCenterSheetState extends State<NotificationCenterSheet> {
                 const Spacer(),
                 TextButton(
                   onPressed: () => store.markAllRead(),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                   child: const Text('Leídas', style: TextStyle(fontSize: 12.5)),
                 ),
                 TextButton(
                   onPressed: () => store.clearNotifications(),
                   style: TextButton.styleFrom(
                     foregroundColor: VeColors.of(context).neg,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: const Text(
                     'Limpiar',
@@ -299,19 +313,30 @@ class _NotificationCenterSheetState extends State<NotificationCenterSheet> {
               padding: const EdgeInsets.fromLTRB(18, 6, 18, 10),
               child: Row(
                 children: [
-                  Text(
-                    'Avisos del sistema activos',
-                    style: VeText.labelCaps(
-                      9.5,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  // Flexible: a textScale >=1.1 el rótulo con tracking amplio
+                  // choca con el botón en 360 dp (fix overflow).
+                  Flexible(
+                    child: Text(
+                      'Avisos del sistema activos',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: VeText.labelCaps(
+                        9.5,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pop();
                       context.go('/ajustes');
                     },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                     child: const Text(
                       'Configurar alertas',
                       style: TextStyle(fontSize: 12.5),

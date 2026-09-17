@@ -561,14 +561,17 @@ class _ConverterScreenState extends State<ConverterScreen> {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Row(
+            // Wrap: a textScale >=1.5 los 2 botones superan el ancho útil
+            // (fix overflow) — envuelven en vez de desbordar.
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
                 FilledButton.tonalIcon(
                   onPressed: plan == null || result <= 0 ? null : _shareCard,
                   icon: const Icon(Icons.ios_share, size: 16),
                   label: const Text('Compartir'),
                 ),
-                const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: plan == null || result <= 0 ? null : _copyResult,
                   icon: const Icon(Icons.copy_all, size: 16),

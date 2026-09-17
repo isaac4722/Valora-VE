@@ -176,9 +176,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ],
             ),
           ],
-          // Export bar.
+          // Export bar. Wrap: los 2 botones + contador no caben en 360 dp
+          // con escala 1.0 (fix overflow) — envuelven en vez de desbordar.
           const SizedBox(height: 10),
-          Row(
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               OutlinedButton.icon(
                 onPressed: () => _exportPurchases(context, filtered),
@@ -188,7 +192,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   style: TextStyle(fontSize: 11.5),
                 ),
               ),
-              const SizedBox(width: 6),
               OutlinedButton.icon(
                 onPressed: () => _exportMovements(context, store),
                 icon: const Icon(Icons.format_list_numbered, size: 14),
@@ -197,7 +200,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   style: TextStyle(fontSize: 11.5),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 6),
               // Contador honesto: todas las compras son navegables (páginas).
               Text(
                 '${filtered.length} de ${store.purchases.length} compras',
@@ -309,13 +312,20 @@ class _Seat extends StatelessWidget {
                   fmtDate(purchase.date).toUpperCase(),
                   style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
+                // Flexible + ellipsis: la tienda es texto libre del usuario
+                // y con nombres largos desbordaba el asiento (fix overflow).
                 if (purchase.store != null)
-                  Text(
-                    purchase.store!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                  Expanded(
+                    child: Text(
+                      purchase.store!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
               ],

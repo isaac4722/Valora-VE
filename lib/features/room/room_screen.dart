@@ -784,7 +784,12 @@ class _ServerCardState extends State<_ServerCard> {
               onChanged: widget.room.setServerToken,
             ),
             const SizedBox(height: 10),
-            Row(
+            // Wrap: los 2 botones suman ~309 px y no caben en los 300 px
+            // útiles de 360 dp (fix overflow) — envuelven si hace falta.
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 FilledButton.tonal(
                   onPressed: _probing
@@ -806,7 +811,6 @@ class _ServerCardState extends State<_ServerCard> {
                         )
                       : const Text('Probar conexión'),
                 ),
-                const SizedBox(width: 8),
                 TextButton(
                   onPressed: () => setState(() => _guide = !_guide),
                   child: Text(

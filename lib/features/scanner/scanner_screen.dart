@@ -171,8 +171,11 @@ class _ScannerScreenState extends State<ScannerScreen> {
                           style: TextStyle(color: Colors.white70, fontSize: 13),
                         ),
                         const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        // Wrap centrado: a textScale >=1.3 los 2 botones
+                        // superan el ancho y desbordaban (fix overflow).
+                        Wrap(
+                          spacing: 6,
+                          alignment: WrapAlignment.center,
                           children: [
                             TextButton.icon(
                               onPressed: openAppSettings,
@@ -186,7 +189,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
                                 style: TextStyle(color: Colors.white70),
                               ),
                             ),
-                            const SizedBox(width: 6),
                             TextButton(
                               onPressed: () =>
                                   Navigator.of(context).pop('__manual__'),
