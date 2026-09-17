@@ -18,7 +18,7 @@ import 'package:valorave/core/currencies.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/data/backup.dart';
 import 'package:valorave/data/store.dart';
-import 'package:valorave/main.dart' as app;
+import 'package:valorave/lowder_entry.dart' as lowder;
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -31,61 +31,19 @@ void main() {
       .setMockMethodCallHandler(const MethodChannel('home_widget'),
           (call) async => true);
 
-  group('Flujo completo · primer arranque', () {
-    testWidgets('arranque → onboarding → tablero honesto sin red', (tester) async {
-      // En host (flutter-tester) el binding live NO despacha taps a la vista
-      // (multi-view de Flutter 3.47): este flujo UI se valida en emulador o
-      // dispositivo real (docs/RELEASE.md §2); el onboarding queda cubierto
-      // además por widget tests en test/. En host se salta con motivo.
-      if (!Platform.isAndroid && !Platform.isIOS) {
-        // ignore: avoid_print
-        print('SKIP host: flujo UI de onboarding requiere emulador/dispositivo '
-            '(binding live sin dispatch de taps); ver docs/RELEASE.md §2.');
-        return;
+  group('Flujo completo · rama Lowder (Fase 4)', () {
+    testWidgets('entry Lowder → la pantalla del .low renderiza', (tester) async {
+      // En esta rama el entry es el de Lowder (lib/lowder_entry.dart):
+      // el flujo UI de la app real se valida en fix/v1.1.0-dp4-paridad.
+      // Aquí se verifica que la solución carga del .low y pinta su landing.
+      await lowder.main();
+      var aparecio = false;
+      for (int i = 0; i < 20 && !aparecio; i++) {
+        await tester.pump(const Duration(milliseconds: 200));
+        aparecio = find.text('Hola desde un .low').evaluate().isNotEmpty;
       }
-      SharedPreferences.setMockInitialValues({});
-      final dir = await Directory.systemTemp.createTemp('valorave_it');
-      await app.main(documentsDir: dir.path);
-      await tester.pumpAndSettle(const Duration(seconds: 2));
-
-      // Toca [tapText] y espera a que aparezca [waitText]. En el binding
-      // live los taps de tester.tap se pierden (multi-view en host), así
-      // que se usa el gesto manual documentado: down → pump → up → pump.
-      Future<void> tapUntilFound(String tapText, String waitText) async {
-        for (int t = 0; t < 10; t++) {
-          if (find.text(waitText).evaluate().isNotEmpty) return;
-          final f = find.text(tapText);
-          if (f.evaluate().isNotEmpty) {
-            final center = tester.getCenter(f);
-            final gesture = await tester.startGesture(center);
-            await tester.pump(const Duration(milliseconds: 40));
-            await gesture.up();
-            await tester.pumpAndSettle();
-          } else {
-            await tester.pump(const Duration(milliseconds: 120));
-          }
-        }
-      }
-
-      // Onboarding si no se ha completado: Paso0 → Paso1 país → 7 slides
-      // (Siguiente ×6) → Listo → Done.
-      if (find.text('Comenzar').evaluate().isNotEmpty) {
-        await tapUntilFound('Comenzar', 'Elegir Venezuela');
-        await tapUntilFound('Elegir Venezuela', 'Siguiente');
-        for (int i = 0; i < 6; i++) {
-          final f = find.text('Siguiente');
-          if (f.evaluate().isEmpty) break; // ya en la última slide
-          final center = tester.getCenter(f);
-          final gesture = await tester.startGesture(center);
-          await tester.pump(const Duration(milliseconds: 40));
-          await gesture.up();
-          await tester.pumpAndSettle();
-        }
-        await tapUntilFound('Listo', 'Empezar a usar ValoraVE');
-        await tapUntilFound('Empezar a usar ValoraVE', 'COTIZACIÓN PRINCIPAL');
-      }
-      // Tablero: sin red muestra estado honesto (con semilla real pendiente).
-      expect(find.text('COTIZACIÓN PRINCIPAL'), findsOneWidget);
+      expect(aparecio, isTrue,
+          reason: 'assets/lowder/demo.low debía cargar su pantalla inicial');
     });
 
     testWidgets('conversión EUR→COP con arista', (tester) async {

@@ -1,0 +1,218 @@
+{
+  "id": "valorave-lowder-demo",
+  "name": "ValoraVE Demo",
+  "filePath": "assets/lowder/demo.low",
+  "type": "flutter",
+  "landingScreen": "screen-inicio",
+  "environmentData": {
+    "environments": ["Dev", "QA", "Prod"],
+    "keys": ["env"],
+    "values": [["Dev", "QA", "Prod"]]
+  },
+  "stringResources": {
+    "languages": ["es"],
+    "keys": ["app_name"],
+    "values": [["ValoraVE · Lowder"]]
+  },
+  "screens": [
+    {
+      "_id": "screen-inicio",
+      "_type": "Screen",
+      "name": "Inicio Lowder",
+      "_folder": "Demo",
+      "properties": {
+        "routeName": "lowder-inicio"
+      },
+      "widgets": {
+        "body": {
+          "_id": "scaffold-inicio",
+          "_type": "scaffold",
+          "name": "Inicio Lowder",
+          "properties": {
+            "backgroundColor": "#121417"
+          },
+          "widgets": {
+            "appBar": {
+              "_id": "appbar-inicio",
+              "_type": "appBar",
+              "properties": {
+                "title": "Lowder · ValoraVE"
+              }
+            },
+            "body": {
+              "_id": "center-inicio",
+              "_type": "center",
+              "widgets": {
+                "child": {
+                  "_id": "column-inicio",
+                  "_type": "column",
+                  "properties": {
+                    "mainAxisAlignment": "center"
+                  },
+                  "widgets": {
+                    "children": [
+                      {
+                        "_id": "text-titulo",
+                        "_type": "text",
+                        "properties": {
+                          "value": "Hola desde un .low",
+                          "style": {
+                            "fontSize": "24",
+                            "color": "#ECEEF1",
+                            "fontWeight": "bold"
+                          }
+                        }
+                      },
+                      {
+                        "_id": "sizedbox-1",
+                        "_type": "sizedBox",
+                        "properties": {
+                          "height": "8"
+                        }
+                      },
+                      {
+                        "_id": "text-sub",
+                        "_type": "text",
+                        "properties": {
+                          "value": "Esta pantalla vive en assets/lowder/demo.low. El editor la escribe; la app la renderiza.",
+                          "style": {
+                            "fontSize": "14",
+                            "color": "#9AA1AB"
+                          }
+                        }
+                      },
+                      {
+                        "_id": "sizedbox-2",
+                        "_type": "sizedBox",
+                        "properties": {
+                          "height": "24"
+                        }
+                      },
+                      {
+                        "_id": "btn-detalle",
+                        "_type": "elevatedButton",
+                        "name": "Abrir detalle",
+                        "properties": {
+                          "text": "Ver el detalle"
+                        },
+                        "actions": {
+                          "onPressed": {
+                            "_id": "act-navegar-detalle",
+                            "_type": "Navigate",
+                            "properties": {
+                              "jumpToRoute": "lowder-detalle",
+                              "state": {
+                                "desde": "Inicio"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "_id": "screen-detalle",
+      "_type": "Screen",
+      "name": "Detalle Lowder",
+      "_folder": "Demo",
+      "properties": {
+        "routeName": "lowder-detalle"
+      },
+      "widgets": {
+        "body": {
+          "_id": "scaffold-detalle",
+          "_type": "scaffold",
+          "name": "Detalle Lowder",
+          "properties": {
+            "backgroundColor": "#121417"
+          },
+          "widgets": {
+            "appBar": {
+              "_id": "appbar-detalle",
+              "_type": "appBar",
+              "properties": {
+                "title": "Detalle · Lowder"
+              }
+            },
+            "body": {
+              "_id": "center-detalle",
+              "_type": "center",
+              "widgets": {
+                "child": {
+                  "_id": "column-detalle",
+                  "_type": "column",
+                  "properties": {
+                    "mainAxisAlignment": "center"
+                  },
+                  "widgets": {
+                    "children": [
+                      {
+                        "_id": "text-detalle-titulo",
+                        "_type": "text",
+                        "properties": {
+                          "value": "Llegaste por Navigate + routeName",
+                          "style": {
+                            "fontSize": "20",
+                            "color": "#ECEEF1",
+                            "fontWeight": "bold"
+                          }
+                        }
+                      },
+                      {
+                        "_id": "sizedbox-3",
+                        "_type": "sizedBox",
+                        "properties": {
+                          "height": "8"
+                        }
+                      },
+                      {
+                        "_id": "text-detalle-estado",
+                        "_type": "text",
+                        "properties": {
+                          "value": "El estado viajo: ${state.desde}",
+                          "style": {
+                            "fontSize": "14",
+                            "color": "#9AA1AB"
+                          }
+                        }
+                      },
+                      {
+                        "_id": "sizedbox-4",
+                        "_type": "sizedBox",
+                        "properties": {
+                          "height": "24"
+                        }
+                      },
+                      {
+                        "_id": "btn-volver",
+                        "_type": "outlinedButton",
+                        "name": "Volver",
+                        "properties": {
+                          "text": "Volver"
+                        },
+                        "actions": {
+                          "onPressed": {
+                            "_id": "act-pop",
+                            "_type": "Pop",
+                            "properties": {}
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

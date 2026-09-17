@@ -31,6 +31,9 @@ dependencies:
   connectivity_plus: ^7.3.1         # offline REAL (v17.8): saber cuándo NO hay red
   socket_io_client: 2.0.3+1         # sala modo Servidor (relay del usuario · orden del dueño v19)
 
+  # ── Low-code (SOLO esta rama de prueba) ────────────────────────────────
+  lowder: ^0.1.12                   # pantallas .low + editor web (test/lowder, Fase 4 del dueño)
+
   # ── Plataforma Android ───────────────────────────────────────────────────
   flutter_local_notifications: ^17.2.4   # 5 canales locales (sin FCM)
   file_picker: ^12.2.0              # import CSV/JSON (§trap 2: NO 11.x)
@@ -72,6 +75,7 @@ flutter:
   assets:
     - assets/brand/
     - assets/flags/
+    - assets/lowder/                 # pantallas .low del editor (solo rama test/lowder)
 
   fonts:
     - family: Inter

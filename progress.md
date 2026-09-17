@@ -1057,3 +1057,61 @@ con la plantilla de `AGENT.md`.
 - Siguiente: Fase 4 — rama test/lowder para probar Lowder (estructura
   + entry secundario + docs) → push de ambas ramas → poll CI/Build
   hasta verde → merge a main SOLO con orden expresa del dueño.
+
+---
+## [TASK-26] Fase 4 · rama test/lowder: Lowder integrado para probar · 2026-09-18 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Contexto: encargo del dueño (Fase 4): rama nueva dedicada a probar
+  Lowder con estructura correcta, configs manuales y SIN tocar la app
+  real. Base ya verificada por el dueño: Lowder es un paquete integrado
+  al proyecto (no un editor conectado al repo) que genera pantallas
+  desde .low; el editor (dart run lowder) sirve web y lee/escribe esos
+  archivos DENTRO del proyecto; editor en http://0.0.0.0:8787/editor.html.
+- Hecho (en ESTA rama, ramificada de fix/v1.1.0-dp4-paridad 2d9cb8f):
+  - Investigación del paquete publicado lowder 0.1.12 (pub.dev + repo
+    HCaseira/lowder_flutter + archivo del paquete descomprimido): API
+    exacta (import lowder/widget/lowder.dart; extends Lowder con
+    List<SolutionSpec>; SolutionSpec(nombre, filePath:)), acciones base
+    (Navigate con jumpToRoute/jumpToScreen + state, Pop, SetState,
+    BlocState), widgets base registrados, formato .low (screens con
+    routeName en properties, environmentData y stringResources
+    OBLIGATORIOS — languages[0] revienta sin stringResources, hallado
+    por test y corregido).
+  - pubspec: lowder ^0.1.12 + assets/lowder/ declarada.
+  - lib/lowder_entry.dart: entry secundario con main() propio y raíz
+    ValoraLowder (SolutionSpec 'Demo' → assets/lowder/demo.low).
+  - lib/main.dart de ESTA rama delega en lowder_entry (por qué: dart
+    run lowder compila lib/main.dart a web sin permitir otro target y
+    la app real usa dart:io — no compila a JS; la app REAL queda
+    intacta en fix/v1.1.0-dp4-paridad).
+  - assets/lowder/demo.low: 2 pantallas demo con routeName, Navigate
+    (con estado) y Pop — ejemplos andantes de las limitaciones
+    documentadas.
+  - docs/LOWDER.md: cómo correr el editor, estructura, puentes
+    manuales con la app (routing propio, Bloc propio, sin integración
+    mágica con widgets existentes) y límites verificados.
+  - integration_test/app_test.dart adaptado a ESTA rama: valida el
+    entry Lowder en vez del main real (los demás flujos de store se
+    mantienen).
+  - test/lowder_entry_test.dart: la solución carga del .low y pinta
+    su landing + botón de navegación (title case: «Ver El Detalle»,
+    comportamiento del propio Lowder para botones).
+- Decisiones:
+  - Botón title-case documentado en el test: getText(context «button»)
+    aplica Strings.getTitle — es el design system de Lowder, no un
+    bug; el copy es-VE se escribe sabiendo que los botones llegan
+    capitalizados.
+  - Un solo testWidgets del entry: Lowder vive en estado estático
+    (soluciones/fábricas registradas 1 vez por proceso) — montar dos
+    raíces duplicaría el registro.
+  - Esta rama NO dispara CI/Build (los workflows disparan en main y
+    fix/*): gates locales en cada commit + build web del editor
+    verificado con EXIT 0 (la compilación exacta que hace dart run
+    lowder).
+- Gates: analyze=0 issues · test=189/189 (188 de la rama base + 1
+  nuevo del entry) · build web editor=EXIT 0 (repro exacto del comando
+  de dart run lowder).
+- Bloqueos: ninguno.
+- Siguiente: decisión del dueño — profundizar Lowder (más pantallas,
+  registro de widgets propios del design system ValoraVE vía
+  IWidgets/IActions/IProperties) o cerrar el experimento.
