@@ -281,7 +281,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
           i.priceUSD.toStringAsFixed(4),
           i.originalPrice.toStringAsFixed(2),
           i.currency,
-          p.store ?? '',
+          // Multitienda (v17.2): el ítem manda; si no tiene tienda propia,
+          // cae a la de la compra — igual que la ficha en pantalla.
+          i.store ?? p.store ?? '',
         ]);
       }
     }
