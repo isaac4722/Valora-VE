@@ -10,6 +10,8 @@ Se instalan con `npx skills add <ruta>` o se leen directamente como contexto.
 | `taste/` | https://github.com/Leonxlnx/taste-skill | Familia completa anti-slop de frontend (taste, brandkit, minimalist, redesign, imagegen-frontend-*, stitch, soft, output, image-to-code) |
 | `flutter/` | `npx skills add flutter/agent-plugins --skill '*'` | 37 skills Flutter (app-workflow, ui-design, persistence, networking, notifications, testing, performance, etc.) |
 | `dart/` | `npx skills add dart-lang/skills --skill '*'` | dart-language, dart-concurrency |
+| `humanizer/` | https://github.com/blader/humanizer (orden del dueño · v19.3) | Reescribe texto con «tells» de IA para que lea como humano (prosa, docs, copy) — MIT, respuesta a `/humanizer` |
+| `caveman/` | incluida en el repo | modo de comunicación ultra-comprimido (niveles lite/full/ultra) — recorta tokens sin perder sustancia técnica |
 
 ## Uso rápido
 

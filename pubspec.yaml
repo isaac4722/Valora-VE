@@ -2,11 +2,11 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y salas con su propia tecnología. Offline-first."
 publish_to: 'none'
 
-# 1.9.2-beta+20 · v19.2 — licencia propietaria (LICENSE), repo público,
-# paquete único: cada build entrega UN ZIP con los 4 APK + el AAB
-# (+ LEEME.txt y checksums). Kotlin 2.3.20 + NDK 28.2.13676358.
-# (Regla 5 de AGENT.md · 1.x.y-beta+z · Regla 9: cobertura total + ZIP).
-version: 1.9.2-beta+20
+# 1.9.3-beta+21 · v19.3 — auditoría GUI completa: 37 fixes de pantalla
+# (desbordes, dark theme, a11y textScale, leaks, es-VE del date picker).
+# flutter_localizations + intl 0.20.3 + syncfusion 34 (alineadas al
+# Flutter 3.47 del CI). Skills: + blader/humanizer en agent-skills/.
+version: 1.9.3-beta+21
 
 environment:
   sdk: ^3.9.2

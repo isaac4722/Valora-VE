@@ -1,6 +1,54 @@
 # Changelog
 
 
+## 1.9.3-beta+21 · v19.3 — auditoría GUI completa: 37 fixes de pantalla
+
+Ronda de auditoría del GUI en 3 frentes (shell/home/welcome · insights/
+products/statement · lista/converter/room/history) con verificación
+línea a línea de cada hallazgo. Todos los fixes corrigen defectos que
+`flutter analyze` no puede ver: desbordes con datos reales, texto
+invisible en oscuro, accesibilidad y fugas de memoria.
+
+- **Desbordes de fila (9)**: cabecera y pie del centro de notificaciones,
+  barra de export del Historial, «Probar conexión» de la sala, botones
+  del escáner, Compartir/Copiar del conversor, cabeceras por tienda del
+  checkout, fila de foto del ticket y leyenda del heatmap — todas a
+  Wrap/Flexible (rompían a 360 dp escala 1.0 o textScale ≥1.1).
+- **Texto del usuario sin recorte (10)**: precio/tienda de Productos,
+  monto de Recientes, título del visor de tickets, fila PRECIO VIGENTE,
+  rótulos de la constancia, StatCard «Tienda top» (FittedBox §8),
+  búsqueda global con tiles «y N más» por grupo + clamp de página al
+  borrar productos («Página 3 de 2» con pantalla vacía).
+- **Español real (1 raíz)**: el `showDatePicker` de Análisis renderizaba
+  en INGLÉS («SELECT DATE»/CANCEL/OK) — la app fijaba locale es-VE sin
+  delegates. Añadido `flutter_localizations` (+ intl 0.20.3, syncfusion
+  34.2.8 alineada al Flutter 3.47 del CI) con delegates en ambos
+  MaterialApps.
+- **Tema oscuro y contraste (4)**: subtítulo del menú de compartir
+  invisible en oscuro (black54 → onSurfaceVariant); pie de la constancia
+  a 4.5:1 de contraste; tinta de días sin datos legible; rótulos de la
+  matriz al piso de 9.5 px del sistema.
+- **Accesibilidad textScale (5)**: puntos del onboarding con FittedBox +
+  slide 1 con scroll (desbordaba en landscape); tab bar y header con
+  minHeight elástico (las etiquetas se recortaban a textScale ≥2.35);
+  campo CANTIDAD elástico; monto del ranking sin partirse en 2 líneas.
+- **Elemento muerto + copy + formato (3)**: el badge «N ítems» del héroe
+  de la Lista JAMÁS se pintaba (LiveBadge con live:false colapsa a
+  cero); «Toca el lápiz» ya no aparece en filas sin lápiz; la meta de
+  precio se guarda/lee con coma es-VE (antes «3.0» con punto).
+- **Higiene (6)**: dispose de los TextEditingController de 4 diálogos
+  (leak por apertura); orden de `mounted` en tips (un desmonte ya no
+  consume el tip para siempre); rate VES correcto en productos creados
+  al guardar compra (unitsPerUSD(usd) devolvía siempre 1).
+- **Escáner ROI con estado de error (paridad)**: permiso denegado o
+  cámara ocupada ya NO muestra pantalla negra muda — estado con salidas
+  (abrir ajustes · escribir a mano), igual que el escáner principal.
+- **Skills**: `agent-skills/humanizer/` (blader/humanizer, MIT) añadido
+  a las familias del repo; LICENSE propietaria propagada a TODAS las
+  ramas (main, test, fix/v1.0.1-*, fix/v1.0.2-*) por orden del dueño.
+- **Bump 1.9.3-beta+21 · kAppVersionVisible 19.3**.
+
+
 ## 1.9.2-beta+20 · v19.2 — licencia propietaria + paquete único ZIP
 
 El dueño pasó el repo a PÚBLICO y pidió: licencia de propietario (sin

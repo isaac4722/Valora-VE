@@ -868,3 +868,65 @@ con la plantilla de `AGENT.md`.
     Simulado LOCALMENTE con archivos falsos antes de push (script
     scripts/test_paquete_local.sh, fuera del repo): nombre, 4 APK, AAB,
     LEEME y checksums verificados en sandbox.
+
+---
+## [TASK-23] Auditoría GUI completa · 37 fixes de pantalla + humanizer + LICENSE en todas las ramas · 2026-09-17 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Contexto: encargo del dueño — «escribe y arregla el GUI de la app en
+  general, evitando errores», activar skills del repo + instalar
+  blader/humanizer, y asegurar que TODAS las ramas tengan su licencia de
+  PROPIEDAD. Trabajo en fix/v1.1.0-dp4-paridad (v19.2 → v19.3).
+- Hecho:
+  - SKILLS: agent-skills/humanizer/ añadido (clonado de github/blader
+    porque npx skills add cae por timeout de red en este entorno — mismo
+    bloqueo de TASK-13; el README del repo documenta la vía alternativa
+    de leer como contexto, que es la usada: flutter-ui-design,
+    flutter-responsive-layout, taste-skill + humanizer). README de
+    agent-skills actualizado con las 5 familias.
+  - LICENCIAS: LICENSE propietaria copiada a main (7e8284d), test
+    (e57e458), fix/v1.0.1-router-icono-paridad (9b49324) y
+    fix/v1.0.2-paridad-mvp (6afcc0b) — las 5 ramas del repo ya la
+    tienen (verificado con git show por rama).
+  - SDK LOCAL: flutter-sdk 3.47.4 clonado en /home/z/my-project (fuera
+    del repo) → gates analyze/test corren LOCALES otra vez (TASK-21/22
+    los delegaban a CI): línea base 0 issues · 172/172 verificada ANTES
+    de tocar nada, y en cada commit.
+  - AUDITORÍA: 3 agentes en paralelo (shell/home/welcome · insights/
+    products/statement · lista/converter/room/history/scanner/widgets)
+    + verificación propia línea a línea de cada hallazgo antes de
+    corregir. 37 issues reales (los que analyze NO ve).
+  - FIXES en 7 commits (62318fa → dbb03a7): (1) desbordes de fila a
+    360dp/textScale ×9; (2) texto de usuario sin recorte ×10 +
+    clamp de paginación; (3) showDatePicker en INGLÉS → raíz arreglada
+    con flutter_localizations (+ intl 0.20.3 + syncfusion 34.2.8, la
+    major alineada al Flutter 3.47 del CI) + delegates en ambos
+    MaterialApps; (4) dark theme/contraste ×4 (share_menu invisible en
+    oscuro, black38, alpha 0.4, piso 9.5px); (5) a11y textScale ×5
+    (dots onboarding, slide 1 con scroll, tab bar/header minHeight,
+    CANTIDAD, monto ranking); (6) badge «N ítems» muerto (LiveBadge
+    live:false jamás se pintaba), copy «Toca el lápiz» solo donde hay
+    lápiz, meta con coma es-VE; (7) leaks de TextEditingController ×4
+    diálogos, orden de mounted en tips, vesRate del checkout
+    (unitsPerUSD(usd) devolvía 1 siempre).
+  - Bump 1.9.3-beta+21 · kAppVersionVisible 19.3 · CHANGELOG.
+- Decisiones:
+  - StatCard.value con FittedBox scaleDown (patrón §8 del propio repo)
+    en vez de maxLines: sirve igual para cifras y para nombres libres.
+  - main_shell: ConstrainedBox(minHeight) + mainAxisSize.min — el test
+    del shell cazó en vivo que con .max la Column llenaba TODO el alto
+    del slot bottomNavigationBar (los gates existen por esto).
+  - flutter_localizations es paquete OFICIAL del SDK (regla 7); el
+    salto syncfusion 27→34 lo exige intl 0.20.3 y lo valida la suite
+    completa (172/172) — APIs usadas (SfCartesian/Series/Axes)
+    estables entre majors.
+  - Los fixes del tab bar/header usan minHeight (no altura fija) para
+    que crezcan con textScale de accesibilidad sin romper el layout.
+  - vesRate con fallback 0 (no 1): 0 = «sin tasa conocida», el mismo
+    convenio de buildPurchase.
+- Gates: analyze=0 issues · test=172/172 (locales, en CADA commit) ·
+  build=paso 8 en curso (verificación del run de Actions hasta verde).
+- Bloqueos: npx skills add cae por timeout de red (2 intentos, luego
+  clonado directo con git — documentado arriba y en TASK-13).
+- Siguiente: poll de CI+Build de este push hasta verde (4 APK + AAB +
+  ZIP) → reportar enlaces al dueño → merge a main SOLO con orden
+  expresa del dueño.
