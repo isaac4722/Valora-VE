@@ -930,3 +930,68 @@ con la plantilla de `AGENT.md`.
 - Siguiente: poll de CI+Build de este push hasta verde (4 APK + AAB +
   ZIP) → reportar enlaces al dueño → merge a main SOLO con orden
   expresa del dueño.
+
+## [TASK-24] v19.4 · 5 encargos del dueño: tarjetas TIPs, Generar, widgets de Inicio, Buscar Sala y FlutLab · 2026-09-17 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Contexto: encargos del dueño sobre fix/v1.1.0-dp4-paridad (v19.3 →
+  v19.4): arreglar el tamaño de las tarjetas de TIPs/Tutoriales (aire
+  en blanco), el error de «Generar» al compartir, widgets de Inicio
+  visibles antes de añadir con contenido adaptable al tamaño
+  («Widget Resizing»), «Buscar Sala» dentro de Crear Sala, y la
+  compatibilidad con flutlab.io (investigando si es cierto). Humanizer
+  aplicado a todo el copy nuevo visible.
+- Hecho:
+  - TIPS/TUTORIALES (31d2bd2): la tarjeta del coach mark ocupaba TODO
+    el hueco (height: maxH fijo) con el texto arriba y los botones al
+    fondo — vacío gigante. Ahora mide su contenido (Align en su hueco:
+    cuelga bajo el foco, se apoya sobre el foco) y el ancho sigue fijo.
+    2 tests nuevos de geometría.
+  - GENERAR (effe564): doble causa raíz — (1) el GlobalKey sobre un
+    KeyedSubtree: findRenderObject devolvía el render descendiente, el
+    cast a RenderRepaintBoundary reventaba y el catch lo tragaba →
+    «No pude generar la tarjeta» SIEMPRE; (2) Future.delayed×2 ganaba
+    la carrera contra el vsync. Key al RepaintBoundary + endOfFrame×2
+    (patrón renderOffstagePng) + captureWidget endurecido (sube al
+    boundary envolvente). Test end-to-end del PNG (firma + limpieza).
+  - WIDGETS DE INICIO (5c7d344): catálogo con PREVIEW REAL (el mismo
+    builder pinta hoja e Inicio), tamaños Compacto/Normal/Grande que
+    cambian el CONTENIDO (divisas 4/todas · resumen total/stats/ledger
+    5-8 · alertas 3/6/8 · tiendas 2/4/6 · registros 2+2/3+3/5+5),
+    persistencia valorave.home.widgets/.off/.size.<id> con ocultos
+    recordados (sin eso lo quitado volvía tras reiniciar — bug cazado
+    por test), tarjeta «Widgets de Inicio» al pie + estado «Inicio
+    limpio». Anclas del tour SOLO en Inicio (GlobalKey duplicado
+    tumbaría la app: la preview comparte builders). 8 tests.
+  - BUSCAR SALA (a3f69ec): campo en la tarjeta CREAR SALA que filtra
+    salas públicas avistadas por nombre/anfitrión/código sin tildes ni
+    mayúsculas; escribir arranca la escucha UNA vez por búsqueda (cada
+    arranque limpia la lista). _RoomAdTile compartido con Salas
+    cercanas + seam debugInjectAd (@visibleForTesting). 2 tests.
+  - FLUTLAB (c4b6b6f): verificado — FlutLab es IDE online que importa
+    de GitHub y compila; requiere estructura Flutter en la raíz. ios/ y
+    web/ generados (flutter create --org ve.valorave), .gitignore raíz
+    intacto (ios trae el suyo), .metadata con android restaurada,
+    docs/FLUTLAB.md con decisiones (pubspec.lock commiteado a propósito
+    — recomendación Dart para apps; web/ es andamiaje, la app es
+    Android-first).
+  - Bump 1.9.4-beta+22 · kAppVersionVisible 19.4 · CHANGELOG.
+- Decisiones:
+  - Tarjeta del coach: Align dentro del Positioned del hueco en vez de
+    medir a mano: si el contenido crece, el Column interno se topa en
+    maxH y el scroll existente hace el resto (botones siempre vivos).
+  - Tamaños por widget con contenido DISTINTO; cotización/herramientas
+    sin selector (contenido fijo) — honesto antes que un control muerto.
+  - Lista vacía explícita NO se persiste (inicio pelado tras reiniciar
+    sería un susto): el estado vacío vive la sesión y se recupera solo.
+  - Preview: IgnorePointer + FittedBox scaleDown a ancho 360 — la hoja
+    muestra la pieza real, no un dibujo.
+  - Tests del home: SharedPreferences en el árbol (como appProviders)
+    y tour ya visto donde el test no es del tour (la barrera del coach
+    bloquea taps — lección para futuros tests del shell).
+- Gates: analyze=0 issues · test=185/185 (locales, en CADA commit) ·
+  build=paso 8 en curso (verificación del run de Actions hasta verde).
+- Bloqueos: el test end-to-end del PNG necesitó el patrón híbrido
+  pumps+runAsync (el toImage del engine no fluye con solo pumps) —
+  resuelto y documentado en el propio test.
+- Siguiente: poll de CI+Build hasta verde → reportar → merge a main
+  SOLO con orden expresa del dueño (regla TASK-21/22).

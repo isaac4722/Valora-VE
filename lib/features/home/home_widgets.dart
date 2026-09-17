@@ -219,7 +219,7 @@ class _WidgetCatalogSheet extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           'Míralos tal como quedan y decide cuáles viven en tu Inicio. '
-          'El tamaño cambia cuánto muestran, no solo su marco.',
+          'El tamaño cambia cuánto muestra cada uno.',
           style: TextStyle(
             fontSize: 12,
             height: 1.4,

@@ -7,4 +7,4 @@
 library;
 
 /// Versión visible (ronda v19.3 · auditoría GUI: 37 fixes de pantalla).
-const String kAppVersionVisible = '19.3';
+const String kAppVersionVisible = '19.4';

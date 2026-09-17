@@ -1,6 +1,34 @@
 # Changelog
 
 
+## 1.9.4-beta+22 · v19.4 — 5 encargos del dueño: tarjetas TIPs, compartir, widgets de Inicio, buscar sala y FlutLab
+
+- **Tarjetas de TIPs y Tutorial sin aire muerto**: la tarjeta ocupaba
+  todo el hueco disponible aunque el texto fuera corto — el contenido
+  quedaba arriba y los botones pegados al fondo, con un vacío gigante
+  en el medio. Ahora mide su contenido: cuelga bajo el foco y se apoya
+  sobre él; si el texto no cabe, se scrollea como siempre.
+- **«Generar» la tarjeta del conversor arreglado**: el bug tenía dos
+  patas — el GlobalKey estaba sobre un KeyedSubtree (el cast a
+  RepaintBoundary reventaba y el catch lo tragaba: null SIEMPRE) y los
+  Future.delayed ganaban la carrera contra el vsync. Key al boundary,
+  endOfFrame×2 y captureWidget endurecido (sube al boundary que envuelve
+  en vez de cast ciego).
+- **Widgets de Inicio con vista previa y tamaño**: catálogo donde cada
+  sección se ve ANTES de añadirla (la MISMA pieza pinta la hoja y el
+  Inicio), selector Compacto/Normal/Grande cuyo contenido cambia de
+  verdad (divisas 4/todas · resumen con o sin detalle · alertas 3/6/8 ·
+  tiendas 2/4/6 · registros 2+2/3+3/5+5), y persistencia que recuerda
+  los quitados (un widget retirado vuelve a aparecer tras reiniciar:
+  bug cazado por test).
+- **Buscar sala dentro de Crear Sala**: campo que filtra las salas
+  públicas avistadas por nombre, anfitrión o código — sin tildes ni
+  mayúsculas. Escribir ya arranca la escucha; tocar un resultado entra.
+- **FlutLab**: ios/ y web/ estándar en la raíz (flutter create --org
+  ve.valorave) + docs/FLUTLAB.md con lo verificado. pubspec.lock sigue
+  commiteado a propósito (recomendación oficial de Dart para apps).
+
+
 ## 1.9.3-beta+21 · v19.3 — auditoría GUI completa: 37 fixes de pantalla
 
 Ronda de auditoría del GUI en 3 frentes (shell/home/welcome · insights/
