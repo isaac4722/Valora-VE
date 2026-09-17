@@ -6,5 +6,5 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v19.3 · auditoría GUI: 37 fixes de pantalla).
-const String kAppVersionVisible = '19.4';
+/// Versión visible (ronda v19.5 · recuperación + widgets de escritorio).
+const String kAppVersionVisible = '19.5';

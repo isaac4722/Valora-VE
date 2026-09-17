@@ -2,10 +2,10 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y salas con su propia tecnología. Offline-first."
 publish_to: 'none'
 
-# 1.9.4-beta+22 · v19.4 — 5 encargos del dueño: tarjetas TIPs sin
-# aire, «Generar» arreglado, widgets de Inicio con preview y tamaño,
-# Buscar sala y estructura FlutLab (ios/ + web/).
-version: 1.9.4-beta+22
+# 1.9.5-beta+23 · v19.5 — limpieza de la desviación dp4, 3 fixes
+# recuperados (CSV multitienda, tablero offline, flush Hive) y widgets
+# de escritorio Android con preview y resize adaptativo.
+version: 1.9.5-beta+23
 
 environment:
   sdk: ^3.9.2

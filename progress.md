@@ -995,3 +995,65 @@ con la plantilla de `AGENT.md`.
   resuelto y documentado en el propio test.
 - Siguiente: poll de CI+Build hasta verde → reportar → merge a main
   SOLO con orden expresa del dueño (regla TASK-21/22).
+
+---
+## [TASK-25] v19.5 · limpieza de la desviación + 3 fixes recuperados + AppWidgets con preview y resize · 2026-09-17/18 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Contexto: un agente anterior (Claude Sonnet 4.6/Zed, autor «ValoraVE
+  Agent») se desvió del flujo — creó la rama dp4 y 13 runs de Actions
+  sin permiso, con 5 commits fuera de flujo (4 pushes en rojo, workflow
+  fantasma format-fix, hardening que rompía la Regla 9). El dueño
+  ordenó Fase 0 (inventario) → confirmó qué recuperar (solo lo que
+  corrige funcionalidad EXISTENTE y es mejora clave) y qué descartar
+  (features no pedidas: precio/kg, filtro por mes, menú share, cambio
+  de icono, hardening).
+- Hecho:
+  - FASE 1 (limpieza): rama dp4 y test-new eliminadas del remoto; 13
+    runs huérfanos borrados (API DELETE); el workflow format-fix
+    desapareció solo con la rama. Quota intacto: dp4 nunca subió
+    artefactos. El repo quedó en 5 ramas legítimas sobre bea1eeb.
+  - FASE 2 (recuperación validada, e904676→7e631ee): (1) CSV de
+    movimientos exporta la tienda del ÍTEM (i.store ?? p.store — la UI
+    agrupa por tienda desde v17.2, la planilla no); (2) mergeRegion-
+    Blocks siembra las fuentes de la ronda anterior: región caída no
+    borra tasas (degraded la reporta, updatedAt original se conserva,
+    changed no inventa cambios) + 3 tests nuevos de la semántica;
+    (3) _persist hace flush a disco (fire-and-forget con catchError:
+    fallo de disco deja el dato en memoria y reintenta; guard null del
+    box — el flush del agente desviado con _boxData! revientaría si la
+    caja no está abierta, corregido aquí).
+  - FASE 3 (encargo AppWidgets — ec f6e5a): la familia Tasa BCV ·
+    Paralelo · Brecha YA existía (v19.0) pero sin preview ni resize
+    real. Añadido: previewLayout (Android 12+ renderiza el layout real
+    en el selector) + previewImage PNG (5-11, drawable-nodpi, cifras de
+    la semilla documentada) + descripciones es-VE en el picker; 4×1 por
+    defecto (targetCellWidth/Height + minWidth 250dp), rango 2×1→4×2
+    (min/maxResizeWidth/Height), onAppWidgetOptionsChanged re-renderiza
+    con buckets COMPACT (solo cifra ≤140dp ancho / ≤80dp alto) · NORMAL
+    (completo) · BIG (4×2, 44sp) via setViewVisibility +
+    setTextViewTextSize (API 16+, minSdk 21 OK); tocar el widget abre
+    la app (PendingIntent inmutable, targetSdk 31+). docs/APPWIDGETS.md
+    con flujo y verificación manual. Consulta web del paso 2 hecha
+    (docs oficiales «flexible widget layouts» + patrón preview 12+).
+  - Bump 1.9.5-beta+23 · kAppVersionVisible 19.5 · CHANGELOG.
+- Decisiones:
+  - Solo se recuperaron fixes a funcionalidad EXISTENTE (decisión del
+    dueño); las 3 features nuevas del agente desviado quedaron fuera.
+  - Preservación del board: sources sí, providers no — los proveedores
+    reflejan quién respondió ESTA ronda; degraded dice qué región calló.
+  - Umbral COMPACT por alto (≤80dp) calculado del contenido real del
+    diseño NORMAL (~90dp): una celda baja muestra solo la cifra en vez
+    de recortar.
+  - home_widget 0.9.4 verificado: su updateWidget emite broadcast
+    APPWIDGET_UPDATE → pasa por onUpdate propio → TODAS las vías de
+    actualización (Dart, 30 min, resize) convergen en render().
+  - El previewImage pre-12 es PNG estático (vector no puede llevar
+    texto); mismas cifras de la semilla del store — prohibido inventar.
+- Gates: analyze=0 issues · test=188/188 (185 previos + 3 nuevos de
+  board; en CADA commit) · build=paso 8 en curso (verificación del run
+  de Actions hasta verde — el Kotlin lo compila el build de Actions,
+  localmente no hay SDK Android).
+- Bloqueos: ninguno.
+- Siguiente: Fase 4 — rama test/lowder para probar Lowder (estructura
+  + entry secundario + docs) → push de ambas ramas → poll CI/Build
+  hasta verde → merge a main SOLO con orden expresa del dueño.

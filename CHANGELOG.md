@@ -1,6 +1,25 @@
 # Changelog
 
 
+## 1.9.5-beta+23 · v19.5 — limpieza dp4, 3 fixes recuperados y widgets de escritorio con preview + resize
+
+- **Limpieza de la desviación**: rama `dp4` y sus 13 runs de Actions
+  eliminados; nada de ese trabajo llegó a esta rama sin revalidarse.
+- **CSV de movimientos**: cada renglón exporta la tienda del ÍTEM (la
+  ficha en pantalla agrupa por tienda desde v17.2, la planilla seguía
+  poniendo la de la compra). El ítem manda; si no trae, cae a la compra.
+- **Tablero offline**: una región caída ya no borra sus tasas — la ronda
+  anterior sobrevive con su hora original y la caída queda reportada en
+  `degraded`. Las fuentes frescas pisan a las viejas; nada se inventa.
+- **Durabilidad Hive**: flush a disco tras cada persist del snapshot —
+  un corte de luz ya no pierde la última compra. Fire-and-forget con
+  captura: si el disco falla, el dato sigue en memoria y se reintenta.
+- **Widgets de escritorio (encargo Fase 3)**: la familia Tasa BCV ·
+  Paralelo · Brecha ahora se VE en el selector antes de añadir (layout
+  real en Android 12+, PNG en 5-11, con descripción) y se redimensiona
+  de ~2×1 a 4×2 con contenido que se recompone: solo cifra en compacto,
+  diseño completo en normal y cifras grandes en 4×2. Tocar abre la app.
+
 ## 1.9.4-beta+22 · v19.4 — 5 encargos del dueño: tarjetas TIPs, compartir, widgets de Inicio, buscar sala y FlutLab
 
 - **Tarjetas de TIPs y Tutorial sin aire muerto**: la tarjeta ocupaba
