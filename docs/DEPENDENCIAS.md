@@ -24,11 +24,12 @@ Resueltas con Flutter 3.47.3 stable (canal stable sin pin en CI). El gate
 | image_picker | ^1.1.2 | foto de ticket (maxWidth 1024 + quality 72 = compresión nativa) |
 | mobile_scanner | ^5.x | escáner continuo con zoom |
 | nearby_connections | ^4.1.0 | sala P2P sin internet (WiFi-Direct/BT/BLE, P2P_STAR) |
-| syncfusion_flutter_charts | ^27.1.48 | brecha, evolución, histórico, donut, barras |
+| syncfusion_flutter_charts | ^34.2.8 | brecha, evolución, histórico, donut, barras (major 34: exige intl 0.20, alineada al Flutter 3.47 del CI; APIs usadas —SfCartesian/Series/Axes— estables) |
 | dynamic_color | ^1.7.0 | Material You (opcional) |
 | qr_flutter | ^4.1.0 | QR de sala |
 | pdf + printing | ^3.11.1 / ^5.13.2 | constancias PDF |
-| intl | ^0.19.0 | formato es-VE |
+| intl | ^0.20.3 | formato es-VE (0.20.3: lo exige flutter_localizations) |
+| flutter_localizations | sdk | delegates es-VE — showDatePicker y componentes Material en español real (fix v19.3) |
 | nested | ^1.0.0 | (tipado de listas de providers) |
 
 ## Trampas conocidas respetadas (§8 del prompt)

@@ -11,6 +11,7 @@ library;
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -184,6 +185,14 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
             ),
             themeMode: theme.mode,
             locale: const Locale('es', 'VE'),
+            // Delegates es-VE (fix): sin ellos, MaterialComponents en inglés
+            // (showDatePicker «SELECT DATE»/CANCEL/OK) en una UI 100 % es-VE.
+            localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const <Locale>[Locale('es', 'VE'), Locale('es')],
             home: _BiometricLockScreen(
               onRetry: () async {
                 final ok = await _tryUnlock();
@@ -214,6 +223,14 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
           ),
           themeMode: theme.mode,
           locale: const Locale('es', 'VE'),
+          // Delegates es-VE (fix): ídem arriba — componentes Material en
+          // español real (date pickers, tooltips de texto, etc.).
+          localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const <Locale>[Locale('es', 'VE'), Locale('es')],
           routerConfig: _router,
         );
       },

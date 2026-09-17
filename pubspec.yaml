@@ -48,13 +48,15 @@ dependencies:
   quick_actions: ^1.1.1             # 4 shortcuts del launcher (manifest PWA)
   nearby_connections: ^4.1.0        # sala P2P sin internet (WiFi-Direct/BT/BLE)
 
-  # ── UI / visualización / documentos ──────────────────────────────────────
-  syncfusion_flutter_charts: ^27.1.48    # brecha, evolución, histórico
+  # ── UI / visualización / documentos ────────────────────────────────────────
+  syncfusion_flutter_charts: ^34.2.8    # brecha, evolución, histórico (major 34: alineada a Flutter 3.47 / intl 0.20)
   dynamic_color: ^1.7.0             # Material You opcional
   qr_flutter: ^4.1.0                # QR de sala
   pdf: ^3.11.1                      # constancias PDF
   printing: ^5.13.2
-  intl: ^0.19.0                     # formato es-VE
+  intl: ^0.20.3                     # formato es-VE (0.20.3: lo exige flutter_localizations)
+  flutter_localizations:            # delegates es-VE (fix: showDatePicker
+    sdk: flutter                    # renderizaba en inglés — es-VE real)
   decimal: ^3.0.2                   # dinero exacto (decimal.js del web → Decimal Dart)
 
 dev_dependencies:
