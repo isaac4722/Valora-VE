@@ -1117,6 +1117,12 @@ class AppStore extends ChangeNotifier {
   void _persist() {
     final raw = jsonEncode(_data.toJson());
     _boxData?.put(_kDataKey, raw);
+    // Durabilidad (v19.5): put() queda en el búfer de Hive; el flush fuerza
+    // la escritura a disco antes del próximo ciclo de eventos. Fire-and-forget
+    // con captura: si el disco falla, el dato sigue en memoria y el próximo
+    // _persist reintenta — un corte de luz ya no borra la última compra.
+    final box = _boxData;
+    if (box != null) unawaited(box.flush().catchError((_) {}));
     notifyListeners();
   }
 
