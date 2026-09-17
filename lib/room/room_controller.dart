@@ -860,6 +860,12 @@ class RoomController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Seam de tests: inyecta un anuncio como si lo hubiera avistado el
+  /// escáner — permite probar la UI de búsqueda y salas cercanas sin
+  /// radio (mismo espíritu del seam RoomLink).
+  @visibleForTesting
+  void debugInjectAd(Map<String, dynamic> ad) => _onAd(ad);
+
   void _pruneAds() {
     final before = _foundRooms.length;
     _foundRooms.removeWhere((r) => r.stale);

@@ -390,7 +390,74 @@ class _ModeTile extends StatelessWidget {
 
 typedef _RoomAction = Future<void> Function(Future<String?> Function() action);
 
-class _CreateCard extends StatelessWidget {
+/// Fila de una sala avistada (escaneo o búsqueda): modo · nombre · código
+/// y anfitrión. Tap → entrar. Compartida por Salas cercanas y Buscar sala.
+class _RoomAdTile extends StatelessWidget {
+  const _RoomAdTile({
+    required this.ad,
+    required this.busy,
+    required this.onTap,
+  });
+
+  final RoomAd ad;
+  final bool busy;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: busy ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              switch (ad.mode) {
+                RoomMode.cerca => Icons.wifi_tethering,
+                RoomMode.wifi => Icons.router_outlined,
+                RoomMode.bt => Icons.bluetooth,
+                RoomMode.servidor => Icons.dns_rounded,
+              },
+              size: 18,
+              color: scheme.primary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    ad.label,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    '${ad.code} · anfitrión ${ad.hostName}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.login, size: 16, color: scheme.primary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateCard extends StatefulWidget {
   const _CreateCard({
     required this.room,
     required this.nameCtrl,
@@ -406,8 +473,57 @@ class _CreateCard extends StatelessWidget {
   final _RoomAction onRun;
 
   @override
+  State<_CreateCard> createState() => _CreateCardState();
+}
+
+class _CreateCardState extends State<_CreateCard> {
+  late final TextEditingController _searchCtrl;
+
+  /// El escaneo se arranca UNA vez por búsqueda: cada arranque limpia la
+  /// lista y la repuebla; reiniciarlo en cada tecla dejaría la búsqueda
+  /// en blanco siempre. Se resetea al vaciar el campo.
+  bool _scanKicked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Nombre/código/anfitrión sin tildes ni mayúsculas: «mercado» encuentra
+  /// «Mercado del barrio» y «ANITA» encuentra a «Anita».
+  static String _norm(String s) => s
+      .toLowerCase()
+      .replaceAll('á', 'a')
+      .replaceAll('é', 'e')
+      .replaceAll('í', 'i')
+      .replaceAll('ó', 'o')
+      .replaceAll('ú', 'u')
+      .replaceAll('ü', 'u')
+      .replaceAll('ñ', 'n');
+
+  List<RoomAd> get _matches {
+    final q = _norm(_searchCtrl.text.trim());
+    if (q.isEmpty) return const <RoomAd>[];
+    return widget.room.foundRooms
+        .where((ad) =>
+            _norm(ad.roomName).contains(q) ||
+            ad.code.toLowerCase().contains(q) ||
+            _norm(ad.hostName).contains(q))
+        .toList(growable: false);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final room = widget.room;
     final scheme = Theme.of(context).colorScheme;
+    final matches = _matches;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -425,7 +541,7 @@ class _CreateCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             TextField(
-              controller: roomNameCtrl,
+              controller: widget.roomNameCtrl,
               maxLength: 32,
               onChanged: room.setRoomName,
               decoration: const InputDecoration(
@@ -455,12 +571,12 @@ class _CreateCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: busy
+                onPressed: widget.busy
                     ? null
-                    : () => onRun(
+                    : () => widget.onRun(
                         () => room.create(
-                          name: nameCtrl.text,
-                          roomName: roomNameCtrl.text,
+                          name: widget.nameCtrl.text,
+                          roomName: widget.roomNameCtrl.text,
                           isPublic: room.isPublic,
                         ),
                       ),
@@ -468,6 +584,68 @@ class _CreateCard extends StatelessWidget {
                 label: Text('Crear por ${room.modeLabel}'),
               ),
             ),
+            // ── Buscar sala (v19.4 · orden del dueño): antes de crear una
+            // nueva, se puede mirar si ya existe una con ese nombre.
+            const SizedBox(height: 6),
+            TextField(
+              controller: _searchCtrl,
+              enabled: !widget.busy,
+              onChanged: (v) {
+                setState(() {});
+                // Escribir ya escucha: sin tocar el botón de Salas
+                // cercanas, una sola vez por búsqueda.
+                final hayTexto = v.trim().isNotEmpty;
+                if (hayTexto &&
+                    !_scanKicked &&
+                    !room.scanning &&
+                    !widget.busy) {
+                  _scanKicked = true;
+                  room.startScan();
+                } else if (!hayTexto) {
+                  _scanKicked = false;
+                }
+              },
+              decoration: const InputDecoration(
+                hintText: 'Buscar sala por nombre o código',
+                counterText: '',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            if (_searchCtrl.text.trim().isNotEmpty) ...<Widget>[
+              const SizedBox(height: 8),
+              if (matches.isEmpty)
+                Text(
+                  room.scanning
+                      ? 'Nada todavía. Las salas públicas van apareciendo '
+                          'mientras escucha.'
+                      : 'Sin salas con ese nombre ahora mismo. Puedes crearla '
+                          'con el botón de arriba.',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.4,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                )
+              else ...<Widget>[
+                for (final ad in matches)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _RoomAdTile(
+                      ad: ad,
+                      busy: widget.busy,
+                      onTap: () => widget.onRun(
+                        () => room.join(
+                          name: widget.nameCtrl.text,
+                          code: ad.code,
+                          ad: ad,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ],
           ],
         ),
       ),
@@ -630,62 +808,14 @@ class _ScanCardState extends State<_ScanCard> {
             for (final ad in room.foundRooms)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: widget.busy
-                      ? null
-                      : () => widget.onRun(
-                          () => room.join(
-                            name: widget.nameCtrl.text,
-                            code: ad.code,
-                            ad: ad,
-                          ),
-                        ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: scheme.outlineVariant),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          switch (ad.mode) {
-                            RoomMode.cerca => Icons.wifi_tethering,
-                            RoomMode.wifi => Icons.router_outlined,
-                            RoomMode.bt => Icons.bluetooth,
-                            RoomMode.servidor => Icons.dns_rounded,
-                          },
-                          size: 18,
-                          color: scheme.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                ad.label,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              Text(
-                                '${ad.code} · anfitrión ${ad.hostName}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(Icons.login, size: 16, color: scheme.primary),
-                      ],
+                child: _RoomAdTile(
+                  ad: ad,
+                  busy: widget.busy,
+                  onTap: () => widget.onRun(
+                    () => room.join(
+                      name: widget.nameCtrl.text,
+                      code: ad.code,
+                      ad: ad,
                     ),
                   ),
                 ),

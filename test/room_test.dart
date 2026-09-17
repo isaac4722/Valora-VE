@@ -8,9 +8,13 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/data/store.dart';
+import 'package:valorave/core/theme.dart';
+import 'package:valorave/features/room/room_screen.dart';
 import 'package:valorave/room/room_controller.dart';
 import 'package:valorave/room/room_transport.dart';
 
@@ -368,6 +372,129 @@ void main() {
       final e = RoomEvent.fromMap({'type': 'ping', 'x': 1});
       expect(e.type, 'ping');
       expect(e.payload['x'], 1);
+    });
+  });
+
+  group('Buscar sala (UI del lobby · v19.4)', () {
+    // El campo de búsqueda vive dentro de la tarjeta CREAR SALA.
+    final searchField = find.byWidgetPredicate(
+      (w) =>
+          w is TextField &&
+          (w.decoration?.hintText?.contains('Buscar sala') ?? false),
+    );
+    // El scroll del lobby (hay TextFields con Scrollable propio).
+    final lobbyScroll = find
+        .descendant(
+          of: find.byType(ListView),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+
+    /// Aserciones de la BÚSQUEDA scopeadas a la tarjeta CREAR SALA: la
+    /// misma sala puede vivir también en «Salas cercanas» (otra puerta).
+    Finder enBusqueda(Finder f) => find.descendant(
+          of: find
+              .ancestor(of: find.text('CREAR SALA'), matching: find.byType(Card))
+              .first,
+          matching: f,
+        );
+
+    testWidgets('filtra por nombre, anfitrión y código — sin tildes', (
+      tester,
+    ) async {
+      final store = AppStore.withData(const AppData());
+      final room = RoomController(store);
+      // Servidor: startScan es no-op (la radio no existe en el test) y
+      // los anuncios entran por el seam.
+      room.setMode(RoomMode.servidor);
+      await tester.pumpWidget(
+        ChangeNotifierProvider<RoomController>.value(
+          value: room,
+          child: MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
+        ),
+      );
+      await tester.scrollUntilVisible(searchField, 300, scrollable: lobbyScroll);
+      expect(searchField, findsOneWidget);
+
+      // Escribir primero (arranca el «escaneo» no-op y limpia la lista,
+      // igual que en producción) y DESPUÉS avistar las salas.
+      await tester.enterText(searchField, 'mercado');
+      await tester.pump();
+      room.debugInjectAd({
+        'via': 'nearby',
+        'code': 'ABC123',
+        'name': 'Mercado del barrio',
+        'host': 'Anita',
+        'pub': true,
+      });
+      room.debugInjectAd({
+        'via': 'nearby',
+        'code': 'XYZ987',
+        'name': 'Ferretería',
+        'host': 'Luis',
+        'pub': true,
+      });
+      await tester.pump();
+
+      // Por nombre, sin importar mayúsculas ni tildes.
+      expect(enBusqueda(find.text('Mercado del barrio')), findsOneWidget);
+      expect(enBusqueda(find.text('Ferretería')), findsNothing);
+
+      // Por anfitrión — sin re-arrancar el escaneo (la lista sobrevive).
+      await tester.enterText(searchField, 'luis');
+      await tester.pump();
+      expect(enBusqueda(find.text('Ferretería')), findsOneWidget);
+      expect(enBusqueda(find.text('Mercado del barrio')), findsNothing);
+
+      // Por código, en minúsculas también.
+      await tester.enterText(searchField, 'xyz987');
+      await tester.pump();
+      expect(enBusqueda(find.text('Ferretería')), findsOneWidget);
+
+      // Sin resultados: mensaje honesto, sin inventar salas.
+      await tester.enterText(searchField, 'zzz');
+      await tester.pump();
+      expect(
+        enBusqueda(find.textContaining('Sin salas con ese nombre')),
+        findsOneWidget,
+      );
+      expect(enBusqueda(find.text('Ferretería')), findsNothing);
+    });
+
+    testWidgets('sin texto no muestra la sección de resultados', (
+      tester,
+    ) async {
+      final store = AppStore.withData(const AppData());
+      final room = RoomController(store);
+      room.setMode(RoomMode.servidor);
+      await tester.pumpWidget(
+        ChangeNotifierProvider<RoomController>.value(
+          value: room,
+          child: MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
+        ),
+      );
+      await tester.scrollUntilVisible(searchField, 300, scrollable: lobbyScroll);
+      room.debugInjectAd({
+        'via': 'nearby',
+        'code': 'ABC123',
+        'name': 'Mercado del barrio',
+        'host': 'Anita',
+        'pub': true,
+      });
+      await tester.pump();
+      // Con el campo vacío no aparece ni la sala ni el mensaje de vacío
+      // en la BÚSQUEDA: la búsqueda solo existe cuando se escribe.
+      expect(enBusqueda(find.text('Mercado del barrio')), findsNothing);
+      expect(enBusqueda(find.textContaining('Sin salas con ese nombre')),
+          findsNothing);
+      // La sala SÍ sigue en Salas cercanas (el escaneo es otra puerta).
+      await tester.scrollUntilVisible(
+        find.text('SALAS CERCANAS'),
+        300,
+        scrollable: lobbyScroll,
+      );
+      expect(find.text('SALAS CERCANAS'), findsOneWidget);
+      expect(find.text('Mercado del barrio'), findsAtLeastNWidgets(1));
     });
   });
 }
