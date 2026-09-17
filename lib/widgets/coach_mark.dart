@@ -188,7 +188,8 @@ class _CoachOverlayState extends State<_CoachOverlay> {
       shadowColor: Colors.black54,
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        constraints: BoxConstraints(maxWidth: maxW),
+        // Ancho FIJO (el del hueco): el texto envuelve siempre igual.
+        constraints: BoxConstraints.tightFor(width: maxW),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: scheme.outlineVariant),
@@ -227,15 +228,25 @@ class _CoachOverlayState extends State<_CoachOverlay> {
                 child: const SizedBox.expand(),
               ),
             ),
-            // Tarjeta: posicionada y con alto MÁXIMO = espacio elegido.
-            // El Column interno (contenido Flexible + botones fijos) garantiza
-            // que quepa: si el texto es largo, el CONTENIDO se scrollea.
+            // Tarjeta dentro de SU hueco (top/height = espacio elegido),
+            // pero midiendo su CONTENIDO: el Align absorbe el aire sobrante
+            // y los botones quedan pegados al texto (fix «espacio en blanco
+            // dejado» de TIPs/Tutoriales — antes la tarjeta ocupaba TODO el
+            // hueco aunque el texto fuera corto). Bajo el foco cuelga del
+            // borde superior; sobre el foco se apoya en el inferior. Si el
+            // contenido SUPERA maxH, el Column interno se queda en maxH y el
+            // texto se scrollea — los botones siguen alcanzables siempre.
             Positioned(
               left: (size.width - maxW) / 2,
               top: top,
               width: maxW,
               height: maxH,
-              child: card,
+              child: Align(
+                alignment: (hole == null || below)
+                    ? Alignment.topCenter
+                    : Alignment.bottomCenter,
+                child: card,
+              ),
             ),
           ],
         ),

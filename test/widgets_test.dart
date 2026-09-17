@@ -23,6 +23,7 @@ import 'package:valorave/features/shell/notifs_center.dart';
 import 'package:valorave/room/room_controller.dart';
 import 'package:valorave/widgets/app_router.dart';
 import 'package:valorave/widgets/app_tour.dart';
+import 'package:valorave/widgets/coach_mark.dart';
 import 'package:valorave/features/welcome/welcome_screen.dart';
 import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
@@ -806,6 +807,104 @@ void main() {
       }
       expect(find.text('Tus datos viven en tu teléfono'), findsNothing);
       expect(router.routerDelegate.currentConfiguration.uri.toString(), '/');
+    });
+  });
+
+  group('Tarjeta de coach mark (TIPs/Tutorial)', () {
+    // El Material de la tarjeta es el único con elevation 6 en el overlay.
+    final cardFinder = find.byWidgetPredicate(
+      (w) => w is Material && w.elevation == 6,
+    );
+
+    testWidgets('mide su contenido: sin espacio en blanco bajo el texto', (
+      tester,
+    ) async {
+      // Pantalla 800×600: ancla ARRIBA → el hueco de la tarjeta es el resto
+      // de la pantalla (~510 px). Con texto corto la tarjeta debe medir su
+      // contenido, no llenar el hueco (fix del aire muerto).
+      final key = GlobalKey();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                key: key,
+                width: 220,
+                height: 44,
+                child: const ColoredBox(color: Colors.red),
+              ),
+            ),
+          ),
+        ),
+      );
+      final future = showCoachMark(
+        tester.element(find.byType(Scaffold)),
+        anchor: key,
+        card: const CoachCardData(
+          segment: 'TIP',
+          title: 'Título corto',
+          body: 'Cuerpo de dos líneas como máximo.',
+          cta: 'Entendido',
+        ),
+      );
+      await tester.pump();
+      expect(cardFinder, findsOneWidget);
+      final size = tester.getSize(cardFinder);
+      // Antes del fix: ~510 px (todo el hueco). Ahora: contenido + botones.
+      expect(size.height, lessThan(260), reason: 'la tarjeta encoge a su texto');
+      // Cuelga del borde superior del hueco: arranca justo bajo el ancla.
+      expect(
+        tester.getTopLeft(cardFinder).dy,
+        closeTo(44 + 10 + 14, 2),
+        reason: 'pegada al foco, sin aire arriba',
+      );
+      await tester.tap(find.text('Entendido'));
+      await tester.pump();
+      expect(await future, isTrue);
+    });
+
+    testWidgets('sobre el foco se apoya en su borde inferior', (tester) async {
+      // Ancla ABAJO → la tarjeta vive en el hueco superior y debe quedarse
+      // pegada al foco por abajo (bottomCenter del hueco), no colgada del
+      // techo de la pantalla dejando el aire en el medio.
+      final key = GlobalKey();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: SizedBox(
+                key: key,
+                width: 220,
+                height: 44,
+                child: const ColoredBox(color: Colors.red),
+              ),
+            ),
+          ),
+        ),
+      );
+      final future = showCoachMark(
+        tester.element(find.byType(Scaffold)),
+        anchor: key,
+        card: const CoachCardData(
+          segment: 'INICIO',
+          title: 'Otro título',
+          body: 'Cuerpo corto igual.',
+        ),
+      );
+      await tester.pump();
+      expect(cardFinder, findsOneWidget);
+      expect(
+        tester.getBottomLeft(cardFinder).dy,
+        closeTo(600 - 44 - 10 - 14, 2),
+        reason: 'apoyada sobre el foco',
+      );
+      await tester.tap(find.text('Saltar'));
+      await tester.pump();
+      expect(await future, isFalse);
     });
   });
 }
