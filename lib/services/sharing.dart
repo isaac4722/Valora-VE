@@ -45,13 +45,21 @@ Future<void> shareTotalsText(
 /// Captura un widget (RepaintBoundary) a PNG bytes 1080 px de ancho.
 /// Endurecido (v18.0): boundary muerto/desmontado/sin tamaño → null limpio
 /// en vez de excepción; el llamante decide el mensaje humano.
+/// Endurecido (v19.4): el render del key puede NO ser el RepaintBoundary
+/// (key sobre un widget compuesto) — se SUBE hasta el boundary que lo
+/// envuelve. El cast ciego anterior reventaba y el catch lo tragaba:
+/// «No pude generar la tarjeta» SIEMPRE (bug de la tarjeta del conversor).
 Future<Uint8List?> captureWidget(
   GlobalKey key, {
   int targetWidth = 1080,
 }) async {
   try {
-    final boundary =
-        key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    RenderObject? node = key.currentContext?.findRenderObject();
+    while (node != null && node is! RenderRepaintBoundary) {
+      final parent = node.parent;
+      node = parent is RenderObject ? parent : null;
+    }
+    final boundary = node is RenderRepaintBoundary ? node : null;
     if (boundary == null || !boundary.attached || !boundary.hasSize) {
       return null;
     }

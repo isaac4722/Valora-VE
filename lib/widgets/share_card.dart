@@ -250,10 +250,15 @@ Future<Uint8List?> renderSharePng(
       // RepaintBoundary.toImage produciría una imagen vacía.
       left: -4000,
       top: 0,
-      child: Material(
-        type: MaterialType.transparency,
-        child: KeyedSubtree(
-          key: key,
+      // El GlobalKey va SOBRE el RepaintBoundary: sobre el KeyedSubtree
+      // findRenderObject() devuelve el render DESCENDIENTE (p. ej. un
+      // RenderConstrainedBox), el cast a RenderRepaintBoundary reventaba
+      // y el catch lo tragaba → «No pude generar la tarjeta» SIEMPRE.
+      // Mismo patrón del key en renderOffstagePng (services/sharing.dart).
+      child: RepaintBoundary(
+        key: key,
+        child: Material(
+          type: MaterialType.transparency,
           child: Builder(builder: builder),
         ),
       ),
@@ -261,9 +266,13 @@ Future<Uint8List?> renderSharePng(
   );
   overlay.insert(entry);
   try {
-    // Dos frames: montaje + layout final del árbol offstage.
-    await Future<void>.delayed(Duration.zero);
-    await Future<void>.delayed(Duration.zero);
+    // Dos frames REALES (montaje+layout y settle de pintura/fuentes).
+    // Causa raíz del «No pude generar la tarjeta»: dos
+    // Future.delayed(Duration.zero) ganan la carrera contra el vsync y
+    // capturaban un boundary AÚN SIN TAMAÑO → null. Mismo arranque
+    // probado de renderOffstagePng (services/sharing.dart, v18.0).
+    await WidgetsBinding.instance.endOfFrame;
+    await WidgetsBinding.instance.endOfFrame;
     return await captureWidget(key, targetWidth: targetWidth);
   } finally {
     entry.remove();
