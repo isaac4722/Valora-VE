@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 4×1 · API 31+: targetCellWidth/Height y previewLayout (el selector
+     renderiza el layout REAL); antes de 31: minWidth/minHeight y
+     previewImage (PNG en drawable-nodpi). Resize: 2×1 a 4×2, el
+     contenido se adapta por bucket (BcvWidgetProvider.bucketOf). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="180dp"
+    android:minWidth="250dp"
     android:minHeight="60dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="1"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:maxResizeWidth="320dp"
+    android:maxResizeHeight="180dp"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_parallel"
+    android:previewLayout="@layout/widget_parallel"
+    android:previewImage="@drawable/widget_preview_parallel"
+    android:description="@string/widget_parallel_description"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />

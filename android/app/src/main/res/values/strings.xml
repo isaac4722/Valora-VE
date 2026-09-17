@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ValoraVE</string>
-    <string name="widget_bcv_description">Tasa BCV y paralelo al día</string>
+    <string name="widget_bcv_description">El dólar oficial, con el paralelo al lado</string>
+    <string name="widget_parallel_description">El dólar paralelo, con el BCV al lado</string>
+    <string name="widget_gap_description">Cuánto separa al oficial del paralelo, en %</string>
 </resources>
