@@ -80,32 +80,42 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
             ),
             // Barra de control: atrás · puntos · siguiente/comenzar.
+            // FittedBox en los puntos (en <356 dp el Expanded recibía menos
+            // de sus 88 px intrínsecos y desbordaban sobre los botones) y
+            // botones con Flexible en vez de anchos fijos (fix overflow).
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Row(
                 children: <Widget>[
-                  SizedBox(
-                    width: 88,
-                    child: TextButton(
-                      onPressed: _index == 0 ? null : () => _go(_index - 1),
-                      child: const Text('Atrás'),
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 88),
+                      child: TextButton(
+                        onPressed: _index == 0 ? null : () => _go(_index - 1),
+                        child: const Text('Atrás'),
+                      ),
                     ),
                   ),
                   Expanded(
                     child: Center(
-                      child: _Dots(count: 4, index: _index, onTap: _go),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: _Dots(count: 4, index: _index, onTap: _go),
+                      ),
                     ),
                   ),
-                  SizedBox(
-                    width: 140,
-                    child: FilledButton(
-                      onPressed: _index < 3
-                          ? () => _go(_index + 1)
-                          : () => _finish(store),
-                      child: Text(
-                        _index < 3 ? 'Siguiente' : 'Comenzar',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 140),
+                      child: FilledButton(
+                        onPressed: _index < 3
+                            ? () => _go(_index + 1)
+                            : () => _finish(store),
+                        child: Text(
+                          _index < 3 ? 'Siguiente' : 'Comenzar',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ),
@@ -126,67 +136,75 @@ class _SlideMarca extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Center(
-            child: RichText(
-              text: TextSpan(
-                style: VeText.displayNum(
-                  44,
-                  color: scheme.onSurface,
-                  weight: FontWeight.w700,
-                ),
-                children: <InlineSpan>[
-                  const TextSpan(text: 'Valora'),
-                  TextSpan(
-                    text: 'VE',
-                    style: TextStyle(color: scheme.primary),
+    // Scroll + centrado (patrón de los slides 2-4): en landscape o con
+    // textScale >=1.5 el contenido superaba el viewport fijo del PageView
+    // y desbordaba — el primer slide que ve un usuario nuevo (fix).
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight - 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Center(
+                child: RichText(
+                  text: TextSpan(
+                    style: VeText.displayNum(
+                      44,
+                      color: scheme.onSurface,
+                      weight: FontWeight.w700,
+                    ),
+                    children: <InlineSpan>[
+                      const TextSpan(text: 'Valora'),
+                      TextSpan(
+                        text: 'VE',
+                        style: TextStyle(color: scheme.primary),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              'Precios y divisas de Venezuela',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 15.5,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurfaceVariant,
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  'Precios y divisas de Venezuela',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Center(
-            child: Text(
-              'El instrumento para registrar, comparar y calcular.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.45,
-                color: scheme.onSurfaceVariant,
+              const SizedBox(height: 6),
+              Center(
+                child: Text(
+                  'El instrumento para registrar, comparar y calcular.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 34),
+              // Las seis divisas del foco, con banderas reales (assets/flags).
+              Center(
+                child: Wrap(
+                  spacing: 14,
+                  runSpacing: 14,
+                  alignment: WrapAlignment.center,
+                  children: <Widget>[
+                    for (final c in CurrencyX.focus) _FlagPill(currency: c),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 34),
-          // Las seis divisas del foco, con banderas reales (assets/flags).
-          Center(
-            child: Wrap(
-              spacing: 14,
-              runSpacing: 14,
-              alignment: WrapAlignment.center,
-              children: <Widget>[
-                for (final c in CurrencyX.focus) _FlagPill(currency: c),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

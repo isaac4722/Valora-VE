@@ -1228,12 +1228,21 @@ class _WeekdayRanking extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
+                    // FittedBox: a textScale >=1.3 «$ 1.234,56» (≈91 px)
+                    // envolvía en 2 líneas dentro del box fijo de 74 px y
+                    // descuadraba la fila del ranking (fix a11y).
                     SizedBox(
                       width: 74,
-                      child: Text(
-                        r.totalUSD > 0 ? fmtUSD(r.totalUSD) : '—',
-                        textAlign: TextAlign.right,
-                        style: VeText.displayNum(11.5, color: scheme.onSurface),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          r.totalUSD > 0 ? fmtUSD(r.totalUSD) : '—',
+                          style: VeText.displayNum(
+                            11.5,
+                            color: scheme.onSurface,
+                          ),
+                        ),
                       ),
                     ),
                     SizedBox(

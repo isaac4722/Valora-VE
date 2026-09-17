@@ -253,9 +253,15 @@ class _TabButton extends StatelessWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return TapScale(
       onTap: onTap,
-      child: SizedBox(
-        height: 58,
+      // minHeight en vez de altura fija: con tamaños de accesibilidad
+      // (textScale >=2.35) la etiqueta de 11 px superaba los 58 px y se
+      // recortaba en la barra de navegación (fix a11y). OJO: mainAxisSize
+      // .min — con .max la Column llenaría TODO el alto que le presta el
+      // slot bottomNavigationBar (bug hallado por el test del shell).
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 58),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Stack(
@@ -363,8 +369,10 @@ class _Header extends StatelessWidget {
       ),
       child: SafeArea(
         bottom: false,
-        child: SizedBox(
-          height: 54,
+        // minHeight (ídem tab bar): el header crece con textScale de
+        // accesibilidad en vez de recortar la marca (fix a11y).
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 54),
           child: Padding(
             padding: const EdgeInsets.only(left: 16),
             child: Row(

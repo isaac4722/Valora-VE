@@ -362,8 +362,10 @@ class _ItemEditorState extends State<_ItemEditor> {
                   child: Icon(Icons.remove_circle_outline, size: 20),
                 ),
               ),
-              SizedBox(
-                width: 52,
+              // Ancho elástico 52–72: a textScale >=1.3 «999» tabular se
+              // recortaba dentro de los 52 px fijos (fix a11y).
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 52, maxWidth: 72),
                 child: TextField(
                   controller: _qtyCtrl,
                   keyboardType: TextInputType.number,
