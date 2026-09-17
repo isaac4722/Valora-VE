@@ -39,12 +39,13 @@ AppStore _pumpedStore(WidgetTester tester, {String dir = 'w'}) {
 final NotificationsService _notifs = NotificationsService();
 late RatesPoller _poller;
 late AlertEngine _alerts;
+late SharedPreferences _prefs;
 
 /// Prepara los servicios singleton con prefs mock (await en cada test).
 Future<void> _initServices(AppStore store) async {
   SharedPreferences.setMockInitialValues({});
-  final prefs = await SharedPreferences.getInstance();
-  _alerts = AlertEngine(prefs);
+  _prefs = await SharedPreferences.getInstance();
+  _alerts = AlertEngine(_prefs);
   _poller = RatesPoller(store, _notifs, _alerts);
 }
 
@@ -60,6 +61,9 @@ Widget _wrap(
       ChangeNotifierProvider(create: (_) => _poller),
       Provider<AlertEngine>.value(value: _alerts),
       Provider<NotificationsService>.value(value: _notifs),
+      // v19.4: el Inicio lee las prefs de widgets (como appProviders en
+      // la app real — siempre están).
+      Provider<SharedPreferences>.value(value: _prefs),
       // v18.0 · Sala Viva: controlador de sala a nivel app (como en
       // appProviders) — la Lista y la sala lo comparten.
       ChangeNotifierProvider(create: (_) => RoomController(store)),
@@ -223,6 +227,7 @@ void main() {
             ChangeNotifierProvider.value(value: store),
             ChangeNotifierProvider(create: (_) => ThemeController()),
             ChangeNotifierProvider.value(value: _poller),
+            Provider<SharedPreferences>.value(value: _prefs),
           ],
           child: MaterialApp.router(
             theme: AppTheme.light(),
@@ -520,6 +525,10 @@ void main() {
     testWidgets('navega 5 pestañas y badge de carrito', (tester) async {
       final store = _pumpedStore(tester, dir: 'w9');
       await _initServices(store);
+      // El tour auto-arranca con prefs frescas (como en la app real) y su
+      // barrera bloquea el navbar: este test es de NAVEGACIÓN — el tour
+      // ya visto, como un usuario que lo completó.
+      await _prefs.setBool(kTourDoneKey, true);
       store.addToCart(
         const CartItem(
           id: 'k',
@@ -582,6 +591,7 @@ void main() {
             ChangeNotifierProvider.value(value: store),
             ChangeNotifierProvider(create: (_) => ThemeController()),
             ChangeNotifierProvider.value(value: _poller),
+            Provider<SharedPreferences>.value(value: _prefs),
             // v18.0: la Lista lee el controlador de sala del árbol.
             ChangeNotifierProvider(create: (_) => RoomController(store)),
           ],
@@ -597,8 +607,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byKey(kNavBarKey), findsOneWidget);
       expect(find.text('3'), findsOneWidget); // badge carrito
-      // navega a Lista
-      await tester.tap(find.text('Lista'));
+      // navega a Lista — al navbar, no a la tarjeta «Lista» de las
+      // Herramientas del Inicio (ambas dicen «Lista» desde v19.4).
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(kNavBarKey),
+          matching: find.text('Lista'),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Lista de compras'), findsOneWidget);
     });

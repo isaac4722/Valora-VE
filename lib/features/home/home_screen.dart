@@ -11,6 +11,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/analytics.dart' as an;
 import '../../core/currencies.dart';
@@ -25,6 +26,7 @@ import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/rate_sheet.dart';
 import '../../widgets/ui.dart';
+import 'home_widgets.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -54,18 +56,252 @@ class HomeScreen extends StatelessWidget {
               alignment: Alignment.topCenter,
               child: Column(children: [_RateHero(), _WeekSpark()]),
             ),
-            // Anclas del tour completo (v17.8): cotización + divisas del foco.
-            KeyedSubtree(
-              key: TourKeys.cotizacion,
-              child: _CotizacionPrincipal(),
-            ),
-            KeyedSubtree(key: TourKeys.divisasFoco, child: _DivisasFoco()),
-            _ResumenMes(),
-            _AlertasPrecios(),
-            _TusTiendas(),
-            _RegistrosRecientes(),
-            _Herramientas(),
+            // v19.4 · orden del dueño: las secciones SON widgets — se ven
+            // antes de añadir (catálogo con preview real) y su contenido
+            // adapta al tamaño elegido por el usuario.
+            const _HomeSections(),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Catálogo de widgets de Inicio. Los ids son ESTABLES (persistencia en
+/// prefs): no renombrar en vano. Los builders los comparten el Inicio y
+/// la vista previa del catálogo — lo que se ve es lo que queda.
+final List<HomeWidgetSpec> kHomeWidgetSpecs = <HomeWidgetSpec>[
+  HomeWidgetSpec(
+    id: 'cotizacion',
+    title: 'Cotización principal',
+    description:
+        'Las tasas del país con todas sus fuentes. Toca una fila para '
+        'calcular con ella; contenido fijo — es la puerta de la app.',
+    icon: Icons.currency_exchange_rounded,
+    sizes: const <HomeWidgetSize>[],
+    builder: (context, size) => const _CotizacionPrincipal(),
+  ),
+  HomeWidgetSpec(
+    id: 'divisas',
+    title: 'Divisas del foco',
+    description:
+        'Una tarjeta por divisa con su tasa activa. Toca para cambiar '
+        'la fuente de esa divisa.',
+    icon: Icons.grid_view_rounded,
+    sizes: const <HomeWidgetSize>[HomeWidgetSize.s, HomeWidgetSize.m],
+    builder: (context, size) => _DivisasFoco(size: size),
+  ),
+  HomeWidgetSpec(
+    id: 'resumen',
+    title: 'Resumen del mes',
+    description:
+        'Cuánto llevas gastado este mes, tus tiendas y la comparación '
+        'con el mes anterior.',
+    icon: Icons.receipt_long_rounded,
+    builder: (context, size) => _ResumenMes(size: size),
+  ),
+  HomeWidgetSpec(
+    id: 'alertas',
+    title: 'Alertas de precios',
+    description:
+        'Tus metas de precio con el último precio visto de cada una.',
+    icon: Icons.notifications_none_rounded,
+    builder: (context, size) => _AlertasPrecios(size: size),
+  ),
+  HomeWidgetSpec(
+    id: 'tiendas',
+    title: 'Tus tiendas',
+    description:
+        'Las tiendas donde más compras, con tu gasto acumulado en cada '
+        'una.',
+    icon: Icons.storefront_rounded,
+    builder: (context, size) => _TusTiendas(size: size),
+  ),
+  HomeWidgetSpec(
+    id: 'registros',
+    title: 'Registros recientes',
+    description:
+        'Tus últimas compras e ingresos, de lo más nuevo a lo más viejo.',
+    icon: Icons.history_rounded,
+    builder: (context, size) => _RegistrosRecientes(size: size),
+  ),
+  HomeWidgetSpec(
+    id: 'herramientas',
+    title: 'Herramientas',
+    description:
+        'Atajos al conversor, la lista y el historial.',
+    icon: Icons.apps_rounded,
+    sizes: const <HomeWidgetSize>[],
+    builder: (context, size) => const _Herramientas(),
+  ),
+];
+
+/// Anclas del tour por id de widget: SOLO en el Inicio (la preview del
+/// catálogo monta los mismos builders sin estas llaves — un GlobalKey
+/// duplicado tiraría la app).
+Widget _withTourAnchor(String id, Widget child) => switch (id) {
+  'cotizacion' => KeyedSubtree(key: TourKeys.cotizacion, child: child),
+  'divisas' => KeyedSubtree(key: TourKeys.divisasFoco, child: child),
+  _ => child,
+};
+
+/// Las secciones configurables del Inicio: visibles y tamaños viven en
+/// [HomeWidgetController] (persistido). Por defecto TODO visible en
+/// tamaño normal — el Inicio de siempre para quien no toca nada.
+class _HomeSections extends StatefulWidget {
+  const _HomeSections();
+
+  @override
+  State<_HomeSections> createState() => _HomeSectionsState();
+}
+
+class _HomeSectionsState extends State<_HomeSections> {
+  HomeWidgetController? _controller;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // En didChangeDependencies (no initState): read() de providers.
+    _controller ??= HomeWidgetController(
+      context.read<SharedPreferences>(),
+      knownIds: kHomeWidgetSpecs.map((s) => s.id).toList(growable: false),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    if (controller == null) return const SizedBox.shrink();
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final visible = <HomeWidgetSpec>[
+          for (final id in controller.visible)
+            kHomeWidgetSpecs.firstWhere((s) => s.id == id),
+        ];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            for (final spec in visible)
+              _withTourAnchor(
+                spec.id,
+                spec.builder(context, controller.sizeOf(spec.id)),
+              ),
+            if (visible.isEmpty) const _EmptyWidgetsCard(),
+            _AddWidgetsCard(controller: controller),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Tarjeta de entrada al catálogo: siempre al pie del Inicio.
+class _AddWidgetsCard extends StatelessWidget {
+  const _AddWidgetsCard({required this.controller});
+
+  final HomeWidgetController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 22, bottom: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => showHomeWidgetCatalog(
+          context,
+          controller: controller,
+          specs: kHomeWidgetSpecs,
+        ),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: scheme.primary.withValues(alpha: 0.35),
+            ),
+            color: scheme.primary.withValues(alpha: 0.04),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.add_circle_outline_rounded, size: 20,
+                  color: scheme.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Widgets de Inicio',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Añade o quita secciones y elige cuánto muestra cada una.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.tune_rounded, size: 18, color: scheme.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Estado cuando el usuario quitó TODO: el Inicio queda pelado a
+/// propósito y esta tarjeta es la salida.
+class _EmptyWidgetsCard extends StatelessWidget {
+  const _EmptyWidgetsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 22),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Icon(Icons.widgets_outlined, size: 26,
+                  color: scheme.onSurfaceVariant),
+              const SizedBox(height: 10),
+              const Text(
+                'Inicio limpio',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Quitaste todos los widgets. Añade los que uses — tasas, '
+                'resumen, alertas — desde el botón de abajo.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -461,6 +697,8 @@ class _WeekSpark extends StatelessWidget {
 /// está visible: el lápiz (o el toque, si no hay valor) abre el editor
 /// INLINE — la tasa manual se fija desde aquí, sin ir a Ajustes.
 class _CotizacionPrincipal extends StatelessWidget {
+  const _CotizacionPrincipal();
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
@@ -615,12 +853,22 @@ class _CotizacionPrincipal extends StatelessWidget {
 /// (nueva: radio de fuente con monto «1 {base} = X»; la manual lleva a
 /// Ajustes). «Ir al conversor» queda en el encabezado de la sección.
 class _DivisasFoco extends StatelessWidget {
+  const _DivisasFoco({this.size = HomeWidgetSize.m});
+
+  /// Compacto recorta a 4 tarjetas (2 filas); normal muestra todas.
+  final HomeWidgetSize size;
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final ctx = store.contextOf();
 
-    final list = CurrencyX.focus.toList(growable: false);
+    final list = CurrencyX.focus
+        .take(switch (size) {
+          HomeWidgetSize.s => 4,
+          _ => CurrencyX.focus.length,
+        })
+        .toList(growable: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -711,6 +959,11 @@ Future<void> _openCurrencySources(BuildContext context, Currency c) async {
 }
 
 class _AlertasPrecios extends StatelessWidget {
+  const _AlertasPrecios({this.size = HomeWidgetSize.m});
+
+  /// Cuántas metas se listan: 3 compacto · 6 normal · 8 grande.
+  final HomeWidgetSize size;
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
@@ -725,6 +978,11 @@ class _AlertasPrecios extends StatelessWidget {
               a.latestRecord?.date ?? a.createdAt,
             ),
           );
+    final shown = switch (size) {
+      HomeWidgetSize.s => 3,
+      HomeWidgetSize.m => 6,
+      HomeWidgetSize.l => 8,
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -767,7 +1025,7 @@ class _AlertasPrecios extends StatelessWidget {
           Card(
             child: Column(
               children: [
-                for (final p in targets.take(6))
+                for (final p in targets.take(shown))
                   InkWell(
                     onTap: () => context.go('/productos'),
                     child: Padding(
@@ -836,6 +1094,12 @@ class _AlertasPrecios extends StatelessWidget {
 }
 
 class _ResumenMes extends StatelessWidget {
+  const _ResumenMes({this.size = HomeWidgetSize.m});
+
+  /// Compacto: solo el total y su delta. Normal: + tarjetas de compras y
+  /// tienda top con las 5 tiendas líderes. Grande: la cuenta llega a 8.
+  final HomeWidgetSize size;
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
@@ -866,6 +1130,13 @@ class _ResumenMes extends StatelessWidget {
     }
     final sorted = byStore.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
+
+    // Cuánto detalle muestra el widget según el tamaño elegido.
+    final showStats = size != HomeWidgetSize.s;
+    final ledgerTake = switch (size) {
+      HomeWidgetSize.l => 8,
+      _ => 5,
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -913,57 +1184,59 @@ class _ResumenMes extends StatelessWidget {
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: StatCard(
-                          label: 'Compras',
-                          value: '${monthPurchases.length}',
-                          icon: Icons.receipt_long,
-                          tone: StatTone.neutral,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: StatCard(
-                          label: 'Tienda top',
-                          value: sorted.first.key,
-                          sub: sorted.length > 1
-                              ? 'y ${sorted.length - 1} tiendas más'
-                              : null,
-                          icon: Icons.storefront_outlined,
-                          tone: StatTone.pos,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (sorted.isNotEmpty) ...[
+                  if (showStats) ...[
                     const SizedBox(height: 12),
-                    for (final e in sorted.take(5))
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: LedgerRow(
-                          label: e.key,
-                          value: fmtUSD(e.value),
-                          leading: CircleAvatar(
-                            radius: 12,
-                            backgroundColor: scheme.primary.withValues(
-                              alpha: 0.10,
-                            ),
-                            child: Text(
-                              an.storeInitials(e.key),
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                                color: scheme.primary,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: StatCard(
+                            label: 'Compras',
+                            value: '${monthPurchases.length}',
+                            icon: Icons.receipt_long,
+                            tone: StatTone.neutral,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: StatCard(
+                            label: 'Tienda top',
+                            value: sorted.first.key,
+                            sub: sorted.length > 1
+                                ? 'y ${sorted.length - 1} tiendas más'
+                                : null,
+                            icon: Icons.storefront_outlined,
+                            tone: StatTone.pos,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (sorted.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      for (final e in sorted.take(ledgerTake))
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: LedgerRow(
+                            label: e.key,
+                            value: fmtUSD(e.value),
+                            leading: CircleAvatar(
+                              radius: 12,
+                              backgroundColor: scheme.primary.withValues(
+                                alpha: 0.10,
+                              ),
+                              child: Text(
+                                an.storeInitials(e.key),
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: scheme.primary,
+                                ),
                               ),
                             ),
+                            dots:
+                                true, // cierre del resumen: conserva puntos contables
                           ),
-                          dots:
-                              true, // cierre del resumen: conserva puntos contables
                         ),
-                      ),
+                    ],
                   ],
                 ],
               ),
@@ -975,10 +1248,22 @@ class _ResumenMes extends StatelessWidget {
 }
 
 class _TusTiendas extends StatelessWidget {
+  const _TusTiendas({this.size = HomeWidgetSize.m});
+
+  /// Tiendas listadas: 2 compacto · 4 normal · 6 grande.
+  final HomeWidgetSize size;
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    final stats = an.storeStats(store.purchases).take(4).toList();
+    final stats = an
+        .storeStats(store.purchases)
+        .take(switch (size) {
+          HomeWidgetSize.s => 2,
+          HomeWidgetSize.m => 4,
+          HomeWidgetSize.l => 6,
+        })
+        .toList();
     if (stats.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -1145,14 +1430,24 @@ void showStoreSheet(BuildContext context, String storeName) {
 }
 
 class _RegistrosRecientes extends StatelessWidget {
+  const _RegistrosRecientes({this.size = HomeWidgetSize.m});
+
+  /// Compras e ingresos listados: 2+2 compacto · 3+3 normal · 5+5 grande.
+  final HomeWidgetSize size;
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
+    final take = switch (size) {
+      HomeWidgetSize.s => 2,
+      HomeWidgetSize.m => 3,
+      HomeWidgetSize.l => 5,
+    };
     final recents = <String>[];
-    for (final p in store.purchases.take(3)) {
+    for (final p in store.purchases.take(take)) {
       recents.add('Compra · ${p.store ?? 'Sin tienda'} · ${fmtDate(p.date)}');
     }
-    for (final t in store.transactions.take(3)) {
+    for (final t in store.transactions.take(take)) {
       recents.add(
         '${t.isIncome ? 'Ingreso' : 'Gasto'} · ${t.category.label} · ${fmtDate(t.date)}',
       );
@@ -1202,6 +1497,8 @@ class _RegistrosRecientes extends StatelessWidget {
 }
 
 class _Herramientas extends StatelessWidget {
+  const _Herramientas();
+
   @override
   Widget build(BuildContext context) {
     return Column(

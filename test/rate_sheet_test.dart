@@ -41,9 +41,11 @@ AppStore _storeConTablero() {
 void main() {
   final notifs = NotificationsService();
 
+  late SharedPreferences prefs;
+
   Future<RatesPoller> makePoller(AppStore store) async {
     SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
+    prefs = await SharedPreferences.getInstance();
     return RatesPoller(store, notifs, AlertEngine(prefs));
   }
 
@@ -59,6 +61,8 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: store),
           ChangeNotifierProvider.value(value: poller),
+          // v19.4: los widgets de Inicio leen sus prefs (como la app).
+          Provider<SharedPreferences>.value(value: prefs),
         ],
         child: MaterialApp(
           theme: AppTheme.light(),
@@ -99,6 +103,8 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: store),
           ChangeNotifierProvider.value(value: poller),
+          // v19.4: los widgets de Inicio leen sus prefs (como la app).
+          Provider<SharedPreferences>.value(value: prefs),
         ],
         child: MaterialApp(
           theme: AppTheme.light(),
