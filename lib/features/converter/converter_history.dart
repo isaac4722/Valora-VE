@@ -390,7 +390,11 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
         ? scheme.onPrimary
         : disponible
         ? scheme.onSurface
-        : scheme.onSurfaceVariant.withValues(alpha: 0.4);
+        : scheme.onSurfaceVariant.withValues(
+            // 0.55 (antes 0.4): la tinta de día sin datos quedaba a ≈1.9:1
+            // de contraste sobre la tarjeta — ilegible para fecha (fix).
+            alpha: 0.55,
+          );
     return SizedBox(
       height: 42,
       child: Padding(

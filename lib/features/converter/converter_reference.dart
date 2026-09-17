@@ -343,12 +343,13 @@ class _Matriz6State extends State<_Matriz6> {
                                     children: [
                                       Flag(c, size: 13),
                                       const SizedBox(height: 2),
+                                      // labelCaps aplica el piso de
+                                      // legibilidad de 9.5 px (antes 8.5
+                                      // crudos, bajo el mínimo del sistema).
                                       Text(
                                         c.code,
-                                        style: TextStyle(
-                                          fontSize: 8.5,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.6,
+                                        style: VeText.labelCaps(
+                                          9.5,
                                           color: scheme.onSurfaceVariant,
                                         ),
                                       ),

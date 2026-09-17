@@ -50,9 +50,14 @@ Future<void> showShareMenu(
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
-            const Text(
+            // onSurfaceVariant: black54 fijo era casi invisible en tema
+            // oscuro (contraste ≈1.2:1 sobre cardDark) — fix dark theme.
+            Text(
               'Elige cómo quieres salir de ValoraVE',
-              style: TextStyle(fontSize: 12, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 10),
             for (final a in actions)
