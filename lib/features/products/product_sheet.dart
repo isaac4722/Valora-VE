@@ -195,7 +195,10 @@ class _ProductSheetState extends State<ProductSheet> {
     _newStoreCtrl = TextEditingController();
     _priceCtrl = TextEditingController();
     _targetCtrl = TextEditingController(
-      text: p?.targetPrice == null ? '' : '${p!.targetPrice}',
+      // fmtNum es-VE (fix): el toString crudo interpolaba «3.0»/«2.5» con
+      // PUNTO decimal — formato que la propia app considera inválido al
+      // teclear (MoneyField normaliza a coma).
+      text: p?.targetPrice == null ? '' : fmtNum(p!.targetPrice!),
     );
     _cat = p?.category ?? ProductCategory.otros;
     _pres = p?.presentation ?? Presentation.unit;

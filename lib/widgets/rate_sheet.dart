@@ -121,10 +121,16 @@ class RateTile extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 1),
+                      // Copy honesto (fix): «Toca el lápiz…» se mostraba en
+                      // TODA fila sin tasa, pero el lápiz solo existe en
+                      // fuentes manuales — en oficiales/paralelo era una
+                      // instrucción imposible de seguir.
                       Text(
                         has
                             ? (freshness ?? s.detail)
-                            : 'Toca el lápiz para fijar tu tasa',
+                            : (s.category == SourceCategory.manual
+                                  ? 'Toca el lápiz para fijar tu tasa'
+                                  : 'Sin tasa aún para esta fuente'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

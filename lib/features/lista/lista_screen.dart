@@ -308,7 +308,10 @@ class _ListaScreenState extends State<ListaScreen> {
                     // Divisa de cálculo SIEMPRE visible junto a la cifra (v17.5).
                     CurrencyTag(calcCur.code),
                     const Spacer(),
-                    LiveBadge(live: false, label: '${store.cart.length} ítems'),
+                    // Contador de ítems VISIBLE (fix): antes un LiveBadge
+                    // con live:false — que colapsa a SizedBox.shrink() y
+                    // jamás se pintaba (elemento muerto en el héroe).
+                    Stamp('${store.cart.length} ítems'),
                   ],
                 ),
                 const SizedBox(height: 4),
