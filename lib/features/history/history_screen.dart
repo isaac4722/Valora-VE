@@ -658,7 +658,12 @@ class _Seat extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      // Fix leak: los controllers del diálogo se disponen al cerrarlo
+      // (cada edición dejaba dos vivos para siempre).
+      storeCtrl.dispose();
+      notesCtrl.dispose();
+    });
   }
 }
 

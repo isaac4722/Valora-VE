@@ -301,7 +301,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
     // 2) Productos del libro (H): vincular → registrar precio; resto → crear.
     // _cart y purchase.items van 1:1 en el mismo orden (buildPurchase mapea).
-    final vesRate = _ctx.unitsPerUSD(Currency.usd) ?? 1;
+    // Fix: unitsPerUSD(usd) devolvía SIEMPRE 1 (identidad USD→USD) — el
+    // registro de un producto nuevo nacía con rate:1 aunque su fuente fuera
+    // la de VES. La tasa correcta es la de VES (patrón de buildPurchase).
+    final vesRate = _ctx.unitsPerUSD(Currency.ves) ?? 0;
     final created = <String, String>{}; // 'nombre|tienda' → productId
     for (var i = 0; i < _cart.length; i++) {
       final it = _cart[i];

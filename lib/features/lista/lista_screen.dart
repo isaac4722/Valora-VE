@@ -112,8 +112,11 @@ class _ListaScreenState extends State<ListaScreen> {
           ],
         ),
       );
-      if (ok != true || !mounted) return;
+      // El texto se lee ANTES de disponer el controller (fix leak: cada
+      // apertura del diálogo dejaba un controller vivo para siempre).
       final manual = ctrl.text.trim();
+      ctrl.dispose();
+      if (ok != true || !mounted) return;
       if (manual.isEmpty) return;
       await _resolveScannedCode(store, manual);
       return;
@@ -1069,8 +1072,11 @@ class _Plantillas extends StatelessWidget {
                 ],
               ),
             );
+            // Fix leak: dispose del controller tras leer su texto.
+            final name = nameCtrl.text;
+            nameCtrl.dispose();
             if (ok == true) {
-              final id = store.saveTemplate(nameCtrl.text);
+              final id = store.saveTemplate(name);
               if (id == null && context.mounted) {
                 showToast(
                   context,

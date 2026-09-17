@@ -166,9 +166,14 @@ Future<bool> maybeShowTipOnce(
   if (tourRunning || _tipRunning) return false;
   if (!force && !tipsEngineEnabled(prefs)) return false;
   if (isTipShown(prefs, id)) return false;
-  // Marca ANTES de mostrar (una sola oportunidad por tip).
+  // Marca ANTES de mostrar (una sola oportunidad por tip), pero SOLO si
+  // el contexto sigue vivo: marcar tras un desmonte consumía el tip para
+  // siempre sin mostrarlo (y reseteaba el cooldown en vano) (fix orden).
+  if (!context.mounted) return false;
   await prefs.setBool('$kTipPrefix$id', true);
   await prefs.setInt(kTipLastAt, DateTime.now().millisecondsSinceEpoch);
+  // Re-check tras los awaits: si el contexto murió en la ventana entre
+  // ambos checks, no hay pantalla donde mostrar (ventana de ~1 ms).
   if (!context.mounted) return false;
   _tipRunning = true;
   try {

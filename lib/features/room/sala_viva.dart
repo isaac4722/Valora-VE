@@ -118,6 +118,9 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
         ],
       ),
     );
+    // Fix leak: dispose del controller del diálogo (cada apertura dejaba
+    // uno vivo).
+    c.dispose();
     if (name != null && name.trim().isNotEmpty) {
       await room.renameRoom(name);
     }
