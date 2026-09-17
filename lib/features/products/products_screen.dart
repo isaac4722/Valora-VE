@@ -176,6 +176,12 @@ class _ProductsScreenState extends State<ProductsScreen> {
     final scheme = Theme.of(context).colorScheme;
     final list = _filtered(store);
     final pages = (list.length / kPageSize).ceil().clamp(1, 9999);
+    // Clamp de página: al borrar productos desde la ficha la lista se
+    // encoge y _page podía quedar fuera de rango («Página 3 de 2» con
+    // página vacía). Se corrige en build antes de paginar.
+    if (_page >= pages) {
+      _page = pages - 1;
+    }
     final pageItems = list.skip(_page * kPageSize).take(kPageSize).toList();
 
     return Scaffold(
@@ -523,34 +529,42 @@ class _ProductCard extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  if (last != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          fmtUSD(last.price),
-                          style: VeText.displayNum(17, color: scheme.onSurface),
-                        ),
-                        Text(
-                          '${last.store ?? 'Sin tienda'} · ${fmtDate(last.date)}'
-                          '${last.currency != 'USD' ? ' · pagó ${fmtMoney(last.originalPrice, CurrencyX.from(last.currency))}' : ''}',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            color: scheme.onSurfaceVariant,
+                  // Expanded + ellipsis: tienda y «pagó Bs …» son texto del
+                  // usuario; el ancho intrínseco desbordaba la card (fix).
+                  Expanded(
+                    child: last != null
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                fmtUSD(last.price),
+                                style: VeText.displayNum(
+                                  17,
+                                  color: scheme.onSurface,
+                                ),
+                              ),
+                              Text(
+                                '${last.store ?? 'Sin tienda'} · ${fmtDate(last.date)}'
+                                '${last.currency != 'USD' ? ' · pagó ${fmtMoney(last.originalPrice, CurrencyX.from(last.currency))}' : ''}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            'Sin precio aún',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                      ],
-                    )
-                  else
-                    Text(
-                      'Sin precio aún',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  const Spacer(),
+                  ),
                   if (product.records.length >= 2) ...[
                     // Sparkline compartida del sistema (dp6): misma semántica
                     // visual (sube = neg, baja = pos) sin duplicado local.

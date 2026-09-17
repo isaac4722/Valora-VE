@@ -957,7 +957,18 @@ class StatCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 9),
-            Text(value, style: VeText.displayNum(21, color: scheme.onSurface)),
+            // Números largos y nombres libres (p. ej. «Tienda top» del
+            // Home): FittedBox scaleDown + 1 línea — patrón §8 (fix
+            // overflow/misalignment de tarjetas hermanas).
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: VeText.displayNum(21, color: scheme.onSurface),
+              ),
+            ),
             if (sub != null) ...[
               const SizedBox(height: 4),
               Text(

@@ -741,17 +741,23 @@ class _ProductSheetState extends State<ProductSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Flexible + Wrap-friendly: a textScale >=1.2 la fila superaba
+          // los ~300 px del ReadWindow y desbordaba (fix overflow).
           Row(
             children: [
-              Text(
-                'PRECIO VIGENTE',
-                style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+              Flexible(
+                child: Text(
+                  'PRECIO VIGENTE',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+                ),
               ),
               const SizedBox(width: 6),
               // El libro de precios es USD-normalizado: divisa explícita (v17.5).
               const CurrencyTag('USD'),
-              const Spacer(),
               if (varPct != null) ...[
+                const SizedBox(width: 5),
                 TrendBadge(varPct),
                 const SizedBox(width: 5),
                 Text(

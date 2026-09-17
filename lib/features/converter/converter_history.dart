@@ -52,11 +52,17 @@ class _Recientes extends StatelessWidget {
                       children: [
                         Flag(CurrencyX.from(r.from), size: 15),
                         const SizedBox(width: 4),
-                        Text(
-                          fmtNum(r.amount, decimals: 2),
-                          style: VeText.displayNum(
-                            12.5,
-                            color: Theme.of(context).colorScheme.onSurface,
+                        // Flexible + ellipsis: montos enormes (10^12+) son
+                        // datos del usuario y desbordaban la card (fix).
+                        Flexible(
+                          child: Text(
+                            fmtNum(r.amount, decimals: 2),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: VeText.displayNum(
+                              12.5,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                           ),
                         ),
                         Icon(
@@ -75,7 +81,7 @@ class _Recientes extends StatelessWidget {
                             ).colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 6),
                         Text(
                           fmtDate(r.at),
                           style: TextStyle(

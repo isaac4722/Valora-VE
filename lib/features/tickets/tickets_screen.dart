@@ -249,8 +249,12 @@ class _TicketViewerState extends State<_TicketViewer> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // maxLines + ellipsis: fecha larga y tienda libre del usuario
+            // envolvían y desbordaban la AppBar de 56 px (fix overflow).
             Text(
               fmtDateLong(p.date),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontFamily: 'SpaceGrotesk',
                 fontSize: 14.5,
@@ -261,6 +265,8 @@ class _TicketViewerState extends State<_TicketViewer> {
             if (p.store?.isNotEmpty == true)
               Text(
                 p.store!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 11,
                   color: Colors.white.withValues(alpha: 0.72),

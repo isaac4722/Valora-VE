@@ -25,7 +25,10 @@ import '../../services/sharing.dart';
 import '../../widgets/share_menu.dart';
 import '../../widgets/ui.dart';
 
-const kInkAccent = Color(0xFF22354E);
+// Tinta del papel: ES el token de marca primaryLight (una sola verdad en
+// core/theme.dart) — antes un duplicado crudo Color(0xFF22354E) que podía
+// derivar si el token cambiaba.
+const kInkAccent = VeColors.primaryLight;
 // v17.8: kInkPos/kInkNeg se retiraron con la constancia de finanzas (la
 // constancia ahora es solo de compras); se conservan en el historial git.
 
@@ -582,9 +585,15 @@ class StatementDoc extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              Text(
-                label.toUpperCase(),
-                style: VeText.labelCaps(9, color: Colors.black54),
+              // Flexible: en trimestral/anual el rótulo supera el ancho del
+              // documento a textScale >=1.25 (fix overflow).
+              Flexible(
+                child: Text(
+                  label.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: VeText.labelCaps(9, color: Colors.black54),
+                ),
               ),
             ],
           ),
@@ -620,9 +629,11 @@ class StatementDoc extends StatelessWidget {
               ),
           ],
           const SizedBox(height: 16),
+          // black54: black38 daba contraste ≈2.7:1 sobre papel — ilegible
+          // en el PNG compartido (piso WCAG para texto pequeño: 4.5:1).
           Text(
             'Generado ${fmtDateTime(DateTime.now())} · ValoraVE $kAppVersionVisible',
-            style: const TextStyle(fontSize: 9, color: Colors.black38),
+            style: const TextStyle(fontSize: 9, color: Colors.black54),
           ),
         ],
       ),
@@ -651,9 +662,15 @@ class StatementRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
+          // Flexible + ellipsis: el label es el nombre de tienda (texto
+          // libre) y desbordaba el documento a textScale >=1.2 (fix).
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
           ),
           const SizedBox(width: 6),
           const Expanded(child: LedgerLine()),

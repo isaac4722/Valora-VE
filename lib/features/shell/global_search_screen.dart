@@ -158,6 +158,24 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 dense: true,
                 onTap: () => _go('/productos'),
               ),
+            // «y N más»: antes el corte a 8 era mudo — el resultado buscado
+            // podía existir y no verse (mismo patrón del Home con metas).
+            if (productos.length > 8)
+              ListTile(
+                dense: true,
+                leading: Icon(
+                  Icons.more_horiz,
+                  color: scheme.onSurfaceVariant,
+                ),
+                title: Text(
+                  'y ${productos.length - 8} productos más',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                onTap: () => _go('/productos'),
+              ),
           ],
           if (compras.isNotEmpty) ...<Widget>[
             const _GroupLabel('Compras'),
@@ -181,6 +199,22 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 dense: true,
                 onTap: () => _go('/historial'),
               ),
+            if (compras.length > 8)
+              ListTile(
+                dense: true,
+                leading: Icon(
+                  Icons.more_horiz,
+                  color: scheme.onSurfaceVariant,
+                ),
+                title: Text(
+                  'y ${compras.length - 8} compras más',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                onTap: () => _go('/historial'),
+              ),
           ],
           if (notifs.isNotEmpty) ...<Widget>[
             const _GroupLabel('Avisos'),
@@ -201,6 +235,22 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                   ),
                 ),
                 dense: true,
+                onTap: () => _go('/'),
+              ),
+            if (notifs.length > 8)
+              ListTile(
+                dense: true,
+                leading: Icon(
+                  Icons.more_horiz,
+                  color: scheme.onSurfaceVariant,
+                ),
+                title: Text(
+                  'y ${notifs.length - 8} avisos más',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
                 onTap: () => _go('/'),
               ),
           ],
