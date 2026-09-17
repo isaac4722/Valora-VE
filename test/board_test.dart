@@ -132,4 +132,73 @@ void main() {
       expect(result.changed, contains('brl-br')); // 5.10 → 5.20 (> 0.05 %)
     });
   });
+
+  group('fusión offline (v19.5): región caída no borra el tablero', () {
+    RateBoard boardOf(Map<String, RateEntry> s) => RateBoard(
+          sources: s,
+          providers: const ['dolarapi.com'],
+          degraded: const [],
+          lastUpdate: DateTime(2026, 9, 12),
+          fetchedAt: DateTime(2026, 9, 12),
+        );
+
+    test('red totalmente caída → las fuentes previas sobreviven intactas', () {
+      final prev = boardOf({
+        'ves-bcv': RateEntry(rate: 234.89, updatedAt: DateTime(2026, 9, 12)),
+        'ves-parallel': RateEntry(rate: 260.00, updatedAt: DateTime(2026, 9, 12)),
+        'brl-br': RateEntry(rate: 5.10, updatedAt: DateTime(2026, 9, 12)),
+      });
+      // Las regiones caen igual que en producción: bloque con fuentes vacías
+      // + su lista de errores (el catch de cada bloque se queda con el error).
+      final dead = List.generate(4, (_) => const (<String, RateEntry>{}, <String>['HTTP 503'], <String>[]));
+      final result = mergeRegionBlocks(dead, prev);
+      expect(result.board.sources['ves-bcv']!.rate, closeTo(234.89, 1e-9));
+      expect(result.board.sources['ves-parallel']!.rate, closeTo(260.00, 1e-9));
+      expect(result.board.sources['brl-br']!.rate, closeTo(5.10, 1e-9));
+      // Nada cambió de tasa: cero cambios reportados y la caída sí queda
+      // registrada en degraded (el usuario la ve, el tablero no la inventa).
+      expect(result.changed, isEmpty);
+      expect(result.board.degraded, isNotEmpty);
+    });
+
+    test('la fuente fresca pisa a la vieja; la región caída conserva la suya', () {
+      final prev = boardOf({
+        'ves-bcv': RateEntry(rate: 234.89, updatedAt: DateTime(2026, 9, 12)),
+        'brl-br': RateEntry(rate: 5.10, updatedAt: DateTime(2026, 9, 13)),
+      });
+      final blocks = <RegionBlock>[
+        (
+          {'ves-bcv': RateEntry(rate: 240.00, updatedAt: DateTime(2026, 9, 15))},
+          <String>[],
+          <String>['dolarapi.com'],
+        ),
+        const (<String, RateEntry>{}, <String>['brl-br: HTTP 500'], <String>[]),
+      ];
+      final result = mergeRegionBlocks(blocks, prev);
+      // La fresca pisa; la caída sobrevive con su valor anterior y su
+      // updatedAt original (quién está fresco queda a la vista).
+      expect(result.board.sources['ves-bcv']!.rate, closeTo(240.00, 1e-9));
+      expect(result.board.sources['brl-br']!.rate, closeTo(5.10, 1e-9));
+      expect(
+        result.board.sources['brl-br']!.updatedAt,
+        DateTime(2026, 9, 13),
+      );
+      expect(result.changed, contains('ves-bcv'));
+      expect(result.changed, isNot(contains('brl-br')));
+    });
+
+    test('sin previous la fusión se comporta igual que siempre', () {
+      final blocks = <RegionBlock>[
+        (
+          {'ves-bcv': RateEntry(rate: 240.00, updatedAt: DateTime(2026, 9, 15))},
+          <String>[],
+          <String>['dolarapi.com'],
+        ),
+      ];
+      final result = mergeRegionBlocks(blocks, null);
+      expect(result.board.sources.keys, containsAll(['ves-bcv']));
+      expect(result.board.sources.length, 1);
+      expect(result.changed, contains('ves-bcv'));
+    });
+  });
 }

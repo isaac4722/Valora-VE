@@ -415,6 +415,11 @@ BoardResult mergeRegionBlocks(List<RegionBlock> results, RateBoard? previous) {
   final sources = <String, RateEntry>{};
   final providers = <String>{};
   final degraded = <String>[];
+  // Offline (v19.5): siembra las fuentes de la ronda ANTERIOR para que una
+  // región caída no borre sus tasas del tablero; las frescas las pisan
+  // encima. La entrada preservada conserva su updatedAt original y la
+  // región fallida queda listada en `degraded` — nada se inventa.
+  if (previous != null) sources.addAll(previous.sources);
   for (final (s, e, p) in results) {
     sources.addAll(s);
     degraded.addAll(e);
