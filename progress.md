@@ -1111,7 +1111,10 @@ con la plantilla de `AGENT.md`.
 - Gates: analyze=0 issues · test=189/189 (188 de la rama base + 1
   nuevo del entry) · build web editor=EXIT 0 (repro exacto del comando
   de dart run lowder).
-- Bloqueos: ninguno.
+- Bloqueos: ninguno. Desviación del nombre pedido: `test/lowder` es
+  IMPOSIBLE en este repo (la rama `test` existente ocupa el namespace
+  — Git no permite refs `test` y `test/*` a la vez) y borrar `test` no
+  fue autorizado; se usó `test-lowder`, el nombre legal más cercano.
 - Siguiente: decisión del dueño — profundizar Lowder (más pantallas,
   registro de widgets propios del design system ValoraVE vía
   IWidgets/IActions/IProperties) o cerrar el experimento.
