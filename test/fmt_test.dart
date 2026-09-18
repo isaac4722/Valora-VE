@@ -83,6 +83,19 @@ void main() {
       expect(parseLocaleNum(null), isNull);
     });
 
+    test('v19.6: punto con 3+ dígitos detrás es miles (bug del conversor)', () {
+      // El 5.º dígito tecleado sobre «4.000» deja «4.0000»: eso son 40
+      // mil, no «4,0000» = 4 (regla idéntica a MoneyField._canon).
+      expect(parseLocaleNum('4.0000'), 40000);
+      expect(parseLocaleNum('40.0000'), 400000); // 6.º dígito
+      expect(parseLocaleNum('400.000'), 400000);
+      // Cero inicial = decimal explícito: «0.0001» es una tasa chiquita.
+      expect(parseLocaleNum('0.0001'), closeTo(0.0001, 1e-9));
+      // 1-2 dígitos tras el punto siguen siendo decimales (hábito EN).
+      expect(parseLocaleNum('3.5'), 3.5);
+      expect(parseLocaleNum('3.25'), 3.25);
+    });
+
     test('parseDateField ISO', () {
       expect(parseDateField('2026-09-10'), DateTime(2026, 9, 10));
       expect(parseDateField('nada'), isNull);

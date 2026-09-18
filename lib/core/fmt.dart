@@ -219,7 +219,14 @@ double? parseLocaleNum(String? raw) {
     normalized = s.replaceAll('.', '').replaceAll(',', '.');
   } else if (lastDot > lastComma) {
     final decimals = s.length - lastDot - 1;
-    final isThousandSep = lastDot > 0 && decimals == 3 && !s.contains(',');
+    // v19.6 (bug del dueño): misma regla que MoneyField._canon — sin coma
+    // en el texto, un punto con 3+ dígitos detrás es MILES («4.0000» tras
+    // el 5.º tecleo = 40000, no 4), salvo cero inicial («0.0001» es una
+    // tasa chiquita, no 1).
+    final intPart = s.substring(0, lastDot).replaceAll(RegExp(r'[^0-9]'), '');
+    final intIsZero = RegExp(r'^0*$').hasMatch(intPart);
+    final isThousandSep =
+        lastDot > 0 && decimals >= 3 && !s.contains(',') && !intIsZero;
     // «1.234» es ambiguo: si hay coma ANTES del punto, el punto es decimal.
     if (lastComma >= 0) {
       normalized = s.replaceAll('.', '').replaceAll(',', '.');

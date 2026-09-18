@@ -1494,7 +1494,13 @@ class _MoneyFieldState extends State<MoneyField> {
   /// · coma al final → coma decimal y los puntos son MIL ES-VE
   ///   («40.000,00» → 40000,00 — crítico para setText programáticos);
   /// · punto al final → decimal, SALVO el patrón de miles clásico
-  ///   («1.000» sin coma y 3 dígitos tras el punto = mil, no 1,0).
+  ///   («1.000» sin coma y 3+ dígitos tras el punto = mil, no 1,0).
+  ///   v19.6 (bug del dueño): teclear el 5.º dígito sobre «4.000» deja
+  ///   «4.0000» — el punto NO puede volverse decimal ahí: es el separador
+  ///   de miles a medio grupo (antes: «4,0000» = 4, y 40 mil se volvía 4).
+  ///   Regla: sin coma en el texto, el punto es decimal SOLO con 1-2
+  ///   dígitos detrás, o cuando lo de adelante es puro cero («0.0001»,
+  ///   hábito EN de las tasas chiquitas).
   String _canon(String raw) {
     final clean = raw.replaceAll(RegExp(r'[^0-9.,]'), '');
     if (clean.isEmpty) return '';
@@ -1505,7 +1511,14 @@ class _MoneyFieldState extends State<MoneyField> {
       decSep = ',';
     } else if (lastDot > lastComma) {
       final digitsAfter = clean.length - lastDot - 1;
-      final isThousands = lastDot > 0 && digitsAfter == 3 && lastComma < 0;
+      // Miles: 3+ dígitos tras el punto y algo antes que NO sea cero
+      // (cero inicial = decimal explícito: «0.0001» es una tasa, no 1).
+      final intPart = clean
+          .substring(0, lastDot)
+          .replaceAll(RegExp(r'[^0-9]'), '');
+      final intIsZero = RegExp(r'^0*$').hasMatch(intPart);
+      final isThousands =
+          lastDot > 0 && lastComma < 0 && digitsAfter >= 3 && !intIsZero;
       decSep = isThousands ? '' : '.';
     } else {
       decSep = '';

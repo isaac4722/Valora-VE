@@ -198,6 +198,22 @@ void main() {
       await tester.pump();
       expect(find.text('0,5'), findsOneWidget);
       expect(valor, 0.5);
+      // v19.6 (bug del dueño): el 5.º dígito sobre «4.000» — el punto a
+      // medio grupo de miles ya no se vuelve decimal («4,0000» = 4).
+      await tester.enterText(field, '4.0000');
+      await tester.pump();
+      expect(find.text('40.000'), findsOneWidget);
+      expect(valor, 40000);
+      // Y el 6.º: «40.0000» → 400 mil.
+      await tester.enterText(field, '40.0000');
+      await tester.pump();
+      expect(find.text('400.000'), findsOneWidget);
+      expect(valor, 400000);
+      // Tasas chiquitas con punto (hábito EN): «0.0001» sigue decimal.
+      await tester.enterText(field, '0.0001');
+      await tester.pump();
+      expect(find.text('0,0001'), findsOneWidget);
+      expect(valor, closeTo(0.0001, 1e-9));
       // Vacío → 0, sin caracteres rarios.
       await tester.enterText(field, '');
       await tester.pump();
@@ -869,7 +885,11 @@ void main() {
       expect(cardFinder, findsOneWidget);
       final size = tester.getSize(cardFinder);
       // Antes del fix: ~510 px (todo el hueco). Ahora: contenido + botones.
-      expect(size.height, lessThan(260), reason: 'la tarjeta encoge a su texto');
+      expect(
+        size.height,
+        lessThan(260),
+        reason: 'la tarjeta encoge a su texto',
+      );
       // Cuelga del borde superior del hueco: arranca justo bajo el ancla.
       expect(
         tester.getTopLeft(cardFinder).dy,
