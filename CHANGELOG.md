@@ -1,6 +1,33 @@
 # Changelog
 
 
+## 1.9.6-beta+24 · v19.6 — widgets in-app retirados, galería de App Widgets del launcher y fix del conversor
+
+- **Widgets de Inicio retirados (orden del dueño)**: el sistema
+  configurable de v19.4 — catálogo para añadir/quitar secciones y
+  elegir su tamaño, persistido en prefs — sale de la app. El Inicio
+  vuelve a sus secciones fijas de siempre: cotización, divisas,
+  resumen del mes, alertas, tiendas, registros y herramientas.
+- **App Widgets, bien escritos**: la tarjeta «+» del pie del Inicio
+  ahora abre la galería de los App Widgets de verdad — los de la
+  pantalla de inicio de Android (Tasa BCV · Paralelo · Brecha). Cada
+  entrada trae su preview fiel (mismo diseño, colores y jerarquía del
+  widget nativo, con las tasas vivas del tablero) y un botón
+  «Añadir» que pide el pin al launcher (requestPinAppWidget, Android
+  8+, canal propio `valorave/widgets`); si el launcher no lo soporta,
+  sale la guía manual de 3 pasos. Diseño adaptado de las tarjetas de
+  referencia del dueño.
+- **Conversor arreglado (bug del dueño)**: al teclear más de 3 ceros
+  la cifra se caía — «4.000» + un dígito quedaba «4,0000» y 40 mil se
+  volvía 4. Regla nueva (MoneyField y parseLocaleNum, misma
+  semántica): sin coma en el texto, un punto con 3 o más dígitos
+  detrás es separador de miles; con 1-2 es decimal; y si lo de
+  adelante es puro cero («0.0001») es decimal — las tasas chiquitas
+  no se convierten en 1.
+- **Tests**: 4 de la galería de App Widgets (secciones fijas,
+  previews fieles, pin al canal nativo, guía manual) y 2 de
+  regresión del conversor.
+
 ## 1.9.5-beta+23 · v19.5 — limpieza dp4, 3 fixes recuperados y widgets de escritorio con preview + resize
 
 - **Limpieza de la desviación**: rama `dp4` y sus 13 runs de Actions

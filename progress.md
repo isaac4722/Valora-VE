@@ -1057,3 +1057,61 @@ con la plantilla de `AGENT.md`.
 - Siguiente: Fase 4 — rama test/lowder para probar Lowder (estructura
   + entry secundario + docs) → push de ambas ramas → poll CI/Build
   hasta verde → merge a main SOLO con orden expresa del dueño.
+
+## [TASK-26] v19.6 · orden del dueño: widgets in-app fuera, galería de App Widgets y fix del conversor · 2026-09-19 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Contexto: el dueño pidió (1) explicación de lo descartado del agente
+  desviado (precio/kg, filtro por mes, menú share, cambio de icono,
+  hardening de workflows — features de un spec externo «Review.txt»,
+  ninguna pedida), (2) ELIMINAR los «UI Widgets» configurables DENTRO
+  de la app (v19.4), dejar el «+» y escribir bien los App Widgets /
+  Home Android Screen Widgets usando sus tarjetas de diseño como base
+  (adaptadas), (3) arreglar el conversor: al teclear más de 3 ceros
+  salían comas y 40 mil se volvía 4, (4) auditar y corregir.
+- Hecho:
+  - CONVERSOR (bug real): la heurística del punto en MoneyField._canon
+    solo reconocía grupos de miles EXACTOS de 3 dígitos — al teclear el
+    5.º dígito sobre «4.000» el texto pasaba por «4.0000», el punto se
+    volvía decimal, salía «4,0000» y el valor caía a 4. Regla nueva (y
+    espejo en parseLocaleNum): sin coma, punto con 3+ dígitos detrás =
+    miles; 1-2 = decimal; parte entera puro cero («0.0001») = decimal
+    (las tasas chiquitas no se vuelven 1). Tradeoff documentado en
+    código: 3+ decimales tecleados con Punto en monto ≥ 1 se leen como
+    miles — en es-VE el teclado da coma.
+  - WIDGETS IN-APP RETIRADOS: home_widgets.dart (catálogo,
+    HomeWidgetController, tamaños, prefs valorave.home.*) y su test
+    ELIMINADOS. home_screen.dart: _HomeSections vuelve a ser la lista
+    FIJA de 7 secciones (anclas del tour intactas: cotización y
+    divisas), sin estado ni SharedPreferences. Los prefs viejos de
+    usuarios quedan huérfanos sin efecto (sin migración: el Inicio
+    simplemente vuelve al de siempre).
+  - APP WIDGETS (los del launcher, «escritos bien»): nueva galería
+    lib/features/home/app_widgets.dart — la tarjeta «+» del pie del
+    Inicio («App Widgets · Añade a tu pantalla de inicio de Android»)
+    abre la hoja con los TRES nativos (Tasa BCV · Paralelo · Brecha):
+    preview FIEL al widget real (mismo fondo #121417, borde #3A4048,
+    radios 18, colores y jerarquía del bucket NORMAL, cifras vivas del
+    tablero), botón «Añadir» → pin al launcher. Diseño adaptado de las
+    tarjetas de referencia del dueño (badge · cifra héroe · secundario
+    · hora, 2×1/4×1/4×2). Nota de resizing y cierre «Listo».
+  - PIN NATIVO: MainActivity.kt registra el canal «valorave/widgets»
+    (pinWidget → requestPinAppWidget, API 26+, mapa explícito de
+    proveedor→clase — nada de Class.forName, sobrevive minify);
+    launcher sin soporte o Android viejo → PlatformException → guía
+    manual de 3 pasos (dialog) desde Dart.
+  - TESTS: app_widgets_test.dart (4: secciones fijas + tarjeta, galería
+    con previews fieles, pin al canal con provider correcto, guía
+    manual); widgets_test.dart +3 casos de regresión del conversor
+    (4.0000/40.0000/0.0001); fmt_test.dart +1 grupo parseLocaleNum.
+  - AUDITORÍA: grep de residuos del catálogo = 0 referencias vivas;
+    SharedPreferences quedó sin usos en home_screen (import retirado);
+    tours/tips no referenciaban el catálogo; docs/APPWIDGETS.md
+    actualizado (galería in-app + verificación manual renumerada).
+  - Bump 1.9.6-beta+24 · kAppVersionVisible 19.6 · CHANGELOG.
+- Gates: format/analyze/test locales ANTES del commit (resultado en
+  el commit); el Kotlin lo compila el build de Actions (sin SDK
+  Android local, como en TASK-25).
+- Bloqueos: ninguno.
+- Siguiente: push → CI/Build verde → merge a main SOLO con orden
+  expresa del dueño. test-lowder sigue disponible para la Fase 4 del
+  dueño (editor en 0.0.0.0:8787/editor.html).

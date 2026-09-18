@@ -5,7 +5,7 @@ publish_to: 'none'
 # 1.9.5-beta+23 · v19.5 — limpieza de la desviación dp4, 3 fixes
 # recuperados (CSV multitienda, tablero offline, flush Hive) y widgets
 # de escritorio Android con preview y resize adaptativo.
-version: 1.9.5-beta+23
+version: 1.9.6-beta+24
 
 environment:
   sdk: ^3.9.2

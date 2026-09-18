@@ -6,5 +6,5 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v19.5 · recuperación + widgets de escritorio).
-const String kAppVersionVisible = '19.5';
+/// Versión visible (ronda v19.6 · App Widgets del launcher + fix conversor).
+const String kAppVersionVisible = '19.6';
