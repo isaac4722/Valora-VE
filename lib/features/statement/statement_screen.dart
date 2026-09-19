@@ -22,7 +22,7 @@ import '../../core/theme.dart';
 import '../../core/version.dart';
 import '../../data/store.dart';
 import '../../services/sharing.dart';
-import '../../widgets/share_menu.dart';
+import '../../widgets/export_sheet.dart';
 import '../../widgets/ui.dart';
 
 // Tinta del papel: ES el token de marca primaryLight (una sola verdad en
@@ -172,8 +172,8 @@ class _StatementScreenState extends State<StatementScreen> {
     return captureWidget(_docKey, targetWidth: 1080);
   }
 
-  /// Menú propio (v17.2): texto · imagen · PDF, cada uno con compartir o
-  /// descargar. Genera los bytes solo cuando toca (sin descargar archivos).
+  /// Exportación UNIFICADA (v19.8): texto · PNG · PDF, cada uno con
+  /// compartir o guardar — el mismo componente de toda la app.
   Future<void> _shareMenu(
     BuildContext context,
     AppStore store,
@@ -181,89 +181,79 @@ class _StatementScreenState extends State<StatementScreen> {
     String label,
     List<Purchase> purchases,
   ) async {
-    await showShareMenu(
+    await showExportSheet(
       context,
-      title: 'Constancia $_scopeLabel · $label',
-      actions: [
-        ShareMenuAction(
-          icon: Icons.subject_rounded,
-          label: 'Texto',
-          hint: 'Resumen legible para pegar o enviar por chat',
-          onRun: () async {
-            await SharePlus.instance.share(
-              ShareParams(text: _plainText(range, label, purchases)),
-            );
-            return null;
-          },
-        ),
-        ShareMenuAction(
-          icon: Icons.image_outlined,
-          label: 'Compartir imagen',
-          hint: 'PNG de la constancia (1080 px) para redes o chat',
-          onRun: () async {
-            final bytes = await _renderDocPng(range, label, purchases);
-            if (bytes == null) {
-              return 'No se pudo generar la imagen. Intenta de nuevo.';
-            }
-            await sharePng(bytes, _pngName);
-            return null;
-          },
-        ),
-        ShareMenuAction(
-          icon: Icons.download_rounded,
-          label: 'Descargar imagen',
-          hint: 'Guarda el PNG sin abrir el share',
-          onRun: () async {
-            final bytes = await _renderDocPng(range, label, purchases);
-            if (bytes == null) {
-              return 'No se pudo generar la imagen. Intenta de nuevo.';
-            }
-            return runDownloadBytes(bytes, _pngName);
-          },
-        ),
-        ShareMenuAction(
-          icon: Icons.picture_as_pdf_outlined,
-          label: 'Compartir PDF',
-          hint: 'PDF con la tabla del período',
-          onRun: () async {
-            final bytes = await _buildPdf(
-              store,
-              range,
-              label,
-              purchases,
-            ).save();
-            await SharePlus.instance.share(
-              ShareParams(
-                files: [
-                  XFile.fromData(
-                    Uint8List.fromList(bytes),
-                    name: 'constancia-valorave.pdf',
-                    mimeType: 'application/pdf',
+      ExportSpec(
+        title: 'Constancia $_scopeLabel · $label',
+        subtitle: 'Elige el formato; luego compartes o guardas',
+        formats: [
+          ExportFormat(
+            icon: Icons.subject_rounded,
+            label: 'Texto',
+            hint: 'Resumen legible para pegar o enviar por chat',
+            run: (share) async {
+              await SharePlus.instance.share(
+                ShareParams(text: _plainText(range, label, purchases)),
+              );
+              return null;
+            },
+          ),
+          ExportFormat(
+            icon: Icons.image_outlined,
+            label: 'Imagen PNG',
+            hint: 'PNG de la constancia (1080 px) para redes o chat',
+            run: (share) async {
+              final bytes = await _renderDocPng(range, label, purchases);
+              if (bytes == null) {
+                return 'No se pudo generar la imagen. Intenta de nuevo.';
+              }
+              if (share) {
+                await sharePng(bytes, _pngName);
+                return null;
+              }
+              final path = await downloadBytes(bytes, fileName: _pngName);
+              return path == null
+                  ? 'No se pudo guardar la imagen.'
+                  : 'Guardado en: $path';
+            },
+          ),
+          ExportFormat(
+            icon: Icons.picture_as_pdf_outlined,
+            label: 'PDF',
+            hint: 'PDF con la tabla del período',
+            run: (share) async {
+              final bytes = await _buildPdf(
+                store,
+                range,
+                label,
+                purchases,
+              ).save();
+              final file = Uint8List.fromList(bytes);
+              if (share) {
+                await SharePlus.instance.share(
+                  ShareParams(
+                    files: [
+                      XFile.fromData(
+                        file,
+                        name: 'constancia-valorave.pdf',
+                        mimeType: 'application/pdf',
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            );
-            return null;
-          },
-        ),
-        ShareMenuAction(
-          icon: Icons.save_alt_rounded,
-          label: 'Descargar PDF',
-          hint: 'Guarda el PDF en la carpeta ValoraVE',
-          onRun: () async {
-            final bytes = await _buildPdf(
-              store,
-              range,
-              label,
-              purchases,
-            ).save();
-            return runDownloadBytes(
-              Uint8List.fromList(bytes),
-              'constancia-valorave.pdf',
-            );
-          },
-        ),
-      ],
+                );
+                return null;
+              }
+              final path = await downloadBytes(
+                file,
+                fileName: 'constancia-valorave.pdf',
+              );
+              return path == null
+                  ? 'No se pudo guardar el PDF.'
+                  : 'Guardado en: $path';
+            },
+          ),
+        ],
+      ),
     );
   }
 

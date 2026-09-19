@@ -5,7 +5,7 @@ publish_to: 'none'
 # 1.9.7-beta+25 · v19.7 — versión web (modo cliente): build web PWA
 # con marca propia (título, descripción es-VE, splash tipográfico que
 # se retira con el primer frame) e íconos de marca en el manifest.
-version: 1.9.7-beta+25
+version: 1.9.8-beta+26
 
 environment:
   sdk: ^3.9.2

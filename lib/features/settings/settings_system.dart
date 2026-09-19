@@ -26,10 +26,37 @@ class _Respaldo extends StatelessWidget {
                   child: FilledButton.icon(
                     icon: const Icon(Icons.ios_share, size: 16),
                     label: const Text('Exportar respaldo JSON'),
-                    onPressed: () => showShareFile(
+                    onPressed: () => showExportSheet(
                       context,
-                      'backup-valorave-${SnapshotPoint.dayKey(DateTime.now())}.json',
-                      exportBackupJson(store.data),
+                      ExportSpec(
+                        title: 'Respaldo de tus datos',
+                        subtitle:
+                            'JSON completo — listas, productos y '
+                            'preferencias',
+                        formats: [
+                          ExportFormat(
+                            icon: Icons.data_object,
+                            label: 'JSON',
+                            hint: 'Todo tu historial en un archivo',
+                            run: (share) async {
+                              final name =
+                                  'backup-valorave-${SnapshotPoint.dayKey(DateTime.now())}.json';
+                              final text = exportBackupJson(store.data);
+                              if (share) {
+                                await shareFile(name, text);
+                                return 'Respaldo compartido';
+                              }
+                              final path = await downloadText(
+                                text,
+                                fileName: name,
+                              );
+                              return path == null
+                                  ? 'No se pudo guardar el respaldo.'
+                                  : 'Guardado en: $path';
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

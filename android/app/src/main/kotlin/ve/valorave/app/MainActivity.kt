@@ -2,6 +2,7 @@ package ve.valorave.app
 
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.Intent
 import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -9,10 +10,14 @@ import io.flutter.plugin.common.MethodChannel
 
 /// MainActivity: Flutter puro. Los widgets de escritorio viven en
 /// Widgets.kt (home_widget los registra); el puente de Bluetooth clásico
-/// RFCOMM de la Sala Viva (BtSppPlugin, v18.0) se registra aquí; y desde
-/// v19.6 también el canal de App Widgets: la galería de la app pide el
-/// pin del widget en la pantalla de inicio (requestPinAppWidget).
+/// RFCOMM de la Sala Viva (BtSppPlugin, v18.0) se registra aquí; desde
+/// v19.6 también el canal de App Widgets (requestPinAppWidget); y desde
+/// v19.8 el canal de DEEP LINKS de la sala: el QR `valorave://sala?c=…`
+/// escaneado con la cámara del teléfono abre la app directo al flujo de
+/// unirse (canal `valorave/deeplink`: getInitial + onNewIntent).
 class MainActivity : FlutterActivity() {
+    private var deeplinkChannel: MethodChannel? = null
+
     override fun configureFlutterEngine(engine: FlutterEngine) {
         super.configureFlutterEngine(engine)
         engine.plugins.add(BtSppPlugin())
@@ -24,6 +29,26 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        deeplinkChannel = MethodChannel(
+            engine.dartExecutor.binaryMessenger, "valorave/deeplink"
+        ).also { channel ->
+            channel.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    // El enlace que ABRÓ la app (intent inicial).
+                    "getInitial" -> result.success(intent?.dataString)
+                    else -> result.notImplemented()
+                }
+            }
+        }
+    }
+
+    /// Sala viva: llega un enlace mientras la app ya corre (singleTop).
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.dataString?.let { uri ->
+            deeplinkChannel?.invokeMethod("onLink", uri)
+        }
     }
 
     /// Pide al launcher fijar el widget en la pantalla de inicio

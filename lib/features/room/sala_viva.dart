@@ -15,6 +15,7 @@ import '../../core/theme.dart';
 import '../../room/room_controller.dart';
 import '../../room/room_transport.dart';
 import '../../widgets/ui.dart';
+import 'pin_emoji.dart';
 
 const String kSalaVivaRoute = '/sala-viva';
 
@@ -205,6 +206,8 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
           if (room.canAdmin)
             _AdminBar(onRename: _renameDialog, onClose: _confirmLeave),
           _CodigoQrCard(room: room),
+          if (room.isHost && room.hasPin)
+            PinShowCard(pin: room.pinEmoji, compact: true),
           _MiembrosCard(room: room, members: members),
         ],
       ),
@@ -361,7 +364,11 @@ class _CodigoQrCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: QrImageView(
-                  data: 'valorave-sala:${room.code}',
+                  // Deep link (v19.8): QR escaneado con la cámara del teléfono
+                  // → abre ValoraVE → hoja de unirse (modo · nombre · PIN).
+                  data:
+                      'valorave://sala?c=${room.code}&m=${room.mode.id}'
+                      '&p=${room.hasPin ? 1 : 0}',
                   version: QrVersions.auto,
                   size: 170,
                   backgroundColor: Colors.transparent,
@@ -369,8 +376,9 @@ class _CodigoQrCard extends StatelessWidget {
               ),
             const SizedBox(height: 8),
             Text(
-              'Comparte el código o el QR — quien lo tenga entra con la '
-              'tecnología ${room.modeLabel}.',
+              'Comparte el código o el QR — el QR abre la app de quien lo '
+              'escanee${room.hasPin ? ' y pide el PIN de emojis' : ''}. La '
+              'tecnología es ${room.modeLabel}.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
             ),

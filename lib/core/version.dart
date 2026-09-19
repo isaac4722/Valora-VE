@@ -7,4 +7,4 @@
 library;
 
 /// Versión visible (ronda v19.7 · versión web cliente: PWA con marca).
-const String kAppVersionVisible = '19.7';
+const String kAppVersionVisible = '19.8';

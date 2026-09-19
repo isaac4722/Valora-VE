@@ -20,6 +20,7 @@ import 'core/theme.dart';
 import 'data/store.dart';
 import 'services/biometric.dart';
 import 'services/connectivity.dart';
+import 'services/deep_link.dart';
 import 'services/notifications.dart';
 import 'services/quick_actions.dart';
 import 'services/widget_service.dart';
@@ -118,6 +119,9 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
       if (!mounted) return;
       QuickActionsService.bind(_router);
       QuickActionsService.init();
+      // Deep link de la Sala (v19.8): QR externo → lobby de unirse.
+      DeepLinkService.bind(_router);
+      DeepLinkService.init();
     });
     // Primer refresco tras el primer frame (no bloquea LCP).
     WidgetsBinding.instance.addPostFrameCallback((_) {

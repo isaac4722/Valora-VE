@@ -23,7 +23,7 @@ import 'product_sheet.dart';
 import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/ui.dart';
-import '../../services/sharing.dart';
+import '../../widgets/export_sheet.dart';
 
 const int kPageSize = 20;
 
@@ -426,7 +426,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     );
   }
 
-  void _exportCsv(BuildContext context, AppStore store) {
+  Future<void> _exportCsv(BuildContext context, AppStore store) async {
     final rows = <List<String>>[
       [
         'Producto',
@@ -457,14 +457,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
         ]);
       }
     }
-    final text = toCSV(rows);
-    exportTextFile(context, 'productos-valorave.csv', text);
+    await showExportSheet(
+      context,
+      ExportSpec(
+        title: 'Productos',
+        subtitle: 'El catálogo completo con sus precios',
+        formats: [
+          csvFormat(
+            hint: 'Una fila por registro de precio',
+            fileName: 'productos-valorave.csv',
+            rows: () => rows,
+          ),
+        ],
+      ),
+    );
   }
-}
-
-/// Exporta texto a file_picker/share (CSV/JSON).
-void exportTextFile(BuildContext context, String name, String text) {
-  showShareFile(context, name, text);
 }
 
 class _ProductCard extends StatelessWidget {

@@ -17,9 +17,7 @@ import 'package:valorave/widgets/share_card.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('la tarjeta del conversor genera un PNG válido', (
-    tester,
-  ) async {
+  testWidgets('la tarjeta del conversor genera un PNG válido', (tester) async {
     await tester.pumpWidget(
       MaterialApp(theme: AppTheme.light(), home: const Scaffold()),
     );
@@ -43,8 +41,11 @@ void main() {
     for (var i = 0; i < 6 && !done; i++) {
       await tester.pump(const Duration(milliseconds: 16));
     }
-    expect(find.byType(ConversionShareCard), findsOneWidget,
-        reason: 'la tarjeta se montó offstage');
+    expect(
+      find.byType(ConversionShareCard),
+      findsOneWidget,
+      reason: 'la tarjeta se montó offstage',
+    );
     // El toImage/toByteData del engine necesitan el event loop real.
     await tester.runAsync(() async {
       var guard = 0;

@@ -163,10 +163,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             if (productos.length > 8)
               ListTile(
                 dense: true,
-                leading: Icon(
-                  Icons.more_horiz,
-                  color: scheme.onSurfaceVariant,
-                ),
+                leading: Icon(Icons.more_horiz, color: scheme.onSurfaceVariant),
                 title: Text(
                   'y ${productos.length - 8} productos más',
                   style: TextStyle(
@@ -202,10 +199,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             if (compras.length > 8)
               ListTile(
                 dense: true,
-                leading: Icon(
-                  Icons.more_horiz,
-                  color: scheme.onSurfaceVariant,
-                ),
+                leading: Icon(Icons.more_horiz, color: scheme.onSurfaceVariant),
                 title: Text(
                   'y ${compras.length - 8} compras más',
                   style: TextStyle(
@@ -240,10 +234,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             if (notifs.length > 8)
               ListTile(
                 dense: true,
-                leading: Icon(
-                  Icons.more_horiz,
-                  color: scheme.onSurfaceVariant,
-                ),
+                leading: Icon(Icons.more_horiz, color: scheme.onSurfaceVariant),
                 title: Text(
                   'y ${notifs.length - 8} avisos más',
                   style: TextStyle(

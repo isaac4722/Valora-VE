@@ -20,7 +20,7 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
-import '../../services/sharing.dart';
+import '../../widgets/export_sheet.dart';
 import '../../widgets/ui.dart';
 import '../statement/statement_screen.dart';
 
@@ -232,8 +232,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  void _exportPurchases(BuildContext context, List<Purchase> list) {
-    final rows = <List<String>>[
+  Future<void> _exportPurchases(
+    BuildContext context,
+    List<Purchase> list,
+  ) async {
+    List<List<String>> rows() => [
       [
         'Fecha',
         'Tienda',
@@ -244,24 +247,36 @@ class _HistoryScreenState extends State<HistoryScreen> {
         'Pagado',
         'Items',
       ],
+      for (final p in list)
+        [
+          fmtDate(p.date),
+          p.store ?? '',
+          p.totalUSD.toStringAsFixed(2),
+          p.totalBS.toStringAsFixed(2),
+          p.rate.toStringAsFixed(4),
+          p.rateSourceId ?? '',
+          p.paidTotal?.toStringAsFixed(2) ?? '',
+          '${p.items.length}',
+        ],
     ];
-    for (final p in list) {
-      rows.add([
-        fmtDate(p.date),
-        p.store ?? '',
-        p.totalUSD.toStringAsFixed(2),
-        p.totalBS.toStringAsFixed(2),
-        p.rate.toStringAsFixed(4),
-        p.rateSourceId ?? '',
-        p.paidTotal?.toStringAsFixed(2) ?? '',
-        '${p.items.length}',
-      ]);
-    }
-    showShareFile(context, 'compras-valorave.csv', toCSV(rows));
+    await showExportSheet(
+      context,
+      ExportSpec(
+        title: 'Compras',
+        subtitle: '${list.length} compras guardadas',
+        formats: [
+          csvFormat(
+            hint: 'Una fila por compra: tienda, montos y tasa',
+            fileName: 'compras-valorave.csv',
+            rows: rows,
+          ),
+        ],
+      ),
+    );
   }
 
-  void _exportMovements(BuildContext context, AppStore store) {
-    final rows = <List<String>>[
+  Future<void> _exportMovements(BuildContext context, AppStore store) async {
+    List<List<String>> rows() => [
       [
         'Fecha',
         'Producto',
@@ -271,23 +286,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
         'Moneda',
         'Tienda',
       ],
+      for (final p in store.purchases)
+        for (final i in p.items)
+          [
+            fmtDate(p.date),
+            i.name,
+            '${i.quantity}',
+            i.priceUSD.toStringAsFixed(4),
+            i.originalPrice.toStringAsFixed(2),
+            i.currency,
+            // Multitienda (v17.2): el ítem manda; si no tiene tienda propia,
+            // cae a la de la compra — igual que la ficha en pantalla.
+            i.store ?? p.store ?? '',
+          ],
     ];
-    for (final p in store.purchases) {
-      for (final i in p.items) {
-        rows.add([
-          fmtDate(p.date),
-          i.name,
-          '${i.quantity}',
-          i.priceUSD.toStringAsFixed(4),
-          i.originalPrice.toStringAsFixed(2),
-          i.currency,
-          // Multitienda (v17.2): el ítem manda; si no tiene tienda propia,
-          // cae a la de la compra — igual que la ficha en pantalla.
-          i.store ?? p.store ?? '',
-        ]);
-      }
-    }
-    showShareFile(context, 'movimientos-precios-valorave.csv', toCSV(rows));
+    await showExportSheet(
+      context,
+      ExportSpec(
+        title: 'Movimientos de precios',
+        subtitle: 'Cada ítem de cada compra con su moneda original',
+        formats: [
+          csvFormat(
+            hint: 'Una fila por ítem: precio, moneda y tienda',
+            fileName: 'movimientos-precios-valorave.csv',
+            rows: rows,
+          ),
+        ],
+      ),
+    );
   }
 }
 

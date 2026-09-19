@@ -1,4 +1,4 @@
-/// ─── RoomController (v19.0 · protocolo hello→welcome, sin PIN) ──────────────
+/// ─── RoomController (v19.8 · protocolo hello→welcome + PIN de emojis) ───────
 /// Estado + gobierno de la sala sobre cualquier [RoomLink] P2P. Reescrito
 /// desde 0 junto al seam de enlaces: el anfitrión ES la autoridad (valida,
 /// asigna roles, retransmite) y el invitado solo está «en sala» cuando
@@ -6,6 +6,8 @@
 /// anfitrión (el viejo devolvía null apenas emitía join_room: quedaban
 /// salas fantasma). Guard baseline+suppress + diff del store → item_* con
 /// outbox offline.
+/// v19.8: la sala puede pedir un PIN de 4 emojis al unirse (candado de
+/// puerta, orden del dueño): viaja en el hello y lo valida el anfitrión.
 library;
 
 import 'dart:async';
@@ -37,6 +39,13 @@ class RoomController extends ChangeNotifier {
   String? _lastError;
   String _myPeerId = '';
   String _myRole = 'editor';
+
+  /// PIN de 4 emojis que el anfitrión EXIGE a quien se une ('' = sin PIN).
+  String _pinEmoji = '';
+
+  /// Invitación pendiente por deep link (QR escaneado con la cámara del
+  /// teléfono): la pantalla del lobby la toma al abrirse.
+  SalaInvite? pendingInvite;
 
   /// Invitado: handshake hello→welcome en curso (null cuando no aplica).
   Completer<String?>? _welcome;
@@ -186,6 +195,25 @@ class RoomController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── PIN de emojis (v19.8) ────────────────────────────────────────────────
+
+  /// PIN actual de la sala (solo tiene sentido en el anfitrión).
+  String get pinEmoji => _pinEmoji;
+  bool get hasPin => _pinEmoji.isNotEmpty;
+
+  /// Fija (o limpia) el PIN de la sala en el lobby de creación.
+  void setPin(String pin) {
+    _pinEmoji = pin;
+    notifyListeners();
+  }
+
+  /// Toma la invitación pendiente (deep link), si existe.
+  SalaInvite? consumePendingInvite() {
+    final inv = pendingInvite;
+    pendingInvite = null;
+    return inv;
+  }
+
   // ── Crear / Unirse (deterministas) ────────────────────────────────────────
 
   /// Crea la sala: el enlace arranca como ANFITRIÓN (rol explícito — nunca
@@ -195,6 +223,7 @@ class RoomController extends ChangeNotifier {
     String roomName = '',
     bool isPublic = true,
     RoomMode? mode,
+    String pin = '',
   }) async {
     if (_status == RoomStatus.connecting) return 'Ya hay una conexión en curso';
     if (name.trim().isEmpty) return 'Escribe tu nombre';
@@ -205,6 +234,7 @@ class RoomController extends ChangeNotifier {
     _isHost = true;
     _roomName = roomName.trim();
     _isPublic = isPublic;
+    _pinEmoji = pin;
     _code = RoomProtocol.newCode();
     _myPeerId = 'host';
     _myRole = 'host';
@@ -261,6 +291,7 @@ class RoomController extends ChangeNotifier {
     required String code,
     RoomMode? mode,
     RoomAd? ad,
+    String pin = '',
   }) async {
     if (_status == RoomStatus.connecting) return 'Ya hay una conexión en curso';
     if (name.trim().isEmpty) return 'Escribe tu nombre';
@@ -274,6 +305,7 @@ class RoomController extends ChangeNotifier {
     _code = ad?.code ?? c;
     _roomName = ad?.roomName ?? '';
     _isPublic = true;
+    _pinEmoji = '';
     _myPeerId = '';
     _myRole = 'editor';
     _lastError = null;
@@ -304,7 +336,7 @@ class RoomController extends ChangeNotifier {
       }
       // Handshake: hello → welcome. Sin respuesta del anfitrión no hay sala.
       _welcome = Completer<String?>();
-      await link.send('hello', {'code': _code, 'name': _myName});
+      await link.send('hello', {'code': _code, 'name': _myName, 'pin': pin});
       final err = await _welcome!.future.timeout(
         const Duration(seconds: 10),
         onTimeout: () => 'El anfitrión no respondió (¿código correcto?)',
@@ -502,12 +534,19 @@ class RoomController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Anfitrión: valida código y cupo, asigna rol y entrega el estado COMPLETO.
+  /// Anfitrión: valida código, PIN, cupo y asigna rol y entrega el estado
+  /// COMPLETO.
   Future<void> _hostOnHello(String fromId, Map<String, dynamic> p) async {
     if (fromId.isEmpty) return;
     final code = '${p['code'] ?? ''}'.trim().toUpperCase();
     if (code != _code) {
       await _link?.sendTo(fromId, 'room_error', {'reason': 'not_found'});
+      return;
+    }
+    // PIN de emojis (v19.8): el candado de la puerta — sin coincidencia
+    // exacta no entra, aunque tenga el código.
+    if (_pinEmoji.isNotEmpty && '${p['pin'] ?? ''}' != _pinEmoji) {
+      await _link?.sendTo(fromId, 'room_error', {'reason': 'bad_pin'});
       return;
     }
     if (_members.length >= RoomProtocol.maxMembers) {
@@ -939,6 +978,7 @@ class RoomController extends ChangeNotifier {
     _members.clear();
     _myPeerId = '';
     _myRole = 'editor';
+    _pinEmoji = '';
     _lastSeenMs.clear();
     _typingUntilMs.clear();
     _snapshot = const [];

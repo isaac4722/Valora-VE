@@ -148,11 +148,12 @@ Future<void> sharePng(Uint8List bytes, String name) async {
 }
 
 /// Comparte un archivo de texto (CSV/JSON) con nombre sugerido.
-Future<void> showShareFile(
-  BuildContext context,
-  String name,
-  String text,
-) async {
+Future<void> showShareFile(BuildContext context, String name, String text) =>
+    shareFile(name, text);
+
+/// Comparte un archivo de texto SIN contexto (v19.8: el componente unificado
+/// de exportación ejecuta fuera del árbol de widgets).
+Future<void> shareFile(String name, String text) async {
   await SharePlus.instance.share(
     ShareParams(
       text: 'ValoraVE · $name',
@@ -164,6 +165,15 @@ Future<void> showShareFile(
         ),
       ],
     ),
+  );
+}
+
+/// Guarda texto plano (CSV/JSON) en la carpeta de la app y devuelve la ruta.
+/// Gemelo de [downloadBytes] para fuentes que solo producen texto.
+Future<String?> downloadText(String text, {required String fileName}) {
+  return downloadBytes(
+    Uint8List.fromList(utf8.encode('\ufeff$text')),
+    fileName: fileName,
   );
 }
 

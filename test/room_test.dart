@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/core/theme.dart';
+import 'package:valorave/features/room/pin_emoji.dart';
 import 'package:valorave/features/room/room_screen.dart';
 import 'package:valorave/room/room_controller.dart';
 import 'package:valorave/room/room_transport.dart';
@@ -393,11 +394,11 @@ void main() {
     /// Aserciones de la BÚSQUEDA scopeadas a la tarjeta CREAR SALA: la
     /// misma sala puede vivir también en «Salas cercanas» (otra puerta).
     Finder enBusqueda(Finder f) => find.descendant(
-          of: find
-              .ancestor(of: find.text('CREAR SALA'), matching: find.byType(Card))
-              .first,
-          matching: f,
-        );
+      of: find
+          .ancestor(of: find.text('CREAR SALA'), matching: find.byType(Card))
+          .first,
+      matching: f,
+    );
 
     testWidgets('filtra por nombre, anfitrión y código — sin tildes', (
       tester,
@@ -413,7 +414,11 @@ void main() {
           child: MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
         ),
       );
-      await tester.scrollUntilVisible(searchField, 300, scrollable: lobbyScroll);
+      await tester.scrollUntilVisible(
+        searchField,
+        300,
+        scrollable: lobbyScroll,
+      );
       expect(searchField, findsOneWidget);
 
       // Escribir primero (arranca el «escaneo» no-op y limpia la lista,
@@ -473,7 +478,11 @@ void main() {
           child: MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
         ),
       );
-      await tester.scrollUntilVisible(searchField, 300, scrollable: lobbyScroll);
+      await tester.scrollUntilVisible(
+        searchField,
+        300,
+        scrollable: lobbyScroll,
+      );
       room.debugInjectAd({
         'via': 'nearby',
         'code': 'ABC123',
@@ -485,8 +494,10 @@ void main() {
       // Con el campo vacío no aparece ni la sala ni el mensaje de vacío
       // en la BÚSQUEDA: la búsqueda solo existe cuando se escribe.
       expect(enBusqueda(find.text('Mercado del barrio')), findsNothing);
-      expect(enBusqueda(find.textContaining('Sin salas con ese nombre')),
-          findsNothing);
+      expect(
+        enBusqueda(find.textContaining('Sin salas con ese nombre')),
+        findsNothing,
+      );
       // La sala SÍ sigue en Salas cercanas (el escaneo es otra puerta).
       await tester.scrollUntilVisible(
         find.text('SALAS CERCANAS'),
@@ -495,6 +506,149 @@ void main() {
       );
       expect(find.text('SALAS CERCANAS'), findsOneWidget);
       expect(find.text('Mercado del barrio'), findsAtLeastNWidgets(1));
+    });
+  });
+
+  /// ─── v19.8 · PIN de emojis + QR deep link ────────────────────────────────
+  group('Sala · PIN de emojis (v19.8)', () {
+    test('generatePinEmoji: 4 emojis de la paleta, sin repetir', () {
+      var seed = 7;
+      final pin = generatePinEmoji((max) {
+        seed = (seed * 1103515245 + 12345) % 2147483648;
+        return seed % max;
+      });
+      expect(pin.characters.length, 4);
+      expect(isValidPin(pin), isTrue);
+      // Sin repetir: el generador saca de la polla sin devolver.
+      expect(pin.characters.toSet().length, 4);
+    });
+
+    test('isValidPin: 4 de la paleta y exactamente 4', () {
+      expect(isValidPin('🍎🍌🌵🐳'), isTrue);
+      expect(isValidPin('🍎🍎🌵🐳'), isTrue); // repetidos válidos si los marca
+      expect(isValidPin('🍎🌵'), isFalse); // corto
+      expect(isValidPin('🍎🍌🌵🐳⚡'), isFalse); // largo
+      expect(isValidPin('abc🌵🐳⚡'), isFalse); // fuera de la paleta
+      expect(isValidPin(''), isFalse);
+    });
+
+    test(
+      'anfitrión con PIN: hello sin PIN → bad_pin; con PIN → welcome',
+      () async {
+        final link = FakeLink('cerca');
+        final c = RoomController(_store(), linkFactory: (_) => link);
+        await c.create(name: 'Isa', pin: '🍎🍌🌵🐳');
+        expect(c.hasPin, isTrue);
+        expect(c.pinEmoji, '🍎🍌🌵🐳');
+
+        // Sin PIN → rechazado con bad_pin y mensaje humano.
+        link.inject('hello', {'code': c.code, 'name': 'Ana'}, 'g1');
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        final rejected = link.sent.firstWhere(
+          (m) => m.type == 'room_error' && m.to == 'g1',
+        );
+        expect(rejected.payload['reason'], 'bad_pin');
+        expect(c.visibleMembers.length, 1); // sigue solo el anfitrión
+
+        // PIN incorrecto → también bad_pin.
+        link.inject('hello', {
+          'code': c.code,
+          'name': 'Ana',
+          'pin': '🍎🍎🍎🍎',
+        }, 'g2');
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        expect(
+          link.sent.any(
+            (m) =>
+                m.type == 'room_error' &&
+                m.to == 'g2' &&
+                m.payload['reason'] == 'bad_pin',
+          ),
+          isTrue,
+        );
+
+        // PIN correcto → welcome.
+        link.inject('hello', {
+          'code': c.code,
+          'name': 'Ana',
+          'pin': '🍎🍌🌵🐳',
+        }, 'g3');
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        expect(
+          link.sent.any((m) => m.type == 'welcome' && m.to == 'g3'),
+          isTrue,
+        );
+        expect(c.visibleMembers.length, 2);
+        await c.leave();
+        // leave limpia el PIN (la próxima sala empieza abierta).
+        expect(c.hasPin, isFalse);
+      },
+    );
+
+    test('invitado: el PIN viaja en el hello', () async {
+      final link = FakeLink('cerca');
+      final c = RoomController(_store(), linkFactory: (_) => link);
+      final future = c.join(name: 'Ana', code: 'ABC234', pin: '⭐🌙🚀🎧');
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      final hello = link.sent.firstWhere((m) => m.type == 'hello');
+      expect(hello.payload['pin'], '⭐🌙🚀🎧');
+      link.inject('room_error', {'reason': 'bad_pin'});
+      final err = await future;
+      expect(err, contains('PIN de emojis incorrecto'));
+      expect(c.connected, isFalse);
+    });
+
+    test('anfitrión SIN PIN: el hello sin pin entra normal', () async {
+      final link = FakeLink('cerca');
+      final c = RoomController(_store(), linkFactory: (_) => link);
+      await c.create(name: 'Isa'); // sin pin
+      expect(c.hasPin, isFalse);
+      link.inject('hello', {'code': c.code, 'name': 'Ana'}, 'g1');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(link.sent.any((m) => m.type == 'welcome' && m.to == 'g1'), isTrue);
+      await c.leave();
+    });
+  });
+
+  group('SalaInvite · QR deep link (v19.8)', () {
+    test('parsea el formato actual con modo y PIN', () {
+      final inv = SalaInvite.tryParse('valorave://sala?c=ABC123&m=wifi&p=1')!;
+      expect(inv, isNotNull);
+      expect(inv.code, 'ABC123');
+      expect(inv.mode, RoomMode.wifi);
+      expect(inv.hasPin, isTrue);
+    });
+
+    test('parsea sin PIN y sin modo', () {
+      final inv = SalaInvite.tryParse('valorave://sala?c=XYZ987')!;
+      expect(inv.code, 'XYZ987');
+      expect(inv.mode, isNull);
+      expect(inv.hasPin, isFalse);
+    });
+
+    test('parsea el QR histórico (valorave-sala:CODE)', () {
+      final inv = SalaInvite.tryParse('valorave-sala:ABC123')!;
+      expect(inv.code, 'ABC123');
+      expect(inv.hasPin, isFalse);
+    });
+
+    test('parsea un código pelado (teclado manual)', () {
+      final inv = SalaInvite.tryParse('abc123')!;
+      expect(inv.code, 'ABC123');
+    });
+
+    test('basura → null (nunca inventa salas)', () {
+      expect(SalaInvite.tryParse(''), isNull);
+      expect(SalaInvite.tryParse('http://otra.app/sala?c=ABC123'), isNull);
+      expect(SalaInvite.tryParse('valorave://sala?c=AB'), isNull);
+      expect(SalaInvite.tryParse('valorave://otro?c=ABC123'), isNull);
+    });
+
+    test('pendingInvite: el lobby lo consume una sola vez', () {
+      final c = RoomController(_store());
+      c.pendingInvite = SalaInvite(code: 'ABC123', hasPin: true);
+      expect(c.consumePendingInvite()?.code, 'ABC123');
+      expect(c.consumePendingInvite(), isNull);
     });
   });
 }

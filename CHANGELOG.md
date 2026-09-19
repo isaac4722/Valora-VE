@@ -1,6 +1,49 @@
 # Changelog
 
 
+## 1.9.8-beta+26 · v19.8 — Análisis rediseñado (web-first), Sala con PIN de emojis y QR con deep link
+
+- **Análisis, rediseñado como un dashboard web** (orden del dueño):
+  barra de anclas segmentada (píldora activa, una sola unidad visual
+  con los chips de rango), fila de KPIs al tope de cada ancla (brecha
+  + tasas del día · inflación personal/productos/devaluación · costo
+  de canasta · total gastado), tarjetas-panel con cabecera consistente
+  (título + acción a la derecha), panel del día en 3 columnas (BCV ·
+  Paralelo · Brecha) en vez de la pila densa de renglones, heatmap que
+  solo dibuja meses con datos y estados vacíos compactos (pista con
+  ícono, no tarjeta gigante de error). Misma matemática, otra piel.
+- **Sala: el flujo de entrada en su sitio** (orden del dueño): el
+  lobby arranca por la CONFIGURACIÓN de conexión (cómo se conectan) y
+  la tarjeta de nombre desaparece de arriba — el nombre lo pregunta
+  la hoja de Unirme en el momento de entrar: modo · nombre · PIN.
+  Crear integra el nombre del anfitrión, el switch de PIN y la
+  tarjeta del PIN generado.
+- **PIN de emojis (tipo 2FA de Google)** (orden del dueño): la sala
+  puede exigir 4 emojis para unirse — el candado de la puerta contra
+  quien avista la sala cerca. El anfitrión los genera/regenera, se
+  muestran en la Sala Viva y viajan cifrados... no: viajan en el hello
+  y los valida el anfitrión (bad_pin humano). El invitado los marca
+  en un teclado de 12 fichas.
+- **QR con deep link real** (orden del dueño): el QR de la sala ahora
+  es `valorave://sala?c=CODE&m=MODE&p=0|1` — escaneado con la cámara
+  del teléfono (cualquier escáner externo) Android ofrece abrir
+  ValoraVE (BROWSABLE + DEFAULT en el manifest, canal
+  valorave/deeplink con initial + onNewIntent) y la app cae directo
+  a la hoja de unirse prellenada: elige conexión, nombre, PIN si
+  procede y conecta si la sala sigue activa. El escáner interno
+  además entra por QR y respeta el formato histórico.
+- **Exportación UNIFICADA** (orden del dueño): un solo componente
+  (showExportSheet + ExportSpec) para TODA la app — formato (CSV ·
+  PNG · PDF · texto/JSON) y luego modo (compartir o guardar).
+  Migrados: conversor, constancias, historial, productos, respaldo y
+  las dos exportaciones de Análisis. share_menu.dart eliminado.
+- **Tests**: 196 (185 + 11 nuevos: PIN genera/valida, anfitrión
+  rechaza bad_pin y acepta el correcto, el PIN viaja en el hello,
+  salas sin PIN intactas, parser del deep link con formato actual,
+  histórico, código manual, host ajeno y código corto → null,
+  pendingInvite se consume una vez).
+
+
 ## 1.9.7-beta+25 · v19.7 — versión web (modo cliente) de ValoraVE
 
 - **Web, de verdad**: `flutter build web` compila la app completa

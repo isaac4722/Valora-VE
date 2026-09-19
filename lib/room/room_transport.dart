@@ -382,6 +382,8 @@ class RoomProtocol {
   /// Errores humanos.
   static String errorMessage(String reason) => switch (reason) {
     'not_found' => 'No existe esa sala',
+    'bad_pin' =>
+      'PIN de emojis incorrecto: pídele al anfitrión los 4 emojis en orden',
     'room_full' => 'La sala está llena (10 personas)',
     'too_large' => 'El mensaje pesa más de 16 KB',
     'bad_item' => 'Ítem inválido',
@@ -467,6 +469,60 @@ class RoomAd {
   String get label => roomName.isNotEmpty
       ? roomName
       : (hostName.isNotEmpty ? hostName : 'Sala $code');
+}
+
+/// Invitación a una sala (v19.8): el QR de la sala es un deep link
+/// `valorave://sala?c=CODE&m=MODE&p=0|1` — escaneado con CUALQUIER cámara
+/// abre la app con esta invitación lista. También alimenta el escáner
+/// interno y la hoja de unirse.
+class SalaInvite {
+  const SalaInvite({
+    required this.code,
+    this.mode,
+    this.hasPin = false,
+    this.roomName = '',
+    this.hostName = '',
+  });
+
+  final String code;
+  final RoomMode? mode;
+  final bool hasPin;
+  final String roomName;
+  final String hostName;
+
+  /// Parsea el payload de un QR o deep link de sala. Acepta:
+  /// · `valorave://sala?c=ABC123&m=wifi&p=1` (formato actual, deep link)
+  /// · `valorave-sala:ABC123` (formato histórico de los QR viejos)
+  static SalaInvite? tryParse(String raw) {
+    final s = raw.trim();
+    if (s.isEmpty) return null;
+    if (s.startsWith('valorave://')) {
+      final uri = Uri.tryParse(s);
+      // Solo enlaces de SALA (valorave://sala?…): cualquier otro host
+      // de la app no es una invitación.
+      if (uri == null || uri.host != 'sala') return null;
+      final code = (uri.queryParameters['c'] ?? '').toUpperCase();
+      if (code.length < 4) return null;
+      final m = uri.queryParameters['m'] ?? '';
+      final mode = RoomMode.values.where((v) => v.id == m).firstOrNull;
+      return SalaInvite(
+        code: code,
+        mode: mode,
+        hasPin: uri.queryParameters['p'] == '1',
+      );
+    }
+    final legacy = s.startsWith('valorave-sala:')
+        ? s.substring('valorave-sala:'.length).toUpperCase()
+        : '';
+    if (RegExp(r'^[A-Z0-9]{4,8}$').hasMatch(legacy)) {
+      return SalaInvite(code: legacy);
+    }
+    // Código pelado escrito a mano (ABC123).
+    if (RegExp(r'^[A-Z0-9]{4,8}$').hasMatch(s.toUpperCase())) {
+      return SalaInvite(code: s.toUpperCase());
+    }
+    return null;
+  }
 }
 
 /// ─── (d) Servidor — socket.io del propio usuario (v19 · DEVUELTO) ───────────

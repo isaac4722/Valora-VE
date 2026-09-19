@@ -1,8 +1,10 @@
-/// ─── Sala · lobby de conexión (v19.0 · reescrita desde 0) ───────────────────
-/// TRES modos P2P sin internet (Cerca · WiFi o Hotspot · Bluetooth), cada
-/// uno con su tecnología. Crear = ser anfitrión; Unirse = código de 6 letras
-/// o una sala avistada en el escaneo. La sala EN VIVO se vive en su propia
-/// pantalla (/sala-viva); aquí solo se configura y entra.
+/// ─── Sala · lobby de conexión (v19.8 · orden del dueño) ─────────────────────
+/// TRES modos P2P sin internet (Cerca · WiFi o Hotspot · Bluetooth) + el
+/// servidor propio, cada uno con su tecnología. La pantalla arranca por la
+/// CONFIGURACIÓN de conexión (cómo se conectan) y de ahí a las acciones:
+/// Unirme (hoja: modo · nombre · PIN) · Crear (anfitrión, con PIN de emojis
+/// opcional) · Salas cercanas (escucha en vivo). El nombre ya NO vive arriba:
+/// lo pregunta la hoja de unirse al momento de entrar.
 library;
 
 import 'package:flutter/material.dart';
@@ -12,7 +14,11 @@ import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../room/room_controller.dart';
 import '../../room/room_transport.dart';
+import '../../services/deep_link.dart' show salaInviteRequest;
 import '../../widgets/ui.dart';
+import '../scanner/scanner_screen.dart';
+import 'join_sheet.dart';
+import 'pin_emoji.dart';
 
 class RoomScreen extends StatefulWidget {
   const RoomScreen({super.key});
@@ -22,25 +28,33 @@ class RoomScreen extends StatefulWidget {
 }
 
 class _RoomScreenState extends State<RoomScreen> {
-  late final TextEditingController _nameCtrl;
   late final TextEditingController _roomNameCtrl;
-  late final TextEditingController _codeCtrl;
+  late final TextEditingController _hostNameCtrl;
   String? _busyError;
+  bool _creating = false;
 
   @override
   void initState() {
     super.initState();
     final room = context.read<RoomController>();
-    _nameCtrl = TextEditingController(text: room.myName);
     _roomNameCtrl = TextEditingController(text: room.roomName);
-    _codeCtrl = TextEditingController();
+    _hostNameCtrl = TextEditingController(text: room.myName);
+    // Deep link (QR externo escaneado con la cámara): si hay invitación
+    // pendiente, abre la hoja de unirse prellenada.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final inv = salaInviteRequest.value ?? room.consumePendingInvite();
+      if (inv != null) {
+        salaInviteRequest.value = null;
+        showJoinSheet(context, invite: inv);
+      }
+    });
   }
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
     _roomNameCtrl.dispose();
-    _codeCtrl.dispose();
+    _hostNameCtrl.dispose();
     super.dispose();
   }
 
@@ -67,7 +81,7 @@ class _RoomScreenState extends State<RoomScreen> {
   Widget build(BuildContext context) {
     final room = context.watch<RoomController>();
     final scheme = Theme.of(context).colorScheme;
-    final busy = room.status == RoomStatus.connecting;
+    final busy = room.status == RoomStatus.connecting || _creating;
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
@@ -90,7 +104,7 @@ class _RoomScreenState extends State<RoomScreen> {
             _ErrorBanner(msg: _busyError ?? room.lastError!),
             const SizedBox(height: 10),
           ],
-          if (busy) ...[
+          if (busy && !_creating) ...[
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(14),
@@ -121,27 +135,30 @@ class _RoomScreenState extends State<RoomScreen> {
             ),
             const SizedBox(height: 10),
           ],
-          _NameCard(ctrl: _nameCtrl),
+          // 1º CÓMO SE CONECTAN (la configuración primero, orden del dueño).
           _ModePicker(room: room),
+          // 2º El servidor propio, solo en su modo.
           if (room.mode == RoomMode.servidor) ...[
             const SizedBox(height: 10),
             _ServerCard(room: room),
           ],
+          // 3º UNIRSE: una sola puerta — la hoja pregunta el resto.
+          const SizedBox(height: 10),
+          _JoinEntryCard(room: room, busy: busy),
+          // 4º CREAR: anfitrión, con PIN de emojis opcional.
+          const SizedBox(height: 10),
           _CreateCard(
             room: room,
-            nameCtrl: _nameCtrl,
             roomNameCtrl: _roomNameCtrl,
+            hostNameCtrl: _hostNameCtrl,
             busy: busy,
+            creating: _creating,
             onRun: _run,
+            onCreating: (v) => setState(() => _creating = v),
           ),
-          _JoinCard(
-            room: room,
-            nameCtrl: _nameCtrl,
-            codeCtrl: _codeCtrl,
-            busy: busy,
-            onRun: _run,
-          ),
-          _ScanCard(room: room, nameCtrl: _nameCtrl, busy: busy, onRun: _run),
+          // 5º SALAS CERCANAS: escucha en vivo.
+          const SizedBox(height: 10),
+          _ScanCard(room: room, busy: busy),
         ],
       ),
     );
@@ -227,14 +244,28 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-class _NameCard extends StatelessWidget {
-  const _NameCard({required this.ctrl});
+/// Puerta única de unirse (v19.8): la hoja hace el flujo completo (modo ·
+/// nombre · PIN · conectar). Aquí solo el atajo: botón grande + escanear.
+class _JoinEntryCard extends StatelessWidget {
+  const _JoinEntryCard({required this.room, required this.busy});
 
-  final TextEditingController ctrl;
+  final RoomController room;
+  final bool busy;
+
+  Future<void> _scanQr(BuildContext context) async {
+    final raw = await ScannerScreen.scan(context);
+    if (raw == null || raw == '__manual__' || !context.mounted) return;
+    final invite = SalaInvite.tryParse(raw);
+    if (!context.mounted) return;
+    if (invite == null) {
+      showToast(context, 'Ese QR no es de una sala', kind: ToastKind.warn);
+      return;
+    }
+    await showJoinSheet(context, invite: invite);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final room = context.read<RoomController>();
     final scheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
@@ -243,21 +274,32 @@ class _NameCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'TU NOMBRE',
+              'UNIRSE A UNA SALA',
               style: VeText.labelCaps(10.5, color: scheme.primary),
             ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: ctrl,
-              maxLength: 24,
-              onChanged: room.setMyName,
-              decoration: const InputDecoration(
-                hintText: '¿Cómo te ven en la sala?',
-                counterText: '',
-                prefixIcon: Icon(Icons.badge_outlined),
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
+            const SizedBox(height: 4),
+            Text(
+              'Tienes el código o un QR del anfitrión: te preguntamos cómo '
+              'conectarte, tu nombre y el PIN si la sala lo pide.',
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: busy ? null : () => showJoinSheet(context),
+                    icon: const Icon(Icons.login, size: 17),
+                    label: const Text('Unirme'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: busy ? null : () => _scanQr(context),
+                  icon: const Icon(Icons.qr_code_scanner, size: 17),
+                  label: const Text('Escanear QR'),
+                ),
+              ],
             ),
           ],
         ),
@@ -391,7 +433,7 @@ class _ModeTile extends StatelessWidget {
 typedef _RoomAction = Future<void> Function(Future<String?> Function() action);
 
 /// Fila de una sala avistada (escaneo o búsqueda): modo · nombre · código
-/// y anfitrión. Tap → entrar. Compartida por Salas cercanas y Buscar sala.
+/// y anfitrión. Tap → hoja de unirse prellenada (pregunta nombre y PIN).
 class _RoomAdTile extends StatelessWidget {
   const _RoomAdTile({
     required this.ad,
@@ -460,17 +502,21 @@ class _RoomAdTile extends StatelessWidget {
 class _CreateCard extends StatefulWidget {
   const _CreateCard({
     required this.room,
-    required this.nameCtrl,
     required this.roomNameCtrl,
+    required this.hostNameCtrl,
     required this.busy,
+    required this.creating,
     required this.onRun,
+    required this.onCreating,
   });
 
   final RoomController room;
-  final TextEditingController nameCtrl;
   final TextEditingController roomNameCtrl;
+  final TextEditingController hostNameCtrl;
   final bool busy;
+  final bool creating;
   final _RoomAction onRun;
+  final ValueChanged<bool> onCreating;
 
   @override
   State<_CreateCard> createState() => _CreateCardState();
@@ -512,10 +558,12 @@ class _CreateCardState extends State<_CreateCard> {
     final q = _norm(_searchCtrl.text.trim());
     if (q.isEmpty) return const <RoomAd>[];
     return widget.room.foundRooms
-        .where((ad) =>
-            _norm(ad.roomName).contains(q) ||
-            ad.code.toLowerCase().contains(q) ||
-            _norm(ad.hostName).contains(q))
+        .where(
+          (ad) =>
+              _norm(ad.roomName).contains(q) ||
+              ad.code.toLowerCase().contains(q) ||
+              _norm(ad.hostName).contains(q),
+        )
         .toList(growable: false);
   }
 
@@ -540,6 +588,20 @@ class _CreateCardState extends State<_CreateCard> {
               style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 10),
+            TextField(
+              controller: widget.hostNameCtrl,
+              maxLength: 24,
+              onChanged: room.setMyName,
+              decoration: const InputDecoration(
+                hintText: '¿Cómo te ven en la sala?',
+                labelText: 'Tu nombre (anfitrión)',
+                counterText: '',
+                prefixIcon: Icon(Icons.badge_outlined),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 8),
             TextField(
               controller: widget.roomNameCtrl,
               maxLength: 32,
@@ -567,6 +629,36 @@ class _CreateCardState extends State<_CreateCard> {
               value: room.isPublic,
               onChanged: room.setPublic,
             ),
+            // ── PIN de emojis (v19.8 · orden del dueño): el candado de la
+            // puerta — nadie se une por azar sin los 4 emojis.
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text(
+                'Pedir PIN de emojis',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                'Quien se une marca los 4 emojis que le muestres',
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              ),
+              value: room.hasPin,
+              onChanged: (v) => room.setPin(
+                v
+                    ? (room.pinEmoji.isNotEmpty
+                          ? room.pinEmoji
+                          : generatePinEmoji())
+                    : '',
+              ),
+            ),
+            if (room.hasPin)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: PinShowCard(
+                  pin: room.pinEmoji,
+                  onRegenerate: () => room.setPin(generatePinEmoji()),
+                ),
+              ),
             const SizedBox(height: 4),
             SizedBox(
               width: double.infinity,
@@ -575,9 +667,10 @@ class _CreateCardState extends State<_CreateCard> {
                     ? null
                     : () => widget.onRun(
                         () => room.create(
-                          name: widget.nameCtrl.text,
+                          name: widget.hostNameCtrl.text,
                           roomName: widget.roomNameCtrl.text,
                           isPublic: room.isPublic,
+                          pin: room.pinEmoji,
                         ),
                       ),
                 icon: const Icon(Icons.add_home_work, size: 17),
@@ -619,9 +712,9 @@ class _CreateCardState extends State<_CreateCard> {
                 Text(
                   room.scanning
                       ? 'Nada todavía. Las salas públicas van apareciendo '
-                          'mientras escucha.'
+                            'mientras escucha.'
                       : 'Sin salas con ese nombre ahora mismo. Puedes crearla '
-                          'con el botón de arriba.',
+                            'con el botón de arriba.',
                   style: TextStyle(
                     fontSize: 11.5,
                     height: 1.4,
@@ -635,12 +728,15 @@ class _CreateCardState extends State<_CreateCard> {
                     child: _RoomAdTile(
                       ad: ad,
                       busy: widget.busy,
-                      onTap: () => widget.onRun(
-                        () => room.join(
-                          name: widget.nameCtrl.text,
+                      onTap: () => showJoinSheet(
+                        context,
+                        invite: SalaInvite(
                           code: ad.code,
-                          ad: ad,
+                          mode: ad.mode,
+                          roomName: ad.roomName,
+                          hostName: ad.hostName,
                         ),
+                        ad: ad,
                       ),
                     ),
                   ),
@@ -653,89 +749,11 @@ class _CreateCardState extends State<_CreateCard> {
   }
 }
 
-class _JoinCard extends StatelessWidget {
-  const _JoinCard({
-    required this.room,
-    required this.nameCtrl,
-    required this.codeCtrl,
-    required this.busy,
-    required this.onRun,
-  });
-
-  final RoomController room;
-  final TextEditingController nameCtrl;
-  final TextEditingController codeCtrl;
-  final bool busy;
-  final _RoomAction onRun;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'UNIRSE CON CÓDIGO',
-              style: VeText.labelCaps(10.5, color: scheme.primary),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Pide el código de 6 letras al anfitrión.',
-              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: codeCtrl,
-                    maxLength: 6,
-                    textCapitalization: TextCapitalization.characters,
-                    onChanged: (v) => codeCtrl.text = v.toUpperCase(),
-                    decoration: const InputDecoration(
-                      hintText: 'ABC123',
-                      counterText: '',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                FilledButton.tonal(
-                  onPressed: busy
-                      ? null
-                      : () => onRun(
-                          () => room.join(
-                            name: nameCtrl.text,
-                            code: codeCtrl.text,
-                          ),
-                        ),
-                  child: const Text('Unirse'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _ScanCard extends StatefulWidget {
-  const _ScanCard({
-    required this.room,
-    required this.nameCtrl,
-    required this.busy,
-    required this.onRun,
-  });
+  const _ScanCard({required this.room, required this.busy});
 
   final RoomController room;
-  final TextEditingController nameCtrl;
   final bool busy;
-  final _RoomAction onRun;
 
   @override
   State<_ScanCard> createState() => _ScanCardState();
@@ -811,12 +829,15 @@ class _ScanCardState extends State<_ScanCard> {
                 child: _RoomAdTile(
                   ad: ad,
                   busy: widget.busy,
-                  onTap: () => widget.onRun(
-                    () => room.join(
-                      name: widget.nameCtrl.text,
+                  onTap: () => showJoinSheet(
+                    context,
+                    invite: SalaInvite(
                       code: ad.code,
-                      ad: ad,
+                      mode: ad.mode,
+                      roomName: ad.roomName,
+                      hostName: ad.hostName,
                     ),
+                    ad: ad,
                   ),
                 ),
               ),

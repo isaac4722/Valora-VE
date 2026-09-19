@@ -1166,3 +1166,54 @@ con la plantilla de `AGENT.md`.
 - Bloqueos: ninguno.
 - Siguiente: merge a main SOLO con orden expresa del dueño. La
   Fase 4 (Lowder) puede restaurarse desde backup_test-lowder_20260920.
+
+## TASK-29 (2026-09-20) · v19.8 — Análisis web-first, Sala con PIN de emojis, QR deep link y exportación unificada
+
+- Orden del dueño (4 frentes): (1) reconfigurar la pantalla de
+  Análisis «pensando cómo lo haría una versión web» e implementarla
+  en la app; (2) reordenar el flujo de la Sala (conexión primero,
+  nombre después, PIN de emojis tipo 2FA); (3) QR que desde un
+  escáner externo ABRA la app y conecte; (4) un componente de
+  exportación reutilizado por todos los módulos + verificar cada
+  pantalla con agent-browser y VLM.
+- DIAGNÓSTICO VISUAL PRIMERO (como se pidió): la web privada del
+  agente (puerto 3099, NO en la preview del dueño — caída por orden)
+  + agent-browser + VLM sobre capturas reales. Hallazgos de la
+  v19.7: anclas y chips de rango sin unidad visual, la tarjeta de
+  brecha competía con la gráfica, el panel «ÚLTIMO DÍA» era una pila
+  densa de renglones pegados, el heatmap dibujaba 6 meses de cuadros
+  vacíos y los estados vacíos parecían pantallas rotas.
+- ANÁLISIS REDESIGN (misma matemática, otra piel): barra de anclas
+  segmentada con píldora activa (una unidad visual con los chips de
+  rango), fila de KPIs por ancla (KpiTile/KpiRow), tarjetas-panel
+  (PanelCard) con título + acción derecha, panel del día en 3
+  columnas (BCV · Paralelo · Brecha), fuentes de Tasa en scroll
+  horizontal, heatmap solo con meses con datos, InlineHint para
+  estados vacíos. Archivo partido en pantalla + paneles
+  (insights_panels.dart) — misma lógica de insights_utils intacta.
+- SALA: lobby reordenado (CÓMO SE CONECTAN → Unirme → Crear → Salas
+  cercanas); la tarjeta TU NOMBRE fuera de arriba. Hoja de unirse
+  (join_sheet.dart): código/QR prellenado → 4 modos compactos →
+  nombre → PIN → conectar, con reintento del PIN al fallar. Crear
+  integra nombre del anfitrión + switch «Pedir PIN de emojis» +
+  PinShowCard (regenerar). Sala Viva muestra el PIN al anfitrión.
+- PIN DE EMOJIS: paleta fija de 12, PIN de 4, generatePinEmoji con
+  seam. Protocolo: hello {code, name, pin} → el anfitrión valida
+  contra _pinEmoji y responde room_error bad_pin (mensaje humano).
+  leave() limpia el PIN. RoomAd/SalaInvite: el QR lleva m= y p=.
+- QR DEEP LINK: QR ahora valorave://sala?c=CODE&m=MODE&p=0|1.
+  Manifest: BROWSABLE + DEFAULT en el intent-filter (lo que permite
+  que la cámara/navegador ofrezca abrir la app). MainActivity.kt:
+  canal valorave/deeplink (getInitial + onNewIntent → onLink).
+  DeepLinkService (services/deep_link.dart): parsea, publica en
+  salaInviteRequest y navega a /sala; el lobby consume la invitación
+  y abre la hoja prellenada. SalaInvite.tryParse también acepta el
+  QR histórico y códigos manuales; host ajeno o código corto → null.
+- EXPORTACIÓN UNIFICADA: widgets/export_sheet.dart (ExportSpec +
+  ExportFormat + showExportSheet: formato → compartir|guardar) +
+  helpers csvFormat/pngFormat/textFormat y shareFile/downloadText en
+  sharing.dart. Migrados: conversor, constancias, historial
+  (compras + movimientos), productos, respaldo JSON y las 2
+  exportaciones de Análisis. share_menu.dart ELIMINADO.
+- Gates: dart format (23 archivos) · flutter analyze = 0 ·
+  flutter test = 196/196 (185 previos + 11 nuevos de PIN/deep link).

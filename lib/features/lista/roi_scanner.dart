@@ -129,8 +129,7 @@ class _RoiScannerScreenState extends State<RoiScannerScreen> {
                           : 'Otra app puede estar usando la cámara, o el '
                                 'hardware no respondió. Reintenta o escribe '
                                 'el código a mano.',
-                      onManual: () =>
-                          Navigator.of(context).pop('__manual__'),
+                      onManual: () => Navigator.of(context).pop('__manual__'),
                     );
                   },
                 ),

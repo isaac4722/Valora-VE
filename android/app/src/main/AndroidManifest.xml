@@ -53,9 +53,14 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Shortcut interno: abrir el escáner directo (§12.2 quick_actions). -->
+            <!-- Deep link de la Sala (v19.8): el QR `valorave://sala?c=CODE`
+                 escaneado con la CÁMARA del teléfono abre la app directo al
+                 flujo de unirse. BROWSABLE es lo que permite que escáneres y
+                 navegadores externos ofrezcan abrir el enlace. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="valorave" android:host="sala"/>
             </intent-filter>
         </activity>

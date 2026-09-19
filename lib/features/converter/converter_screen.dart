@@ -29,7 +29,7 @@ import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/rate_sheet.dart';
 import '../../widgets/share_card.dart';
-import '../../widgets/share_menu.dart';
+import '../../widgets/export_sheet.dart';
 import '../../widgets/ui.dart';
 
 part 'converter_reference.dart';
@@ -367,7 +367,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
   }
 
   /// Compartir SIEMPRE vía menú propio (v17.2): texto · imagen · guardar.
-  /// Nunca el share nativo directo con un PNG.
+  /// Nunca el share nativo directo con un PNG (componente unificado v19.8).
   Future<void> _shareCard() async {
     final store = context.read<AppStore>();
     final ctx = _context(store);
@@ -380,41 +380,45 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final text =
         '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} · '
         '1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} — ValoraVE';
-    await showShareMenu(
+    await showExportSheet(
       context,
-      title: 'Resultado ${from.code} → ${to.code}',
-      actions: [
-        ShareMenuAction(
-          icon: Icons.subject_rounded,
-          label: 'Texto',
-          hint: 'Cifra y tasa listas para pegar en un chat',
-          onRun: () async {
-            await SharePlus.instance.share(ShareParams(text: text));
-            return null;
-          },
-        ),
-        ShareMenuAction(
-          icon: Icons.image_outlined,
-          label: 'Compartir imagen',
-          hint: 'Tarjeta de ValoraVE con la conversión',
-          onRun: () async {
-            final png = await _renderCard();
-            if (png == null) return 'No pude generar la tarjeta';
-            await sharePng(png, 'conversion-valorave.png');
-            return null;
-          },
-        ),
-        ShareMenuAction(
-          icon: Icons.download_rounded,
-          label: 'Descargar imagen',
-          hint: 'Guarda la tarjeta sin abrir el share',
-          onRun: () async {
-            final png = await _renderCard();
-            if (png == null) return 'No pude generar la tarjeta';
-            return runDownloadBytes(png, 'conversion-valorave.png');
-          },
-        ),
-      ],
+      ExportSpec(
+        title: 'Resultado ${from.code} → ${to.code}',
+        subtitle:
+            '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} '
+            '${to.code}',
+        formats: [
+          ExportFormat(
+            icon: Icons.subject_rounded,
+            label: 'Texto',
+            hint: 'Cifra y tasa listas para pegar en un chat',
+            run: (share) async {
+              await SharePlus.instance.share(ShareParams(text: text));
+              return null;
+            },
+          ),
+          ExportFormat(
+            icon: Icons.image_outlined,
+            label: 'Imagen PNG',
+            hint: 'Tarjeta de ValoraVE con la conversión',
+            run: (share) async {
+              final png = await _renderCard();
+              if (png == null) return 'No pude generar la tarjeta';
+              if (share) {
+                await sharePng(png, 'conversion-valorave.png');
+                return null;
+              }
+              final path = await downloadBytes(
+                png,
+                fileName: 'conversion-valorave.png',
+              );
+              return path == null
+                  ? 'No se pudo guardar la imagen.'
+                  : 'Guardado en: $path';
+            },
+          ),
+        ],
+      ),
     );
   }
 
