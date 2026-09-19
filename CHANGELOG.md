@@ -1,6 +1,30 @@
 # Changelog
 
 
+## 1.9.7-beta+25 · v19.7 — versión web (modo cliente) de ValoraVE
+
+- **Web, de verdad**: `flutter build web` compila la app completa
+  sin cambios en `lib/` — la degradación honesta del arranque (que
+  jamás depende de un plugin) hace el resto: Hive persiste en
+  IndexedDB, las tasas llegan por CORS de las APIs públicas y
+  quick_actions / home_widget / workmanager / notificaciones se
+  degradan en silencio, igual que en el host de pruebas.
+- **PWA con marca propia**: la carpeta `web/` deja de ser el
+  scaffold por defecto — título y descripción es-VE reales, manifest
+  con nombre «ValoraVE», colores de marca (#22354E · #F7F8F9 ·
+  #121417), theme-color claro/oscuro según el sistema e íconos
+  generados desde la marca (normal + maskable, 192/512, favicon).
+- **Splash de arranque tipográfico**: mientras baja main.dart.js se
+  ve la marca (Valora + VE, tipografía pura como la app, claro u
+  oscuro según esquema del sistema); el motor emite
+  «flutter-first-frame» y el splash se retira con un fundido.
+- **Verificado en navegador** (headless 430×932): onboarding de 4
+  slides + selección de país → tablero con tasas vivas (BCV ·
+  paralelo · TRM · Brasil · Banxico), barra de 5 tabs y tutorial de
+  13 pasos — 0 errores de página.
+- **Limpieza de ramas** (orden del dueño): el remoto queda en solo
+  `main` y `fix/v1.1.0-dp4-paridad`.
+
 ## 1.9.6-beta+24 · v19.6 — widgets in-app retirados, galería de App Widgets del launcher y fix del conversor
 
 - **Widgets de Inicio retirados (orden del dueño)**: el sistema

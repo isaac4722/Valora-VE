@@ -1,11 +1,12 @@
 {
-    "name": "valorave",
-    "short_name": "valorave",
+    "name": "ValoraVE — cuánto vale tu dinero en Venezuela",
+    "short_name": "ValoraVE",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F7F8F9",
+    "theme_color": "#22354E",
+    "description": "Tasas BCV y paralelo, conversor, lista en vivo, libro de precios y salas. Offline-first: tus datos viven solo en tu dispositivo.",
+    "lang": "es-VE",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

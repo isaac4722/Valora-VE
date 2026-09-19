@@ -1115,3 +1115,54 @@ con la plantilla de `AGENT.md`.
 - Siguiente: push → CI/Build verde → merge a main SOLO con orden
   expresa del dueño. test-lowder sigue disponible para la Fase 4 del
   dueño (editor en 0.0.0.0:8787/editor.html).
+
+## [TASK-27] v19.7 · versión web (modo cliente) + limpieza de ramas · 2026-09-20 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Contexto: orden del dueño — (1) crear la versión web (el modo
+  client) y que cargue en la preview, (2) eliminar del remoto las
+  ramas que no sean main / fix/v1.1.0-dp4-paridad.
+- Hecho:
+  - RAMAS (orden expresa): eliminadas fix/v1.0.1-router-icono-paridad,
+    fix/v1.0.2-paridad-mvp, parallel-dp4-paridad, test y test-lowder.
+    Heads respaldados en tags LOCALES backup_*_20260920 (clon de
+    trabajo; restaurable con `git branch <rama> <tag>`). test-lowder
+    era la Fase 4 (Lowder) — se borra por orden y queda documentado
+    aquí. El remoto queda en SOLO main + fix/v1.1.0-dp4-paridad.
+    Los 13 runs huérfanos de dp4 ya no existían (borrados en v19.5);
+    verificado por barrido de la API (branch=dp4 → 0).
+  - BUILD WEB (sin tocar lib/): Flutter 3.47.4 (idéntico al CI)
+    compila la app COMPLETA para web sin un cambio de Dart. La
+    degradación honesta del arranque hace el resto: Hive → IndexedDB
+    (cajas data/snapshots/notifs/outbox), quick_actions /
+    home_widget / workmanager / notificaciones → MissingPluginException
+    capturada y logueada, biometría no bloquea (lock off por defecto).
+    CORS verificado en vivo: dolarapi (VE/CO/MX/BR) y frankfurter
+    devuelven access-control-allow-origin: *; pydolarve no respondió
+    — el tablero lo degrada como fuente caída (mergeRegionBlocks
+    v19.5) y dolarapi sostiene VE.
+  - PWA CON MARCA: index.html (título «ValoraVE», descripción es-VE,
+    lang=es, theme-color claro/oscuro, splash) y manifest.json (nombre,
+    short_name, colores de marca, descripción, orientación) dejan de
+    ser el scaffold por defecto de flutter create. Íconos generados
+    desde la marca: assets/brand/icon.png → Icon-192/512 +
+    favicon 64; icon-maskable.png → Icon-maskable-192/512.
+  - SPLASH TIPOGRÁFICO: mientras baja main.dart.js (5,6 MB) se ve la
+    marca en tipografía pura (claro/oscuro según esquema del sistema);
+    el motor emite «flutter-first-frame» y el splash sale con fundido
+    de 320 ms. Sin logotipo gráfico — como la app.
+  - VERIFICACIÓN EN NAVEGADOR (headless 430×932, por el proxy de la
+    preview): onboarding completo (4 slides → Venezuela → Comenzar),
+    redirect de go_router intacto (#/bienvenida ↔ #/), tablero con
+    tasas VIVAS (BCV 848,55 · Paralelo 929,27 · TRM 3.192,92 COP ·
+    Banxico 17,2362 · Brasil 5,1424), barra de 5 tabs (Inicio ·
+    Divisas · Lista · Productos · Análisis) y tutorial de 13 pasos al
+    montar el shell. 0 errores de página, 0 consola roja.
+  - SERVIDOR DE PREVIEW (fuera del repo): build/web servido en el
+    puerto 3000 del sandbox con servidor estático propio (MIME
+    correcto incl. .wasm, fallback SPA para deep links del router);
+    el gateway de la plataforma (81) lo expone como preview.
+- Gates: format/analyze/test locales ANTES del commit (resultado
+  en el commit).
+- Bloqueos: ninguno.
+- Siguiente: merge a main SOLO con orden expresa del dueño. La
+  Fase 4 (Lowder) puede restaurarse desde backup_test-lowder_20260920.

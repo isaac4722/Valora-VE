@@ -6,5 +6,5 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v19.6 · App Widgets del launcher + fix conversor).
-const String kAppVersionVisible = '19.6';
+/// Versión visible (ronda v19.7 · versión web cliente: PWA con marca).
+const String kAppVersionVisible = '19.7';

@@ -1,44 +1,90 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
+    Si sirves la app en una ruta distinta de la raíz, cambia el href de
+    <base> para reflejar la ruta base (empezando y terminando en "/").
 
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
+    Es un placeholder que `flutter build --base-href` reemplaza.
   -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV y paralelo, conversor, lista en vivo, libro de precios y salas. Offline-first.">
+
+  <!-- Color de la UI del navegador (claro/oscuro, como la app) -->
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F7F8F9">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121417">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="valorave">
+  <meta name="apple-mobile-web-app-title" content="ValoraVE">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>valorave</title>
+  <title>ValoraVE</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Splash de arranque: mientras baja main.dart.js se ve la marca
+       (tipografía pura, como la app — sin logotipo gráfico). El motor
+       emite «flutter-first-frame» con el primer frame renderizado y el
+       splash se quita solo. -->
+  <style>
+    #splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: #F7F8F9;
+      color: #1A1D21;
+      font-family: Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
+      z-index: 9999;
+      transition: opacity .28s ease;
+    }
+    #splash .marca {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+    #splash .marca b { color: #22354E; font-weight: 700; }
+    #splash .nota {
+      font-size: 12.5px;
+      color: #5F6672;
+    }
+    @media (prefers-color-scheme: dark) {
+      #splash { background: #121417; color: #ECEEF1; }
+      #splash .marca b { color: #8FA7C4; }
+      #splash .nota { color: #9AA1AB; }
+    }
+    #splash.fuera { opacity: 0; pointer-events: none; }
+  </style>
 </head>
 <body>
+  <div id="splash" aria-hidden="true">
+    <div class="marca">Valora<b>VE</b></div>
+    <div class="nota">Cargando…</div>
+  </div>
+  <script>
+    // Primer frame del motor → retirar el splash con un fundido.
+    window.addEventListener('flutter-first-frame', function () {
+      var s = document.getElementById('splash');
+      if (!s) return;
+      s.classList.add('fuera');
+      window.setTimeout(function () { s.remove(); }, 320);
+    });
+  </script>
   <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+    Puedes personalizar «flutter_bootstrap.js» para dar configuración
+    propia al loader o feedback durante la inicialización.
 
-    For more details:
+    Más detalles:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
