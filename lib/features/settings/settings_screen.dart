@@ -267,5 +267,8 @@ class _DatosConexion extends StatelessWidget {
       ),
     );
     if (url != null) store.setSseUrl(url);
+    // FIX 9P·Performance: el controller del diálogo se dispone al cerrar
+    // (cada apertura de «Servidor SSE» dejaba uno vivo). La URL ya se leyó.
+    ctrl.dispose();
   }
 }

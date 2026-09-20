@@ -328,7 +328,14 @@ class _AlertasState extends State<_Alertas> {
         ],
       ),
     );
-    if (ok != true) return null;
-    return parseLocaleNum(ctrl.text);
+    if (ok != true) {
+      // FIX 9P·Performance: el controller lo crea quien llama y nunca se
+      // disponía — cada meta fijada dejaba un controller vivo.
+      ctrl.dispose();
+      return null;
+    }
+    final v = parseLocaleNum(ctrl.text); // leer ANTES de disponer
+    ctrl.dispose();
+    return v;
   }
 }

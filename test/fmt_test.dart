@@ -89,6 +89,7 @@ void main() {
       expect(parseLocaleNum('4.0000'), 40000);
       expect(parseLocaleNum('40.0000'), 400000); // 6.º dígito
       expect(parseLocaleNum('400.000'), 400000);
+      expect(parseLocaleNum('4.000.000'), 4000000); // varios puntos
       // Cero inicial = decimal explícito: «0.0001» es una tasa chiquita.
       expect(parseLocaleNum('0.0001'), closeTo(0.0001, 1e-9));
       // 1-2 dígitos tras el punto siguen siendo decimales (hábito EN).

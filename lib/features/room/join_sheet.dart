@@ -10,6 +10,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme.dart';
@@ -21,6 +22,23 @@ import 'pin_emoji.dart';
 /// Abre la hoja de unirse. [invite] prellena el código (QR/escáner);
 /// [ad] entra al marcar una sala avistada (marca el host/puerto para el
 /// dial directo). Si ambos son null, arranca pidiendo el código.
+
+/// Mayuscula lo tecleado SIN reescribir controller.text (conserva el
+/// cursor donde está: editar en medio del código ya no salta al final).
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
+      composing: TextRange.empty,
+    );
+  }
+}
+
 Future<void> showJoinSheet(
   BuildContext context, {
   SalaInvite? invite,
@@ -179,13 +197,17 @@ class _JoinSheetState extends State<_JoinSheet> {
                 maxLength: 6,
                 textCapitalization: TextCapitalization.characters,
                 autofocus: true,
-                onChanged: (v) {
-                  _codeCtrl.text = v.toUpperCase();
-                  _codeCtrl.selection = TextSelection.collapsed(
-                    offset: _codeCtrl.text.length,
-                  );
-                  setState(() {});
-                },
+                // FIX 9P·Prevención (fase auditoría): el onChanged anterior
+                // reescribía controller.text (mayúsculas) y forzaba la
+                // selección al FINAL — teclear en medio del campo saltaba
+                // al final en cada tecla. El TextInputFormatter mayuscula
+                // SIN tocar la selección.
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(6),
+                  FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
+                  UpperCaseTextFormatter(),
+                ],
+                onChanged: (v) => setState(() {}),
                 decoration: const InputDecoration(
                   hintText: 'ABC123',
                   labelText: 'Código de la sala',

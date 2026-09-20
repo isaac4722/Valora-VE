@@ -70,8 +70,13 @@ Future<String?> scanBarcode(BuildContext context) async {
         ],
       ),
     );
+    // FIX 9P·Performance: el texto se lee ANTES de disponer (después de
+    // dispose, leer .text revienta). Cada apertura del diálogo dejaba un
+    // controller vivo.
+    final typed = ctrl.text.trim();
+    ctrl.dispose();
     if (ok != true) return null;
-    code = ctrl.text.trim();
+    code = typed;
   }
   if (code == null || code.isEmpty) return null;
   return code;
@@ -464,8 +469,13 @@ class _ProductSheetState extends State<ProductSheet> {
         ],
       ),
     );
-    if (ok != true || !context.mounted) return;
+    // FIX 9P·Performance: los textos se leen ANTES de disponer los
+    // controllers — cada edición de registro dejaba dos vivos.
     final price = parseLocaleNum(priceCtrl.text);
+    final storeName = storeCtrl.text.trim();
+    priceCtrl.dispose();
+    storeCtrl.dispose();
+    if (ok != true || !context.mounted) return;
     if (price == null || price <= 0) {
       showToast(
         context,
@@ -479,7 +489,7 @@ class _ProductSheetState extends State<ProductSheet> {
       r.id,
       newUSD: price,
       newOriginal: price,
-      store: storeCtrl.text.trim(),
+      store: storeName,
     );
   }
 

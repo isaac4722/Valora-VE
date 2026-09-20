@@ -200,12 +200,22 @@ void main() {
       expect(valor, 0.5);
       // v19.6 (bug del dueño): el 5.º dígito sobre «4.000» — el punto a
       // medio grupo de miles ya no se vuelve decimal («4,0000» = 4).
+      // (9P·auditoría: se verifica también el estado base «4.000» = 4000.)
+      await tester.enterText(field, '4.000');
+      await tester.pump();
+      expect(find.text('4.000'), findsOneWidget);
+      expect(valor, 4000);
       await tester.enterText(field, '4.0000');
       await tester.pump();
       expect(find.text('40.000'), findsOneWidget);
       expect(valor, 40000);
       // Y el 6.º: «40.0000» → 400 mil.
       await tester.enterText(field, '40.0000');
+      await tester.pump();
+      expect(find.text('400.000'), findsOneWidget);
+      expect(valor, 400000);
+      // 9P: el mismo 6.º dígito sobre «4.000» con 5 ceros («4.00000»).
+      await tester.enterText(field, '4.00000');
       await tester.pump();
       expect(find.text('400.000'), findsOneWidget);
       expect(valor, 400000);
