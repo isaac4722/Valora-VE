@@ -395,6 +395,10 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
                 SizedBox(
                   height: 210,
                   child: SfCartesianChart(
+                    // 9P·Pulido: margen interno para que la curva no roce
+                    // el borde superior de la tarjeta ni el eje X quede
+                    // pegado a la base (auditoría visual de la web).
+                    margin: const EdgeInsets.fromLTRB(6, 14, 10, 4),
                     legend: const Legend(
                       isVisible: true,
                       position: LegendPosition.bottom,
@@ -403,6 +407,11 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
                     primaryXAxis: DateTimeAxis(
                       dateFormat: DateFormat('dd/MM'),
                       majorGridLines: const MajorGridLines(width: 0),
+                      // 9P·Pulido: las fechas del eje respiran bajo la curva.
+                      axisLabelFormatter: (a) => ChartAxisLabel(
+                        a.text,
+                        const TextStyle(fontSize: 9.5),
+                      ),
                     ),
                     trackballBehavior: _trackball,
                     onTrackballPositionChanging: _onTrackball,
@@ -511,6 +520,7 @@ class _DayPanel extends StatelessWidget {
                   label: 'Paralelo',
                   value: parPoint == null ? 'sin dato' : fmtRate(parPoint.rate),
                   color: parPoint == null ? scheme.onSurfaceVariant : ink.neg,
+                  dimmed: parPoint == null,
                 ),
               ),
               Expanded(
@@ -520,6 +530,7 @@ class _DayPanel extends StatelessWidget {
                   value: g == null ? '—' : fmtPct(g.pct),
                   color: g == null ? scheme.onSurfaceVariant : ink.warn,
                   bold: true,
+                  dimmed: g == null,
                 ),
               ),
             ],
@@ -548,6 +559,7 @@ class _DayPanel extends StatelessWidget {
     required String value,
     required Color color,
     bool bold = false,
+    bool dimmed = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -565,11 +577,20 @@ class _DayPanel extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Text(
             value,
-            style: VeText.displayNum(
-              15,
-              color: color,
-              weight: bold ? FontWeight.w800 : FontWeight.w700,
-            ),
+            // 9P·Pulido: «sin dato»/«—» baja de peso y tamaño — ya no
+            // compite visualmente con las cifras reales del panel.
+            style: dimmed
+                ? TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w500,
+                    color: color,
+                  )
+                : VeText.displayNum(
+                    15,
+                    color: color,
+                    weight: bold ? FontWeight.w800 : FontWeight.w700,
+                  ),
           ),
         ),
       ],

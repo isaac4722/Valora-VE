@@ -49,11 +49,15 @@ class KpiTile extends StatelessWidget {
     final c = color ?? scheme.onSurface;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        // 9P·Pulido: aire interno 12/12 (antes 11 vertical — los KPIs se
+        // veían apretados contra el borde de la tarjeta en la auditoría
+        // visual de la web).
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (icon != null) ...[
                   Icon(icon, size: 12, color: c.withValues(alpha: 0.85)),
@@ -62,7 +66,9 @@ class KpiTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    maxLines: 1,
+                    // 9P·Pantalla: 2 líneas — «Brecha BCV ↔ Paralelo» ya no
+                    // se corta con «…» en la columna de 3 KPIs del móvil.
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: VeText.labelCaps(
                       9.5,
@@ -72,7 +78,7 @@ class KpiTile extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 7),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
@@ -83,14 +89,14 @@ class KpiTile extends StatelessWidget {
               ),
             ),
             if (sub != null) ...[
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Text(
                 sub!,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 10,
-                  height: 1.3,
+                  fontSize: 10.5,
+                  height: 1.35,
                   color: scheme.onSurfaceVariant,
                 ),
               ),
