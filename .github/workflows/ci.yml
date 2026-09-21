@@ -1,4 +1,5 @@
-# CI · gates en cada push/PR: pub get → analyze (0) → test (suite verde).
+# CI · gates en cada push/PR: pub get → quality_gate.sh (analyze 0 + suite
+# verde + auditoría UI). El gate vive en scripts/quality_gate.sh (AGENT.md).
 # Flutter SIEMPRE última stable (decisión §4.16; el gate protege de roturas).
 name: CI
 
@@ -27,8 +28,5 @@ jobs:
       - name: pub get
         run: flutter pub get
 
-      - name: flutter analyze (0 issues)
-        run: flutter analyze
-
-      - name: flutter test (unit + widget)
-        run: flutter test
+      - name: Gate de Calidad (analyze + test + auditoría UI)
+        run: bash scripts/quality_gate.sh

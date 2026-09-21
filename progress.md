@@ -1217,3 +1217,55 @@ con la plantilla de `AGENT.md`.
   exportaciones de Análisis. share_menu.dart ELIMINADO.
 - Gates: dart format (23 archivos) · flutter analyze = 0 ·
   flutter test = 196/196 (185 previos + 11 nuevos de PIN/deep link).
+
+## TASK-30 (2026-09-22) · docs(9P) — AGENT.md contrato nuevo, skills en carpeta estándar y estructuración completa
+
+- Orden del dueño: cambiar AGENT.md por el nuevo contrato (máquina de
+  estados de 9 pasos), dejar TODAS las skills en UNA sola carpeta
+  estándar (dejar las oficiales; las que falten según el MD se
+  instalan y se guardan en el repo) y aplicar la estructuración que el
+  contrato referencia.
+- AGENT.md: reescrito EXACTO al texto del dueño — comandos ejecutables
+  (incl. `bash scripts/quality_gate.sh`), stack/versión, mapa, límites
+  de tres niveles, 9P (1_ANALYZE→9_CLOSE con sub-rama 6_RETRY y regla
+  de oro: 2_PLAN solo en primer intento), integración de 5 skills,
+  definición de hecho y progressive disclosure hacia docs/agent/.
+  Nota consciente: el mapa dice `lib/core/theme/` y el archivo real es
+  `lib/core/theme.dart` (aclarado en docs/agent/ARCHITECTURE.md).
+- SKILLS EN CARPETA ESTÁNDAR: agent-skills/ aplanada de familias
+  (dart/ flutter/ taste/ + sueltos) a UNA estructura estándar — cada
+  skill directo en `agent-skills/<skill>/SKILL.md` (convención del CLI
+  `skills --agent universal`). 54 existentes conservadas (git mv,
+  historial intacto) + 3 NUEVAS del MD: flutter-frontend-design
+  (syeduzaif, MIT) · mobile-design (sickn33/agentic-awesome-skills:
+  touch targets ≥48dp y breakpoints, solo consulta) · ui-nice-skill
+  (PROPIA del repo: no existe en ningún registro público — skills.sh,
+  GitHub code search, awesome lists — y se crea para 1_ANALYZE y
+  4_AUDIT con checklist «nice» de 12 puntos + severidades +
+  anti-slop, anclada a §8 y al flujo web/agent-browser/VLM).
+  Total: 57 skills, todas con SKILL.md verificado. README de la
+  carpeta reescrito con inventario y procedencia.
+- ESTRUCTURACIÓN QUE EL CONTRATO EXIGE: (1) docs/agent/ NUEVA con
+  CODE_STYLE.md (fmt, es-VE, dispose, prohibidos) · TESTING.md
+  (estrategia, capas, determinismo, 196 tests) · GIT_WORKFLOW.md
+  (rama de trabajo, conventional es, secretos, gates antes de commit)
+  · ARCHITECTURE.md (mapa real de lib/, flujo offline-first,
+  fronteras de dependencia). (2) MVP-CRUD.md en RAÍZ (nunca estuvo en
+  git): verdad funcional reconstruida desde el código con numeración §
+  coherente con las citas históricas (§1–§14; §4.10, §4.16, §5, §6,
+  §7, §8, §9.6/9.7, §12.2, §14). (3) scripts/quality_gate.sh NUEVO:
+  analyze (0) + test (verde) + auditoría UI por grep (AppStateScope,
+  localStorage, ServiceWorker, mocks, secretos, backdrop-filter,
+  gradientes — 7 patrones probados contra lib/: 0 violaciones).
+  (4) ci.yml ahora llama `bash scripts/quality_gate.sh` como gate
+  único (antes: analyze+test sueltos).
+- Gates: patrón-a-patrón del auditor UI contra lib/ = 0 violaciones ·
+  flutter analyze / flutter test sin flutter local: delegados al run de
+  Actions de este commit (paso 8 del 9P, sin cambios en lib/ que
+  puedan romper la suite de 196).
+- Bloqueos: ninguno (ui-nice-skill inexistente se resolvió creándola
+  como skill propia, con la procedencia documentada en su frontmatter
+  y en el README).
+- Siguiente: TASK-29 continúa — rectificar cada screen con
+  agent-browser + VLM usando el 9P y las skills del nuevo contrato;
+  merge a main SOLO con orden expresa del dueño.

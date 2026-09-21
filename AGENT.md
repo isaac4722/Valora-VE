@@ -1,90 +1,93 @@
-# AGENT.md · Contrato de trabajo para agentes (ValoraVE)
+# AGENT.md · Contrato de Trabajo (ValoraVE)
 
-## Propósito
-Este archivo define CÓMO se trabaja en este repo. Cualquier agente (IA o
-humano en modo automatizado) DEBE cumplirlo antes de tocar código.
+Aplica a TODO agente (IA o humano). Lee este archivo y `docs/agent/` antes de empezar.
 
-## Método de trabajo — ciclo obligatorio en 9 pasos
-Todo encargo se ejecuta SIEMPRE en este orden. Si la auditoría (paso 5)
-falla, se repite el ciclo (1, 2 opcional, 3, 4, 5) hasta pasarla.
-Prohibido saltar pasos o declarar «terminado» antes del 9.
+## Comandos Ejecutables (Ejecutar en este orden)
+| Tarea | Comando |
+|-------|---------|
+| Dependencias | `flutter pub get` |
+| Análisis estático | `flutter analyze` |
+| Suite de tests | `flutter test` |
+| Test de una pieza | `flutter test test/ruta/archivo_test.dart` |
+| Build debug | `flutter build apk --debug` |
+| **Gate de Calidad** | `bash scripts/quality_gate.sh` (ejecuta analyze + test + auditoría UI) |
 
-1. **Analiza lo que se pide** (mínimo 1 minuto): identifica el objetivo
-   real, los módulos tocados y las reglas de este contrato que aplican.
-   Si algo es ambiguo, preguntar antes de escribir código — nunca
-   inventar requisitos.
-2. **Consulta la web** cómo se aplica lo pedido: busca soluciones
-   existentes y mejores prácticas vigentes, selecciona las mejores y
-   combínalas con el conocimiento de base del repo (docs/, progress.md).
-   En reintentos del ciclo este paso es opcional.
-3. **Aplica o crea lo indicado**: una pantalla/pieza por commit; sin
-   features no pedidas; sin cambiar framework, arquitectura ni sistema
-   visual (solo evolucionarlos).
-4. **Audita y verifica** que se aplicó exactamente lo pedido: diff del
-   commit contra el encargo punto por punto + `flutter analyze`
-   (0 issues) + `flutter test` (suite verde).
-5. **Punto de control**: si la auditoría pasa → continúa al paso 6;
-   si falla → VUELVE al paso 1 (paso 2 opcional) y repite 3→4→5 hasta
-   pasarla. Prohibido avanzar con auditoría roja o «casi listo».
-6. **Documenta, declara y detalla**: entrada en progress.md (plantilla
-   abajo), docs actualizados si cambió comportamiento visible, y reporte
-   honesto de qué se hizo, skills usados, qué se verificó y qué falta.
-7. **Guarda en el repo**: commits limpios (conventional commits) y push
-   a la rama de trabajo.
-8. **Compila en Actions y verifica hasta que se logre**: sigue el run de
-   GitHub Actions del push; si el build o los gates fallan, corrige y
-   repite hasta verde antes de dar el encargo por cerrado.
-9. **Termina el trabajo pedido**: repo sincronizado, estado real
-   registrado y encargo cerrado. «Terminado» significa los 9 pasos
-   completos — nunca «casi».
+## Stack y Versión
+- **Framework:** Flutter (Dart). Gestor `pub`.
+- **Versión:** `1.x.y-beta+z` (ver `pubspec.yaml`). Prohibido cambiarla fuera de este esquema.
 
-## Reglas inquebrantables
-1. Lee `AGENT.md` y `progress.md` COMPLETOS antes de empezar tu turno,
-   y ejecuta cada encargo con el §Método de trabajo (ciclo de 9 pasos).
-2. Al terminar tu turno, AÑADE (nunca reescribas) tu sección en
-   `progress.md` con la plantilla del §Plantilla. Sin sección, tu trabajo
-   no existe.
-3. Los gates `flutter analyze` (0 issues) y `flutter test` (suite verde)
-   deben pasar ANTES de cada commit. Prohibido debilitar tests o reglas
-   para «ponerse verde».
-4. `MVP-CRUD.md` es la única fuente de verdad funcional. Si el código y
-   el MD discrepan, manda el MD; anota la desviación en progress.md.
-5. Prohibido: mocks en lib/, `AppStateScope`, patrones web
-   (localStorage/ServiceWorker), cifras de mercado inventadas, tokens/keys
-   en el código, renumerar la versión fuera de `1.x.y-beta+z`.
-6. Idioma: español (es-VE) en UI, docs y commits (conventional commits).
-7. Plugins: solo oficiales (pub.dev verificado); versiones compatibles
-   entre sí (ver docs/DEPENDENCIAS.md).
-8. Si te bloqueas >2 intentos en algo: déjalo registrado en progress.md
-   §Bloqueos y continúa con otra pieza; no inventes soluciones mudas.
-9. Los builds de release cubren CUALQUIER dispositivo Android (orden
-   explícita del dueño · v17.9, ampliada v19.2): cada push a main/fix
-   produce SIEMPRE, con los compiladores estándar de GitHub Actions
-   (ubuntu-latest + Temurin 17 + Flutter estable fijado), los 4 APK
-   (`armeabi-v7a` androids viejos · `arm64-v8a` nuevos · `x86_64`
-   emuladores e Intel · `universal` todo-en-uno) MÁS el AAB de Play
-   Store, y TODO se entrega en UN solo artefacto ZIP
-   `valorave-v{versión}-build-{fecha}-completo.zip` (con LEEME.txt y
-   checksums) más los símbolos de ofuscación aparte. En tags v*, la
-   Release adjunta los 6 archivos (4 APK + AAB + ZIP). Prohibido
-   retirar un ABI de la matriz, el AAB o el ZIP, o dejar de publicar
-   sus artefactos, sin orden expresa del dueño. Nota técnica: Flutter
-   no distribuye motor para x86 de 32 bits — ese ABI no es
-   construible y no cuenta como cobertura faltante. El software es
-   PROPIETARIO (LICENSE, orden del dueño v19.2): licencia de titular
-   privado, sin uso público ni redistribución.
+## Estructura del Proyecto (Mapa)
+- `lib/`: Código fuente. Prohibido mocks, `AppStateScope`, patrones web (localStorage), cifras inventadas o tokens.
+- `lib/core/theme/`: Sistema de diseño y tokens de UI.
+- `lib/features/`: Módulos funcionales (cada uno con su UI, lógica y tests).
+- `test/`: Tests unitarios y de widget. Refleja la estructura de `lib/`.
+- `docs/agent/`: **Documentación con alcance para el agente** (ver abajo).
 
-## Definición de hecho (por pieza)
-- Código + test que lo cubre + `analyze`/`test` verdes + entrada en
-  progress.md + actualización de docs si cambia comportamiento visible
-  + run de Actions verde (paso 8 del método).
+## Límites de Tres Niveles
+- **Siempre hacer:**
+    - Ejecutar `flutter analyze` y `flutter test` antes de cada commit.
+    - Añadir (nunca reescribir) tu entrada en `progress.md`.
+    - Usar español (es-VE) en UI, docs y commits (conventional commits).
+    - Consultar `MVP-CRUD.md` como única fuente de verdad funcional.
+- **Preguntar primero:**
+    - Si un test falla y no entiendes la causa raíz tras 2 intentos.
+    - Antes de añadir una nueva dependencia a `pubspec.yaml`.
+    - Si necesitas modificar `lib/core/` (afecta a toda la app).
+    - Si el encargo es ambiguo o contradice `MVP-CRUD.md`.
+- **Nunca hacer:**
+    - Debilitar tests o relajar reglas de `analyze` para "ponerse verde".
+    - Introducir mocks, `AppStateScope`, `localStorage` o `ServiceWorker` en `lib/`.
+    - Inventar cifras de mercado, tasas de cambio o datos de usuario.
+    - Reemplazar el sistema de diseño o arquitectura; solo evolucionar lo existente.
+    - Commitear tokens, API keys o secretos.
 
-## Plantilla de entrada en progress.md
-    ---
-    ## [TASK-ID] <título> · <fecha UTC>
-    - Agente: <nombre/versión>
-    - Hecho: <lista concreta>
-    - Decisiones: <qué decidiste y por qué>
-    - Gates: analyze=N issues · test=N/N · build=OK/FAIL
-    - Bloqueos: <ninguno | descripción>
-    - Siguiente: <qué toca ahora al flujo principal>
+## Flujo de Trabajo: Máquina de Estados (9 Pasos)
+El ciclo se ejecuta como una máquina de estados. Cada paso emite un "route" que decide el siguiente.
+
+| Estado | Acción Principal | Route si OK | Route si FALLA |
+| :--- | :--- | :--- | :--- |
+| **1. ANALYZE** | Analiza encargo (≥1 min). Identifica módulos, reglas y **dirección estética** si toca UI. | `2_PLAN` | `9_BLOCKED` |
+| **2. PLAN** | Define el plan de implementación. **Paso obligatorio solo en el primer intento.** En reintentos, se salta a `3_IMPLEMENT`. | `3_IMPLEMENT` | `1_ANALYZE` |
+| **3. IMPLEMENT** | Aplica lo pedido. 1 pieza por commit. Usa skills de diseño si aplica. | `4_AUDIT` | `9_BLOCKED` |
+| **4. AUDIT** | Audita el diff vs encargo. Ejecuta `quality_gate.sh` (analyze + test + UI audit). | `5_CONTROL` | `6_RETRY` |
+| **5. CONTROL** | **Gate principal.** Verifica que `quality_gate.sh` pasó y que `progress.md` está actualizado. | `7_PERSIST` | `6_RETRY` |
+| **6. RETRY** | **Sub-rama de recuperación.** Diagnostica el fallo de `4` o `5` y decide a qué estado volver. | `1_ANALYZE` o `3_IMPLEMENT` | `9_BLOCKED` |
+| **7. PERSIST** | Commit (conventional) y push a rama de trabajo. | `8_CI` | `6_RETRY` |
+| **8. CI** | Espera a que GitHub Actions esté verde. | `9_CLOSE` | `6_RETRY` (si es de código) o `9_BLOCKED` (si es de entorno) |
+| **9. CLOSE / BLOCKED** | Cierra el turno. Registra estado real en `progress.md`. | FIN | FIN |
+
+### Sub-rama de Recuperación (RETRY)
+Cuando el flujo llega a `6_RETRY`, el agente **no vuelve ciegamente al paso 1**. Diagnostica:
+- **Fallo de Análisis/Plan (viene de 1 o 2):** Vuelve a `1_ANALYZE`.
+- **Fallo de Implementación (analyze/test fallan):** Vuelve a `3_IMPLEMENT`.
+- **Fallo de Auditoría/Control (el diff no coincide, falta doc):** Vuelve a `3_IMPLEMENT` o `4_AUDIT` según corresponda.
+- **Regla de Oro:** En reintentos, el estado `2_PLAN` se salta por defecto. Solo se re-ejecuta si el fallo fue explícitamente por un plan incorrecto.
+
+## Integración de Skills (Capacidades del Agente)
+Las skills se invocan **dentro** de los estados del flujo. El agente debe leer su `SKILL.md` antes de usarlas.
+
+| Skill | Estado donde se usa | Cuándo Activarla |
+| :--- | :--- | :--- |
+| **`ui-nice-skill`** | 1_ANALYZE, 4_AUDIT | Siempre que el encargo implique crear/modificar pantallas o flujos de UI. |
+| **`flutter-frontend-design`** | 3_IMPLEMENT | Siempre que se implemente UI nueva en `lib/`. |
+| **`mobile-design`** | 2_PLAN (consulta) | Para verificar convenciones de plataforma (touch targets ≥48dp, breakpoints). **Solo consulta, no dicta estética.** |
+| **`Humanizer`** | 3_IMPLEMENT (post-UI) | Antes de cerrar el estado `3_IMPLEMENT`, para pulir TODO texto visible al usuario. |
+| **`Taste Skill`** | 4_AUDIT | Opcional. Si la auditoría visual detecta riesgo de "AI slop". |
+
+**Regla de No Contradicción:** Si una skill sugiere algo que viola los Límites de Tres Niveles, **prevalece el `AGENT.md`**. Si una skill no está instalada, el agente lo registra en `progress.md` y continúa manualmente aplicando sus principios.
+
+## Definición de Hecho (Por Pieza)
+Código + Test que lo cubre + `quality_gate.sh` verde + Entrada en `progress.md` + `docs/` actualizado (si cambió comportamiento) + Run de Actions verde.
+
+## Documentación con Alcance (Progressive Disclosure)
+Para mantener este archivo delgado, el detalle vive en `docs/agent/`. El agente **debe consultar** el archivo correspondiente cuando el estado del flujo lo requiera.
+
+| Necesidad | Archivo de Referencia | Cuándo Consultarlo |
+| :--- | :--- | :--- |
+| Verdad funcional | `MVP-CRUD.md` | Estado `1_ANALYZE` (siempre) |
+| Dependencias y plugins | `docs/DEPENDENCIAS.md` | Estado `2_PLAN` o `3_IMPLEMENT` (si se toca `pubspec`) |
+| Estilo de código y convenciones | `docs/agent/CODE_STYLE.md` | Estado `3_IMPLEMENT` (siempre) |
+| Estrategia de Testing | `docs/agent/TESTING.md` | Estado `4_AUDIT` (siempre) |
+| Flujo de Git y Commits | `docs/agent/GIT_WORKFLOW.md` | Estado `7_PERSIST` (siempre) |
+| Arquitectura y Patrones | `docs/agent/ARCHITECTURE.md` | Estado `2_PLAN` (siempre) |
+| Bitácora de turnos | `progress.md` | Al inicio y fin de cada turno |
