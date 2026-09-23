@@ -28,3 +28,4 @@ Solo se AÑADE; prohibido reescribir entradas.
 
 2026-09-16 · DONE · TASK-20·A v19.0: 21 encargos del dueño — slides, coach_mark propio, tips con reglas, rate_sheet, conversor bidireccional, MoneyField, 1 consulta/región, hive_ce, PushScreen (16 commits) · analyze 0 · test 159/159 · FIN
 2026-09-15 · DONE · TASK-20·B v19.0: DolarApi blindado + respaldos regionales + es-VE total + sellos + BiSwap + sala P2P reescrita desde 0 (seam RoomLink) · analyze 0 · test 155 · FIN
+2026-09-16 · DONE · TASK-20-B integración de las dos sesiones v19.0 (sala→remota, encargos→local, board→ambas) + modo Servidor devuelto por orden · analyze 0 · suite verde · FIN
