@@ -40,4 +40,4 @@ flutter test integration_test/app_test.dart -d <emulador>
 
 ## 5. Post-release
 - [ ] `CHANGELOG.md` con entrada de la versión.
-- [ ] Sección nueva en `progress.md` (plantilla AGENT.md).
+- [ ] Entrada nueva en `PROGRESS.md` (bitácora 3 niveles del AGENT.md).

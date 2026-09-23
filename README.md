@@ -78,9 +78,9 @@ Nada más. Sin FCM: las notificaciones son locales (canales
 
 ## Documentación
 - [AGENT.md](AGENT.md) — contrato de trabajo para agentes: método en 9 pasos
-- [progress.md](progress.md) — bitácora append-only de turnos
+- [PROGRESS.md](PROGRESS.md) — bitácora hot (3 niveles: PROGRESS · progress_warm · progress_archive)
 - [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) — tokens «El Instrumento»
-- [docs/DEPENDENCIAS.md](docs/DEPENDENCIAS.md) — plugins oficiales y trampas
+- [docs/agent/DEPENDENCIAS.md](docs/agent/DEPENDENCIAS.md) — plugins oficiales y trampas
 - [docs/PARIDAD.md](docs/PARIDAD.md) — paridad 1:1 contra el spec §14
 - [docs/MIGRACION.md](docs/MIGRACION.md) — decisiones desde 0
 - [docs/RELEASE.md](docs/RELEASE.md) — checklist de release

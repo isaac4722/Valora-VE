@@ -1,56 +1,42 @@
-# TESTING · Estrategia de testing (ValoraVE)
+# TESTING · Estrategia de tests (es-VE)
 
-Consulta obligatoria en `4_AUDIT`. El gate que aplica esto:
-`bash scripts/quality_gate.sh` (analyze + test + auditoría UI).
+## Gates (obligatorios antes de cada commit)
 
-## Mapa de la suite
-
-- `test/` refleja la estructura de `lib/`: un archivo de test por módulo
-  (`store_test.dart`, `room_test.dart`, `insights_utils_test.dart`,
-  `fmt_test.dart`, `currencies_test.dart`, `board_test.dart`, …).
-- Suite vigente: **196 tests verdes** (v19.8: 185 previos + 11 de PIN de
-  emojis y deep link). El número exacto vive en `progress.md`; este
-  documento describe la estrategia, no el conteo.
-- `integration_test/app_test.dart` existe para humo de integración (no
-  corre en CI; el CI corre unit + widget).
-
-## Reglas de oro
-
-1. **Toda pieza nueva llega con su test** (Definición de Hecho, AGENT.md).
-   Si tocas lógica en `lib/`, el test que la cubre se actualiza en el
-   mismo commit — jamás después.
-2. **Determinismo primero:** nada de `Future.delayed` mágicos ni
-   `pumpAndSettle` con tickers infinitos (el ticker de la cinta y los
-   odómetros nunca se asientan: usar `pump(duración explícita)`).
-3. **Sin red real:** los tests no llaman APIs. Los datos de tasas se
-   inyectan como `RateBoard`/`RateEntry` ya construidos.
-4. **Round-trip como patrón:** persistencia y respaldo se prueban
-   ida/vuelta (`store_test.dart` es el ejemplo canónico: escribir →
-   leer → comparar; respaldo viejo → cargar → tolerar).
-5. **Los tests NO se debilitan.** Si un test falla y tras 2 intentos no
-   entiendes la causa raíz: PREGUNTAR (AGENT.md · Preguntar primero).
-   Prohibido borrar/saltar el test para ponerte verde.
-
-## Capas
-
-| Capa | Qué cubre | Ejemplos |
+| Gate | Comando | Criterio |
 |---|---|---|
-| **Unit pura** | Motor de tasas, formato, utilidades de análisis, protocolo de sala | `currencies_test.dart`, `fmt_test.dart`, `insights_utils_test.dart`, `room_test.dart` |
-| **Unit con estado** | Store Hive, respaldo/migración, modelos, alertas | `store_test.dart`, `models_backup_test.dart`, `tips_test.dart` |
-| **Widget** | Pantallas y componentes: render, interacción, accesibilidad | `widgets_test.dart`, `rate_sheet_test.dart`, `sharing_test.dart`, `push_screen_test.dart` |
-| **Plataforma** | Puentes nativos (AppWidgets, conectividad) | `app_widgets_test.dart`, `connectivity_test.dart` |
+| Análisis | `flutter analyze` | 0 issues |
+| Suite | `flutter test` | 100 % verde |
+| Uno a la vez | `flutter test test/ruta/archivo_test.dart` | verde |
+| Todo junto | `bash scripts/quality_gate.sh` | verde (analyze + test + auditoría) |
 
-## Cómo ejecutar
+Línea base actual: **196 tests verdes** (v19.8). El CI (`.github/workflows/ci.yml`)
+repite pub get → analyze → test en ubuntu-latest con Flutter 3.47.4.
 
-```bash
-flutter test                                    # suite completa (gate)
-flutter test test/store_test.dart               # una pieza
-flutter test test/store_test.dart --name "tag"  # un caso
-flutter analyze                                 # ANTES de testear (0 issues)
-```
+## Estructura
 
-## Cuándo un bug entra a la suite
+- `test/` refleja la estructura de `lib/`: un `_test.dart` por pieza
+  (`room_test`, `board_test`, `store_test`, `sharing_test`, `fmt_test`,
+  `insights_utils_test`, `app_widgets_test`, `widgets_test`, etc.).
+- `integration_test/app_test.dart`: 5 flujos que corren en host
+  (`flutter test integration_test/app_test.dart -d flutter-tester`).
 
-Todo bug arreglado deja un test que lo reprime (regresión). Ejemplo
-canónico: el conversor 40000→4 (v19.8) — el caso quedó clavado en
-`fmt_test.dart`/`currencies_test.dart` para que no vuelva a ocurrir.
+## Cómo se testea aquí
+
+- **Seams + fakes en `test/`** (nunca mocks en `lib/`): ej. `FakeLink
+  implements RoomLink` graba lo enviado y deja inyectar lo que llega —
+  el controlador no sabe que no hay radio.
+- Lógica pura en helpers testables (`insights_utils`, `fmt`,
+  `currencies`) → tests unitarios directos.
+- Widget tests con `SharedPreferences` real en el árbol (como
+  `appProviders`) y tour ya visto para que la barrera del coach no
+  bloquee taps.
+- PNG/tarjetas: patrón híbrido `pumps` + `runAsync` (el `toImage` del
+  engine no fluye con solo pumps) — ver `sharing_test.dart`.
+- Sin `pumpAndSettle` cuando hay animaciones infinitas (pulso del foco):
+  esperar por condición.
+
+## Reglas del contrato
+
+- Prohibido debilitar tests o relajar `analyze` para «ponerse verde».
+- Test falla y no entiendes la causa raíz tras 2 intentos → preguntar.
+- Todo cambio de comportamiento viene con su test (Definición de Hecho).

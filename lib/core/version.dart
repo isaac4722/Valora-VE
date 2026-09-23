@@ -6,5 +6,5 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v19.7 · versión web cliente: PWA con marca).
-const String kAppVersionVisible = '19.8';
+/// Versión visible (ronda v19.9 · contrato del agente + bitácora 3 niveles).
+const String kAppVersionVisible = '19.9';

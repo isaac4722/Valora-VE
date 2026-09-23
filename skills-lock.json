@@ -1,10 +1,22 @@
 {
   "version": 1,
   "skills": {
+    "flutter-frontend-design": {
+      "source": "syeduzaif/flutter-frontend-design",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "72526a8023dfd86cadfa5353c4b85aecc33998d8855a4b30e3c8ca18e2048ede"
+    },
     "humanizer": {
-      "source": "./agent-skills/humanizer",
+      "source": "./.agents/skills/humanizer",
       "sourceType": "local",
       "computedHash": "d70628be4fc857bbc92e94b7397e715e986d13d61663d3a0bfd7f93a5a9d2527"
+    },
+    "mobile-design": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/mobile-design/SKILL.md",
+      "computedHash": "f66841ab7e6e5f26f91d78d722955bd05caa3af6b8c88c3396a7ab1f1b352afb"
     }
   }
 }

@@ -12,7 +12,7 @@ releases borrados; el arte aprobado (brand + fuentes) se rescató antes.
    bridges imprescindibles. Cero HTML/JS en la app.
 3. **Offline-first**: primera ejecución sin red funciona completa con
    tipografías empaquetadas y tablero honesto (sin cifras inventadas).
-4. **Plugins oficiales** con versiones compatibles (docs/DEPENDENCIAS.md).
+4. **Plugins oficiales** con versiones compatibles (docs/agent/DEPENDENCIAS.md).
 
 ## Decisiones cerradas por el dueño (§4 del encargo)
 Orfanado con force-push · applicationId `ve.valorave.app` · GUI dp4 ·
@@ -36,7 +36,7 @@ Flutter stable sin pin en CI · integration solo local antes de tags.
   embebidas y el encargo prohíbe inventar; el primer arranque sin red
   muestra el estado degradado honesto + editor manual prominente.
 - **SSE propio sobre dio** (trampa 1), **file_picker 12** (trampa 2),
-  **path_provider_android 2.2.17** (trampa 3) — ver docs/DEPENDENCIAS.md.
+  **path_provider_android 2.2.17** (trampa 3) — ver docs/agent/DEPENDENCIAS.md.
 - **Sala**: el protocolo lista-sync vive UNA vez (`RoomProtocol`) y lo
   comparten servidor, Nearby (hub en el creador) y LAN (UDP+TCP). El
   guard `baseline+suppress` del web es `applyRemoteRoomEvent` del store:

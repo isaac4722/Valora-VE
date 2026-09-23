@@ -1,96 +1,39 @@
-# ARCHITECTURE · Arquitectura y patrones (ValoraVE)
-
-Consulta obligatoria en `2_PLAN`. Este documento describe LO QUE HAY;
-el diseño se evoluciona, no se reemplaza (AGENT.md · Nunca hacer).
+# ARCHITECTURE · Arquitectura y patrones (es-VE)
 
 ## Mapa real de `lib/`
 
-```
-lib/
-├── main.dart                 # bootstrap: Hive + AppState + MaterialApp
-├── core/                     # núcleo puro (sin Flutter-UI pesado)
-│   ├── models.dart           # entidades: RateEntry/RateBoard, Product,
-│   │                         #   Purchase, CartItem, Transaction, Settings,
-│   │                         #   AppData (13 claves), templates, notifs…
-│   ├── theme.dart            # §8 «El Instrumento»: tokens claro/grafito
-│   │                         #   (nota: es ARCHIVO, no carpeta — el mapa de
-│   │                         #   AGENT.md lo refiere como lib/core/theme/)
-│   ├── fmt.dart              # formato es-VE (1.234,56 · 02-feb-2026)
-│   ├── currencies.dart       # 15 fuentes kind/category + DEFAULT
-│   ├── analytics.dart        # tienda similar, avatar tinta estable
-│   └── version.dart          # versión + build info
-├── data/                     # persistencia y fuentes remotas
-│   ├── store.dart            # Hive (4 cajas JSON) + migrate + merge
-│   ├── board.dart            # motor de tasas: RateContext, plan de
-│   │                         #   conversión, degradados, diagnóstico
-│   ├── backup.dart           # respaldo JSON replace/merge
-│   ├── rate_history.dart / history_api.dart   # histórico BCV/paralelo
-│   └── sse_stream.dart       # SSE opcional (ingesta común con polling)
-├── state/app_state.dart      # estado reactivo de la app (ChangeNotifier)
-├── room/                     # sala en vivo (protocolo lista-sync §6)
-│   ├── room_transport.dart  # Socket.IO + Cerca(Nearby) + WiFi(Lan)
-│   └── room_controller.dart  # LWW, presencia, typing, GC, outbox
-├── services/                 # puentes plataforma (¡no UI!)
-│   ├── lan_hub / nearby_hub / bt_hub     # transportes de red
-│   ├── deep_link.dart       # valorave://sala?c=..&m=..&p=..
-│   ├── biometric.dart · alerts.dart · notifications.dart
-│   ├── quick_actions.dart   # 4 shortcuts del launcher
-│   ├── photo_compress.dart · sharing.dart (PNG/CSV/texto/print)
-│   ├── widget_service.dart  # AppWidgets BCV/Paralelo/Brecha
-│   └── workmanager_service.dart  # fondo: respaldo semanal, targets
-├── widgets/                  # componentes compartidos de UI
-│   ├── ui.dart              # firma visual: ReadWindow, Stamp,
-│   │                         #   LedgerRow, RateTicker, SkeletonPaper…
-│   ├── app_router.dart      # GoRouter (rutas / + deep links)
-│   ├── export_sheet.dart    # ExportSpec: exportación unificada
-│   └── rate_sheet / share_card / app_tips / app_tour / coach_mark
-└── features/                # módulos funcionales (UI + lógica)
-    ├── welcome/  shell/  home/  converter/  lista/  products/
-    ├── history/  statement/  insights/  room/  settings/
-    ├── scanner/  tickets/  legal/
-```
+| Capa | Ruta | Contenido |
+|---|---|---|
+| Dominio | `lib/core/` | `models`, `theme` (sistema de diseño), `fmt` (es-VE), `currencies`, `analytics`, `version` |
+| Datos | `lib/data/` | `store` (Hive), `board` (tablero de tasas + respaldos regionales), `backup`, `history_api`, `rate_history`, `sse_stream` (SSE propio sobre dio) |
+| Servicios | `lib/services/` | conectividad, notificaciones, widgets Android, sharing/exportación, deep link, biometría, quick actions, workmanager, bt/lan/nearby hubs |
+| Estado | `lib/state/app_state.dart` | `AppState` + `ThemeController` (provider como DI) |
+| Sala P2P | `lib/room/` | `room_controller` (protocolo hello→welcome, gobierno de roles) + `room_transport` (seam `RoomLink`) |
+| Features | `lib/features/` | `welcome`, `home`, `lista`, `converter`, `insights`, `history`, `statement`, `products`, `room`, `scanner`, `settings`, `legal`, `shell` — cada módulo con su UI y lógica |
+| UI compartida | `lib/widgets/` | `ui` (sistema de diseño), `app_router`, `export_sheet` (exportación unificada), `rate_sheet`, `share_card`, `app_tour`, `coach_mark`, `app_tips` |
 
-## Flujo de datos (offline-first)
+## Decisiones estructurales (cerradas)
 
-1. **Arranque:** `main.dart` abre Hive → `AppState` carga `AppData`
-   (13 claves) desde `store.dart` → el router muestra el shell.
-2. **Tasas:** `board.dart` arma `RateBoard` desde fuentes (BCV oficial,
-   paralelo, manuales) + SSE opcional; el conversor pide un
-   `ConversionPlan` (ruta visible con tramos, incl. EUR 4 tramos).
-   Los datos NUNCA se inventan: sin fuente → estado honesto «sin dato».
-3. **Escrituras:** toda mutación pasa por métodos del store
-   (`addRecord`, `addPurchase`, `setTarget`…) → cajas Hive →
-   `AppState` notifica → las pantallas se reconstruyen.
-4. **Sala:** los mismos ítems viajan por `room_controller` con
-   time-stamps LWW; offline se acumulan en outbox y salen al reconectar.
-5. **Fondo:** `workmanager_service` ejecuta respaldo semanal (retención
-   4) y price_targets; `widget_service` refresca los AppWidgets nativos.
+- **Offline-first:** Hive (`hive_ce`) persiste TODO; la red es un lujo.
+  Sin red no se consulta (fin de las cargas falsas).
+- **Sala P2P sin internet:** 5 modos (Cerca/WiFi-Hotspot/Bluetooth RFCOMM
+  nativo `BtSppPlugin.kt`/LAN/Servidor) detrás del seam `RoomLink`.
+- **Degradación honesta en web:** el arranque jamás depende de un plugin;
+  Hive → IndexedDB, plugins nativos → excepción capturada y logueada.
+- **Exportación unificada:** `showExportSheet` + `ExportSpec`
+  (`lib/widgets/export_sheet.dart`) para TODA la app.
+- **Deep link:** `valorave://sala?c=CODE&m=MODE&p=0|1` (canal
+  `valorave/deeplink` en `MainActivity.kt` → `DeepLinkService`).
 
-## Patrones vigentes (respetar)
+## Reglas
 
-- **Estado:** `ChangeNotifier` central (`AppState`) + sets locales en
-  pantallas con controladores DISPOSED (fuga = bug de primera clase).
-- **Navegación:** GoRouter único (creado UNA vez fuera de `build()` —
-  el bug v1.0.1 de la bienvenida clavada enseña por qué).
-- **Feature-first:** la pantalla nueva nace en `lib/features/<módulo>/`,
-  con su lógica aparte si crece (`insights_utils.dart` fuera de la
-  pantalla es el patrón a imitar).
-- **Exportación unificada:** TODO "compartir/guardar" pasa por
-  `widgets/export_sheet.dart` (ExportSpec + formatos) — nada de
-  hojas ad-hoc por módulo.
-- **Nativo:** Kotlin en `android/app/src/main/kotlin/ve/valorave/app/`
-  (MainActivity canal deep link, BcvWidgetProvider por subclassing);
-  los cambios de manifest requieren rebuild limpio.
+- No reemplazar arquitectura ni sistema de diseño: solo evolucionar lo
+  existente.
+- Modificar `lib/core/` afecta a toda la app → preguntar primero.
+- Fuente de verdad funcional: `MVP-CRUD.md` (raíz · reconstrucción
+  canónica v19.9). Si el código y el MD discrepan, manda el MD y la
+  desviación se anota en `PROGRESS.md`.
 
-## Fronteras de dependencia
+## TODO
 
-- `features/` → puede usar `core/`, `data/`, `state/`, `widgets/`, `services/`.
-- `services/` → NO importa `features/`.
-- `core/` → NO importa Flutter-UI pesado (queda testable puro).
-- `test/` espeja esta estructura (ver `docs/agent/TESTING.md`).
-
-## Servidor de sala
-
-`server/lista-sync/` (Node/socket.io, deployable con Bun o Node) habla
-el MISMO protocolo JSON que los transportes nativos — 1:1, sin dialectos.
-Su README documenta el despliegue; no forma parte del APK.
+- (ninguno pendiente: todo lo listado es verificable en el árbol)

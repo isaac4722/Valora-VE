@@ -1,74 +1,46 @@
-# GIT_WORKFLOW · Flujo de Git y commits (ValoraVE)
-
-Consulta obligatoria en `7_PERSIST`.
+# GIT_WORKFLOW · Flujo de Git y Builds (es-VE)
 
 ## Ramas
 
-- **Rama de trabajo vigente:** `fix/v1.1.0-dp4-paridad` (todo el ciclo
-  9P corre aquí).
-- **`main`** solo recibe merge con ORDEN EXPRESA del dueño (regla
-  vigente desde v17.x; el historial de `progress.md` lo respalda).
-- Nada de ramas nuevas por cuenta propia: se trabaja en la rama de
-  trabajo del turno, salvo orden del dueño.
+- `main`: estable. **Merge SOLO con orden expresa del dueño.**
+- `fix/v1.1.0-dp4-paridad`: rama de trabajo actual.
+- Sin ramas de experimentación sin permiso (precedente TASK-25: la
+  desviación se revirtió completa).
 
-## Commits (conventional, en español)
+## Commits
 
-Formato: `tipo(ámbito): descripción en minúscula y español`
+- Conventional commits en español: `feat|fix|docs|chore|test(scope): ...`
+- Una pantalla/pieza por commit (regla del ciclo de trabajo).
+- Ejemplos reales: `feat(v19.8): Análisis web-first + Sala con PIN de
+  emojis...`, `fix(9P): conversor 40000→4...`, `docs(v19.6): CHANGELOG +
+  bitácora...`.
+- Gates ANTES de cada commit: `flutter analyze` 0 + `flutter test` verde.
+- Prohibido commitear tokens, API keys o secretos (auth por remote URL
+  local del entorno, jamás en archivos).
 
-| Tipo | Cuándo |
-|---|---|
-| `feat` | Función nueva o ampliación de módulo |
-| `fix` | Bug arreglado (con test de regresión) |
-| `polish` | Refinamiento visual/UX sin cambio funcional |
-| `refactor` | Misma conducta, mejor estructura |
-| `test` | Solo tests |
-| `docs` | Solo documentación (AGENT.md, docs/, progress.md) |
-| `chore` | Tooling, CI, scripts |
-| `perf` | Rendimiento |
+## Versionado
 
-- **1 pieza por commit.** Si el turno tocó 3 piezas, son 3 commits.
-- El mensaje describe QUÉ cerró, no lo que intentaste («fix(9P):
-  conversor 40000→4 + código de sala invertido», no «cambios»).
-- El cuerpo del commit (si hace falta) resume verificación: gates,
-  decisiones, desviaciones conscientes.
+- Esquema: `1.x.y-beta+z` en `pubspec.yaml`. Prohibido salirse.
+- Cada ronda bumpa: `pubspec.yaml` + `kAppVersionVisible` en
+  `lib/core/version.dart` + entrada en `CHANGELOG.md`.
 
-## Gates ANTES de cada commit (AGENT.md · Siempre hacer)
+## CI (`.github/workflows/ci.yml`)
 
-```
-flutter analyze   # 0 issues
-flutter test      # suite verde
-```
+Cada push/PR: `pub get` → `flutter analyze` (0) → `flutter test`.
+ubuntu-latest + Temurin 17 + Flutter 3.47.4 fijado. El paso 8 del ciclo
+exige esperar este run hasta verde antes de cerrar turno.
 
-O el unificado: `bash scripts/quality_gate.sh`.
+## Builds (`.github/workflows/build.yml`) — orden expresa del dueño
 
-## Secretos
-
-- El PAT de GitHub y `android/keystore.properties` NUNCA se commitean
-  (`keystore.properties.example` documenta el formato esperado).
-- Si un secreto apareciera en el diff: detener el turno, avisar al dueño
-  y rotar la credencial antes de seguir.
-
-## Push y CI (paso 8 del 9P)
-
-1. `git push origin fix/v1.1.0-dp4-paridad`.
-2. Esperar el run de **CI** (pub get → quality_gate.sh: analyze + test +
-   auditoría UI) hasta verde. Si falla: `6_RETRY` — corregir y volver a
-   pushar.
-3. En tags `v*`, **Build** produce los 4 APK + AAB + ZIP completo y la
-   Release los adjunta (regla del dueño v17.9/v19.2: cobertura total de
-   dispositivos; prohibido retirar un ABI, el AAB o el ZIP).
-
-## progress.md
-
-- Se LEE completo al empezar el turno (con AGENT.md) y se AÑADE la
-  entrada al cerrar (nunca reescribir secciones ajenas).
-- La entrada registra: orden del dueño, qué se hizo, decisiones,
-  gates reales (analyze/test/build), bloqueos y siguiente paso.
-- Sin entrada en `progress.md`, el trabajo no existe (Definición de
-  Hecho).
-
-## Hygiene
-
-- El working tree queda LIMPIO al cerrar el turno (nada de WIP colgando).
-- `dart format .` antes de commit; archivos generados (`build/`,
-  `.dart_tool/`) jamás entran al índice.
+- Cada push a main/fix produce SIEMPRE: **4 APK** (`armeabi-v7a` androids
+  viejos · `arm64-v8a` nuevos · `x86_64` emuladores/Intel · `universal`
+  todo-en-uno) + **AAB** de Play Store + **UN ZIP**
+  `valorave-v{versión}-build-{fecha}-completo.zip` (con LEEME.txt y
+  checksums) + símbolos de ofuscación aparte.
+- Nomenclatura: `valorave-v{versión}-build-{AAAAMMDD Caracas}-{abi}.apk/.aab`.
+- En tags `v*`: la Release adjunta los 6 archivos (4 APK + AAB + ZIP).
+- Prohibido retirar un ABI, el AAB o el ZIP sin orden expresa del dueño.
+- x86 de 32 bits NO es construible (Flutter no distribuye motor para ese
+  ABI) — no cuenta como cobertura faltante.
+- `limpieza-artefactos.yml`: red de seguridad diaria por si el repo
+  vuelve a privado (público = storage gratis).

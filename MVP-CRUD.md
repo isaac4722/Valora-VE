@@ -2,7 +2,7 @@
 
 **Qué es este archivo:** la ÚNICA fuente de verdad funcional (AGENT.md).
 Si el código y este MD discrepan, manda este MD; la desviación se anota
-en `progress.md` y se decide: o se corrige el código, o se evoluciona
+en `PROGRESS.md` y se decide: o se corrige el código, o se evoluciona
 este documento con la orden del dueño.
 
 > Nota de procedencia: el MVP-CRUD original (privado) nunca estuvo en
@@ -23,7 +23,7 @@ este documento con la orden del dueño.
 4. **Una cosa a la vez:** cada módulo resuelve SU trabajo sin invadir
    al vecino.
 5. **Las órdenes del dueño mandan:** toda desviación consciente queda
-   documentada en `progress.md` con la orden que la originó.
+   documentada en `PROGRESS.md` con la orden que la originó.
 
 ## §2 · Modelo de datos (`lib/core/models.dart`)
 
@@ -172,6 +172,6 @@ declaración.
 ---
 
 **Cómo evoluciona este archivo:** con orden del dueño o con desviaciones
-conscientes documentadas en `progress.md` y aceptadas por él. Un cambio
+conscientes documentadas en `PROGRESS.md` y aceptadas por él. Un cambio
 de comportamiento visible SIEMPRE actualiza la § correspondiente en el
 mismo commit (Definición de Hecho).
