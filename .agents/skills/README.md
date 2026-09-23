@@ -1,50 +1,34 @@
-# Skills del agente (ubicación canónica: `.agents/skills/`)
+# Skills · Catálogo del Contrato
 
-Toda skill vive en `.agents/skills/<skill>/SKILL.md` — una skill = una
-carpeta, sin subcarpetas por familia y sin duplicados (regla del
-`AGENT.md`). El agente DEBE leer el `SKILL.md` (carga previa) antes de
-usar una skill. Catálogo LLM de la familia taste: `taste-llms.txt`.
+Las skills se invocan **dentro** de los estados del flujo definido en `WORKFLOW.md`. Lee el `SKILL.md` de cada skill antes de usarla.
 
-## Las del contrato (AGENT.md · Integración de Skills)
+## Ubicación y organización
 
-| Skill del AGENT.md | Carpeta | Origen |
+- **Ubicación canónica:** `.agents/skills/<skill-name>/SKILL.md`.
+- **Catálogo:** `.agents/skills/README.md`. Si el repo ya contiene skills, verifica que estén en `.agents/skills/` (no dispersas). Si hay duplicados, consolida.
+- **Instalación:** `npx skills add <owner/repo> --agent universal --yes` (mantiene `skills-lock.json`). Sin red npm disponible, clonar y copiar a `.agents/skills/<skill>/` (precedente TASK-13/23).
+- **Faltas:** si una skill requerida no está instalada, regístralo en `PROGRESS.md` y aplica sus principios manualmente.
+
+## Token-efficiency (RTK + Caveman)
+
+| Skill | Estados donde se usa | Cuándo | Notas |
+|---|---|---|---|
+| `rtk` (Rust Token Killer) | Transversal (cualquier estado que ejecute shell) | Comandos ruidosos: `rtk flutter analyze`, `rtk flutter test`, `rtk git status`, `rtk git diff --stat`, `rtk grep`. Reduce **input**. | Instalar vía `brew install rtk` o releases github.com/rtk-ai/rtk; luego `rtk init --global`. |
+| `caveman` | 3_IMPLEMENT, 4_AUDIT, 7_PERSIST (solo output conversacional) | Activar modo `lite` o `full` para comprimir respuestas al usuario. Reduce **output**. | **NUNCA** para `docs/`, `PROGRESS.md`, `progress_warm.md`, `progress_archive.md`, commits ni documentación. Solo respuestas conversacionales. |
+
+**Regla:** RTK optimiza input, Caveman optimiza output. Son capas, no excluyentes. Si una skill de diseño sugiere verbosidad y Caveman sugiere brevedad, prevalece Caveman **solo en output conversacional**; `docs/` y commits van en español normal.
+
+## Diseño y calidad
+
+| Skill | Estados | Cuándo |
 |---|---|---|
-| `ui-nice-skill` | `ui-nice-skill/` | **Propia del repo** (orden del dueño v19.9: no existía en registro público; creada para 1_ANALYZE y 4_AUDIT) |
-| `flutter-frontend-design` | `flutter-frontend-design/` | github.com/syeduzaif/flutter-frontend-design (MIT) |
-| `mobile-design` | `mobile-design/` | github.com/sickn33/agentic-awesome-skills (skills/mobile-design) |
-| `humanizer` | `humanizer/` | github.com/blader/humanizer (MIT, orden del dueño v19.3) |
-| `taste-skill` | `taste-skill/` | github.com/Leonxlnx/taste-skill |
-| `rtk` | `rtk/` | documentación del binario github.com/rtk-ai/rtk (creada v19.9) |
-| `vlm` | `vlm/` | procedimiento propio del repo para 3.5 VISUAL GATE (creada v19.9) |
-| `caveman` | `caveman/` | incluida en el repo (JuliusBrussee/caveman) |
-| `flutter-accessibility` / `flutter-testing` | oficiales | colección Flutter (ver abajo) |
+| `ui-nice-skill` | 1_ANALYZE, 4_AUDIT | Toda creación/modificación de pantallas o flujos UI. Audita contra el sistema de diseño vigente del repo; no inventa estética. |
+| `flutter-frontend-design` | 3_IMPLEMENT | UI nueva en `lib/`. |
+| `mobile-design` | 2_PLAN (consulta) | Convenciones de plataforma (touch targets ≥48dp, breakpoints). Solo consulta, no dicta estética. |
+| `humanizer` | 3_IMPLEMENT (post-UI) | Pulir TODO texto visible al usuario antes de cerrar. |
+| `vlm` | 3.5_VISUAL_GATE | Capturas Flutter web local; descarta slop/BASURA. No rediseña. |
+| `taste-skill` | 4_AUDIT | Opcional. Si la auditoría visual detecta riesgo de "AI slop". |
+| `flutter-accessibility` (oficial) | 4_AUDIT | Semántica, contraste, `Semantics()`, navegación por teclado si hay UI nueva. |
+| `flutter-testing` (oficial) | 4_AUDIT | Widget/golden tests si la pieza tocó widgets o layouts. Complementa `quality_gate.sh`. |
 
-## Inventario completo (59 skills)
-
-| Grupo | Skills |
-|---|---|
-| **Contrato** | ui-nice-skill · flutter-frontend-design · mobile-design · humanizer · taste-skill · rtk · vlm · caveman |
-| **Flutter oficiales (37)** | flutter (meta) · flutter-accessibility · ai-integration · animation · app-workflow · architecture · authentication · background-execution · build-release · ci-cd · code-review · dependency-upgrades · device-testing · figma-workflow · in-app-purchases · localization · navigation · networking · notifications · observability · openapi-client · package-development · performance · persistence · platform-integration · product-analytics · project-creater · responsive-layout · runtime-debugging · security · state-management · testing · text-rendering · ui-design · ui-patterns · visual-effects · webview |
-| **Dart oficiales (2)** | dart-language · dart-concurrency |
-| **Familia taste (13)** | taste-skill · taste-skill-v1 · gpt-tasteskill · brandkit · minimalist-skill · brutalist-skill · soft-skill · redesign-skill · output-skill · image-to-code-skill · imagegen-frontend-web · imagegen-frontend-mobile · stitch-skill |
-
-## Instalación
-
-- Estándar: `npx skills add <owner/repo> --agent universal --yes` (instala
-  en `.agents/skills/<skill>/` y mantiene `skills-lock.json`).
-- En entornos sin salida a la red de npm (timeouts documentados en
-  TASK-13/23/30), la vía probada es clonar el repo y copiar la carpeta a
-  `.agents/skills/<skill>/`, dejando el `SKILL.md` en su raíz, y
-  registrar la instalación en `PROGRESS.md`.
-- `skills-lock.json` (raíz) lo gestiona el CLI para lo que él instala; el
-  inventario canónico de esta carpeta es ESTE README.
-
-## Reglas
-
-- **No contradicción:** si una skill sugiere algo que viola los Límites
-  de Tres Niveles del `AGENT.md`, prevalece el `AGENT.md`.
-- Skill del contrato no instalada → se registra en `PROGRESS.md` y se
-  continúa manualmente aplicando sus principios.
-- `mobile-design` se consulta en `2_PLAN` (convenciones de plataforma,
-  touch targets ≥48dp) — no dicta estética.
-- Actualizar esta tabla al instalar o consolidar skills.
+**Regla de no contradicción:** si una skill sugiere algo que viola los Límites de tres niveles en `AGENT.md`, prevalece el contrato.
