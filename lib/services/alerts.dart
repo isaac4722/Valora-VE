@@ -32,6 +32,13 @@ class AlertEngine {
   final SharedPreferences _prefs;
   final Map<String, DateTime> _fired = {};
 
+  /// Avisos del sistema en vuelo (los `show()` lanzados por _notify).
+  /// En el camino in-app nadie los espera (comportamiento original intacto);
+  /// en 2º plano (workmanager) el worker DEBE esperarlos con drain() antes
+  /// de retornar: si retorna antes, el engine muere y la notificación nunca
+  /// sale — el síntoma «solo avisa cuando abro la app» (fix TASK-32).
+  final List<Future<void>> _pending = [];
+
   static const _kFired = 'valorave.alert-fired';
   static const _kThresholds = 'valorave.alert-thresholds';
 
@@ -353,7 +360,7 @@ class AlertEngine {
     required String body,
     AlertPersist? persist,
   }) {
-    unawaited(
+    _pending.add(
       notifs.show(
         channelId: channelId,
         title: title,
@@ -363,5 +370,20 @@ class AlertEngine {
     );
     persist?.call(kind, title, body);
     debugPrint('[alertas] $title · $body');
+  }
+
+  /// Espera los avisos del sistema en vuelo y vacía la cola. Idempotente:
+  /// drenar con la cola vacía completa al instante. `show()` nunca lanza
+  /// (se protege adentro), así que el drain no puede romper el worker.
+  Future<void> drain() async {
+    final jobs = List<Future<void>>.of(_pending);
+    _pending.clear();
+    for (final job in jobs) {
+      try {
+        await job;
+      } catch (_) {
+        // El worker sigue: un aviso fallido no tumba la tarea horaria.
+      }
+    }
   }
 }

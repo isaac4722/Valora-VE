@@ -45,6 +45,12 @@ void callbackDispatcher() {
         // evalúa contra el último registro guardado y avisa por el canal
         // price_targets; el persist escribe al centro (Hive) y se ve al
         // abrir la app.
+        //
+        // FIX TASK-32: el worker DEBE esperar los show() en vuelo
+        // (engine.drain) y el flush del centro (flushNotifications) antes
+        // de retornar. Antes se retornaba con los futuros sin esperar y el
+        // engine de 2º plano moría: la notificación solo salía al abrir la
+        // app (camino in-app). Con await el sistema completa el aviso.
         try {
           final prefs = await SharedPreferences.getInstance();
           final engine = AlertEngine(prefs);
@@ -55,6 +61,8 @@ void callbackDispatcher() {
             persist: (kind, title, body) =>
                 store.pushNotification(kind: kind, title: title, body: body),
           );
+          await engine.drain();
+          await store.flushNotifications();
         } catch (_) {
           /* sin canal de notifs: no bloquea */
         }

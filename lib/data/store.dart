@@ -1130,6 +1130,18 @@ class AppStore extends ChangeNotifier {
     _boxNotifs?.put('ring', jsonEncode(notifs.map((e) => e.toJson()).toList()));
   }
 
+  /// Fuerza la escritura en disco del anillo de notificaciones. En 2º plano
+  /// (workmanager) el Hive.put queda en cola: si el worker termina sin
+  /// esperar, el aviso se pierde del centro aunque la notificación del
+  /// sistema sí saliera (fix TASK-32). Idempotente y sin efecto en app viva.
+  Future<void> flushNotifications() async {
+    try {
+      await _boxNotifs?.flush();
+    } catch (_) {
+      // Sin caja abierta (host de pruebas, isolate en cierre): no bloquea.
+    }
+  }
+
   void persistSnapshots() {
     _boxSnapshots?.put(
       'points',
