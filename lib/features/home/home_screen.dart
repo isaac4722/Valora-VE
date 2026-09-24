@@ -12,6 +12,7 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -90,7 +91,10 @@ class _HomeSections extends StatelessWidget {
         _TusTiendas(),
         _RegistrosRecientes(),
         _Herramientas(),
-        _AppWidgetsCard(),
+        // Los App Widgets son de la pantalla de inicio de ANDROID: en web
+        // la tarjeta no aplica y molesta al pie del Inicio (auditoría
+        // visual v19.10 · honestidad de plataforma).
+        if (!kIsWeb) _AppWidgetsCard(),
       ],
     );
   }
@@ -416,7 +420,18 @@ class _RateHero extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Stamp(s.category.label, color: catColor),
-                Stamp(s.detail, color: scheme.onSurfaceVariant),
+                // Dedupe (auditoría v19.10): el detalle ya trae el nombre
+                // de la categoría («Oficial · Banco Central de Venezuela»);
+                // con el sello de categoría arriba, la palabra queda
+                // repetida en el héroe. Se recorta el prefijo si coincide.
+                Stamp(
+                  s.detail.toLowerCase().startsWith(
+                        '${s.category.label.toLowerCase()} · ',
+                      )
+                  ? s.detail.substring(s.category.label.length + 3)
+                  : s.detail,
+                  color: scheme.onSurfaceVariant,
+                ),
                 if (gapPct != null)
                   Container(
                     padding: const EdgeInsets.symmetric(

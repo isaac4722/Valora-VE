@@ -972,7 +972,10 @@ class _PresupuestoState extends State<_Presupuesto> {
                         decoration: InputDecoration(
                           hintText: budget.amount > 0
                               ? fmtMoney(budget.amount, bCur)
-                              : 'Tu presupuesto en ${bCur.code}',
+                              // «Presupuesto del mes» (v19.10): el hint largo
+                              // «Tu presupuesto en VES» se truncaba contra el
+                              // selector de moneda; la divisa ya está al lado.
+                              : 'Presupuesto del mes',
                         ),
                       ),
                     ),
