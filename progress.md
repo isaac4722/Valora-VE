@@ -259,3 +259,46 @@ con la plantilla de `AGENT.md`.
 - Pendiente (honesto, ver §3 del scorecard): quick_actions (4 shortcuts),
   widgets 2-13, biometría toggle, SSE vivo, heatmap/proyección en
   Análisis, ruta EUR 4 tramos, Decimal exacto, migración v1→v12 en cadena.
+
+---
+## [TASK-16] Verificación del contrato AGENT.md · entorno configurado y repo reconstruido · 2026-09-24 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Hecho:
+  - AGENT.md y progress.md leídos COMPLETOS antes del turno (Regla 1).
+  - Auditoría de cumplimiento del contrato sobre main (7e8284d):
+    Regla 5 OK — sin mocks en lib/, sin AppStateScope, sin directorio
+    web/ ni patrones web (localStorage/ServiceWorker/indexedDB), sin
+    tokens/keys en código (grep con evidencia); versión 1.0.2-beta+3
+    dentro del rango 1.x.y-beta+z; commits en español con conventional
+    commits (única excepción histórica 9238b19 «Set up devcontainer…»,
+    generado por el asistente de devcontainer de GitHub, no por un turno
+    de agente).
+  - Entorno configurado desde cero: Flutter 3.47.5 stable (Dart 3.13.4)
+    instalado y verificado — cumple `sdk: ^3.9.2` de pubspec y coincide
+    con el tooling registrado en TASK-11 (Gradle 8.14/AGP 8.11.1).
+  - Repo reconstruido: `flutter pub get` OK (150 deps, lockfile intacto
+    y reproducible) · `flutter analyze` 0 issues · `flutter test`
+    107/107 verdes (la suite creció de 104 → 107 desde TASK-15).
+  - Hallazgo H1 (Regla 4): `MVP-CRUD.md` — la «única fuente de verdad
+    funcional» — NO está en main; solo existe en el linaje antiguo
+    (rama remota fix/v1.1.0-dp4-paridad, commit 08360df). Ocho docs lo
+    citan (AGENT.md, PARIDAD*, MIGRACION, DESIGN-SYSTEM, CHANGELOG,
+    server README). No se restauró unilateralmente: el spec puede ser
+    privado y tocarlo sin encargo expuesto violaría el paso 1.
+  - Hallazgo H2: la rama remota fix/v1.1.0-dp4-paridad es el linaje
+    histórico v15/v19 (380 archivos, +53k líneas) e incluye web/ con
+    patrones prohibidos por la Regla 5 — se deja SOLO como referencia;
+    prohibido fusionarla tal cual.
+- Decisiones:
+  - No se tocó código: el encargo fue verificar/configurar/reconstruir;
+    los gates ya pasaban y no había nada que corregir (auditoría verde
+    a la primera — no se debilitó nada).
+  - Sin Android SDK local (disco 9,3 GB tras instalar Flutter; igual
+    criterio que TASK-11..15): la build firmada real la ejecuta el
+    runner de Actions en el push de este commit.
+- Gates: analyze=0 issues · test=107/107 · build=pendiente del run de
+  Actions de este push (paso 8 del método, verificado abajo).
+- Bloqueos: ninguno.
+- Siguiente: decidir con el dueño el destino de MVP-CRUD.md (restaurar
+  en main desde el linaje antiguo vs. mantenerlo externo) y plan de
+  fusiones para el linaje dp4 (saneado previo obligatorio).
