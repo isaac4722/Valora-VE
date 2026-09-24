@@ -51,8 +51,8 @@ estaba explícitamente agregado se conserva tal cual.
 
 1. Cuenta en flutlab.io → Import → GitHub → `isaac4722/Valora-VE`
    (privado: pide un token con acceso al repo).
-2. Rama a compilar: la que se quiera probar (`fix/v1.1.0-dp4-paridad`
-   es la de trabajo actual).
+2. Rama a compilar: la que se quiera probar (`safe/v1.1.0-dp4-paridad`
+   es la de trabajo actual; antes `fix/v1.1.0-dp4-paridad`).
 3. Build Android (APK). Los artefactos oficiales siguen saliendo del
    GitHub Actions del repo (4 APK + AAB + ZIP, regla §9 de AGENT.md) —
    FlutLab queda como vía rápida de prueba, no como canal de release.

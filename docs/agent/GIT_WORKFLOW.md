@@ -3,7 +3,10 @@
 ## Ramas
 
 - `main`: estable. **Merge SOLO con orden expresa del dueño.**
-- `fix/v1.1.0-dp4-paridad`: rama de trabajo actual.
+- `safe/v1.1.0-dp4-paridad`: rama de trabajo actual (antes
+  `fix/v1.1.0-dp4-paridad`; renombrada por orden del dueño 2026-09-24:
+  es la red de seguridad que garantiza reversibilidad del proyecto —
+  `safe/` refleja su propósito).
 - Sin ramas de experimentación sin permiso (precedente TASK-25: la
   desviación se revirtió completa).
 

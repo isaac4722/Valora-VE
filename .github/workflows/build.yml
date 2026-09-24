@@ -27,7 +27,7 @@ name: Build
 
 on:
   push:
-    branches: [main, 'fix/v1.1.0-dp4-paridad']
+    branches: [main, 'safe/v1.1.0-dp4-paridad']
     tags: ['v*']
 
 # Privilegio mínimo: solo escritura de contenidos (crear Release y subir
