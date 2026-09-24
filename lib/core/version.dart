@@ -6,5 +6,6 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v19.9 · contrato del agente + bitácora 3 niveles).
-const String kAppVersionVisible = '19.9';
+/// Versión visible (ronda v19.10 · auditoría visual premium + fix de
+/// notificaciones en 2º plano).
+const String kAppVersionVisible = '19.10';

@@ -1,6 +1,29 @@
 # Changelog
 
 
+## 1.9.10-beta+28 · v19.10 — Auditoría visual premium + notificaciones que sí llegan en 2º plano
+
+- **Notificaciones en 2º plano (fix del síntoma «solo avisan al abrir la
+  app»)**: el worker horario retornaba con los `show()` en vuelo sin
+  esperar y el engine de 2º plano moría antes de notificar. Ahora
+  `AlertEngine` acumula los avisos pendientes y `drain()` los espera;
+  `AppStore.flushNotifications()` fuerza el disco del anillo del centro;
+  el dispatcher de workmanager espera ambos antes de retornar. Con test
+  de regresión (`test/alerts_drain_test.dart`).
+- **Auditoría visual 1:1 (web local privada del agente + capturas)**:
+  onboarding con contenido centrado verticalmente (slides 2–4, patrón
+  del slide 1) — antes quedaban colgados arriba con ~45 % vacío; el
+  héroe de Inicio ya no repite la categoría («OFICIAL» + «Oficial ·
+  Banco Central de Venezuela» pasa a «OFICIAL» + «Banco Central de
+  Venezuela»); el placeholder del presupuesto de Lista ya no se trunca
+  («Presupuesto del mes»); la tarjeta «App Widgets» se oculta en web
+  (honestidad de plataforma: los widgets son de Android).
+- Skills del contrato usadas de punta a punta: rtk (shell), ui-nice-skill
+  (checklist 12 puntos + anti-slop), vlm (capturas y verificación),
+  humanizer (micro-copy), flutter-accessibility (semántica del héroe ya
+  presente; targets verificados), flutter-testing (regresión), taste
+  (filtro anti-genérico: cero señales de slop).
+
 ## 1.9.9-beta+27 · v19.9 — Contrato del agente reconstruido: docs/agent/, bitácora de 3 niveles y skills unificadas
 
 - **AGENT.md v3 (máquina de estados 9.5 pasos)**: el ciclo de trabajo pasa

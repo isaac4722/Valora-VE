@@ -9,7 +9,7 @@
 | Uno a la vez | `flutter test test/ruta/archivo_test.dart` | verde |
 | Todo junto | `bash scripts/quality_gate.sh` | verde (analyze + test + auditoría) |
 
-Línea base actual: **196 tests verdes** (v19.8). El CI (`.github/workflows/ci.yml`)
+Línea base actual: **199 tests verdes** (v19.10). El CI (`.github/workflows/ci.yml`)
 repite pub get → analyze → test en ubuntu-latest con Flutter 3.47.4.
 
 ## Estructura
