@@ -296,8 +296,9 @@ con la plantilla de `AGENT.md`.
   - Sin Android SDK local (disco 9,3 GB tras instalar Flutter; igual
     criterio que TASK-11..15): la build firmada real la ejecuta el
     runner de Actions en el push de este commit.
-- Gates: analyze=0 issues · test=107/107 · build=pendiente del run de
-  Actions de este push (paso 8 del método, verificado abajo).
+- Gates: analyze=0 issues · test=107/107 · build=OK — paso 8 verificado
+  sobre 126c77e: CI success (gates en runner, stable 3.47.5) y Build
+  success (APK/AAB firmados) · runs 36023706765 / 36023706793.
 - Bloqueos: ninguno.
 - Siguiente: decidir con el dueño el destino de MVP-CRUD.md (restaurar
   en main desde el linaje antiguo vs. mantenerlo externo) y plan de
