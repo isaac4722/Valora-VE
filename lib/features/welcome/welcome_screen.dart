@@ -245,12 +245,20 @@ class _SlideQueHace extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final sem = VeColors.of(context);
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(26, 18, 26, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          const SizedBox(height: 8),
+    // Centrado vertical (v19.10): mismo patrón del slide 1 — el
+    // contenido respira centrado y con textScale alto sigue habiendo
+    // scroll sin desbordes (antes quedaba colgado arriba, ~45 % vacío).
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(26, 12, 26, 8),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: constraints.maxHeight - 20,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
           Text(
             'Lo que hace',
             style: VeText.displayNum(
@@ -287,7 +295,9 @@ class _SlideQueHace extends StatelessWidget {
             title: 'Cálculos que sirven',
             body: 'Sueldo en divisas, vuelto, presupuesto y análisis del mes.',
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -300,12 +310,20 @@ class _SlideDatos extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(26, 18, 26, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          const SizedBox(height: 8),
+    // Centrado vertical (v19.10): mismo patrón del slide 1 — el
+    // contenido respira centrado y con textScale alto sigue habiendo
+    // scroll sin desbordes (antes quedaba colgado arriba, ~45 % vacío).
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(26, 12, 26, 8),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: constraints.maxHeight - 20,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
           Text(
             'Tus datos, tuyos',
             style: VeText.displayNum(
@@ -369,7 +387,9 @@ class _SlideDatos extends StatelessWidget {
               ],
             ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -385,12 +405,20 @@ class _SlidePais extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(26, 18, 26, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          const SizedBox(height: 8),
+    // Centrado vertical (v19.10): mismo patrón del slide 1 — el
+    // contenido respira centrado y con textScale alto sigue habiendo
+    // scroll sin desbordes (antes quedaba colgado arriba, ~45 % vacío).
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(26, 12, 26, 8),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: constraints.maxHeight - 20,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
           Text(
             '¿Desde dónde miras las tasas?',
             style: VeText.displayNum(
@@ -428,7 +456,9 @@ class _SlidePais extends StatelessWidget {
                 ),
             ],
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
