@@ -86,6 +86,8 @@ El registro vive en tres archivos. **Nunca reescribir entradas previas: solo añ
 | `PROGRESS_WARM.md` | **Warm** | Últimos ~10 turnos cerrados. | ≤10 entradas |
 | `PROGRESS_COLD.md` | **Cold** | Todo lo anterior, comprimido por mes o hito. | Sin límite - 10 lineas por seccion |
 
+Nota: Esto tambien ocurre con CHANGELOGs.
+
 **Formato de línea (obligatorio, una línea por pieza):**
 ```
 YYYY-MM-DD · <estado> · <pieza> · <gate> · <route>
