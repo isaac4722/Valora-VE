@@ -122,12 +122,12 @@ class Stamp extends StatelessWidget {
     final Color c = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
     final Widget? iconWidget = icon == null
         ? null
-        : Icon(icon, size: 9, color: c);
+        : Icon(icon, size: 10, color: c);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         border: Border.all(color: c.withValues(alpha: 0.38)),
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(6),
         color: c.withValues(alpha: 0.08),
       ),
       child: Row(
@@ -140,7 +140,7 @@ class Stamp extends StatelessWidget {
               fontFamily: 'Inter',
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
+              letterSpacing: 0.6,
               color: c,
             ),
           ),
@@ -173,7 +173,7 @@ class ReadWindow extends StatelessWidget {
         color: dark
             ? VeColors.mutedDark.withValues(alpha: 0.8)
             : VeColors.mutedLight.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         // §8 regla dura: bordes 100 % sólidos (nunca alpha parcial).
         border: Border.all(
           color: dark ? VeColors.borderDark : VeColors.borderLight,
@@ -219,9 +219,10 @@ class LedgerRow extends StatelessWidget {
           Flexible(
             child: Text(
               label,
+              // TASK-33 Linear: etiqueta en peso regular — la cifra manda.
               style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
                 color: scheme.onSurface,
               ),
               overflow: TextOverflow.ellipsis,
@@ -231,9 +232,10 @@ class LedgerRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
+              // TASK-33 Linear: etiqueta en peso regular — la cifra manda.
               style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
                 color: scheme.onSurface,
               ),
               overflow: TextOverflow.ellipsis,
@@ -425,22 +427,26 @@ class ChipTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final c = color ?? scheme.onSurfaceVariant;
+    // TASK-33 Linear: badge plano — sin seleccionar es caja muted sin borde;
+    // seleccionado tiñe al 12 % con borde al 45 % y radio 8 (no píldora).
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: selected ? c.withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
+          color: selected
+              ? c.withValues(alpha: 0.12)
+              : scheme.onSurfaceVariant.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected ? c.withValues(alpha: 0.5) : scheme.outlineVariant,
+            color: selected ? c.withValues(alpha: 0.45) : Colors.transparent,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11.5,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
             color: selected ? c : scheme.onSurfaceVariant,
           ),
@@ -524,9 +530,11 @@ class SectionTitle extends StatelessWidget {
           Expanded(
             child: Text(
               title.toUpperCase(),
+              // TASK-33 Linear: rótulo de sección en tinta MUTE — las
+              // secciones no compiten con el contenido.
               style: VeText.labelCaps(
-                11,
-                color: scheme.onSurface,
+                10.5,
+                color: scheme.onSurfaceVariant,
                 weight: FontWeight.w700,
               ),
             ),
@@ -539,7 +547,13 @@ class SectionTitle extends StatelessWidget {
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: Text(actionLabel!, style: const TextStyle(fontSize: 12)),
+              child: Text(
+                actionLabel!,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
         ],
       ),
@@ -572,8 +586,9 @@ class PageHeader extends StatelessWidget {
                   title,
                   style: TextStyle(
                     fontFamily: 'SpaceGrotesk',
-                    fontSize: 20,
+                    fontSize: 19,
                     fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
                     color: scheme.onSurface,
                     height: 1.1,
                   ),
@@ -583,7 +598,8 @@ class PageHeader extends StatelessWidget {
                   Text(
                     hint!,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 12.5,
+                      height: 1.4,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -624,19 +640,22 @@ class EmptyState extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              width: 52,
-              height: 52,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
                 color: scheme.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, size: 24, color: scheme.primary),
+              child: Icon(icon, size: 22, color: scheme.primary),
             ),
             const SizedBox(height: 14),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
@@ -703,7 +722,10 @@ class LoadingState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             if (hint != null) ...[
               const SizedBox(height: 6),
@@ -768,7 +790,10 @@ class ErrorState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
@@ -835,7 +860,10 @@ class OfflineState extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
@@ -950,7 +978,7 @@ class StatCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label.toUpperCase(),
-                    style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+                    style: VeText.labelCaps(10, color: scheme.onSurfaceVariant),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -966,7 +994,7 @@ class StatCard extends StatelessWidget {
               child: Text(
                 value,
                 maxLines: 1,
-                style: VeText.displayNum(21, color: scheme.onSurface),
+                style: VeText.displayNum(22, color: scheme.onSurface),
               ),
             ),
             if (sub != null) ...[
@@ -1864,7 +1892,7 @@ class SkeletonPaper extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         // §8 regla dura: borde sólido (nunca alpha parcial).
         border: Border.all(
           color: dark ? VeColors.borderDark : VeColors.borderLight,

@@ -273,7 +273,7 @@ abstract final class AppTheme {
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           side: BorderSide(color: border),
         ),
       ),
@@ -297,15 +297,15 @@ abstract final class AppTheme {
           vertical: 12,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: effPrimary, width: 1.4),
         ),
         hintStyle: TextStyle(
@@ -319,9 +319,7 @@ abstract final class AppTheme {
           foregroundColor: effOnPrimary,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 13.5,
@@ -334,9 +332,7 @@ abstract final class AppTheme {
           foregroundColor: fg,
           side: BorderSide(color: border),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 13.5,
@@ -362,7 +358,7 @@ abstract final class AppTheme {
           fontSize: 13,
           color: isDark ? VeColors.fgDark : Colors.white,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: card,
@@ -370,7 +366,7 @@ abstract final class AppTheme {
         // §8: diálogos elevan 8 con sombra firma al 12 %.
         elevation: 8,
         shadowColor: const Color(0x1F0C1016),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         titleTextStyle: TextStyle(
           fontFamily: 'Inter',
           fontSize: 16,
@@ -401,7 +397,7 @@ abstract final class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: card,
         side: BorderSide(color: border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         labelStyle: TextStyle(
           fontFamily: 'Inter',
           fontSize: 12,
