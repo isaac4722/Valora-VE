@@ -496,7 +496,8 @@ class _ProductCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        // TASK-33 Linear: mismo radio que la tarjeta (10).
+        borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(

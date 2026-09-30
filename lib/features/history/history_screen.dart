@@ -338,7 +338,7 @@ class _Seat extends StatelessWidget {
               children: [
                 Text(
                   fmtDate(purchase.date).toUpperCase(),
-                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+                  style: VeText.labelCaps(10, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(width: 8),
                 // Flexible + ellipsis: la tienda es texto libre del usuario
@@ -352,7 +352,7 @@ class _Seat extends StatelessWidget {
                       textAlign: TextAlign.right,
                       style: const TextStyle(
                         fontSize: 13,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
