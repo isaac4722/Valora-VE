@@ -476,20 +476,13 @@ class _Apariencia extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SegmentedChips<ThemeMode>(
-                  options: const [
-                    ThemeMode.light,
-                    ThemeMode.dark,
-                    ThemeMode.system,
-                  ],
+                // TASK-33 Linear: selector de tema con PREVIEWS (patrón
+                // Vercel/Linear) — los dos temas de la app se ven antes de
+                // elegir. Sustituye a los chips planos.
+                ThemePreviewRow(
                   value: theme.mode,
                   onChanged: (v) =>
                       theme.setMode(v, context.read<SharedPreferences>()),
-                  labelOf: (v) => switch (v) {
-                    ThemeMode.light => 'Claro',
-                    ThemeMode.dark => 'Grafito',
-                    _ => 'Sistema',
-                  },
                 ),
                 // Material You (dp6 · mejora 2): opt-in. Solo tiñe acciones y
                 // selección; superficies y semántica de dinero siguen de marca.
@@ -550,6 +543,192 @@ class _Apariencia extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Selector de tema con previews mini (TASK-33 · patrón Vercel/Linear).
+///
+/// Tres tarjetas tocables — Claro · Grafito · Sistema — cada una pintando un
+/// mock diminuto del tema con los tokens REALES (bg, card, border, primary,
+/// muted): el usuario ve los dos temas de la app antes de elegir. La
+/// seleccionada lleva borde primario al 45 % y un check en la esquina.
+class ThemePreviewRow extends StatelessWidget {
+  const ThemePreviewRow({
+    super.key,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final ThemeMode value;
+  final ValueChanged<ThemeMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final (ThemeMode mode, String label, bool claro) in const [
+          (ThemeMode.light, 'Claro', true),
+          (ThemeMode.dark, 'Grafito', false),
+          (ThemeMode.system, 'Sistema', true),
+        ]) ...[
+          Expanded(
+            child: _ThemePreviewCard(
+              label: label,
+              claro: claro,
+              system: mode == ThemeMode.system,
+              selected: value == mode,
+              onTap: () => onChanged(mode),
+            ),
+          ),
+          if (mode != ThemeMode.system) const SizedBox(width: 8),
+        ],
+      ],
+    );
+  }
+}
+
+class _ThemePreviewCard extends StatelessWidget {
+  const _ThemePreviewCard({
+    required this.label,
+    required this.claro,
+    required this.system,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool claro;
+  final bool system;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // Tokens reales del tema que representa la tarjeta.
+    final Color bg = claro ? VeColors.bgLight : VeColors.bgDark;
+    final Color card = claro ? VeColors.cardLight : VeColors.cardDark;
+    final Color border = claro ? VeColors.borderLight : VeColors.borderDark;
+    final Color primary = claro ? VeColors.primaryLight : VeColors.primaryDark;
+    final Color muted = claro ? VeColors.mutedLight : VeColors.mutedDark;
+    return TapScale(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected
+                ? scheme.primary.withValues(alpha: 0.45)
+                : scheme.outlineVariant,
+            width: selected ? 1.4 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            // Mock del tema: fondo + tarjeta con cifra + barra primaria.
+            AspectRatio(
+              aspectRatio: 1.9,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: border, width: 0.5),
+                ),
+                padding: const EdgeInsets.all(6),
+                // Mock a base de Stack: resistente a cualquier tamaño (el
+                // Column anidado desbordaba 5.9 px a 320 px de ancho).
+                child: Stack(
+                  children: [
+                    // Tarjeta del mock.
+                    Positioned.fill(
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: card,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: border, width: 0.5),
+                        ),
+                        alignment: Alignment.topLeft,
+                        // «cifra» del mock: barra gruesa tinta.
+                        child: Container(
+                          height: 5,
+                          width: 24,
+                          decoration: BoxDecoration(
+                            color: claro ? VeColors.fgLight : VeColors.fgDark,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Botón del mock: esquina inferior derecha.
+                    Positioned(
+                      right: 10,
+                      bottom: 10,
+                      child: Container(
+                        height: 4,
+                        width: 14,
+                        decoration: BoxDecoration(
+                          color: primary,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    // Ticker del mock: fila muted abajo a la izquierda.
+                    Positioned(
+                      left: 10,
+                      bottom: 10,
+                      child: Container(
+                        height: 3,
+                        width: 18,
+                        decoration: BoxDecoration(
+                          color: muted,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 7),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (system)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Icon(
+                      Icons.brightness_auto_outlined,
+                      size: 11,
+                      color: selected
+                          ? scheme.primary
+                          : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                // Flexible + ellipsis: a 320 px la tarjeta mide ~78 px y el
+                // rótulo con icono no siempre cabe entero.
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                      color: selected
+                          ? scheme.primary
+                          : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
