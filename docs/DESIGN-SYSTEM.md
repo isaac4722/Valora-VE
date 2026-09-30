@@ -1,7 +1,11 @@
-# Sistema de diseño «El Instrumento»
+# Sistema de diseño «El Instrumento SaaS»
 
-Tokens exactos validados contra MVP-CRUD.md §8 y la GUI dp4 (fuente visual
-mandatoria). Archivo canónico: `lib/core/theme.dart` + `lib/widgets/ui.dart`.
+Tokens exactos validados contra MVP-CRUD.md §8. GUI reconstruida con
+lenguaje **Linear/Vercel** sobre shadcn/ui (TASK-33 · orden del dueño
+2026-10-01: «solo del actual se mantendrán los colores» — paleta intacta).
+Archivos canónicos: `lib/core/shad_theme.dart` (capa shadcn) +
+`lib/core/theme.dart` (puente Material + VeInk) + `lib/widgets/ui.dart`
+(componentes).
 
 ## Paleta por rol
 
@@ -43,6 +47,23 @@ mandatoria). Archivo canónico: `lib/core/theme.dart` + `lib/widgets/ui.dart`.
   (`FontFeature.tabularFigures()`) para héroes 48–64 px.
 - `label-caps`: rótulos técnicos en mayúsculas con tracking 0.12, piso 9.5 px.
 
+## Capa shadcn/ui (TASK-33)
+
+- **Raíz:** `ShadApp.router` con `ShadThemeVe.light()/dark()` — mapeo 1:1
+  de VeColors a los roles CSS de shadcn (background/foreground/card/
+  primary/secondary/muted/accent/destructive/border/input/ring).
+- **Gusto Linear:** `disableSecondaryBorder` (UN borde plano al 100 %),
+  radio global 10 (controles 8), botones 36 px, tooltips de tinta
+  invertida, iconografía **Lucide**.
+- **Puente:** `veMaterialBridge` inyecta el `AppTheme` vigente a las
+  pantallas Material (VeInk + transiciones firma + Material You).
+- **Command palette ⌘K** (`command_palette.dart`): búsqueda global como
+  overlay Linear con teclado completo.
+- **Selector de temas con previews** (`ThemePreviewRow` en Ajustes):
+  mocks pintados con los tokens reales de cada tema.
+- Estilos tipográficos custom shadcn: `displayNum`/`displayNumHero`
+  (Space Grotesk tabular) y `labelCaps`.
+
 ## Firmas visuales (componentes en `lib/widgets/ui.dart`)
 | Firma | Componente |
 |---|---|
@@ -51,6 +72,7 @@ mandatoria). Archivo canónico: `lib/core/theme.dart` + `lib/widgets/ui.dart`.
 | `.ledger-dots::after` | `LedgerRow` + `_LedgerDots` — solo cierre de cuentas |
 | `.ticker-mask/track` | `RateTicker` — cinta con loop −50 % y anti-CLS |
 | `.skeleton-paper` | `SkeletonPaper` — altura exacta anti-CLS |
+| badge plano | `Stamp`/`ChipTag`/`RateBadge` — radio 8, sin píldoras: reposo muted 8 % sin borde, seleccionado tinte 12 % + borde 45 % |
 | `shadow-card/lift` | tema Material (elevación 0 + bordes) |
 | AnimatedNumber | odómetro con curva EASE, sin setState por frame |
 

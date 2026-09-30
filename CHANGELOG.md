@@ -1,6 +1,30 @@
 # Changelog
 
 
+## 1.9.11-beta+29 · v19.11 — GUI nueva «Linear/Vercel» sobre shadcn/ui (TASK-33)
+
+- **Fundaciones shadcn**: `shadcn_ui` 0.57.1 con `ShadApp.router` en la
+  raíz y `ShadThemeVe` (lib/core/shad_theme.dart) — los tokens de color
+  son EXACTAMENTE los de siempre (papel-tinta claro · grafito oscuro):
+  ni un tono nuevo (orden del dueño: «solo del actual se mantendrán los
+  colores»). Test guardián del mapeo 1:1 en ambos temas.
+- **Shell Linear**: cabecera 52 px con acciones fantasma + iconografía
+  Lucide; barra inferior pill al 10 % sin borde; toggle de tema con giro.
+- **Command palette ⌘K**: la búsqueda global se vuelve overlay estilo
+  Linear (grupos módulos/productos/compras/avisos, teclado ↑↓·↵·esc,
+  hints al pie); atajo Ctrl/⌘+K en escritorio.
+- **Sistema de componentes Linear**: Stamp/ChipTag/RateBadge planos
+  (radio 8, sin píldoras), SectionTitle en tinta mute, LedgerRow con
+  etiqueta regular, icon-buttons cuadrados r8, radios coherentes
+  (tarjetas 10 · controles 8). API pública intacta: 199→213 tests sin
+  tocar una sola aserción previa.
+- **Héroe KPI**: rótulo caps mute + cifra protagonista; badges de
+  brecha/vs-ayer rectangulares; tool tiles con cajita muted.
+- **Ajustes**: selector de temas con PREVIEWS (Claro · Grafito ·
+  Sistema) pintadas con los tokens reales — patrón Vercel/Linear.
+- Puente `materialThemeBridge`: las pantallas Material mantienen VeInk,
+  transiciones firma y Material You durante la transición.
+
 ## 1.9.10-beta+28 · v19.10 — Auditoría visual premium + notificaciones que sí llegan en 2º plano
 
 - **Notificaciones en 2º plano (fix del síntoma «solo avisan al abrir la
