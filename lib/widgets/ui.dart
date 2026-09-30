@@ -1217,16 +1217,20 @@ class RateBadge extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        // TASK-33 Linear: mismo lenguaje que ChipTag — plano muted al
+        // reposo, tinte 12 % + borde 45 % seleccionado, radio 8.
         decoration: BoxDecoration(
           color: selected
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.07)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+              : Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: selected
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
-                : Theme.of(context).colorScheme.outlineVariant,
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.45)
+                : Colors.transparent,
           ),
         ),
         child: Row(
@@ -1321,24 +1325,34 @@ class CurrencySelect extends StatelessWidget {
         for (final c in options)
           PopupMenuItem(
             value: c,
+            // TASK-33 Linear: ítem de menú con check del seleccionado
+            // (patrón shadcn Select).
             child: Row(
               children: [
                 Flag(c, size: 18),
                 const SizedBox(width: 8),
-                Text(c.label, style: const TextStyle(fontSize: 13.5)),
+                Expanded(
+                  child: Text(c.label, style: const TextStyle(fontSize: 13.5)),
+                ),
+                if (c == value)
+                  Icon(
+                    Icons.check,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
               ],
             ),
           ),
       ],
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        // TASK-33 Linear: trigger outline plano estilo shadcn Select —
+        // fondo superficie y borde 100 % (antes tinte primario al 7 %).
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(10),
+          color: Theme.of(context).colorScheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: 0.25),
+            color: Theme.of(context).colorScheme.outlineVariant,
           ),
         ),
         child: Row(

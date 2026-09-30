@@ -708,10 +708,11 @@ class _FuenteChip extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        // TASK-33 Linear: trigger outline plano estilo shadcn Select.
         decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
-          borderRadius: BorderRadius.circular(10),
+          color: scheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: scheme.outlineVariant),
         ),
         child: Row(
@@ -723,7 +724,10 @@ class _FuenteChip extends StatelessWidget {
             ],
             Text(
               'Fuente: ${current?.label ?? currentId}',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(width: 2),
             Icon(Icons.expand_more, size: 15, color: scheme.onSurfaceVariant),
