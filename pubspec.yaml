@@ -48,6 +48,7 @@ dependencies:
   nearby_connections: ^4.1.0        # sala P2P sin internet (WiFi-Direct/BT/BLE)
 
   # ── UI / visualización / documentos ────────────────────────────────────────
+  shadcn_ui: ^0.57.1                # GUI nueva «Linear/Vercel» (orden del dueño TASK-33): componentes shadcn/ui con tokens VeColors exactos
   syncfusion_flutter_charts: ^34.2.8    # brecha, evolución, histórico (major 34: alineada a Flutter 3.47 / intl 0.20)
   dynamic_color: ^1.7.0             # Material You opcional
   qr_flutter: ^4.1.0                # QR de sala

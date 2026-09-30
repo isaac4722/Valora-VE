@@ -15,7 +15,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
+import 'core/shad_theme.dart';
 import 'core/theme.dart';
 import 'data/store.dart';
 import 'services/biometric.dart';
@@ -178,16 +180,21 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
       final theme = context.watch<ThemeController>();
       return DynamicColorBuilder(
         builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-          return MaterialApp(
+          return ShadApp(
             title: 'ValoraVE',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.light(
-              theme.dynamicColor ? lightDynamic?.harmonized() : null,
-            ),
-            darkTheme: AppTheme.dark(
-              theme.dynamicColor ? darkDynamic?.harmonized() : null,
-            ),
+            theme: ShadThemeVe.light(),
+            darkTheme: ShadThemeVe.dark(),
             themeMode: theme.mode,
+            materialThemeBuilder: (context, mTheme) => veMaterialBridge(
+              Theme.of(context).brightness,
+              theme.dynamicColor
+                  ? (Theme.of(context).brightness == Brightness.dark
+                            ? darkDynamic
+                            : lightDynamic)
+                        ?.harmonized()
+                  : null,
+            ),
             locale: const Locale('es', 'VE'),
             // Delegates es-VE (fix): sin ellos, MaterialComponents en inglés
             // (showDatePicker «SELECT DATE»/CANCEL/OK) en una UI 100 % es-VE.
@@ -195,6 +202,7 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
+              GlobalShadLocalizations.delegate,
             ],
             supportedLocales: const <Locale>[Locale('es', 'VE'), Locale('es')],
             home: _BiometricLockScreen(
@@ -216,16 +224,24 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
     // sin plataforma devuelve null y el tema queda 100 % de marca.
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        return MaterialApp.router(
+        return ShadApp.router(
           title: 'ValoraVE',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(
-            theme.dynamicColor ? lightDynamic?.harmonized() : null,
-          ),
-          darkTheme: AppTheme.dark(
-            theme.dynamicColor ? darkDynamic?.harmonized() : null,
-          ),
+          theme: ShadThemeVe.light(),
+          darkTheme: ShadThemeVe.dark(),
           themeMode: theme.mode,
+          // TASK-33: el árbol Material de las pantallas no migradas sigue
+          // recibiendo el AppTheme vigente (VeInk + transiciones firma);
+          // Material You solo tiñe el par primario, como siempre.
+          materialThemeBuilder: (context, mTheme) => veMaterialBridge(
+            Theme.of(context).brightness,
+            theme.dynamicColor
+                ? (Theme.of(context).brightness == Brightness.dark
+                          ? darkDynamic
+                          : lightDynamic)
+                      ?.harmonized()
+                : null,
+          ),
           locale: const Locale('es', 'VE'),
           // Delegates es-VE (fix): ídem arriba — componentes Material en
           // español real (date pickers, tooltips de texto, etc.).
@@ -233,6 +249,7 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
+            GlobalShadLocalizations.delegate,
           ],
           supportedLocales: const <Locale>[Locale('es', 'VE'), Locale('es')],
           routerConfig: _router,
