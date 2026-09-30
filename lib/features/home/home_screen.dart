@@ -239,9 +239,11 @@ class _HeroState extends State<_Hero> {
           Expanded(
             child: Text(
               '${kDias[now.weekday - 1].substring(0, 3)} ${now.day} ${kMeses[now.month - 1].substring(0, 3)} · $hhmm',
+              // TASK-33 Linear: meta-línea discreta — el protagonismo es
+              // de la cifra, no de la fecha.
               style: TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
                 color: scheme.onSurface,
                 height: 1.2,
               ),
@@ -331,12 +333,15 @@ class _RateHero extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    s.currency == Currency.usd ? 'Dólar en Venezuela' : s.label,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: scheme.onSurface,
-                      height: 1.1,
+                    (s.currency == Currency.usd
+                            ? 'Dólar en Venezuela'
+                            : s.label)
+                        .toUpperCase(),
+                    // TASK-33 Linear: rótulo caps mute — la cifra manda.
+                    style: VeText.labelCaps(
+                      11.5,
+                      color: scheme.onSurfaceVariant,
+                      weight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -396,12 +401,14 @@ class _RateHero extends StatelessWidget {
                     fmtRate(e.rate).replaceAll('.', ','),
                     'Tasa copiada',
                   ),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(8),
                   child: Container(
                     width: 32,
                     height: 32,
+                    // TASK-33 Linear: icon-button cuadrado r8 — el círculo
+                    // era el único en toda la app.
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: scheme.outlineVariant),
                     ),
                     child: Icon(
@@ -428,26 +435,29 @@ class _RateHero extends StatelessWidget {
                   s.detail.toLowerCase().startsWith(
                         '${s.category.label.toLowerCase()} · ',
                       )
-                  ? s.detail.substring(s.category.label.length + 3)
-                  : s.detail,
+                      ? s.detail.substring(s.category.label.length + 3)
+                      : s.detail,
                   color: scheme.onSurfaceVariant,
                 ),
                 if (gapPct != null)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
+                      horizontal: 7,
+                      vertical: 2,
                     ),
                     decoration: BoxDecoration(
                       color: sem.neg.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: sem.neg.withValues(alpha: 0.38),
+                      ),
                     ),
                     child: Text(
                       'brecha ${fmtPct(gapPct)}',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        fontFamily: 'SpaceGrotesk',
+                        fontFamily: 'Inter',
                         color: sem.neg,
                       ),
                     ),
@@ -455,19 +465,22 @@ class _RateHero extends StatelessWidget {
                 if (vsAyerLabel != null)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
+                      horizontal: 7,
+                      vertical: 2,
                     ),
                     decoration: BoxDecoration(
                       color: sem.pos.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: sem.pos.withValues(alpha: 0.38),
+                      ),
                     ),
                     child: Text(
                       vsAyerLabel,
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        fontFamily: 'SpaceGrotesk',
+                        fontFamily: 'Inter',
                         color: sem.pos,
                       ),
                     ),
@@ -1376,19 +1389,29 @@ class _Tool extends StatelessWidget {
     return TapScale(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 13),
         decoration: BoxDecoration(
           color: scheme.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: scheme.outlineVariant),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 20, color: scheme.primary),
-            const SizedBox(height: 6),
+            // TASK-33 Linear: icono en cajita muted (patrón del palette).
+            Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 17, color: scheme.primary),
+            ),
+            const SizedBox(height: 7),
             Text(
               label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ],
         ),
