@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:valorave/core/models.dart';
+import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/features/converter/converter_screen.dart';
@@ -76,15 +78,21 @@ void main() {
       });
       final prefs = await SharedPreferences.getInstance();
       final store = AppStore.withData(const AppData());
+      // TASK-34 (p6): el Conversor usa el kit «Ve» (shadcn_ui) — necesita
+      // ShadTheme en el árbol, como el ShadApp.custom real de main.dart.
       await tester.pumpWidget(
         MultiProvider(
           providers: [
             ChangeNotifierProvider.value(value: store),
             Provider<SharedPreferences>.value(value: prefs),
           ],
-          child: MaterialApp(
-            theme: AppTheme.light(),
-            home: const Scaffold(body: ConverterScreen()),
+          child: ShadApp.custom(
+            theme: ShadThemeVe.light(),
+            darkTheme: ShadThemeVe.dark(),
+            appBuilder: (context) => MaterialApp(
+              theme: AppTheme.light(),
+              home: const Scaffold(body: ConverterScreen()),
+            ),
           ),
         ),
       );
@@ -120,9 +128,13 @@ void main() {
             ChangeNotifierProvider.value(value: store),
             Provider<SharedPreferences>.value(value: prefs),
           ],
-          child: MaterialApp(
-            theme: AppTheme.light(),
-            home: const Scaffold(body: ConverterScreen()),
+          child: ShadApp.custom(
+            theme: ShadThemeVe.light(),
+            darkTheme: ShadThemeVe.dark(),
+            appBuilder: (context) => MaterialApp(
+              theme: AppTheme.light(),
+              home: const Scaffold(body: ConverterScreen()),
+            ),
           ),
         ),
       );
@@ -139,7 +151,14 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [ChangeNotifierProvider.value(value: store)],
-          child: const MaterialApp(home: Scaffold(body: ConverterScreen())),
+          child: ShadApp.custom(
+            theme: ShadThemeVe.light(),
+            darkTheme: ShadThemeVe.dark(),
+            appBuilder: (context) => MaterialApp(
+              theme: AppTheme.light(),
+              home: const Scaffold(body: ConverterScreen()),
+            ),
+          ),
         ),
       );
       for (var i = 0; i < 6; i++) {

@@ -11,11 +11,15 @@ class _Recientes extends StatelessWidget {
     required this.amount,
     required this.result,
     required this.plan,
+    this.onRestore,
   });
   final Currency from, to;
   final double amount;
   final double result;
   final ConversionPlan? plan;
+
+  /// Toca una conversión guardada → restaura par y monto (prototipo).
+  final void Function(RecentConversion r)? onRestore;
 
   @override
   Widget build(BuildContext context) {
@@ -35,68 +39,44 @@ class _Recientes extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(
+        _SectionEyebrow(
           'Recientes',
           actionLabel: 'Vaciar',
           onAction: () => store.clearRecentConversions(),
         ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                for (final r in recents.take(10))
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Flag(CurrencyX.from(r.from), size: 15),
-                        const SizedBox(width: 4),
-                        // Flexible + ellipsis: montos enormes (10^12+) son
-                        // datos del usuario y desbordaban la card (fix).
-                        Flexible(
-                          child: Text(
-                            fmtNum(r.amount, decimals: 2),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: VeText.displayNum(
-                              12.5,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward,
-                          size: 12,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        Flag(CurrencyX.from(r.to), size: 15),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${r.from} → ${r.to}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          fmtDate(r.at),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+        // Conversiones guardadas del prototipo: filas tappables que
+        // restauran par y monto.
+        VeGroup(
+          children: [
+            for (final r in recents.take(10))
+              VeRow(
+                onTap: onRestore == null ? null : () => onRestore!(r),
+                label: Row(
+                  children: [
+                    Flag(CurrencyX.from(r.from), size: 15),
+                    const SizedBox(width: 6),
+                    // Flexible + ellipsis: montos enormes (10^12+) son
+                    // datos del usuario y desbordaban la fila (fix).
+                    Flexible(
+                      child: VeNum(
+                        fmtNum(r.amount, decimals: 2),
+                        style: const TextStyle(fontSize: 12.5),
+                      ),
                     ),
-                  ),
-              ],
-            ),
-          ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      LucideIcons.arrowRight,
+                      size: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 4),
+                    Flag(CurrencyX.from(r.to), size: 15),
+                  ],
+                ),
+                right: Text('${r.from} → ${r.to} · ${fmtDate(r.at)}'),
+                showChevron: true,
+              ),
+          ],
         ),
       ],
     );
@@ -113,7 +93,7 @@ class _Notas extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(
+        _SectionEyebrow(
           'Notas',
           actionLabel: 'Limpiar',
           onAction: () {
@@ -121,17 +101,15 @@ class _Notas extends StatelessWidget {
             store.writeConversionNotes('');
           },
         ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              controller: ctrl,
-              maxLines: 4,
-              maxLength: 5000,
-              decoration: const InputDecoration(
-                hintText: 'Apunta aquí: dónde vi la tasa, qué comparé…',
-                border: InputBorder.none,
-              ),
+        VeCard(
+          padding: const EdgeInsets.all(12),
+          child: TextField(
+            controller: ctrl,
+            maxLines: 4,
+            maxLength: 5000,
+            decoration: const InputDecoration(
+              hintText: 'Apunta aquí: dónde vi la tasa, qué comparé…',
+              border: InputBorder.none,
             ),
           ),
         ),

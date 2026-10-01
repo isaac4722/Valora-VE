@@ -1,10 +1,15 @@
-/// ─── Productos · libro de precios (§9.4 · MODULE=finance como la PWA) ──────
+/// ─── Productos · libro de precios (§9.4 · TASK-34 lenguaje Ve) ──────────────
 /// 21 semillas CATALOG_VE (solo si vacío) · search sin acentos · chips de
-/// categoría · filtro disponibilidad/meta · paginación 20 · cards con precio
-/// vigente, variación y sparkline · ficha FULL-HEIGHT en product_sheet.dart
-/// (detalle + gráfica + historial + ajustes) · alta nueva con escáner y
-/// primer precio en un paso · CSV ⇄ · iconos: importar Icons.upload_file ·
-/// exportar/compartir Icons.ios_share · escaneo Icons.qr_code_scanner.
+/// categoría (activo = tinta) · filtro disponibilidad/meta · paginación 20 ·
+/// filas de 2 líneas (nombre + «N tiendas · última hace X») con precio
+/// tabular, VeSparkline (tono por tendencia) y VeBadge de estado · ficha
+/// completa en product_sheet.dart (showVeSheet wide) · alta nueva con
+/// escáner y primer precio en un paso · CSV ⇄ · barra inferior «Agregar
+/// producto».
+///
+/// TASK-34 (p8): presentación del prototipo web (Products.tsx) sobre TODA la
+/// lógica previa — semillas, filtros, paginación, exportación y ficha
+/// intactas.
 library;
 
 import 'dart:convert';
@@ -12,12 +17,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
-import '../../core/analytics.dart' as an;
-import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
-import '../../core/theme.dart';
 import '../../data/store.dart';
 import 'product_sheet.dart';
 import '../../widgets/app_tips.dart';
@@ -186,162 +189,176 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showNewProductSheet(context),
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('Producto'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+      body: Stack(
         children: [
-          const TipsTrigger(scope: 'productos'),
-          PageHeader(
-            'Productos',
-            hint: 'Tu libro de precios: qué pagas, dónde y cuándo',
-            action: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.upload_file, size: 19),
-                  tooltip: 'Importar CSV',
-                  onPressed: () => _importCsv(context, store),
+          ListView(
+            // Padding inferior extra para no tapar el contenido con la
+            // VeStickyBar («Agregar producto»).
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 104),
+            children: [
+              VeTitle(
+                sub: Text('${store.products.length} en tu libro'),
+                right: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    VeIconBtn(
+                      icon: LucideIcons.upload,
+                      onTap: () => _importCsv(context, store),
+                      label: 'Importar CSV',
+                    ),
+                    const SizedBox(width: 8),
+                    VeBtn(
+                      size: VeBtnSize.sm,
+                      icon: LucideIcons.download,
+                      onPressed: () => _exportCsv(context, store),
+                      child: const Text('CSV'),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.ios_share, size: 19),
-                  tooltip: 'Exportar CSV',
-                  onPressed: () => _exportCsv(context, store),
+                child: Text('Productos'),
+              ),
+              const TipsTrigger(scope: 'productos'),
+              // Buscador + escáner (ancla del tour v17.8).
+              KeyedSubtree(
+                key: TourKeys.prodBusqueda,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: VeInput(
+                        controller: _searchCtrl,
+                        placeholder: 'Buscar producto…',
+                        onChanged: (v) {
+                          setState(() {
+                            _query = v;
+                            _page = 0;
+                          });
+                        },
+                        semantic: 'Buscar producto',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    VeIconBtn(
+                      icon: LucideIcons.scanBarcode,
+                      onTap: _scanCode,
+                      label: 'Escanear código de barras',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Chips de categoría (activo = tinta invertida).
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  VeChip(
+                    active: _cat == null,
+                    onTap: () => setState(() {
+                      _cat = null;
+                      _page = 0;
+                    }),
+                    child: const Text('Todas'),
+                  ),
+                  for (final c in ProductCategory.values)
+                    VeChip(
+                      active: _cat == c,
+                      onTap: () => setState(() {
+                        _cat = c;
+                        _page = 0;
+                      }),
+                      child: Text(c.label),
+                    ),
+                  VeChip(
+                    active: _onlyUnavailable,
+                    onTap: () => setState(() {
+                      _onlyUnavailable = !_onlyUnavailable;
+                      _page = 0;
+                    }),
+                    child: const Text('No disponibles'),
+                  ),
+                  VeChip(
+                    active: _onlyTarget,
+                    onTap: () => setState(() {
+                      _onlyTarget = !_onlyTarget;
+                      _page = 0;
+                    }),
+                    child: const Text('Con meta'),
+                  ),
+                ],
+              ),
+              if (list.isEmpty) ...[
+                const SizedBox(height: 14),
+                VeEmpty(
+                  title: 'Sin productos',
+                  sub: _query.isEmpty
+                      ? 'Agrega uno nuevo o importa un CSV con «Nombre» y «Código».'
+                      : 'Sin resultados para «$_query». Prueba con otra palabra o revisa los filtros.',
+                  action: VeBtn(
+                    size: VeBtnSize.sm,
+                    icon: LucideIcons.plus,
+                    onPressed: () => showNewProductSheet(context),
+                    child: const Text('Agregar producto'),
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 12),
+                VeGroup(
+                  children: [
+                    for (final p in pageItems)
+                      _ProductRow(
+                        product: p,
+                        onTap: () => showProductSheet(context, p),
+                      ),
+                  ],
+                ),
+                if (pages > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      '${list.length} productos',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                Paginator(
+                  page: _page + 1,
+                  totalPages: pages,
+                  onPage: (p) => setState(() => _page = p - 1),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Toca un producto para ver su ficha: precio por tienda, disponibilidad y meta de precio objetivo.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          // Barra inferior del prototipo: alta de producto siempre a mano.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: VeStickyBar(
+              children: [
+                VeBtn(
+                  variant: VeBtnVariant.primary,
+                  size: VeBtnSize.lg,
+                  expands: true,
+                  icon: LucideIcons.plus,
+                  onPressed: () => showNewProductSheet(context),
+                  child: const Text('Agregar producto'),
                 ),
               ],
             ),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: KeyedSubtree(
-                  key: TourKeys.prodBusqueda,
-                  child: TextField(
-                    controller: _searchCtrl,
-                    onChanged: (v) {
-                      setState(() {
-                        _query = v;
-                        _page = 0;
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      hintText: 'Buscar por nombre o código de barras',
-                      prefixIcon: Icon(Icons.search, size: 18),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                onPressed: _scanCode,
-                tooltip: 'Escanear código de barras',
-                icon: const Icon(Icons.qr_code_scanner, size: 20),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              ChipTag(
-                'Todas',
-                selected: _cat == null,
-                onTap: () => setState(() {
-                  _cat = null;
-                  _page = 0;
-                }),
-              ),
-              for (final c in ProductCategory.values)
-                ChipTag(
-                  c.label,
-                  selected: _cat == c,
-                  onTap: () => setState(() {
-                    _cat = c;
-                    _page = 0;
-                  }),
-                ),
-              const SizedBox(width: 4),
-              ChipTag(
-                'No disponibles',
-                selected: _onlyUnavailable,
-                onTap: () => setState(() {
-                  _onlyUnavailable = !_onlyUnavailable;
-                  _page = 0;
-                }),
-              ),
-              ChipTag(
-                'Con meta',
-                selected: _onlyTarget,
-                onTap: () => setState(() {
-                  _onlyTarget = !_onlyTarget;
-                  _page = 0;
-                }),
-              ),
-            ],
-          ),
-          if (list.isEmpty) ...[
-            const SizedBox(height: 14),
-            EmptyState(
-              'Nada por aquí',
-              icon: Icons.inventory_2_outlined,
-              hint: _query.isEmpty
-                  ? 'Agrega productos con el botón de abajo o importa un CSV con «Nombre» y «Código».'
-                  : 'Sin resultados para «$_query». Prueba con otra palabra o revisa los filtros.',
-              actionLabel: 'Agregar producto',
-              onAction: () => showNewProductSheet(context),
-            ),
-          ] else ...[
-            const SizedBox(height: 8),
-            for (final p in pageItems)
-              _ProductCard(
-                product: p,
-                onTap: () => showProductSheet(context, p),
-                onAddCart: () => _addToCart(context, store, p),
-              ),
-            if (pages > 1)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  '${list.length} productos',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            Paginator(
-              page: _page + 1,
-              totalPages: pages,
-              onPage: (p) => setState(() => _page = p - 1),
-            ),
-          ],
         ],
       ),
     );
-  }
-
-  void _addToCart(BuildContext context, AppStore store, Product p) {
-    final last = p.latestRecord;
-    if (last == null) {
-      showToast(context, 'Regístrale precio primero', kind: ToastKind.warn);
-      return;
-    }
-    store.addToCart(
-      CartItem(
-        id: '',
-        productId: p.id,
-        name: p.name,
-        quantity: 1,
-        price: last.originalPrice,
-        currency: last.currency,
-        barcode: p.barcode,
-      ),
-    );
-    showToast(context, '${p.name} agregado a la lista', kind: ToastKind.ok);
   }
 
   /// Importa productos desde CSV (columnas «Codigo,Nombre,Fecha»; delimitador
@@ -474,131 +491,105 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 }
 
-class _ProductCard extends StatelessWidget {
-  const _ProductCard({
-    required this.product,
-    required this.onTap,
-    required this.onAddCart,
-  });
+/// ─── Fila de producto (prototipo Products.tsx) ───────────────────────────────
+/// Dos líneas: nombre 14 w500 + «N tiendas · última hace X» · precio 16
+/// semibold tabular a la derecha · sparkline (tono por tendencia) + VeBadge
+/// de estado (Meta OK pos · Sube neg · Baja pos · Estable/Sin dato neutral).
+class _ProductRow extends StatelessWidget {
+  const _ProductRow({required this.product, required this.onTap});
 
   final Product product;
   final VoidCallback onTap;
-  final VoidCallback onAddCart;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final shad = ShadTheme.of(context);
+    final scheme = shad.colorScheme;
+    final st = productStatus(product);
     final last = product.latestRecord;
-    final variation = an.totalVariation(product.records);
-    final target = an.computeTargetInfo(product);
+    final stores = product.records
+        .map((r) => (r.store ?? '').trim())
+        .where((s) => s.isNotEmpty)
+        .toSet();
+    final hasSeries = product.records.length >= 2;
+    final sub = last == null
+        ? 'Sin precios registrados'
+        : '${stores.isEmpty ? 1 : stores.length} '
+              '${stores.length <= 1 ? 'tienda' : 'tiendas'} · última ${timeAgo(last.date)}';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: onTap,
-        // TASK-33 Linear: mismo radio que la tarjeta (10).
-        borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CategoryIcon(cat: product.category, size: 32),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: scheme.foreground,
                         ),
-                        Text(
-                          '${presentationLabel(product)}'
-                          '${(product.barcode ?? '').trim().isNotEmpty ? ' · ${product.barcode}' : ''}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (product.isUnavailable)
-                    Stamp('no disponible', color: VeColors.of(context).neg)
-                  else if (target.met)
-                    Stamp('¡bajo meta!', color: VeColors.of(context).pos),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // Expanded + ellipsis: tienda y «pagó Bs …» son texto del
-                  // usuario; el ancho intrínseco desbordaba la card (fix).
-                  Expanded(
-                    child: last != null
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                fmtUSD(last.price),
-                                style: VeText.displayNum(
-                                  17,
-                                  color: scheme.onSurface,
-                                ),
-                              ),
-                              Text(
-                                '${last.store ?? 'Sin tienda'} · ${fmtDate(last.date)}'
-                                '${last.currency != 'USD' ? ' · pagó ${fmtMoney(last.originalPrice, CurrencyX.from(last.currency))}' : ''}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          )
-                        : Text(
-                            'Sin precio aún',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                  ),
-                  if (product.records.length >= 2) ...[
-                    // Sparkline compartida del sistema (dp6): misma semántica
-                    // visual (sube = neg, baja = pos) sin duplicado local.
-                    Sparkline(
-                      values: product.records.map((r) => r.price).toList(),
-                      width: 64,
-                      height: 21,
-                    ),
-                    const SizedBox(width: 10),
-                    TrendBadge(variation, dense: true),
-                  ],
-                  if (product.targetPrice != null) ...[
-                    const SizedBox(width: 10),
-                    Tooltip(
-                      message: 'Meta: ${fmtUSD(product.targetPrice!)}',
-                      child: Icon(
-                        Icons.adjust,
-                        size: 15,
-                        color: scheme.primary,
                       ),
+                      const SizedBox(height: 2),
+                      Text(
+                        sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          color: scheme.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  last == null ? '—' : fmtUSD(last.price),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    color: last == null
+                        ? scheme.mutedForeground
+                        : scheme.foreground,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (hasSeries)
+                  SizedBox(
+                    width: 200,
+                    child: VeSparkline(
+                      data: product.records.map((r) => r.price).toList(),
+                      tone: st.spark,
+                      height: 32,
                     ),
-                  ],
-                ],
-              ),
-            ],
-          ),
+                  ),
+                const Spacer(),
+                VeBadge(tone: st.tone, child: Text(st.label)),
+              ],
+            ),
+          ],
         ),
       ),
     );

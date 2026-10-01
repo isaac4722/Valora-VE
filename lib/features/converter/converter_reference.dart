@@ -4,6 +4,33 @@
 /// biblioteca y sus imports.
 part of 'converter_screen.dart';
 
+/// Encabezado de sección en el lenguaje del prototipo (TASK-34 · p6):
+/// eyebrow caps 10.5 px con la acción de texto a la derecha. Reemplaza a
+/// [SectionTitle] en el conversor conservando el texto en MAYÚSCULAS que
+/// los tests y el tour esperan ver.
+class _SectionEyebrow extends StatelessWidget {
+  const _SectionEyebrow(this.title, {this.actionLabel, this.onAction});
+
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return VeEyebrow(
+      right: (actionLabel == null || onAction == null)
+          ? null
+          : VeBtn(
+              variant: VeBtnVariant.ghost,
+              size: VeBtnSize.sm,
+              onPressed: onAction,
+              child: Text(actionLabel!),
+            ),
+      child: Text(title.toUpperCase()),
+    );
+  }
+}
+
 /// Ruta del cálculo legible (arista directa · puente EUR · vía dólar).
 /// La ruta del puente EUR se pinta COMPLETA (4 tramos: EUR → local → USD →
 /// destino) con las fuentes usadas en cada tramo — nunca colapsada.
@@ -29,7 +56,7 @@ class _RutaCalculo extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionTitle('Ruta del cálculo'),
+          _SectionEyebrow('Ruta del cálculo'),
           Text(
             'Sin tasa disponible para este par. Revisa tus fuentes en '
             'Ajustes → Monedas y tasas, o pega una tasa manual.',
@@ -42,62 +69,62 @@ class _RutaCalculo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Ruta del cálculo'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _kindLabel(p).toUpperCase(),
-                  style: VeText.labelCaps(9.5, color: scheme.primary),
-                ),
-                const SizedBox(height: 7),
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    for (int i = 0; i < p.path.length; i++) ...[
-                      if (i > 0) ...[
-                        Icon(
-                          Icons.arrow_forward,
-                          size: 13,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                      Flag(p.path[i], size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        p.path[i].code,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                        ),
+        _SectionEyebrow('Ruta del cálculo'),
+        VeCard(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _kindLabel(p).toUpperCase(),
+                style: VeText.labelCaps(10.5, color: scheme.primary),
+              ),
+              const SizedBox(height: 7),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  for (int i = 0; i < p.path.length; i++) ...[
+                    if (i > 0) ...[
+                      Icon(
+                        Icons.arrow_forward,
+                        size: 13,
+                        color: scheme.onSurfaceVariant,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 6),
                     ],
+                    Flag(p.path[i], size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      p.path[i].code,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                ],
+              ),
+              if (p.sourceIds.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final id in p.sourceIds)
+                      if (id.isNotEmpty)
+                        VeBadge(
+                          child: Text(
+                            (convSourceNames[id] ??
+                                    RateSource.of(id)?.label ??
+                                    id)
+                                .toUpperCase(),
+                          ),
+                        ),
                   ],
                 ),
-                if (p.sourceIds.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final id in p.sourceIds)
-                        if (id.isNotEmpty)
-                          Stamp(
-                            convSourceNames[id] ??
-                                RateSource.of(id)?.label ??
-                                id,
-                            color: scheme.primary,
-                          ),
-                    ],
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
         ),
       ],
@@ -124,7 +151,6 @@ class _ReferenciaFuentes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     // Dedupe por id conservando el orden: primero la divisa de origen.
     final ids = <String>[];
     for (final s in [
@@ -141,62 +167,42 @@ class _ReferenciaFuentes extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Referencia de fuentes'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                for (final id in ids)
-                  if (RateSource.of(id) != null)
-                    _fila(context, scheme, RateSource.of(id)!),
-              ],
-            ),
-          ),
+        _SectionEyebrow('Referencia de fuentes'),
+        // Filas divididas del prototipo (Group+Row): tocar una fila la usa
+        // como fuente (mismo camino del selector de chips).
+        VeGroup(
+          children: [
+            for (final id in ids)
+              if (RateSource.of(id) != null) _fila(context, RateSource.of(id)!),
+          ],
         ),
       ],
     );
   }
 
-  Widget _fila(BuildContext context, ColorScheme scheme, RateSource s) {
+  Widget _fila(BuildContext context, RateSource s) {
+    final scheme = Theme.of(context).colorScheme;
     final activa = ctx.sel(s.currency) == s.id;
     final r = ctx.rate(s.id);
-    final row = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
+    return VeRow(
+      onTap: () => onPick(s.currency, s.id),
+      label: Text(
+        '${s.currency.code} ${s.label}',
+        style: activa
+            ? TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)
+            : TextStyle(color: scheme.onSurface),
+      ),
+      sub: Text(s.detail),
+      right: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SourceSeal(s.category),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${s.currency.code} ${s.label}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: activa ? FontWeight.w800 : FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                Text(
-                  s.detail,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
+          VeNum(
             r > 0 ? fmtRate(r) : '—',
-            style: VeText.displayNum(13.5, color: scheme.onSurface),
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: activa ? FontWeight.w700 : FontWeight.w500,
+              color: scheme.onSurface,
+            ),
           ),
           Text(
             ' ${s.quote.code}',
@@ -208,74 +214,156 @@ class _ReferenciaFuentes extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           if (activa)
-            Icon(Icons.check_circle, size: 15, color: scheme.primary)
+            Icon(LucideIcons.check, size: 15, color: scheme.primary)
           else
             const SizedBox(width: 15),
         ],
       ),
-    );
-    return InkWell(
-      onTap: () => onPick(s.currency, s.id),
-      borderRadius: BorderRadius.circular(8),
-      child: row,
+      showChevron: false,
     );
   }
 }
 
-/// Montos de referencia: el monto y sus múltiplos a Bs (planForTable del web).
+/// Montos de referencia: el monto y sus múltiplos (planForTable del web).
+/// Cuando el par es USD→VES y existen ambas tasas reales, sube a la tabla
+/// de equivalencias del prototipo: 4 columnas (USD · BCV · Paralelo · Dif)
+/// con la diferencia en tinta warn; tocar una fila pega ese monto arriba.
 class _TablaMontos extends StatelessWidget {
   const _TablaMontos({
     required this.ctx,
     required this.amount,
     required this.from,
+    this.onAmount,
   });
   final RateContext ctx;
   final double amount;
   final Currency from;
 
+  /// Toca un monto de la tabla → se convierte en el monto del conversor.
+  final ValueChanged<double>? onAmount;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final amounts = quickAmounts[from] ?? const <double>[];
+
+    // Tabla de equivalencias (USD · BCV · Paralelo · Dif) SOLO con datos
+    // reales de ambas fuentes; el resto de pares mantiene la versión de
+    // siempre (monto → Bs con la fuente activa).
+    final bcv = ctx.rate('ves-bcv');
+    final par = ctx.rate('ves-parallel');
+    final dual = from == Currency.usd && bcv > 0 && par > 0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Montos de referencia'),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                for (final a in amounts)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Text(
-                          fmtMoney(a, from),
-                          style: VeText.displayNum(
-                            13.5,
-                            color: scheme.onSurface,
+        _SectionEyebrow('Montos de referencia'),
+        if (dual)
+          VeGroup(
+            children: [
+              // Encabezado de columnas del prototipo (fondo subtle + caps).
+              Container(
+                padding: const EdgeInsets.fromLTRB(14, 7, 14, 7),
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.06),
+                child: Row(
+                  children: [
+                    for (final (i, h) in const [
+                      'USD',
+                      'BCV',
+                      'Paralelo',
+                      'Dif.',
+                    ].indexed)
+                      Expanded(
+                        child: Text(
+                          h,
+                          textAlign: i == 0 ? TextAlign.left : TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.84,
+                            color: scheme.onSurfaceVariant,
                           ),
                         ),
-                        const Spacer(),
-                        Text(
-                          fmtCurrency(
-                            ctx.convert(a, from, Currency.ves),
-                            Currency.ves,
+                      ),
+                  ],
+                ),
+              ),
+              for (final a in amounts)
+                InkWell(
+                  onTap: onAmount == null ? null : () => onAmount!(a),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 9,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: VeNum(
+                            '\$${fmtNum(a, decimals: 0)}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: scheme.onSurfaceVariant,
+                        ),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: VeNum(
+                              fmtNum(a * bcv, decimals: 0),
+                              style: const TextStyle(fontSize: 12.5),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: VeNum(
+                              fmtNum(a * par, decimals: 0),
+                              style: const TextStyle(fontSize: 12.5),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: VeNum(
+                              '${a * (par - bcv) >= 0 ? '+' : '−'}'
+                              '${fmtNum((a * (par - bcv)).abs(), decimals: 0)}',
+                              style: TextStyle(fontSize: 12.5, color: ink.warn),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-              ],
-            ),
+                ),
+            ],
+          )
+        else
+          VeGroup(
+            children: [
+              for (final a in amounts)
+                VeRow(
+                  onTap: onAmount == null ? null : () => onAmount!(a),
+                  label: VeNum(
+                    fmtMoney(a, from),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  right: Text(
+                    fmtCurrency(
+                      ctx.convert(a, from, Currency.ves),
+                      Currency.ves,
+                    ),
+                  ),
+                ),
+            ],
           ),
-        ),
       ],
     );
   }
@@ -310,121 +398,111 @@ class _Matriz6State extends State<_Matriz6> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(child: SectionTitle('Tabla de referencia 6×6')),
-            Switch(
-              value: _open,
-              onChanged: (v) => setState(() => _open = v),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ],
+        _SectionEyebrow(
+          'Tabla de referencia 6×6',
+          actionLabel: _open ? 'Ocultar' : 'Mostrar',
+          onAction: () => setState(() => _open = !_open),
         ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: _open
-                ? Scrollbar(
+        VeCard(
+          padding: const EdgeInsets.all(12),
+          child: _open
+              ? Scrollbar(
+                  controller: _scroll,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
                     controller: _scroll,
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      controller: _scroll,
-                      scrollDirection: Axis.horizontal,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const SizedBox(width: 42),
-                              for (final c in focus)
-                                SizedBox(
-                                  width: 58,
-                                  child: Column(
-                                    children: [
-                                      Flag(c, size: 13),
-                                      const SizedBox(height: 2),
-                                      // labelCaps aplica el piso de
-                                      // legibilidad de 9.5 px (antes 8.5
-                                      // crudos, bajo el mínimo del sistema).
-                                      Text(
-                                        c.code,
-                                        style: VeText.labelCaps(
-                                          9.5,
-                                          color: scheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          for (final r in focus)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2),
-                              child: Row(
-                                children: [
-                                  SizedBox(
-                                    width: 42,
-                                    child: Center(child: Flag(r, size: 15)),
-                                  ),
-                                  for (final c in focus)
-                                    SizedBox(
-                                      width: 58,
-                                      child: Center(
-                                        child: r == c
-                                            ? Text(
-                                                '·',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color:
-                                                      scheme.onSurfaceVariant,
-                                                ),
-                                              )
-                                            : () {
-                                                final rate = widget.ctx.convert(
-                                                  1,
-                                                  r,
-                                                  c,
-                                                );
-                                                return rate > 0
-                                                    ? Text(
-                                                        fmtRate(rate),
-                                                        style:
-                                                            VeText.displayNum(
-                                                              10,
-                                                              weight: FontWeight
-                                                                  .w600,
-                                                              color: scheme
-                                                                  .onSurface,
-                                                            ),
-                                                      )
-                                                    : Text(
-                                                        '—',
-                                                        style: TextStyle(
-                                                          fontSize: 10,
-                                                          color: scheme
-                                                              .onSurfaceVariant,
-                                                        ),
-                                                      );
-                                              }(),
+                    scrollDirection: Axis.horizontal,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const SizedBox(width: 42),
+                            for (final c in focus)
+                              SizedBox(
+                                width: 58,
+                                child: Column(
+                                  children: [
+                                    Flag(c, size: 13),
+                                    const SizedBox(height: 2),
+                                    // labelCaps aplica el piso de
+                                    // legibilidad de 9.5 px (antes 8.5
+                                    // crudos, bajo el mínimo del sistema).
+                                    Text(
+                                      c.code,
+                                      style: VeText.labelCaps(
+                                        9.5,
+                                        color: scheme.onSurfaceVariant,
                                       ),
                                     ),
-                                ],
+                                  ],
+                                ),
                               ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        for (final r in focus)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 42,
+                                  child: Center(child: Flag(r, size: 15)),
+                                ),
+                                for (final c in focus)
+                                  SizedBox(
+                                    width: 58,
+                                    child: Center(
+                                      child: r == c
+                                          ? Text(
+                                              '·',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: scheme.onSurfaceVariant,
+                                              ),
+                                            )
+                                          : () {
+                                              final rate = widget.ctx.convert(
+                                                1,
+                                                r,
+                                                c,
+                                              );
+                                              return rate > 0
+                                                  ? Text(
+                                                      fmtRate(rate),
+                                                      style: VeText.displayNum(
+                                                        10,
+                                                        weight: FontWeight.w600,
+                                                        color: scheme.onSurface,
+                                                      ),
+                                                    )
+                                                  : Text(
+                                                      '—',
+                                                      style: TextStyle(
+                                                        fontSize: 10,
+                                                        color: scheme
+                                                            .onSurfaceVariant,
+                                                      ),
+                                                    );
+                                            }(),
+                                    ),
+                                  ),
+                              ],
                             ),
-                        ],
-                      ),
-                    ),
-                  )
-                : Text(
-                    'Enciende la tabla para cruzar las 6 divisas del foco con la tasa vigente de cada una.',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: scheme.onSurfaceVariant,
+                          ),
+                      ],
                     ),
                   ),
-          ),
+                )
+              : Text(
+                  'Toca «Mostrar» para cruzar las 6 divisas del foco con la '
+                  'tasa vigente de cada una.',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
         ),
       ],
     );

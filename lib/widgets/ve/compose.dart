@@ -429,72 +429,77 @@ class _VeSheetChrome extends StatelessWidget {
             : BorderRadius.circular(14),
         border: Border.all(color: scheme.border),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Cabecera 48 px: título 14 w600 + cerrar.
-          Container(
-            height: 48,
-            padding: const EdgeInsets.only(left: 16, right: 8),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: scheme.border)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.foreground,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (dismissible)
-                  ShadButton.raw(
-                    variant: ShadButtonVariant.ghost,
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    width: 32,
-                    height: 32,
-                    padding: EdgeInsets.zero,
-                    backgroundColor: Colors.transparent,
-                    hoverBackgroundColor: scheme.accent,
-                    foregroundColor: scheme.mutedForeground,
-                    hoverForegroundColor: scheme.foreground,
-                    child: Icon(LucideIcons.x, size: 15),
-                  ),
-              ],
-            ),
-          ),
-          Flexible(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(context).height * 0.66,
-              ),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: body,
-              ),
-            ),
-          ),
-          if (footer != null)
+      child: Material(
+        // Ancestro Material transparente: los cuerpos de la app mezclan
+        // controles shadcn con widgets Material propios (MoneyField,
+        // TextField de nombre, PopupMenu de divisas…) que lo exigen.
+        type: MaterialType.transparency,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Container(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+              height: 48,
+              padding: const EdgeInsets.only(left: 16, right: 8),
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: scheme.border)),
+                border: Border(bottom: BorderSide(color: scheme.border)),
               ),
-              child: SafeArea(
-                top: false,
-                minimum: const EdgeInsets.only(bottom: 4),
-                child: Row(children: [Expanded(child: footer!)]),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.foreground,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (dismissible)
+                    ShadButton.raw(
+                      variant: ShadButtonVariant.ghost,
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      width: 32,
+                      height: 32,
+                      padding: EdgeInsets.zero,
+                      backgroundColor: Colors.transparent,
+                      hoverBackgroundColor: scheme.accent,
+                      foregroundColor: scheme.mutedForeground,
+                      hoverForegroundColor: scheme.foreground,
+                      child: Icon(LucideIcons.x, size: 15),
+                    ),
+                ],
               ),
             ),
-        ],
+            Flexible(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.66,
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: body,
+                ),
+              ),
+            ),
+            if (footer != null)
+              Container(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: scheme.border)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  minimum: const EdgeInsets.only(bottom: 4),
+                  child: Row(children: [Expanded(child: footer!)]),
+                ),
+              ),
+          ],
+        ),
       ),
     );
 

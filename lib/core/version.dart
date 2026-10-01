@@ -6,6 +6,6 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v19.11 · GUI nueva «Linear/Vercel» sobre
-/// shadcn/ui — TASK-33, orden del dueño).
-const String kAppVersionVisible = '19.11';
+/// Versión visible (ronda v20.0 · GUI del prototipo web sobre shadcn/ui —
+/// TASK-34, orden del dueño).
+const String kAppVersionVisible = '20.0';

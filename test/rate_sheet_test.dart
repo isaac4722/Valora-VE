@@ -7,8 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:valorave/core/currencies.dart';
 import 'package:valorave/core/models.dart';
+import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/features/home/home_screen.dart';
@@ -56,6 +58,8 @@ void main() {
   ) async {
     final store = _storeConTablero();
     final poller = await makePoller(store);
+    // TASK-34 (p5): el Inicio usa el kit «Ve» (shadcn_ui) — necesita
+    // ShadTheme en el árbol, como el ShadApp.custom real de main.dart.
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -64,9 +68,13 @@ void main() {
           // v19.4: los widgets de Inicio leen sus prefs (como la app).
           Provider<SharedPreferences>.value(value: prefs),
         ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          home: const Scaffold(body: HomeScreen()),
+        child: ShadApp.custom(
+          theme: ShadThemeVe.light(),
+          darkTheme: ShadThemeVe.dark(),
+          appBuilder: (context) => MaterialApp(
+            theme: AppTheme.light(),
+            home: const Scaffold(body: HomeScreen()),
+          ),
         ),
       ),
     );
@@ -98,6 +106,7 @@ void main() {
   ) async {
     final store = _storeConTablero();
     final poller = await makePoller(store);
+    // TASK-34 (p5): mismo shell ShadApp del main.dart real (kit «Ve»).
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -106,9 +115,13 @@ void main() {
           // v19.4: los widgets de Inicio leen sus prefs (como la app).
           Provider<SharedPreferences>.value(value: prefs),
         ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          home: const Scaffold(body: HomeScreen()),
+        child: ShadApp.custom(
+          theme: ShadThemeVe.light(),
+          darkTheme: ShadThemeVe.dark(),
+          appBuilder: (context) => MaterialApp(
+            theme: AppTheme.light(),
+            home: const Scaffold(body: HomeScreen()),
+          ),
         ),
       ),
     );

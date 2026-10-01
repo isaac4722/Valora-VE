@@ -8,7 +8,6 @@
 library;
 
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -67,17 +66,18 @@ Future<void> _cargarFuentes() async {
 /// red en las capturas).
 AppStore _storeConDatos() {
   final ahora = DateTime(2026, 10, 1, 11, 30);
-  final precio = (double p, String t) => PriceRecord(
-        id: 'r$t',
-        price: p,
-        originalPrice: p,
-        currency: 'USD',
-        quantity: 1,
-        store: t,
-        rate: 1,
-        sourceId: 'manual',
-        date: ahora,
-      );
+
+  PriceRecord precio(double p, String t) => PriceRecord(
+    id: 'r$t',
+    price: p,
+    originalPrice: p,
+    currency: 'USD',
+    quantity: 1,
+    store: t,
+    rate: 1,
+    sourceId: 'manual',
+    date: ahora,
+  );
   final arroz = Product(
     id: 'p1',
     name: 'Arroz 1 kg',
@@ -150,11 +150,18 @@ void main() {
     addTearDown(tester.view.reset);
 
     final store = _storeConDatos();
+    // Harness de captura manual (se corre con `flutter test scripts/…`):
+    // llamada legítima a la API de pruebas fuera de test/ — falso positivo
+    // del hint visibleForTesting en este archivo.
+    // ignore: invalid_use_of_visible_for_testing_member
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(kTourDoneKey, true);
-    final poller =
-        RatesPoller(store, NotificationsService(), AlertEngine(prefs));
+    final poller = RatesPoller(
+      store,
+      NotificationsService(),
+      AlertEngine(prefs),
+    );
 
     final router = GoRouter(
       initialLocation: ruta,
@@ -229,10 +236,8 @@ void main() {
         child: ShadApp.custom(
           theme: ShadThemeVe.light(),
           darkTheme: ShadThemeVe.dark(),
-          appBuilder: (context) => MaterialApp.router(
-            theme: AppTheme.light(),
-            routerConfig: router,
-          ),
+          appBuilder: (context) =>
+              MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
         ),
       ),
     );

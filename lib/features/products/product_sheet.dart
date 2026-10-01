@@ -1,32 +1,37 @@
-/// ─── Productos · Ficha de producto (§9.4 · enfoque web v15) ────────────────
-/// Bottom-sheet FULL-HEIGHT (0.94 · isScrollControlled + useSafeArea): cubre
-/// el header de la app con integración limpia. Contenido de la ficha:
-///  · Cabecera firma: nombre editable + Stamps de estado (¡bajo meta! verde /
-///    meta fijada / sin meta / no disponible) + tienda del último registro.
-///  · Cifra vigente protagonista: ReadWindow con displayNum grande + «hace X»
-///    + variación % vs registro anterior (tinta pos/neg) + precio por unidad
-///    (kg/L/pza) cuando el tamaño lo permite. FittedBox scaleDown.
-///  · «Actualizar precio» como acción protagonista: campo + moneda + tienda
-///    (opcional), se registra con fecha de hoy → addRecord; banner honesto
-///    «¡Bajo tu meta!» si el precio quedó por debajo (TARGET_EPS).
-///  · Gráfica «Inflación/deflación del producto»: SfCartesianChart (área USD
-///    + precio por kg/L punteado en eje secundario), % acumulado del período,
-///    enableTooltip + trackball. Estado vacío honesto («sin datos»).
-///  · Historial de registros (LedgerRow): fecha · tienda · precio, editar
-///    (updateRecord) y borrar (deleteRecord con confirmación).
-///  · Ajustes: código de barras (+ escáner con el mecanismo existente), meta
-///    de precio fijar/quitar, tienda del último registro, marcar no
-///    disponible y eliminar producto (confirm; cascada de canasta en store).
+/// ─── Productos · Ficha de producto (§9.4 · TASK-34 Ve) ──────────────────────
+/// Ficha en SHEET Ve (showVeSheet wide: móvil bottom / escritorio modal
+/// centrado) con TODO el detalle de siempre:
+///  · Cabecera: categoría eyebrow + nombre editable + badges de estado +
+///    tienda del último registro.
+///  · Cifra vigente protagonista: precio 34 px + VeBadge de estado +
+///    VeSparkline h48 + «hace X» + variación % vs registro anterior (tinta
+///    pos/neg) + precio por unidad (kg/L/pza) cuando el tamaño lo permite.
+///  · Grid de 3 stats (Mejor · Promedio · Meta) con divisores.
+///  · «Precio por tienda» (VeGroup): comparador de precio más bajo con
+///    badge «Mejor» en la más barata (último precio por tienda).
+///  · «Registrar precio»: monto + moneda + tienda (autocompletado) →
+///    addRecord con fecha de hoy; banner honesto «¡Bajo tu meta!» si el
+///    precio quedó por debajo (TARGET_EPS).
+///  · Gráfica «Inflación/deflación del producto» (SfCartesianChart: área USD
+///    + precio por kg/L punteado en eje secundario), % acumulado del
+///    período, tooltip + trackball. Estado vacío honesto («sin datos»).
+///  · Historial de registros: editar (updateRecord) y borrar (deleteRecord
+///    con confirmación).
+///  · Ajustes: código de barras (+ escáner), categoría/presentación/tamaño,
+///    meta de precio fijar/quitar, tienda del último registro, marcar no
+///    disponible. Eliminar vive en el pie (trash danger) con confirmación.
+///  · Pie: [Eliminar producto] + [Agregar a la lista] (precio vigente del
+///    libro; sin precio avisa honesto).
 /// Alta de producto (req. 2): NewProductSheet — nombre + escaneo de código +
 /// PRIMER PRECIO (precio+moneda+tamaño opcional) → addProduct con
-/// firstRecord en un solo paso. Iconografía: escanear Icons.qr_code_scanner.
+/// firstRecord en un solo paso.
 library;
 
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../../core/analytics.dart' as an;
@@ -38,7 +43,72 @@ import '../../data/store.dart';
 import '../../services/alerts.dart';
 import '../../services/notifications.dart';
 import '../scanner/scanner_screen.dart';
+import '../lista/item_editor.dart' show StoreAutocompleteField;
 import '../../widgets/ui.dart';
+
+/// Estado visual de un producto (mapa del prototipo Products.tsx):
+/// META OK→pos · Sube→neg · Baja→pos · Estable→neutral · Sin dato→neutral ·
+/// No disponible→neg. La sparkline hereda el tono (sube=neg · baja/meta=pos ·
+/// estable/sin dato=muted).
+class VeProductStatus {
+  const VeProductStatus({
+    required this.label,
+    required this.tone,
+    required this.spark,
+  });
+
+  final String label;
+  final VeTone tone;
+  final VeChartTone spark;
+}
+
+/// Resuelve el estado de un producto con su historial real (sin inventar):
+/// meta cumplida > subida > bajada > estable; sin serie → «Sin dato»;
+/// marcado no disponible → «No disponible».
+VeProductStatus productStatus(Product p) {
+  final target = an.computeTargetInfo(p);
+  if (p.isUnavailable) {
+    return const VeProductStatus(
+      label: 'No disponible',
+      tone: VeTone.neg,
+      spark: VeChartTone.muted,
+    );
+  }
+  if (target.met) {
+    return const VeProductStatus(
+      label: 'Meta OK',
+      tone: VeTone.pos,
+      spark: VeChartTone.pos,
+    );
+  }
+  if (p.records.length >= 2) {
+    final v = an.totalVariation(p.records);
+    if (v > 0.5) {
+      return const VeProductStatus(
+        label: 'Sube',
+        tone: VeTone.neg,
+        spark: VeChartTone.neg,
+      );
+    }
+    if (v < -0.5) {
+      return const VeProductStatus(
+        label: 'Baja',
+        tone: VeTone.pos,
+        spark: VeChartTone.pos,
+      );
+    }
+    return const VeProductStatus(
+      label: 'Estable',
+      tone: VeTone.neutral,
+      spark: VeChartTone.muted,
+    );
+  }
+  return const VeProductStatus(
+    label: 'Sin dato',
+    tone: VeTone.neutral,
+    spark: VeChartTone.muted,
+  );
+}
 
 /// Escaneo de código de barras con el mecanismo existente
 /// (ScannerScreen.scan) + fallback «__manual__» en diálogo. Devuelve el
@@ -82,26 +152,33 @@ Future<String?> scanBarcode(BuildContext context) async {
   return code;
 }
 
-/// Abre la FICHA completa de un producto existente (req. 1). Full-height:
-/// isScrollControlled + useSafeArea + 0.94 del alto disponible — el header
-/// de la app queda cubierto. LayoutBuilder para respetar también el teclado.
+/// Abre la FICHA completa de un producto existente (req. 1) en sheet Ve
+/// wide (prototipo ProductSheet): pie con [Eliminar] + [Agregar a la lista].
 Future<void> showProductSheet(BuildContext context, Product product) async {
-  await showModalBottomSheet<void>(
+  final key = GlobalKey<ProductSheetState>();
+  await showVeSheet(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    clipBehavior: Clip.antiAlias,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-    ),
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-      child: LayoutBuilder(
-        builder: (ctx, cons) => SizedBox(
-          height: cons.maxHeight * 0.94,
-          child: ProductSheet(productId: product.id),
+    title: 'Ficha del producto',
+    wide: true,
+    builder: (_) => ProductSheet(key: key, productId: product.id),
+    footer: Row(
+      children: [
+        VeBtn(
+          variant: VeBtnVariant.danger,
+          icon: LucideIcons.trash2,
+          onPressed: () => key.currentState?.askDelete(),
+          child: const Text('Eliminar'),
         ),
-      ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: VeBtn(
+            variant: VeBtnVariant.primary,
+            icon: LucideIcons.plus,
+            onPressed: () => key.currentState?.addToCartAndClose(),
+            child: const Text('Agregar a la lista'),
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -112,22 +189,18 @@ Future<void> showNewProductSheet(
   BuildContext context, {
   String? initialBarcode,
 }) async {
-  await showModalBottomSheet<void>(
+  final key = GlobalKey<_NewProductSheetState>();
+  await showVeSheet(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    clipBehavior: Clip.antiAlias,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-    ),
-    builder: (ctx) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-      child: LayoutBuilder(
-        builder: (ctx, cons) => SizedBox(
-          height: cons.maxHeight * 0.94,
-          child: NewProductSheet(initialBarcode: initialBarcode),
-        ),
-      ),
+    title: 'Nuevo producto',
+    builder: (_) => NewProductSheet(key: key, initialBarcode: initialBarcode),
+    footer: VeBtn(
+      variant: VeBtnVariant.primary,
+      size: VeBtnSize.lg,
+      expands: true,
+      icon: LucideIcons.check,
+      onPressed: () => key.currentState?.create(),
+      child: const Text('Crear producto'),
     ),
   );
 }
@@ -163,21 +236,21 @@ class ProductSheet extends StatefulWidget {
   final String productId;
 
   @override
-  State<ProductSheet> createState() => _ProductSheetState();
+  State<ProductSheet> createState() => ProductSheetState();
 }
 
-class _ProductSheetState extends State<ProductSheet> {
+class ProductSheetState extends State<ProductSheet> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _barcodeCtrl;
   late final TextEditingController _sizeCtrl;
   late final TextEditingController _lastStoreCtrl;
-  late final TextEditingController _newStoreCtrl;
   late final TextEditingController _priceCtrl;
   late final TextEditingController _targetCtrl;
 
   late ProductCategory _cat;
   late Presentation _pres;
   Currency _newCurrency = Currency.usd;
+  String? _newStore;
 
   String? _priceError;
   String? _detailsError;
@@ -197,7 +270,6 @@ class _ProductSheetState extends State<ProductSheet> {
     _lastStoreCtrl = TextEditingController(
       text: p?.latestRecord?.store?.trim() ?? '',
     );
-    _newStoreCtrl = TextEditingController();
     _priceCtrl = TextEditingController();
     _targetCtrl = TextEditingController(
       // fmtNum es-VE (fix): el toString crudo interpolaba «3.0»/«2.5» con
@@ -215,6 +287,12 @@ class _ProductSheetState extends State<ProductSheet> {
       .where((x) => x.id == widget.productId)
       .firstOrNull;
 
+  Product? _currentProduct() => context
+      .read<AppStore>()
+      .products
+      .where((x) => x.id == widget.productId)
+      .firstOrNull;
+
   @override
   void dispose() {
     _metTimer?.cancel();
@@ -222,7 +300,6 @@ class _ProductSheetState extends State<ProductSheet> {
     _barcodeCtrl.dispose();
     _sizeCtrl.dispose();
     _lastStoreCtrl.dispose();
-    _newStoreCtrl.dispose();
     _priceCtrl.dispose();
     _targetCtrl.dispose();
     super.dispose();
@@ -304,7 +381,7 @@ class _ProductSheetState extends State<ProductSheet> {
       );
       return;
     }
-    final storeName = _newStoreCtrl.text.trim();
+    final storeName = (_newStore ?? '').trim();
     final prev = p.latestRecord; // ANTES de insertar (base de la alerta).
     store.addRecord(
       p.id,
@@ -321,8 +398,10 @@ class _ProductSheetState extends State<ProductSheet> {
       ),
     );
     _priceCtrl.clear();
-    _newStoreCtrl.clear();
-    setState(() => _priceError = null);
+    setState(() {
+      _priceError = null;
+      _newStore = null;
+    });
     // Alerta de subida de precio (v17.5) + metas de producto (17.7 · el
     // mismo camino del 2º plano): engine + sistema + centro + metSince.
     try {
@@ -393,6 +472,41 @@ class _ProductSheetState extends State<ProductSheet> {
     final code = await scanBarcode(context);
     if (code == null || !mounted) return;
     setState(() => _barcodeCtrl.text = code);
+  }
+
+  /// Pie: «Eliminar» (trash) — confirmación y cascada de canasta en store.
+  /// El watcher de la ficha la cierra al no encontrar el producto.
+  Future<void> askDelete() async {
+    final store = context.read<AppStore>();
+    final p = _currentProduct();
+    if (p == null) return;
+    await _confirmDelete(store, p);
+  }
+
+  /// Pie: «Agregar a la lista» con el precio vigente del libro (patrón del
+  /// escáner). Sin precio → aviso honesto, no se agrega en $0.
+  void addToCartAndClose() {
+    final store = context.read<AppStore>();
+    final p = _currentProduct();
+    if (p == null) return;
+    final last = p.latestRecord;
+    if (last == null) {
+      showToast(context, 'Regístrale precio primero', kind: ToastKind.warn);
+      return;
+    }
+    store.addToCart(
+      CartItem(
+        id: '',
+        productId: p.id,
+        name: p.name,
+        quantity: 1,
+        price: last.originalPrice,
+        currency: last.currency,
+        barcode: p.barcode,
+      ),
+    );
+    showToast(context, '${p.name} agregado a la lista', kind: ToastKind.ok);
+    Navigator.of(context).pop();
   }
 
   Future<void> _confirmDelete(AppStore store, Product p) async {
@@ -542,83 +656,65 @@ class _ProductSheetState extends State<ProductSheet> {
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Agarradera firma del sheet.
-        Center(
-          child: Container(
-            width: 34,
-            height: 3.5,
-            margin: const EdgeInsets.only(top: 10),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.outlineVariant,
-              borderRadius: BorderRadius.circular(999),
-            ),
-          ),
-        ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-            children: [
-              _header(context, store, p),
-              const SizedBox(height: 14),
-              _vigente(context, p),
-              if (_justMet) ...[
-                const SizedBox(height: 8),
-                _metBanner(context, p),
-              ],
-              _addPrice(context, store, p),
-              _chart(context, p),
-              _tiendas(context, p),
-              _history(context, store, p),
-              _actions(context, store, p),
-            ],
-          ),
-        ),
+        _header(context, store, p),
+        _vigente(context, p),
+        if (_justMet) ...[
+          const SizedBox(height: 8),
+          _metBanner(context, p),
+        ],
+        _stats(context, p),
+        _addPrice(context, store, p),
+        _tiendas(context, p),
+        _chart(context, p),
+        _history(context, store, p),
+        _actions(context, store, p),
       ],
     );
   }
 
-  // ── Cabecera: nombre editable + stamps + última tienda ───────────────────
+  // ── Cabecera: categoría + nombre editable + badges + última tienda ──────
 
   Widget _header(BuildContext context, AppStore store, Product p) {
-    final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
-    final last = p.latestRecord;
+    final shad = ShadTheme.of(context);
+    final scheme = shad.colorScheme;
+    final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final target = an.computeTargetInfo(p);
+    final last = p.latestRecord;
     final hasStore = last != null && _storeOf(last) != 'Sin tienda';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            CategoryIcon(cat: p.category, size: 38),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                controller: _nameCtrl,
-                style: TextStyle(
-                  fontFamily: 'SpaceGrotesk',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
-                  height: 1.15,
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'Nombre del producto',
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close, size: 20),
-              tooltip: 'Cerrar ficha',
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
+        // Categoría (eyebrow del prototipo).
+        Text(
+          p.category.label.toUpperCase(),
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.84,
+            color: scheme.mutedForeground,
+          ),
+        ),
+        const SizedBox(height: 4),
+        TextField(
+          controller: _nameCtrl,
+          style: TextStyle(
+            fontFamily: 'SpaceGrotesk',
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: scheme.foreground,
+            height: 1.15,
+          ),
+          decoration: const InputDecoration(
+            hintText: 'Nombre del producto',
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -627,21 +723,26 @@ class _ProductSheetState extends State<ProductSheet> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             if (p.isUnavailable)
-              Stamp('no disponible', color: sem.neg, icon: Icons.block)
+              const VeBadge(tone: VeTone.neg, child: Text('NO DISPONIBLE'))
             else if (target.met)
-              Stamp('¡bajo meta!', color: sem.pos, icon: Icons.check)
+              const VeBadge(tone: VeTone.pos, child: Text('BAJO META'))
             else if (p.targetPrice != null)
-              Stamp('meta fijada', color: sem.warn)
+              VeBadge(tone: VeTone.warn, child: Text('META FIJADA'))
             else
-              Stamp('sin meta', color: scheme.onSurfaceVariant),
+              const VeBadge(tone: VeTone.neutral, child: Text('SIN META')),
             if ((p.barcode ?? '').trim().isNotEmpty)
               Text(
                 p.barcode!,
-                style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+                style: TextStyle(
+                  fontFamily: 'JetBrainsMono',
+                  fontSize: 10.5,
+                  letterSpacing: 0.6,
+                  color: scheme.mutedForeground,
+                ),
               ),
             Text(
               presentationLabel(p),
-              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 11.5, color: scheme.mutedForeground),
             ),
           ],
         ),
@@ -655,23 +756,25 @@ class _ProductSheetState extends State<ProductSheet> {
             const SizedBox(width: 7),
             Text(
               'ÚLTIMA TIENDA',
-              style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+              style: VeText.labelCaps(9, color: scheme.mutedForeground),
             ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 last == null ? '— sin registros' : _storeOf(last),
-                style: const TextStyle(
+                style: TextStyle(
+                  fontFamily: 'Inter',
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
+                  color: scheme.foreground,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
-        // Botón de guardado solo cuando hay cambios (ListenableBuilder para no
-        // redibujar la gráfica en cada tecla).
+        // Botón de guardado solo cuando hay cambios (ListenableBuilder para
+        // no redibujar la gráfica en cada tecla).
         AnimatedBuilder(
           animation: Listenable.merge([_nameCtrl, _barcodeCtrl, _sizeCtrl]),
           builder: (context, _) => _isDirty(p)
@@ -680,13 +783,16 @@ class _ProductSheetState extends State<ProductSheet> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: FilledButton.tonal(
+                        child: VeBtn(
+                          size: VeBtnSize.sm,
                           onPressed: () => _saveDetails(store, p),
                           child: const Text('Guardar cambios'),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      OutlinedButton(
+                      VeBtn(
+                        variant: VeBtnVariant.ghost,
+                        size: VeBtnSize.sm,
                         onPressed: () => _resetLocal(p),
                         child: const Text('Descartar'),
                       ),
@@ -702,7 +808,7 @@ class _ProductSheetState extends State<ProductSheet> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: sem.neg,
+              color: ink.neg,
             ),
           ),
         ],
@@ -710,110 +816,128 @@ class _ProductSheetState extends State<ProductSheet> {
     );
   }
 
-  // ── Cifra vigente (ReadWindow, displayNum, variación vs anterior) ────────
+  // ── Cifra vigente: precio 34 px + badge + sparkline h48 ─────────────────
 
   Widget _vigente(BuildContext context, Product p) {
-    final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
+    final shad = ShadTheme.of(context);
+    final scheme = shad.colorScheme;
+    final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final last = p.latestRecord;
+    final st = productStatus(p);
+    final series = p.records.map((r) => r.price).toList();
 
-    if (last == null) {
-      return ReadWindow(
-        semanticLabel: 'Sin precio vigente todavía',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'PRECIO VIGENTE',
-              style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '—',
-              style: VeText.displayNum(34, color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Sin datos: regístra el primer precio abajo.',
-              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      );
-    }
+    final priceBlock = last == null
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '—',
+                style: VeText.displayNum(
+                  34,
+                  color: scheme.mutedForeground,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Sin datos: regístrale el primer precio abajo.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.5,
+                  color: scheme.mutedForeground,
+                ),
+              ),
+            ],
+          )
+        : Builder(builder: (context) {
+            final recs = [...p.records]
+              ..sort((a, b) => a.date.compareTo(b.date));
+            final prev = recs.length >= 2 ? recs[recs.length - 2] : null;
+            final varPct = prev == null
+                ? null
+                : an.priceVariation(prev.price, last.price);
+            final perUnit = _perUnitOf(last, p);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'PRECIO VIGENTE',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: VeText.labelCaps(
+                          9.5,
+                          color: scheme.mutedForeground,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // El libro de precios es USD-normalizado: divisa
+                    // explícita (v17.5).
+                    const CurrencyTag('USD'),
+                    if (varPct != null) ...[
+                      const SizedBox(width: 5),
+                      TrendBadge(varPct),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Números largos: FittedBox scaleDown (§8).
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    fmtUSD(last.price),
+                    style: VeText.displayNum(34, color: scheme.foreground),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${timeAgo(last.date)} · ${_storeOf(last)}'
+                  '${last.currency != 'USD' ? ' · pagó ${fmtMoney(last.originalPrice, CurrencyX.from(last.currency))}' : ''}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.foreground.withValues(alpha: 0.75),
+                  ),
+                ),
+                if (perUnit != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '≈ ${fmtUSD(perUnit)} / ${baseUnitLabel(p)}',
+                    style: VeText.displayNum(12.5, color: ink.pos),
+                  ),
+                ],
+              ],
+            );
+          });
 
-    final recs = [...p.records]..sort((a, b) => a.date.compareTo(b.date));
-    final prev = recs.length >= 2 ? recs[recs.length - 2] : null;
-    final varPct = prev == null
-        ? null
-        : an.priceVariation(prev.price, last.price);
-    final perUnit = _perUnitOf(last, p);
-
-    return ReadWindow(
-      semanticLabel: 'Precio vigente ${fmtUSD(last.price)}',
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Flexible + Wrap-friendly: a textScale >=1.2 la fila superaba
-          // los ~300 px del ReadWindow y desbordaba (fix overflow).
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Flexible(
-                child: Text(
-                  'PRECIO VIGENTE',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
-                ),
-              ),
-              const SizedBox(width: 6),
-              // El libro de precios es USD-normalizado: divisa explícita (v17.5).
-              const CurrencyTag('USD'),
-              if (varPct != null) ...[
-                const SizedBox(width: 5),
-                TrendBadge(varPct),
-                const SizedBox(width: 5),
-                Text(
-                  'VS ANTERIOR',
-                  style: VeText.labelCaps(8.5, color: scheme.onSurfaceVariant),
-                ),
-              ],
+              Expanded(child: priceBlock),
+              const SizedBox(width: 8),
+              VeBadge(tone: st.tone, child: Text(st.label)),
             ],
           ),
-          const SizedBox(height: 6),
-          // Números largos: FittedBox scaleDown (§8).
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              fmtUSD(last.price),
-              style: VeText.displayNum(34, color: scheme.onSurface),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Icon(Icons.history, size: 12, color: scheme.onSurfaceVariant),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  '${timeAgo(last.date)} · ${_storeOf(last)}'
-                  '${last.currency != 'USD' ? ' · pagó ${fmtMoney(last.originalPrice, CurrencyX.from(last.currency))}' : ''}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface.withValues(alpha: 0.75),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+          if (series.length >= 2) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 48,
+              child: VeSparkline(
+                data: series,
+                tone: st.spark,
+                height: 48,
               ),
-            ],
-          ),
-          if (perUnit != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              '≈ ${fmtUSD(perUnit)} / ${baseUnitLabel(p)}',
-              style: VeText.displayNum(12.5, color: sem.pos),
             ),
           ],
         ],
@@ -838,7 +962,7 @@ class _ProductSheetState extends State<ProductSheet> {
       ),
       child: Row(
         children: [
-          Icon(Icons.celebration_outlined, size: 15, color: sem.pos),
+          Icon(LucideIcons.circleCheck, size: 15, color: sem.pos),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -855,270 +979,170 @@ class _ProductSheetState extends State<ProductSheet> {
     );
   }
 
-  // ── Actualizar precio (acción protagonista, enfoque web v15) ─────────────
+  // ── Grid de 3 stats (Mejor · Promedio · Meta) ───────────────────────────
+
+  Widget _stats(BuildContext context, Product p) {
+    final shad = ShadTheme.of(context);
+    final scheme = shad.colorScheme;
+    final recs = p.records;
+    final best = recs.isEmpty
+        ? null
+        : recs.map((r) => r.price).reduce((a, b) => a < b ? a : b);
+    final avg = recs.isEmpty
+        ? null
+        : recs.fold<double>(0, (a, r) => a + r.price) / recs.length;
+
+    Widget cell(String label, String value, {bool first = false}) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: first
+              ? null
+              : BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: scheme.border),
+                  ),
+                ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.84,
+                  color: scheme.mutedForeground,
+                ),
+              ),
+              const SizedBox(height: 4),
+              VeNum(
+                value,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.foreground,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: scheme.border),
+        ),
+        child: Row(
+          children: [
+            cell('Mejor', best == null ? '—' : fmtUSD(best), first: true),
+            cell('Promedio', avg == null ? '—' : fmtUSD(avg)),
+            cell(
+              'Meta',
+              p.targetPrice == null ? '—' : fmtUSD(p.targetPrice!),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Registrar precio (acción protagonista, enfoque web v15) ────────────
 
   Widget _addPrice(BuildContext context, AppStore store, Product p) {
     final scheme = Theme.of(context).colorScheme;
     final sem = VeColors.of(context);
-    // v19: la sección vive en su Card como todas las demás (antes iba
-    // suelta y pegada a la cifra vigente) y el monto usa MoneyField con
-    // formato de miles en vivo.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Actualizar precio', icon: Icons.price_change_outlined),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: MoneyField(
-                        controller: _priceCtrl,
-                        decoration: const InputDecoration(
-                          hintText: 'Precio que pagaste',
-                          prefixIcon: Icon(Icons.payments_outlined, size: 18),
-                        ),
+        VeEyebrow(child: const Text('REGISTRAR PRECIO')),
+        VeCard(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: MoneyField(
+                      controller: _priceCtrl,
+                      decoration: const InputDecoration(
+                        hintText: 'Precio que pagaste',
+                        prefixIcon: Icon(Icons.payments_outlined, size: 18),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    CurrencySelect(
-                      value: _newCurrency,
-                      onChanged: (c) => setState(() => _newCurrency = c),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _newStoreCtrl,
-                  decoration: const InputDecoration(
-                    hintText: 'Tienda (opcional)',
-                    prefixIcon: Icon(Icons.storefront_outlined, size: 18),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.today_outlined,
-                      size: 12,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Text(
-                        'SE REGISTRA CON FECHA DE HOY · ${fmtDate(DateTime.now()).toUpperCase()}',
-                        style: VeText.labelCaps(
-                          8.5,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                  const SizedBox(width: 8),
+                  CurrencySelect(
+                    value: _newCurrency,
+                    onChanged: (c) => setState(() => _newCurrency = c),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Tienda (autocompletado con las del libro — texto libre).
+              StoreAutocompleteField(
+                stores: store.stores,
+                initialValue: _newStore,
+                onChanged: (v) => setState(() => _newStore = v),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    LucideIcons.calendar,
+                    size: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      'SE REGISTRA CON FECHA DE HOY · ${fmtDate(DateTime.now()).toUpperCase()}',
+                      style: VeText.labelCaps(
+                        8.5,
+                        color: scheme.onSurfaceVariant,
                       ),
-                    ),
-                  ],
-                ),
-                if (_priceError != null) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    _priceError!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: sem.neg,
                     ),
                   ),
                 ],
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () => _submitPrice(store, p),
-                    icon: const Icon(Icons.add_circle_outline, size: 17),
-                    label: const Text('Actualizar precio'),
-                  ),
-                ),
-                if (p.targetPrice != null) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    'Tu meta para este producto: ${fmtUSD(p.targetPrice!)}',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── Gráfica: inflación/deflación del producto ────────────────────────────
-
-  Widget _chart(BuildContext context, Product p) {
-    final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
-    final recs = [...p.records]..sort((a, b) => a.date.compareTo(b.date));
-    final total = recs.length >= 2 ? an.totalVariation(recs) : null;
-    final showUnit = p.size > 0 && p.presentation != Presentation.unit;
-    final hasUnit = showUnit && recs.any((r) => pricePerBase(r, p) != null);
-    final points = recs
-        .map(
-          (r) => _ChartPoint(
-            r.date,
-            r.price,
-            showUnit ? pricePerBase(r, p) : null,
-          ),
-        )
-        .toList();
-
-    return Column(
-      children: [
-        SectionTitle(
-          'Inflación/deflación del producto',
-          icon: Icons.show_chart,
-        ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              total == null ? '—' : fmtPct(total),
-                              style: VeText.displayNum(
-                                21,
-                                color: scheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            total == null
-                                ? 'Acumulado del período (sin datos)'
-                                : 'Acumulado del período · del ${fmtDate(recs.first.date)} al ${fmtDate(recs.last.date)}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (total != null) TrendBadge(total),
-                  ],
-                ),
-                if (hasUnit) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Punteada: precio por ${baseUnitLabel(p)} (eje derecho)',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+              ),
+              if (_priceError != null) ...[
                 const SizedBox(height: 6),
-                if (recs.length < 2)
-                  SizedBox(
-                    height: 120,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.query_stats,
-                            size: 20,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            recs.isEmpty
-                                ? 'Sin registros: no hay curva que mostrar.'
-                                : 'Con un solo registro no hay curva — añade otro precio.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  SizedBox(
-                    height: 200,
-                    child: SfCartesianChart(
-                      legend: const Legend(
-                        isVisible: true,
-                        position: LegendPosition.bottom,
-                        textStyle: TextStyle(fontSize: 10),
-                      ),
-                      primaryXAxis: DateTimeAxis(
-                        dateFormat: DateFormat('dd/MM'),
-                        majorGridLines: const MajorGridLines(width: 0),
-                        labelStyle: const TextStyle(fontSize: 9.5),
-                      ),
-                      primaryYAxis: NumericAxis(
-                        majorGridLines: const MajorGridLines(width: 0.5),
-                        labelStyle: const TextStyle(fontSize: 9.5),
-                      ),
-                      axes: hasUnit
-                          ? [
-                              NumericAxis(
-                                name: 'unit',
-                                opposedPosition: true,
-                                majorGridLines: const MajorGridLines(width: 0),
-                                labelStyle: const TextStyle(fontSize: 9.5),
-                              ),
-                            ]
-                          : const <ChartAxis>[],
-                      tooltipBehavior: TooltipBehavior(enable: true),
-                      trackballBehavior: TrackballBehavior(
-                        enable: true,
-                        activationMode: ActivationMode.singleTap,
-                      ),
-                      series: [
-                        AreaSeries<_ChartPoint, DateTime>(
-                          dataSource: points,
-                          xValueMapper: (pt, _) => pt.date,
-                          yValueMapper: (pt, _) => pt.price,
-                          name: 'Precio (USD)',
-                          color: scheme.primary.withValues(alpha: 0.22),
-                          borderColor: scheme.primary,
-                          borderWidth: 2,
-                        ),
-                        if (hasUnit)
-                          LineSeries<_ChartPoint, DateTime>(
-                            dataSource: points,
-                            xValueMapper: (pt, _) => pt.date,
-                            yValueMapper: (pt, _) => pt.perUnit,
-                            yAxisName: 'unit',
-                            name: 'Por ${baseUnitLabel(p)}',
-                            color: sem.manual,
-                            width: 1.6,
-                            dashArray: const <double>[5, 3],
-                          ),
-                      ],
-                    ),
+                Text(
+                  _priceError!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: sem.neg,
                   ),
+                ),
               ],
-            ),
+              const SizedBox(height: 10),
+              VeBtn(
+                variant: VeBtnVariant.primary,
+                expands: true,
+                icon: LucideIcons.plus,
+                onPressed: () => _submitPrice(store, p),
+                child: const Text('Registrar precio'),
+              ),
+              if (p.targetPrice != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Tu meta para este producto: ${fmtUSD(p.targetPrice!)}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ],
@@ -1129,7 +1153,8 @@ class _ProductSheetState extends State<ProductSheet> {
   // ── consultor: «comparador de tiendas»). Último precio por tienda.
 
   Widget _tiendas(BuildContext context, Product p) {
-    final sem = VeColors.of(context);
+    final shad = ShadTheme.of(context);
+    final scheme = shad.colorScheme;
     final byStore = <String, PriceRecord>{};
     final count = <String, int>{};
     for (final r in p.records) {
@@ -1150,31 +1175,208 @@ class _ProductSheetState extends State<ProductSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Tiendas', icon: Icons.storefront_outlined),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Column(
-              children: [
-                for (final (i, e) in rows.indexed)
-                  LedgerRow(
-                    leading: StoreAvatar(e.key),
-                    label:
-                        '${e.key} · ${timeAgo(e.value.date)}'
-                        ' · ${count[e.key]} reg.${i == 0 ? ' · MÁS BARATO' : ''}',
-                    dots: true,
-                    value: fmtUSD(e.value.price),
-                    valueColor: i == 0 ? sem.pos : null,
+        VeEyebrow(child: const Text('PRECIO POR TIENDA')),
+        VeGroup(
+          children: [
+            for (final (i, e) in rows.indexed)
+              VeRow(
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        e.key,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (i == 0) ...[
+                      const SizedBox(width: 6),
+                      const VeBadge(tone: VeTone.pos, child: Text('Mejor')),
+                    ],
+                  ],
+                ),
+                sub: Text('${count[e.key]} reg. · ${timeAgo(e.value.date)}'),
+                right: VeNum(
+                  fmtUSD(e.value.price),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: i == 0 ? null : scheme.foreground,
                   ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ── Gráfica: inflación/deflación del producto ──────────────────────────
+
+  Widget _chart(BuildContext context, Product p) {
+    final scheme = Theme.of(context).colorScheme;
+    final sem = VeColors.of(context);
+    final recs = [...p.records]..sort((a, b) => a.date.compareTo(b.date));
+    final total = recs.length >= 2 ? an.totalVariation(recs) : null;
+    final showUnit = p.size > 0 && p.presentation != Presentation.unit;
+    final hasUnit = showUnit && recs.any((r) => pricePerBase(r, p) != null);
+    final points = recs
+        .map(
+          (r) => _ChartPoint(
+            r.date,
+            r.price,
+            showUnit ? pricePerBase(r, p) : null,
+          ),
+        )
+        .toList();
+
+    return Column(
+      children: [
+        VeEyebrow(child: const Text('INFLACIÓN/DEFLACIÓN DEL PRODUCTO')),
+        VeCard(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            total == null ? '—' : fmtPct(total),
+                            style: VeText.displayNum(
+                              21,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          total == null
+                              ? 'Acumulado del período (sin datos)'
+                              : 'Acumulado del período · del ${fmtDate(recs.first.date)} al ${fmtDate(recs.last.date)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (total != null) TrendBadge(total),
+                ],
+              ),
+              if (hasUnit) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Punteada: precio por ${baseUnitLabel(p)} (eje derecho)',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ],
-            ),
+              const SizedBox(height: 6),
+              if (recs.length < 2)
+                SizedBox(
+                  height: 120,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          LucideIcons.chartColumn,
+                          size: 20,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          recs.isEmpty
+                              ? 'Sin registros: no hay curva que mostrar.'
+                              : 'Con un solo registro no hay curva — añade otro precio.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 200,
+                  child: SfCartesianChart(
+                    legend: const Legend(
+                      isVisible: true,
+                      position: LegendPosition.bottom,
+                      textStyle: TextStyle(fontSize: 10),
+                    ),
+                    primaryXAxis: DateTimeAxis(
+                      dateFormat: DateFormat('dd/MM'),
+                      majorGridLines: const MajorGridLines(width: 0),
+                      labelStyle: const TextStyle(fontSize: 9.5),
+                    ),
+                    primaryYAxis: NumericAxis(
+                      majorGridLines: const MajorGridLines(width: 0.5),
+                      labelStyle: const TextStyle(fontSize: 9.5),
+                    ),
+                    axes: hasUnit
+                        ? [
+                            NumericAxis(
+                              name: 'unit',
+                              opposedPosition: true,
+                              majorGridLines: const MajorGridLines(width: 0),
+                              labelStyle: const TextStyle(fontSize: 9.5),
+                            ),
+                          ]
+                        : const <ChartAxis>[],
+                    tooltipBehavior: TooltipBehavior(enable: true),
+                    trackballBehavior: TrackballBehavior(
+                      enable: true,
+                      activationMode: ActivationMode.singleTap,
+                    ),
+                    series: [
+                      AreaSeries<_ChartPoint, DateTime>(
+                        dataSource: points,
+                        xValueMapper: (pt, _) => pt.date,
+                        yValueMapper: (pt, _) => pt.price,
+                        name: 'Precio (USD)',
+                        color: scheme.primary.withValues(alpha: 0.22),
+                        borderColor: scheme.primary,
+                        borderWidth: 2,
+                      ),
+                      if (hasUnit)
+                        LineSeries<_ChartPoint, DateTime>(
+                          dataSource: points,
+                          xValueMapper: (pt, _) => pt.date,
+                          yValueMapper: (pt, _) => pt.perUnit,
+                          yAxisName: 'unit',
+                          name: 'Por ${baseUnitLabel(p)}',
+                          color: sem.manual,
+                          width: 1.6,
+                          dashArray: const <double>[5, 3],
+                        ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  // ── Historial de registros (LedgerRow + editar/borrar) ───────────────────
+  // ── Historial de registros (editar/borrar) ──────────────────────────────
 
   Widget _history(BuildContext context, AppStore store, Product p) {
     final scheme = Theme.of(context).colorScheme;
@@ -1183,69 +1385,35 @@ class _ProductSheetState extends State<ProductSheet> {
 
     return Column(
       children: [
-        SectionTitle(
-          'Historial de registros',
-          icon: Icons.receipt_long_outlined,
-        ),
+        VeEyebrow(child: const Text('HISTORIAL DE REGISTROS')),
         if (recs.isEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.receipt_long_outlined,
-                    size: 16,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Sin registros todavía: todo arranca con el primer precio.',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          const VeEmpty(
+            title: 'Sin registros todavía',
+            sub: 'Todo arranca con el primer precio.',
           )
         else
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Column(
-                children: [
-                  for (final r in shown)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: LedgerRow(
-                              label: _recordLabel(r),
-                              value: fmtUSD(r.price),
-                              onTap: () => _editRecord(context, store, p, r),
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.delete_outline,
-                              size: 16,
-                              color: VeColors.of(context).neg,
-                            ),
-                            tooltip: 'Eliminar registro',
-                            onPressed: () =>
-                                _confirmDeleteRecord(context, store, p, r),
-                          ),
-                        ],
+          VeGroup(
+            children: [
+              for (final r in shown)
+                Row(
+                  children: [
+                    Expanded(
+                      child: VeRow(
+                        label: Text(_recordLabel(r)),
+                        right: Text(fmtUSD(r.price)),
+                        onTap: () => _editRecord(context, store, p, r),
                       ),
                     ),
-                ],
-              ),
-            ),
+                    VeIconBtn(
+                      icon: LucideIcons.trash2,
+                      danger: true,
+                      onTap: () =>
+                          _confirmDeleteRecord(context, store, p, r),
+                      label: 'Eliminar registro',
+                    ),
+                  ],
+                ),
+            ],
           ),
         if (recs.length > 30)
           Padding(
@@ -1263,11 +1431,10 @@ class _ProductSheetState extends State<ProductSheet> {
       '${fmtDate(r.date)} · ${_storeOf(r)}'
       '${r.currency != 'USD' ? ' · pagó ${fmtMoney(r.originalPrice, CurrencyX.from(r.currency))}' : ''}';
 
-  // ── Ajustes: código, categoría/presentación/tamaño, meta, tienda, peligro ─
+  // ── Ajustes: código, categoría/presentación/tamaño, meta, tienda ───────
 
   Widget _actions(BuildContext context, AppStore store, Product p) {
     final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
     final sizeHint = switch (_pres) {
       Presentation.weight => 'Tamaño total en g (ej. 1000)',
       Presentation.volume => 'Tamaño total en ml (ej. 2000)',
@@ -1275,181 +1442,163 @@ class _ProductSheetState extends State<ProductSheet> {
       Presentation.unit => 'Contenido (opcional, ej. 355 ml)',
     };
 
-    // v19: Ajustes en SU Card (antes suelto) con grupos separados por
-    // divisores — jerarquía clara y nada pegado.
+    // Ajustes en su Card con grupos separados por divisores — jerarquía
+    // clara y nada pegado (v19). Eliminar vive en el pie del sheet.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Ajustes del producto', icon: Icons.tune),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'CÓDIGO DE BARRAS',
-                  style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _barcodeCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          hintText: 'Código (opcional)',
-                        ),
-                      ),
+        VeEyebrow(child: const Text('AJUSTES DEL PRODUCTO')),
+        VeCard(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'CÓDIGO DE BARRAS',
+                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: VeInput(
+                      controller: _barcodeCtrl,
+                      keyboardType: TextInputType.number,
+                      placeholder: 'Código (opcional)',
+                      semantic: 'Código de barras',
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  VeIconBtn(
+                    icon: LucideIcons.scanBarcode,
+                    onTap: _scanIntoBarcode,
+                    label: 'Escanear código de barras',
+                  ),
+                ],
+              ),
+              const Divider(height: 22),
+              Text(
+                'PRESENTACIÓN',
+                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final pr in Presentation.values)
+                    VeChip(
+                      active: _pres == pr,
+                      onTap: () => setState(() => _pres = pr),
+                      child: Text(pr.label),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              VeInput(
+                controller: _sizeCtrl,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                placeholder: sizeHint,
+                semantic: 'Tamaño',
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'CATEGORÍA',
+                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final c in ProductCategory.values)
+                    VeChip(
+                      active: _cat == c,
+                      onTap: () => setState(() => _cat = c),
+                      child: Text(c.label),
+                    ),
+                ],
+              ),
+              const Divider(height: 22),
+              Text(
+                'META DE PRECIO (USD)',
+                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 6),
+              MoneyField(
+                controller: _targetCtrl,
+                maxDecimals: 4,
+                decoration: InputDecoration(
+                  hintText: p.targetPrice == null
+                      ? 'Ej. 2,50'
+                      : 'Cambiar meta USD',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: VeBtn(
+                      size: VeBtnSize.sm,
+                      onPressed: () => _fixTarget(store, p),
+                      child: const Text('Fijar meta'),
+                    ),
+                  ),
+                  if (p.targetPrice != null) ...[
                     const SizedBox(width: 8),
-                    IconButton.filledTonal(
-                      onPressed: _scanIntoBarcode,
-                      tooltip: 'Escanear código de barras',
-                      icon: const Icon(Icons.qr_code_scanner, size: 20),
-                    ),
-                  ],
-                ),
-                const Divider(height: 22),
-                Text(
-                  'PRESENTACIÓN',
-                  style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final pr in Presentation.values)
-                      ChipTag(
-                        pr.label,
-                        selected: _pres == pr,
-                        onTap: () => setState(() => _pres = pr),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _sizeCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: InputDecoration(hintText: sizeHint),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'CATEGORÍA',
-                  style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final c in ProductCategory.values)
-                      ChipTag(
-                        c.label,
-                        selected: _cat == c,
-                        onTap: () => setState(() => _cat = c),
-                      ),
-                  ],
-                ),
-                const Divider(height: 22),
-                Text(
-                  'META DE PRECIO (USD)',
-                  style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 6),
-                MoneyField(
-                  controller: _targetCtrl,
-                  maxDecimals: 4,
-                  decoration: InputDecoration(
-                    hintText: p.targetPrice == null
-                        ? 'Ej. 2,50'
-                        : 'Cambiar meta USD',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => _fixTarget(store, p),
-                        child: const Text('Fijar meta'),
+                      child: VeBtn(
+                        variant: VeBtnVariant.ghost,
+                        size: VeBtnSize.sm,
+                        onPressed: () => _clearTarget(store, p),
+                        child: const Text('Quitar meta'),
                       ),
-                    ),
-                    if (p.targetPrice != null) ...[
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _clearTarget(store, p),
-                          child: const Text('Quitar meta'),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const Divider(height: 22),
-                Text(
-                  'TIENDA DEL ÚLTIMO REGISTRO',
-                  style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _lastStoreCtrl,
-                        decoration: InputDecoration(
-                          hintText: p.latestRecord == null
-                              ? '— sin registros'
-                              : 'Ej. Bicentenario',
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: p.latestRecord == null
-                          ? null
-                          : () => _saveLastStore(store, p),
-                      child: const Text('Guardar'),
                     ),
                   ],
-                ),
-                const Divider(height: 22),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () =>
-                        store.setUnavailable(p.id, !p.isUnavailable),
-                    icon: Icon(
-                      p.isUnavailable
-                          ? Icons.check_circle_outline
-                          : Icons.block,
-                      size: 16,
-                    ),
-                    label: Text(
-                      p.isUnavailable
-                          ? 'Marcar disponible'
-                          : 'Marcar no disponible',
+                ],
+              ),
+              const Divider(height: 22),
+              Text(
+                'TIENDA DEL ÚLTIMO REGISTRO',
+                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: VeInput(
+                      controller: _lastStoreCtrl,
+                      placeholder: p.latestRecord == null
+                          ? '— sin registros'
+                          : 'Ej. Bicentenario',
+                      semantic: 'Tienda del último registro',
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: sem.neg,
-                      side: BorderSide(color: sem.neg.withValues(alpha: 0.4)),
-                    ),
-                    onPressed: () => _confirmDelete(store, p),
-                    icon: const Icon(Icons.delete_outline, size: 16),
-                    label: const Text('Eliminar producto'),
+                  const SizedBox(width: 8),
+                  VeBtn(
+                    size: VeBtnSize.sm,
+                    enabled: p.latestRecord != null,
+                    onPressed: () => _saveLastStore(store, p),
+                    child: const Text('Guardar'),
                   ),
+                ],
+              ),
+              const Divider(height: 22),
+              VeBtn(
+                expands: true,
+                icon: p.isUnavailable
+                    ? LucideIcons.circleCheck
+                    : LucideIcons.ban,
+                onPressed: () => store.setUnavailable(p.id, !p.isUnavailable),
+                child: Text(
+                  p.isUnavailable
+                      ? 'Marcar disponible'
+                      : 'Marcar no disponible',
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
@@ -1517,7 +1666,8 @@ class _NewProductSheetState extends State<NewProductSheet> {
   }
 
   /// Crea el producto (y su primer precio si se ingresó) en un paso.
-  void _create(AppStore store) {
+  void create() {
+    final store = context.read<AppStore>();
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       setState(() => _error = 'El nombre es obligatorio');
@@ -1589,7 +1739,6 @@ class _NewProductSheetState extends State<NewProductSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
     final scheme = Theme.of(context).colorScheme;
     final sizeHint = switch (_pres) {
       Presentation.weight => 'Tamaño total en g (opcional)',
@@ -1599,198 +1748,144 @@ class _NewProductSheetState extends State<NewProductSheet> {
     };
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Center(
-          child: Container(
-            width: 34,
-            height: 3.5,
-            margin: const EdgeInsets.only(top: 10),
-            decoration: BoxDecoration(
-              color: scheme.outlineVariant,
-              borderRadius: BorderRadius.circular(999),
+        VeField(
+          label: 'Nombre',
+          child: VeInput(
+            controller: _nameCtrl,
+            autofocus: widget.initialBarcode == null,
+            placeholder: 'ej. Pasta larga 500 g',
+            semantic: 'Nombre del producto',
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'CÓDIGO DE BARRAS',
+          style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: VeInput(
+                controller: _barcodeCtrl,
+                keyboardType: TextInputType.number,
+                placeholder: 'Código (opcional)',
+                semantic: 'Código de barras',
+              ),
+            ),
+            const SizedBox(width: 8),
+            VeIconBtn(
+              icon: LucideIcons.scanBarcode,
+              onTap: _scanIntoBarcode,
+              label: 'Escanear código de barras',
+            ),
+          ],
+        ),
+        if (_barcodeWarn != null) ...[
+          const SizedBox(height: 5),
+          Text(
+            _barcodeWarn!,
+            style: TextStyle(
+              fontSize: 11.5,
+              color: VeColors.of(context).warn,
             ),
           ),
+        ],
+        const SizedBox(height: 14),
+        Text(
+          'CATEGORÍA',
+          style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
         ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-            children: [
-              PageHeader(
-                'Nuevo producto',
-                hint: 'Alta en un paso: nombre + primer precio',
-                action: IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  tooltip: 'Cerrar',
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final c in ProductCategory.values)
+              VeChip(
+                active: _cat == c,
+                onTap: () => setState(() => _cat = c),
+                child: Text(c.label),
               ),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
-                        controller: _nameCtrl,
-                        autofocus: widget.initialBarcode == null,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: const InputDecoration(
-                          hintText: 'Nombre del producto',
-                          prefixIcon: Icon(
-                            Icons.inventory_2_outlined,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'CÓDIGO DE BARRAS',
-                        style: VeText.labelCaps(
-                          9,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _barcodeCtrl,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                hintText: 'Código (opcional)',
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton.filledTonal(
-                            onPressed: _scanIntoBarcode,
-                            tooltip: 'Escanear código de barras',
-                            icon: const Icon(Icons.qr_code_scanner, size: 20),
-                          ),
-                        ],
-                      ),
-                      if (_barcodeWarn != null) ...[
-                        const SizedBox(height: 5),
-                        Text(
-                          _barcodeWarn!,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: VeColors.of(context).warn,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'PRESENTACIÓN',
+          style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final pr in Presentation.values)
+              VeChip(
+                active: _pres == pr,
+                onTap: () => setState(() => _pres = pr),
+                child: Text(pr.label),
               ),
-              const SizedBox(height: 14),
-              Text(
-                'CATEGORÍA',
-                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final c in ProductCategory.values)
-                    ChipTag(
-                      c.label,
-                      selected: _cat == c,
-                      onTap: () => setState(() => _cat = c),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'PRESENTACIÓN',
-                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final pr in Presentation.values)
-                    ChipTag(
-                      pr.label,
-                      selected: _pres == pr,
-                      onTap: () => setState(() => _pres = pr),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _sizeCtrl,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: InputDecoration(hintText: sizeHint),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'PRIMER PRECIO (OPCIONAL · FECHA DE HOY)',
-                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Expanded(
-                    child: MoneyField(
-                      controller: _priceCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'Precio que pagaste',
-                        prefixIcon: Icon(Icons.payments_outlined, size: 18),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  CurrencySelect(
-                    value: _currency,
-                    onChanged: (c) => setState(() => _currency = c),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _storeCtrl,
+          ],
+        ),
+        const SizedBox(height: 10),
+        VeInput(
+          controller: _sizeCtrl,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          placeholder: sizeHint,
+          semantic: 'Tamaño',
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'PRIMER PRECIO (OPCIONAL · FECHA DE HOY)',
+          style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: MoneyField(
+                controller: _priceCtrl,
                 decoration: const InputDecoration(
-                  hintText: 'Tienda (opcional)',
-                  prefixIcon: Icon(Icons.storefront_outlined, size: 18),
+                  hintText: 'Precio que pagaste',
+                  prefixIcon: Icon(Icons.payments_outlined, size: 18),
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Sin precio igual se crea: lo añades después desde su ficha.',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  _error!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: VeColors.of(context).neg,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => _create(store),
-                  icon: const Icon(Icons.check, size: 17),
-                  label: const Text('Crear producto'),
-                ),
-              ),
-            ],
+            ),
+            const SizedBox(width: 8),
+            CurrencySelect(
+              value: _currency,
+              onChanged: (c) => setState(() => _currency = c),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        VeInput(
+          controller: _storeCtrl,
+          placeholder: 'Tienda (opcional)',
+          semantic: 'Tienda',
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Sin precio igual se crea: lo añades después desde su ficha.',
+          style: TextStyle(
+            fontSize: 11.5,
+            color: scheme.onSurfaceVariant,
           ),
         ),
+        if (_error != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            _error!,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: VeColors.of(context).neg,
+            ),
+          ),
+        ],
       ],
     );
   }

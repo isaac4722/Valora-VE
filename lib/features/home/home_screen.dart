@@ -16,6 +16,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show LucideIcons;
 
 import '../../core/analytics.dart' as an;
 import '../../core/currencies.dart';
@@ -30,6 +31,8 @@ import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/rate_sheet.dart';
 import '../../widgets/ui.dart';
+import '../shell/command_palette.dart' show showCommandPalette;
+import '../shell/notifs_center.dart' show showNotificationCenter;
 import 'app_widgets.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -44,27 +47,29 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: scheme.surfaceContainerLowest,
       body: RefreshIndicator(
         onRefresh: () => poller.refreshNow(),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          children: [
-            const TipsTrigger(scope: 'home'),
-            _Hero(poller: poller),
-            // v19 · anti-salto: el héroe y la chispa de 7 días SON
-            // condicionales (sin datos → shrink). AnimatedSize convierte su
-            // aparición/desaparición en transición (300 ms) — el resto del
-            // contenido nunca brinca al llegar la primera tasa o al cambiar
-            // de fuente.
-            AnimatedSize(
-              duration: kLayoutDur,
-              curve: kEaseVe,
-              alignment: Alignment.topCenter,
-              child: Column(children: [_RateHero(), _WeekSpark()]),
-            ),
-            // v19.6 · orden del dueño: secciones FIJAS de siempre — sin
-            // catálogo ni tamaños configurables adentro (eso salió con la
-            // ronda v19.4). La única puerta de widgets queda al pie.
-            const _HomeSections(),
-          ],
+        child: VeEntry(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+            children: [
+              const TipsTrigger(scope: 'home'),
+              _Hero(poller: poller),
+              // v19 · anti-salto: el héroe y la chispa de 7 días SON
+              // condicionales (sin datos → shrink). AnimatedSize convierte su
+              // aparición/desaparición en transición (300 ms) — el resto del
+              // contenido nunca brinca al llegar la primera tasa o al cambiar
+              // de fuente.
+              AnimatedSize(
+                duration: kLayoutDur,
+                curve: kEaseVe,
+                alignment: Alignment.topCenter,
+                child: Column(children: [_RateHero(), _WeekSpark()]),
+              ),
+              // v19.6 · orden del dueño: secciones FIJAS de siempre — sin
+              // catálogo ni tamaños configurables adentro (eso salió con la
+              // ronda v19.4). La única puerta de widgets queda al pie.
+              const _HomeSections(),
+            ],
+          ),
         ),
       ),
     );
@@ -96,6 +101,33 @@ class _HomeSections extends StatelessWidget {
         // visual v19.10 · honestidad de plataforma).
         if (!kIsWeb) _AppWidgetsCard(),
       ],
+    );
+  }
+}
+
+/// Encabezado de sección en el lenguaje del prototipo (TASK-34 · p5):
+/// eyebrow caps 10.5 px con la acción de texto a la derecha. Reemplaza a
+/// [SectionTitle] en las pantallas evolucionadas conservando el texto en
+/// MAYÚSCULAS que los tests y el tour esperan ver.
+class _SectionEyebrow extends StatelessWidget {
+  const _SectionEyebrow(this.title, {this.actionLabel, this.onAction});
+
+  final String title;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return VeEyebrow(
+      right: (actionLabel == null || onAction == null)
+          ? null
+          : VeBtn(
+              variant: VeBtnVariant.ghost,
+              size: VeBtnSize.sm,
+              onPressed: onAction,
+              child: Text(actionLabel!),
+            ),
+      child: Text(title.toUpperCase()),
     );
   }
 }
@@ -229,43 +261,103 @@ class _HeroState extends State<_Hero> {
         ? null
         : (fetched == null ? 'sin datos aún' : timeAgo(fetched, now));
     final vsAyer = _vsAyer(store);
+    // Saludo del prototipo (Home.tsx): «Buenas tardes» según la hora real.
+    final saludo = now.hour < 12
+        ? 'Buenos días'
+        : now.hour < 19
+        ? 'Buenas tardes'
+        : 'Buenas noches';
+    // Campana con punto mientras haya avisos sin leer.
+    final hayNoLeidas = store.notifs.any((n) => !n.read);
+    // En escritorio el Ajuste vive en el sidebar (como el «md:hidden» del
+    // prototipo); en móvil la fila completa de 3 iconos.
+    final bool movil = MediaQuery.sizeOf(context).width < 700;
 
     return Padding(
       padding: const EdgeInsets.only(top: 10, bottom: 14),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // v19 (orden del dueño): la fecha LARGA se retira — una sola línea
-          // corta «lun 15 sep · 14:30» dice lo mismo sin ocupar el hero.
           Expanded(
-            child: Text(
-              '${kDias[now.weekday - 1].substring(0, 3)} ${now.day} ${kMeses[now.month - 1].substring(0, 3)} · $hhmm',
-              // TASK-33 Linear: meta-línea discreta — el protagonismo es
-              // de la cifra, no de la fecha.
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
-                height: 1.2,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // v19 (orden del dueño): la fecha LARGA se retira — una sola
+                // línea corta «lun 15 sep · 14:30» como eyebrow del prototipo.
+                Text(
+                  '${kDias[now.weekday - 1].substring(0, 3)} ${now.day} ${kMeses[now.month - 1].substring(0, 3)} · $hhmm',
+                  style: VeText.labelCaps(
+                    10.5,
+                    color: scheme.onSurfaceVariant,
+                    weight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                // Saludo 22 px Space Grotesk (prototipo · sin nombre porque
+                // la app no pide datos personales).
+                Text(
+                  saludo,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: VeText.displayNum(
+                    22,
+                    color: scheme.onSurface,
+                    weight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (widget.poller.loading)
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    else ...[
+                      if (vsAyer != null) ...[
+                        Tooltip(
+                          message: '${vsAyer.$1} hoy vs ayer (snapshot local)',
+                          child: TrendBadge(vsAyer.$2),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Flexible(
+                        child: Text(
+                          freshness ?? '',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
           ),
-          if (widget.poller.loading)
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else ...[
-            if (vsAyer != null) ...[
-              Tooltip(
-                message: '${vsAyer.$1} hoy vs ayer (snapshot local)',
-                child: TrendBadge(vsAyer.$2),
-              ),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              freshness ?? '',
-              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 10),
+          // Fila de iconos del prototipo: alertas (punto si hay sin leer) ·
+          // búsqueda (palette ⌘K) · ajustes.
+          VeIconBtn(
+            icon: LucideIcons.bell,
+            label: 'Alertas',
+            dot: hayNoLeidas,
+            onTap: () => showNotificationCenter(context),
+          ),
+          const SizedBox(width: 8),
+          VeIconBtn(
+            icon: LucideIcons.search,
+            label: 'Buscar',
+            onTap: () => showCommandPalette(context),
+          ),
+          if (movil) ...[
+            const SizedBox(width: 8),
+            VeIconBtn(
+              icon: LucideIcons.settings,
+              label: 'Ajustes',
+              onTap: () => context.go('/ajustes'),
             ),
           ],
         ],
@@ -275,8 +367,9 @@ class _HeroState extends State<_Hero> {
 }
 
 /// ─── Héroe de la tasa protagonista (patrón dp4, datos reales) ───────────────
-/// Tarjeta «Dólar en Venezuela»: cifra héroe en ReadWindow (displayNum 38),
-/// botón copiar, sellos de categoría/fuente y píldoras de brecha y vs-ayer.
+/// Tarjeta «Dólar en Venezuela»: cifra héroe en ReadWindow (displayNum 38)
+/// con flash al cambiar (VeFlash), chispa de la serie real a la derecha,
+/// botón copiar y badges de categoría/fuente, brecha y vs-ayer.
 /// Usa la fuente VES activa del tablero vivo (nunca demo).
 class _RateHero extends StatelessWidget {
   const _RateHero();
@@ -285,20 +378,12 @@ class _RateHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final store = context.watch<AppStore>();
-    final VeInk sem = VeColors.of(context);
 
     // Fuente VES activa del tablero vivo; si no hay datos, nada (honesto).
     final activeId = store.sourceFor(Currency.ves);
     final s = RateSource.of(activeId);
     final e = store.board.sources[activeId];
     if (s == null || e == null) return const SizedBox.shrink();
-
-    final Color catColor = switch (s.category) {
-      SourceCategory.official => sem.pos,
-      SourceCategory.mixed => sem.warn,
-      SourceCategory.parallel => sem.neg,
-      SourceCategory.manual => sem.manual,
-    };
 
     // Brecha real vs BCV cuando la activa NO es la oficial (sello del héroe).
     final double? bcv = store.board.sources['ves-bcv']?.rate;
@@ -309,6 +394,7 @@ class _RateHero extends StatelessWidget {
 
     // vs ayer: snapshot local del día anterior para la fuente activa.
     String? vsAyerLabel;
+    double? vsAyerPct;
     final String dayKey = SnapshotPoint.dayKey(
       DateTime.now().subtract(const Duration(days: 1)),
     );
@@ -318,57 +404,77 @@ class _RateHero extends StatelessWidget {
             .toList()
           ..sort((a, b) => a.day.compareTo(b.day));
     if (yest.isNotEmpty && yest.last.rate > 0) {
-      final double pct = (e.rate / yest.last.rate - 1) * 100;
-      vsAyerLabel = 'vs ayer ${fmtPct(pct, forceSign: true)}';
+      vsAyerPct = (e.rate / yest.last.rate - 1) * 100;
+      vsAyerLabel = 'vs ayer ${fmtPct(vsAyerPct, forceSign: true)}';
     }
 
-    return Card(
+    // Dedupe (auditoría v19.10): «Oficial · Banco Central de Venezuela» —
+    // el badge de categoría ya dice «Oficial»; se recorta el prefijo si
+    // coincide.
+    final detalle =
+        s.detail.toLowerCase().startsWith(
+          '${s.category.label.toLowerCase()} · ',
+        )
+        ? s.detail.substring(s.category.label.length + 3)
+        : s.detail;
+
+    // Serie del prototipo (Home.tsx): chispa a la derecha del número con la
+    // serie REAL de la fuente activa — sin snapshots, no se dibuja.
+    final serie = snapshotSeries(
+      store.snapshots,
+      activeId,
+      14,
+    ).map((p) => p.rate).toList(growable: false);
+    final bool subio = serie.length >= 2 && serie.last >= serie.first;
+
+    return VeCard(
       key: kHeroRateKey,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    (s.currency == Currency.usd
-                            ? 'Dólar en Venezuela'
-                            : s.label)
-                        .toUpperCase(),
-                    // TASK-33 Linear: rótulo caps mute — la cifra manda.
-                    style: VeText.labelCaps(
-                      11.5,
-                      color: scheme.onSurfaceVariant,
-                      weight: FontWeight.w700,
-                    ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  (s.currency == Currency.usd ? 'Dólar en Venezuela' : s.label)
+                      .toUpperCase(),
+                  // TASK-33 Linear: rótulo caps mute — la cifra manda.
+                  style: VeText.labelCaps(
+                    10.5,
+                    color: scheme.onSurfaceVariant,
+                    weight: FontWeight.w700,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(2.5),
-                  decoration: BoxDecoration(
-                    color: scheme.onSurfaceVariant.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Flag(Currency.ves, size: 13),
+              ),
+              Container(
+                padding: const EdgeInsets.all(2.5),
+                decoration: BoxDecoration(
+                  color: scheme.onSurfaceVariant.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Settle(
-                    child: ReadWindow(
-                      semanticLabel:
-                          '1 dólar igual a ${fmtRate(e.rate)} bolívares',
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Flexible(
+                child: const Flag(Currency.ves, size: 13),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Settle(
+                  child: ReadWindow(
+                    semanticLabel:
+                        '1 dólar igual a ${fmtRate(e.rate)} bolívares',
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Flexible(
+                          // Flash del prototipo: el número destella en pos
+                          // cuando la tasa cambia (VeFlash vigila e.rate).
+                          child: VeFlash(
+                            value: e.rate,
                             child: Text(
                               fmtRate(e.rate),
                               style: VeText.displayNum(
@@ -378,124 +484,101 @@ class _RateHero extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 9),
-                          const Flag(Currency.usd, size: 21),
-                          const SizedBox(width: 6),
-                          Text(
-                            'USD',
-                            style: VeText.displayNum(
-                              20,
-                              color: scheme.onSurfaceVariant,
-                              weight: FontWeight.w600,
-                            ),
+                        ),
+                        const SizedBox(width: 9),
+                        const Flag(Currency.usd, size: 21),
+                        const SizedBox(width: 6),
+                        Text(
+                          'USD',
+                          style: VeText.displayNum(
+                            20,
+                            color: scheme.onSurfaceVariant,
+                            weight: FontWeight.w600,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                InkWell(
-                  onTap: () => copiarAlPortapapeles(
-                    context,
-                    fmtRate(e.rate).replaceAll('.', ','),
-                    'Tasa copiada',
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: 32,
-                    height: 32,
-                    // TASK-33 Linear: icon-button cuadrado r8 — el círculo
-                    // era el único en toda la app.
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: scheme.outlineVariant),
-                    ),
-                    child: Icon(
-                      Icons.copy_outlined,
-                      size: 14,
-                      color: scheme.onSurfaceVariant,
-                    ),
+              ),
+              if (serie.length >= 2) ...[
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 96,
+                  height: 44,
+                  child: VeSparkline(
+                    data: serie,
+                    tone: subio ? VeChartTone.pos : VeChartTone.neg,
+                    height: 44,
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Stamp(s.category.label, color: catColor),
-                // Dedupe (auditoría v19.10): el detalle ya trae el nombre
-                // de la categoría («Oficial · Banco Central de Venezuela»);
-                // con el sello de categoría arriba, la palabra queda
-                // repetida en el héroe. Se recorta el prefijo si coincide.
-                Stamp(
-                  s.detail.toLowerCase().startsWith(
-                        '${s.category.label.toLowerCase()} · ',
-                      )
-                      ? s.detail.substring(s.category.label.length + 3)
-                      : s.detail,
-                  color: scheme.onSurfaceVariant,
+              const SizedBox(width: 10),
+              VeIconBtn(
+                icon: LucideIcons.copy,
+                label: 'Copiar tasa',
+                onTap: () => copiarAlPortapapeles(
+                  context,
+                  fmtRate(e.rate).replaceAll('.', ','),
+                  'Tasa copiada',
                 ),
-                if (gapPct != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: sem.neg.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: sem.neg.withValues(alpha: 0.38),
-                      ),
-                    ),
-                    child: Text(
-                      'brecha ${fmtPct(gapPct)}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Inter',
-                        color: sem.neg,
-                      ),
-                    ),
-                  ),
-                if (vsAyerLabel != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: sem.pos.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: sem.pos.withValues(alpha: 0.38),
-                      ),
-                    ),
-                    child: Text(
-                      vsAyerLabel,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Inter',
-                        color: sem.pos,
-                      ),
-                    ),
-                  ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              // Badges del prototipo: categoría con fondo tenue del tono
+              // (pos=oficial · neg=paralelo · warn=mixto · info=manual).
+              VeBadge(
+                tone: switch (s.category) {
+                  SourceCategory.official => VeTone.pos,
+                  SourceCategory.parallel => VeTone.neg,
+                  SourceCategory.mixed => VeTone.warn,
+                  SourceCategory.manual => VeTone.info,
+                },
+                child: Text(s.category.label.toUpperCase()),
+              ),
+              if (gapPct != null)
+                VeBadge(
+                  tone: VeTone.warn,
+                  child: Text('brecha ${fmtPct(gapPct)}'.toUpperCase()),
+                ),
+              if (vsAyerLabel != null)
+                VeBadge(
+                  tone: (vsAyerPct ?? 0) >= 0 ? VeTone.pos : VeTone.neg,
+                  child: Text(vsAyerLabel.toUpperCase()),
+                ),
+            ],
+          ),
+          // Detalle de la fuente (dedupe v19.10: el detalle ya trae el
+          // nombre de la categoría; se recorta el prefijo si coincide). Va
+          // como línea muted propia — en badge no cabe a 320 px sin desborde.
+          if (detalle.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              detalle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-/// Sparkline de 7 días de la fuente VES activa (patrón dp6): honesta, solo
-/// aparece con ≥ 2 snapshots guardados; muestra «Ayer» como referencia.
+/// Barras de 7 días de la fuente VES activa (patrón dp6 → prototipo p5):
+/// honesta, solo aparece con ≥ 2 snapshots guardados; una barra por día con
+/// su inicial [L·M·X·J·V·S·D] y «Ayer» como referencia en el encabezado.
 class _WeekSpark extends StatelessWidget {
   const _WeekSpark();
 
@@ -509,63 +592,54 @@ class _WeekSpark extends StatelessWidget {
     if (pts.length < 2) return const SizedBox.shrink();
     final values = pts.map((p) => p.rate).toList();
     final ayer = pts[pts.length - 2].rate;
+    // Inicial del día de cada snapshot («L», «M», «X»…).
+    final labels = [
+      for (final p in pts)
+        kDias[DateTime.parse(p.day).weekday - 1].substring(0, 1).toUpperCase(),
+    ];
 
     return Padding(
       padding: const EdgeInsets.only(top: 10, bottom: 2),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Últimos 7 días',
-                      style: VeText.labelCaps(
-                        9.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    LayoutBuilder(
-                      builder: (context, box) {
-                        final w = (box.maxWidth - 84).clamp(120.0, 220.0);
-                        return Sparkline(
-                          values: values,
-                          width: w.toDouble(),
-                          height: 30,
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Ayer',
+      child: VeCard(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Últimos 7 días',
                     style: VeText.labelCaps(
-                      9.5,
+                      10.5,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    fmtRate(ayer),
-                    style: VeText.displayNum(
-                      15,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                ),
+                Text(
+                  'Ayer ',
+                  style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+                ),
+                VeNum(
+                  fmtRate(ayer),
+                  style: VeText.displayNum(
+                    14,
+                    color: scheme.onSurface,
+                    weight: FontWeight.w600,
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            VeBars(
+              labels: labels,
+              data: values,
+              tone: VeChartTone.fg,
+              height: 96,
+              formatValue: fmtRate,
+              semantic: 'Tasa de los últimos 7 días, una barra por día',
+            ),
+          ],
         ),
       ),
     );
@@ -594,7 +668,7 @@ class _CotizacionPrincipal extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Cotización principal'),
+        _SectionEyebrow('Cotización principal'),
         if (!hasAny)
           if (poller.offlineActive)
             // Desconexión ELEGIDA (modo offline): cloud_off + guía local.
@@ -633,33 +707,31 @@ class _CotizacionPrincipal extends StatelessWidget {
               onAction: () => _editManual(context, store, manualId),
             )
         else
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                children: [
-                  // ── Grupo USD: todas las fuentes «1 USD = X» ──
-                  const RateGroupHeader(
-                    Currency.usd,
-                    hint: '1 USD = X · toca una fila para activarla',
-                  ),
-                  ..._groupRows(context, store, ctx, [
-                    Currency.ves,
-                    Currency.cop,
-                    Currency.brl,
-                    Currency.mxn,
-                  ], country.currency),
-                  // ── Grupo EUR: aristas del euro (solo si alguna tiene valor) ──
-                  if (_visibleSources(ctx, const [
+          VeCard(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              children: [
+                // ── Grupo USD: todas las fuentes «1 USD = X» ──
+                const RateGroupHeader(
+                  Currency.usd,
+                  hint: '1 USD = X · toca para activar',
+                ),
+                ..._groupRows(context, store, ctx, [
+                  Currency.ves,
+                  Currency.cop,
+                  Currency.brl,
+                  Currency.mxn,
+                ], country.currency),
+                // ── Grupo EUR: aristas del euro (solo si alguna tiene valor) ──
+                if (_visibleSources(ctx, const [
+                  Currency.eur,
+                ], country.currency).isNotEmpty) ...<Widget>[
+                  const RateGroupHeader(Currency.eur, hint: '1 EUR = X'),
+                  ..._groupRows(context, store, ctx, const [
                     Currency.eur,
-                  ], country.currency).isNotEmpty) ...<Widget>[
-                    const RateGroupHeader(Currency.eur, hint: '1 EUR = X'),
-                    ..._groupRows(context, store, ctx, const [
-                      Currency.eur,
-                    ], country.currency),
-                  ],
+                  ], country.currency),
                 ],
-              ),
+              ],
             ),
           ),
       ],
@@ -747,7 +819,7 @@ class _DivisasFoco extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(
+        _SectionEyebrow(
           'Divisas del foco',
           actionLabel: 'Ir al conversor',
           onAction: () => context.go('/conversor'),
@@ -840,7 +912,6 @@ class _AlertasPrecios extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
     final targets =
         store.products
             .where((p) => p.targetPrice != null && p.targetPrice! > 0)
@@ -855,106 +926,60 @@ class _AlertasPrecios extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(
+        _SectionEyebrow(
           'Alertas de precios',
           actionLabel: 'Ver productos',
           onAction: () => context.go('/productos'),
         ),
         if (targets.isEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.notifications_none,
-                    size: 18,
-                    color: scheme.onSurfaceVariant,
+          // Empty punteado del prototipo con la acción centrada.
+          VeEmpty(
+            title: 'Sin metas configuradas',
+            sub:
+                'Fija un precio meta en cualquier producto y te avisamos '
+                'cuando baje de él.',
+            action: VeBtn(
+              variant: VeBtnVariant.secondary,
+              size: VeBtnSize.sm,
+              onPressed: () => context.go('/productos'),
+              child: const Text('Fijar una meta'),
+            ),
+          )
+        else
+          // Filas divididas del prototipo (Group+Row) con badge de estado.
+          VeGroup(
+            children: [
+              for (final p in targets.take(shown))
+                VeRow(
+                  label: Text(p.name),
+                  sub: Text(
+                    'Meta ${fmtUSD(p.targetPrice!)} · Último ${p.latestRecord != null ? fmtUSD(p.latestRecord!.price) : '—'}',
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
+                  right: an.computeTargetInfo(p).met
+                      ? const VeBadge(
+                          tone: VeTone.pos,
+                          dot: true,
+                          child: Text('¡BAJO META!'),
+                        )
+                      : const VeBadge(child: Text('PENDIENTE')),
+                  onTap: () => context.go('/productos'),
+                  showChevron: true,
+                ),
+              if (targets.length > shown)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
                     child: Text(
-                      'Sin metas configuradas',
+                      'y ${targets.length - shown} metas más en Productos.',
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 11,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () => context.go('/productos'),
-                    child: const Text('Fijar una meta'),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          Card(
-            child: Column(
-              children: [
-                for (final p in targets.take(shown))
-                  InkWell(
-                    onTap: () => context.go('/productos'),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  p.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                Text(
-                                  'Meta ${fmtUSD(p.targetPrice!)} · Último ${p.latestRecord != null ? fmtUSD(p.latestRecord!.price) : '—'}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          if (an.computeTargetInfo(p).met)
-                            Stamp('¡bajo meta!', color: sem.pos)
-                          else
-                            Stamp('pendiente', color: scheme.onSurfaceVariant),
-                        ],
-                      ),
-                    ),
-                  ),
-                if (targets.length > 6)
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: 14,
-                      right: 14,
-                      bottom: 10,
-                    ),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'y ${targets.length - 6} metas más en Productos.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+                ),
+            ],
           ),
       ],
     );
@@ -1000,13 +1025,14 @@ class _ResumenMes extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(
+        _SectionEyebrow(
           'Resumen del mes',
           actionLabel: 'Ver en Análisis',
           onAction: () => context.go('/analisis'),
         ),
         if (monthPurchases.isEmpty)
-          Card(
+          VeCard(
+            padding: const EdgeInsets.all(14),
             child: EmptyState(
               'Sin compras este mes',
               icon: Icons.shopping_cart_outlined,
@@ -1016,87 +1042,82 @@ class _ResumenMes extends StatelessWidget {
             ),
           )
         else
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Gastado en ${kMeses[now.month - 1]}',
-                    style: VeText.labelCaps(
-                      9.5,
-                      color: scheme.onSurfaceVariant,
+          VeCard(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Gastado en ${kMeses[now.month - 1]}',
+                  style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 6),
+                AnimatedNumber(
+                  spent,
+                  style: VeText.displayNum(30, color: scheme.onSurface),
+                  decimals: 2,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$deltaSub · ${monthPurchases.length} ${monthPurchases.length == 1 ? 'compra' : 'compras'}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: StatCard(
+                        label: 'Compras',
+                        value: '${monthPurchases.length}',
+                        icon: Icons.receipt_long,
+                        tone: StatTone.neutral,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  AnimatedNumber(
-                    spent,
-                    style: VeText.displayNum(30, color: scheme.onSurface),
-                    decimals: 2,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$deltaSub · ${monthPurchases.length} ${monthPurchases.length == 1 ? 'compra' : 'compras'}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: scheme.onSurfaceVariant,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: StatCard(
+                        label: 'Tienda top',
+                        value: sorted.first.key,
+                        sub: sorted.length > 1
+                            ? 'y ${sorted.length - 1} tiendas más'
+                            : null,
+                        icon: Icons.storefront_outlined,
+                        tone: StatTone.pos,
+                      ),
                     ),
-                  ),
+                  ],
+                ),
+                if (sorted.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: StatCard(
-                          label: 'Compras',
-                          value: '${monthPurchases.length}',
-                          icon: Icons.receipt_long,
-                          tone: StatTone.neutral,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: StatCard(
-                          label: 'Tienda top',
-                          value: sorted.first.key,
-                          sub: sorted.length > 1
-                              ? 'y ${sorted.length - 1} tiendas más'
-                              : null,
-                          icon: Icons.storefront_outlined,
-                          tone: StatTone.pos,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (sorted.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    for (final e in sorted.take(5))
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: LedgerRow(
-                          label: e.key,
-                          value: fmtUSD(e.value),
-                          leading: CircleAvatar(
-                            radius: 12,
-                            backgroundColor: scheme.primary.withValues(
-                              alpha: 0.10,
-                            ),
-                            child: Text(
-                              an.storeInitials(e.key),
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                                color: scheme.primary,
-                              ),
+                  for (final e in sorted.take(5))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: LedgerRow(
+                        label: e.key,
+                        value: fmtUSD(e.value),
+                        leading: CircleAvatar(
+                          radius: 12,
+                          backgroundColor: scheme.primary.withValues(
+                            alpha: 0.10,
+                          ),
+                          child: Text(
+                            an.storeInitials(e.key),
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: scheme.primary,
                             ),
                           ),
-                          dots:
-                              true, // cierre del resumen: conserva puntos contables
                         ),
+                        dots:
+                            true, // cierre del resumen: conserva puntos contables
                       ),
-                  ],
+                    ),
                 ],
-              ),
+              ],
             ),
           ),
       ],
@@ -1116,163 +1137,144 @@ class _TusTiendas extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(
+        _SectionEyebrow(
           'Tus tiendas',
           actionLabel: 'Ver historial',
           onAction: () => context.go('/historial'),
         ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                for (final s in stats)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: InkWell(
-                      onTap: () => showStoreSheet(context, s.store),
-                      borderRadius: BorderRadius.circular(10),
-                      child: LedgerRow(
-                        label: s.store.isEmpty ? 'Sin tienda' : s.store,
-                        value: fmtUSD(s.totalUSD),
-                        leading: StoreAvatar(
-                          s.store.isEmpty ? 'Sin Tienda' : s.store,
-                          size: 28,
-                        ),
-                      ),
+        // Filas divididas del prototipo: avatar + tienda + total, tap abre
+        // la hoja de detalle.
+        VeGroup(
+          children: [
+            for (final s in stats)
+              VeRow(
+                label: Row(
+                  children: [
+                    StoreAvatar(
+                      s.store.isEmpty ? 'Sin Tienda' : s.store,
+                      size: 28,
                     ),
-                  ),
-              ],
-            ),
-          ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(s.store.isEmpty ? 'Sin tienda' : s.store),
+                    ),
+                  ],
+                ),
+                right: VeNum(fmtUSD(s.totalUSD)),
+                onTap: () => showStoreSheet(context, s.store),
+                showChevron: true,
+              ),
+          ],
         ),
       ],
     );
   }
 }
 
-/// Detalle por tienda (StoreSheet del web §9.1): gasto total, frecuencia,
-/// última compra y las compras de esa tienda con cross-link al Historial.
+/// Detalle por tienda (web §9.1): gasto total, frecuencia, última compra y
+/// las compras de esa tienda con cross-link al Historial. Hoja del
+/// prototipo (p5): móvil bottom-sheet · escritorio modal centrado.
 void showStoreSheet(BuildContext context, String storeName) {
-  showModalBottomSheet<void>(
+  showVeSheet(
     context: context,
-    isScrollControlled: true,
-    builder: (_) => DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.62,
-      maxChildSize: 0.9,
-      builder: (ctx, scroll) {
-        final store = ctx.watch<AppStore>();
-        final scheme = Theme.of(ctx).colorScheme;
-        final stats = an.storeStats(store.purchases);
-        final stat = stats.where((s) => s.store == storeName).firstOrNull;
-        final purchases = an.storeDetail(store.purchases, storeName);
-        final label = storeName.isEmpty ? 'Sin tienda' : storeName;
-        return ListView(
-          controller: scroll,
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          children: [
-            Row(
-              children: [
-                StoreAvatar(
-                  storeName.isEmpty ? 'Sin Tienda' : storeName,
-                  size: 40,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      if (stat != null)
-                        Text(
-                          '${stat.count} compras · última ${stat.last == null ? '—' : fmtDate(stat.last!)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            if (stat == null)
-              Padding(
-                padding: const EdgeInsets.only(top: 30),
-                child: Text(
-                  'Sin compras registradas de esta tienda.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              )
-            else ...[
-              ReadWindow(
+    title: storeName.isEmpty ? 'Sin tienda' : storeName,
+    builder: (ctx) {
+      final store = ctx.watch<AppStore>();
+      final scheme = Theme.of(ctx).colorScheme;
+      final stats = an.storeStats(store.purchases);
+      final stat = stats.where((s) => s.store == storeName).firstOrNull;
+      final purchases = an.storeDetail(store.purchases, storeName);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              StoreAvatar(
+                storeName.isEmpty ? 'Sin Tienda' : storeName,
+                size: 40,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'GASTO ACUMULADO',
-                      style: VeText.labelCaps(
-                        9,
-                        color: scheme.onSurfaceVariant,
+                    if (stat != null)
+                      Text(
+                        '${stat.count} compras · última ${stat.last == null ? '—' : fmtDate(stat.last!)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      fmtUSD(stat.totalUSD),
-                      style: VeText.displayNum(26, color: scheme.onSurface),
-                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
-              for (final p in purchases.take(12))
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: LedgerRow(
-                    label: '${fmtDate(p.date)} · ${p.items.length} artículos',
-                    value: fmtUSD(p.totalUSD),
-                    dots: true, // cierre de la cuenta por tienda: con puntos
-                  ),
-                ),
-              if (purchases.length > 12)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    'y ${purchases.length - 12} compras más en el Historial.',
-                    style: TextStyle(
-                      fontSize: 11.5,
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (stat == null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                'Sin compras registradas de esta tienda.',
+                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+              ),
+            )
+          else ...[
+            ReadWindow(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'GASTO ACUMULADO',
+                    style: VeText.labelCaps(
+                      9.5,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
-                ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.tonal(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    ctx.go('/historial');
-                  },
-                  child: const Text('Ver en el Historial'),
+                  const SizedBox(height: 4),
+                  Text(
+                    fmtUSD(stat.totalUSD),
+                    style: VeText.displayNum(26, color: scheme.onSurface),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final p in purchases.take(12))
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: LedgerRow(
+                  label: '${fmtDate(p.date)} · ${p.items.length} artículos',
+                  value: fmtUSD(p.totalUSD),
+                  dots: true, // cierre de la cuenta por tienda: con puntos
                 ),
               ),
-            ],
+            if (purchases.length > 12)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'y ${purchases.length - 12} compras más en el Historial.',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 14),
+            VeBtn(
+              variant: VeBtnVariant.primary,
+              expands: true,
+              onPressed: () {
+                Navigator.pop(ctx);
+                ctx.go('/historial');
+              },
+              child: const Text('Ver en el Historial'),
+            ),
           ],
-        );
-      },
-    ),
+        ],
+      );
+    },
   );
 }
 
@@ -1297,39 +1299,16 @@ class _RegistrosRecientes extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle(
+        _SectionEyebrow(
           'Registros recientes',
           actionLabel: 'Ver historial',
           onAction: () => context.go('/historial'),
         ),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Column(
-              children: [
-                for (final r in recents)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.history,
-                          size: 14,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            r,
-                            style: const TextStyle(fontSize: 12.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
+        VeGroup(
+          children: [
+            for (final r in recents)
+              VeRow(label: Text(r), onTap: () => context.go('/historial')),
+          ],
         ),
       ],
     );
@@ -1344,12 +1323,12 @@ class _Herramientas extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Herramientas'),
+        _SectionEyebrow('Herramientas'),
         Row(
           children: [
             Expanded(
               child: _Tool(
-                icon: Icons.calculate_outlined,
+                icon: LucideIcons.calculator,
                 label: 'Conversor',
                 onTap: () => context.go('/conversor'),
               ),
@@ -1357,7 +1336,7 @@ class _Herramientas extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: _Tool(
-                icon: Icons.shopping_cart_outlined,
+                icon: LucideIcons.shoppingCart,
                 label: 'Lista',
                 onTap: () => context.go('/lista'),
               ),
@@ -1365,7 +1344,7 @@ class _Herramientas extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: _Tool(
-                icon: Icons.receipt_long_outlined,
+                icon: LucideIcons.receiptText,
                 label: 'Historial',
                 onTap: () => context.go('/historial'),
               ),
@@ -1386,35 +1365,28 @@ class _Tool extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return TapScale(
+    // Tile del prototipo: VeCard tocable con icono en cajita muted.
+    return VeCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: scheme.outlineVariant),
-        ),
-        child: Column(
-          children: [
-            // TASK-33 Linear: icono en cajita muted (patrón del palette).
-            Container(
-              width: 34,
-              height: 34,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: scheme.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 17, color: scheme.primary),
+      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
+      child: Column(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(height: 7),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
+            child: Icon(icon, size: 17, color: scheme.primary),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }

@@ -70,12 +70,21 @@ Widget _wrap(
       // appProviders) — la Lista y la sala lo comparten.
       ChangeNotifierProvider(create: (_) => RoomController(store)),
     ],
-    child: MaterialApp(
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+    // TASK-34 (p5+p6): Inicio y Conversor usan el kit «Ve» (shadcn_ui
+    // real), que necesita ShadTheme en el árbol — como en la app
+    // (ShadApp.custom en main.dart monta MaterialApp dentro). El harness
+    // replica ese shell.
+    child: ShadApp.custom(
+      theme: ShadThemeVe.light(),
+      darkTheme: ShadThemeVe.dark(),
       themeMode: mode,
-      localizationsDelegates: const [],
-      home: child,
+      appBuilder: (context) => MaterialApp(
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: mode,
+        localizationsDelegates: const [],
+        home: child,
+      ),
     ),
   );
 }
@@ -395,6 +404,11 @@ void main() {
     testWidgets('Lista: agregar producto, plantilla, vuelto, dividir', (
       tester,
     ) async {
+      // TASK-34 (p7): la Lista vive en teléfono — superficie real 390×844
+      // (a 800×600 el botón de alta queda bajo la VeStickyBar).
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
       final store = _pumpedStore(tester, dir: 'w4');
       await _initServices(store);
       store.setRateBoard(
@@ -408,18 +422,35 @@ void main() {
       await tester.pumpWidget(_wrap(const ListaScreen(), store: store));
       await tester.pumpAndSettle();
       expect(find.text('Lista de compras'), findsOneWidget);
-      // agrega un ítem
+      // agrega un ítem (TASK-34: campos VeInput anclados por Key — el
+      // placeholder sigue en pantalla para el usuario)
       await tester.enterText(
-        find.widgetWithText(TextField, 'Producto'),
+        find.byKey(const Key('lista-nombre')),
         'Café',
       );
       await tester.enterText(
-        find.widgetWithText(TextField, 'Precio unitario'),
+        find.byKey(const Key('lista-precio')),
         '40',
+      );
+      // TASK-34: la zona de captura quedó más abajo (barra de presupuesto +
+      // alta rápida encima) — se baja hasta el botón antes de tocarlo y se
+      // arrastra UN POCO MÁS para que quede por encima de la VeStickyBar
+      // (el tap caería en la barra si el botón queda pegado al borde).
+      await tester.scrollUntilVisible(
+        find.text('Agregar a la lista'),
+        200,
+        scrollable: find.byType(Scrollable).first,
       );
       await tester.tap(find.text('Agregar a la lista'));
       await tester.pumpAndSettle();
       expect(store.cart.length, 1);
+      // Vuelve al héroe para verificar el total (la fila nueva empujó el
+      // contenido hacia abajo).
+      await tester.drag(
+        find.byType(Scrollable).first,
+        const Offset(0, 600),
+      );
+      await tester.pumpAndSettle();
       // v19: total en moneda de cálculo + USD de extra al lado.
       store.setSetting('calcCurrency', 'VES');
       await tester.pumpAndSettle();
@@ -447,10 +478,11 @@ void main() {
         4,
       );
       // v19: la ficha abre con las secciones en Cards y el precio usa
-      // MoneyField (formato de miles en vivo).
+      // MoneyField (formato de miles en vivo). TASK-34: «Actualizar precio»
+      // pasó a ser «Registrar precio» (lenguaje del prototipo).
       await tester.tap(find.text(store.products.first.name));
       await tester.pumpAndSettle(const Duration(milliseconds: 200));
-      expect(find.text('ACTUALIZAR PRECIO'), findsOneWidget);
+      expect(find.text('REGISTRAR PRECIO'), findsOneWidget);
       expect(find.byType(MoneyField), findsAtLeastNWidgets(1));
       // Ajustes vive al final de la ficha: scroll hasta la sección.
       await tester.scrollUntilVisible(

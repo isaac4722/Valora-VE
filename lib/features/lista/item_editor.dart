@@ -1,18 +1,22 @@
-/// ─── Editor de ítems con detalle (v17.2 · requisito D) ──────────────────────
-/// Sheet firma (no Material crudo) que captura TODO el detalle de un ítem:
-/// nombre · precio + moneda · cantidad · TIENDA (autocompletado con las
-/// tiendas conocidas del libro) · CÓDIGO DE BARRAS (a mano o con el escáner
-/// ROI) · PESO/TAMAÑO de la presentación (g/kg · ml/L).
+/// ─── Editor de ítems con detalle (v17.2 · requisito D · TASK-34 Ve) ─────────
+/// Sheet del kit Ve (showVeSheet: móvil bottom / escritorio modal) que captura
+/// TODO el detalle de un ítem: nombre · precio + moneda · cantidad · TIENDA
+/// (autocompletado con las tiendas conocidas del libro) · CÓDIGO DE BARRAS
+/// (a mano o con el escáner ROI) · PESO/TAMAÑO de la presentación (g/kg ·
+/// ml/L).
 ///
 /// Con tamaño capturado (>0) muestra en vivo el precio por unidad de compra:
 /// «Bs 12,50 por kg» (price/size×1000 si la unidad base es g/ml) o
 /// «$ 1,20 por litro» (price/size si kg/l).
 ///
-/// Devuelve un CartItem por Navigator.pop (id vacío = nuevo ítem); el caller
-/// decide addToCart vs updateCartItem. Cancelar/cerrar = null.
+/// Devuelve un [ItemEditorResult] por Navigator.pop: `item` = CartItem listo
+/// (id vacío = nuevo ítem; el caller decide addToCart vs updateCartItem),
+/// `remove` = quitar el ítem editado, null = cancelar/cerrar.
+
 library;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
@@ -22,32 +26,59 @@ import '../../data/store.dart';
 import '../../widgets/ui.dart';
 import 'roi_scanner.dart';
 
-/// Abre el editor; [initial] presente = editar, ausente = agregar (se puede
-/// prellenar con [presetName] / [presetBarcode] desde el escáner).
-Future<CartItem?> showItemEditorSheet(
+/// Resultado del editor: ítem guardado o «Quitar» del ítem editado.
+class ItemEditorResult {
+  const ItemEditorResult({this.item, this.remove = false});
+
+  final CartItem? item;
+  final bool remove;
+}
+
+/// Abre el editor; [initial] presente = editar (con acción «Quitar» si
+/// [removable]), ausente = agregar (se puede prellenar con [presetName] /
+/// [presetBarcode] desde el escáner o el alta rápida por nombre).
+Future<ItemEditorResult?> showItemEditorSheet(
   BuildContext context, {
   required AppStore store,
   CartItem? initial,
   String? presetName,
   String? presetBarcode,
+  bool removable = false,
 }) {
-  return showModalBottomSheet<CartItem>(
+  final key = GlobalKey<_ItemEditorState>();
+  final editing = initial != null;
+  return showVeSheet<ItemEditorResult>(
     context: context,
-    isScrollControlled: true,
-    builder: (sheetCtx) => Padding(
-      // Deja sitio al teclado sin tapar los campos del fondo.
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
-      ),
-      child: SafeArea(
-        top: false,
-        child: _ItemEditor(
-          store: store,
-          initial: initial,
-          presetName: presetName,
-          presetBarcode: presetBarcode,
+    title: editing ? 'Editar ítem' : 'Agregar ítem',
+    builder: (_) => _ItemEditor(
+      key: key,
+      store: store,
+      initial: initial,
+      presetName: presetName,
+      presetBarcode: presetBarcode,
+    ),
+    footer: Row(
+      children: [
+        if (removable) ...[
+          VeBtn(
+            variant: VeBtnVariant.danger,
+            icon: LucideIcons.trash2,
+            onPressed: () => key.currentState?.remove(),
+            child: const Text('Quitar'),
+          ),
+          const SizedBox(width: 8),
+        ],
+        Expanded(
+          child: VeBtn(
+            variant: VeBtnVariant.primary,
+            icon: LucideIcons.check,
+            onPressed: () => key.currentState?.save(),
+            child: Text(
+              editing ? 'Guardar cambios' : 'Agregar a la lista',
+            ),
+          ),
         ),
-      ),
+      ],
     ),
   );
 }
@@ -144,6 +175,7 @@ enum _SizeMode { none, weight, volume }
 
 class _ItemEditor extends StatefulWidget {
   const _ItemEditor({
+    super.key,
     required this.store,
     this.initial,
     this.presetName,
@@ -164,8 +196,8 @@ class _ItemEditorState extends State<_ItemEditor> {
   late final TextEditingController _priceCtrl;
   late final TextEditingController _barcodeCtrl;
   late final TextEditingController _sizeCtrl;
-  final _qtyCtrl = TextEditingController(text: '1');
   late Currency _currency;
+  late int _qty;
   String? _storeName;
   _SizeMode _mode = _SizeMode.none;
   String _unit = 'g'; // g | kg | ml | l
@@ -199,7 +231,7 @@ class _ItemEditorState extends State<_ItemEditor> {
       _mode = _SizeMode.volume;
       _unit = su!;
     }
-    _qtyCtrl.text = '${it?.quantity ?? 1}';
+    _qty = (it?.quantity ?? 1).clamp(1, 999);
   }
 
   @override
@@ -208,11 +240,9 @@ class _ItemEditorState extends State<_ItemEditor> {
     _priceCtrl.dispose();
     _barcodeCtrl.dispose();
     _sizeCtrl.dispose();
-    _qtyCtrl.dispose();
     super.dispose();
   }
 
-  int get _qty => int.tryParse(_qtyCtrl.text) ?? 1;
   double get _price => parseLocaleNum(_priceCtrl.text) ?? 0;
   double get _size =>
       _mode == _SizeMode.none ? 0 : (parseLocaleNum(_sizeCtrl.text) ?? 0);
@@ -234,7 +264,9 @@ class _ItemEditorState extends State<_ItemEditor> {
     setState(() => _barcodeCtrl.text = code);
   }
 
-  void _save() {
+  /// Valida y cierra con el ítem listo (el toast de validación se mantiene:
+  /// nunca se cierra en silencio con datos incompletos).
+  void save() {
     final name = _nameCtrl.text.trim();
     final qty = _qty.clamp(1, 999);
     if (name.isEmpty || _price <= 0) {
@@ -271,8 +303,11 @@ class _ItemEditorState extends State<_ItemEditor> {
               sizeUnit: hasSize ? _unit : null,
               clearSizeUnit: !hasSize,
             );
-    Navigator.of(context).pop(item);
+    Navigator.of(context).pop(ItemEditorResult(item: item));
   }
+
+  /// «Quitar» (solo edición): el caller elimina el ítem de la lista.
+  void remove() => Navigator.of(context).pop(const ItemEditorResult(remove: true));
 
   @override
   Widget build(BuildContext context) {
@@ -280,247 +315,192 @@ class _ItemEditorState extends State<_ItemEditor> {
     final editing = widget.initial != null;
     final unitPrice = _unitPriceText();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  editing ? 'Editar ítem' : 'Agregar ítem',
-                  style: TextStyle(
-                    fontFamily: 'SpaceGrotesk',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Cerrar',
-                icon: const Icon(Icons.close, size: 18),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-          Text(
-            editing
-                ? 'El detalle viaja con el ítem hasta el historial'
-                : 'Todo es opcional salvo nombre y precio',
-            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 12),
-          // Nombre.
-          TextField(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          editing
+              ? 'El detalle viaja con el ítem hasta el historial'
+              : 'Todo es opcional salvo nombre y precio',
+          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 14),
+        // Nombre.
+        VeField(
+          label: 'Nombre',
+          child: VeInput(
             controller: _nameCtrl,
             autofocus: !editing && widget.presetName == null,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'Producto'),
+            placeholder: 'Producto',
+            semantic: 'Nombre del producto',
           ),
-          const SizedBox(height: 8),
-          // Precio + moneda.
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
+        ),
+        const SizedBox(height: 12),
+        // Precio + moneda.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: VeField(
+                label: 'Precio unitario',
+                child: VeInput(
                   controller: _priceCtrl,
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
                   onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    hintText: 'Precio unitario',
-                  ),
+                  placeholder: '0,00',
+                  semantic: 'Precio unitario',
                 ),
               ),
-              const SizedBox(width: 8),
-              CurrencySelect(
-                value: _currency,
-                onChanged: (c) => setState(() => _currency = c),
+            ),
+            const SizedBox(width: 8),
+            CurrencySelect(
+              value: _currency,
+              onChanged: (c) => setState(() => _currency = c),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Cantidad (stepper del prototipo: − valor +).
+        Row(
+          children: [
+            Text(
+              'CANTIDAD',
+              style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(width: 12),
+            VeStepper(
+              value: _qty,
+              min: 1,
+              max: 999,
+              onChanged: (v) => setState(() => _qty = v),
+              semantic: 'Cantidad',
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Tienda (autocompletado con las tiendas del libro).
+        StoreAutocompleteField(
+          stores: widget.store.stores,
+          initialValue: _storeName,
+          onChanged: (v) => setState(() => _storeName = v),
+        ),
+        const SizedBox(height: 12),
+        // Código de barras (a mano o escaneado con ROI).
+        Row(
+          children: [
+            Expanded(
+              child: VeInput(
+                controller: _barcodeCtrl,
+                keyboardType: TextInputType.number,
+                placeholder: 'Código de barras (opcional)',
+                semantic: 'Código de barras',
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Cantidad.
-          Row(
-            children: [
-              Text(
-                'CANTIDAD',
-                style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
-              ),
-              const SizedBox(width: 10),
-              InkWell(
-                onTap: () => setState(
-                  () => _qtyCtrl.text = '${(_qty - 1).clamp(1, 999)}',
-                ),
-                borderRadius: BorderRadius.circular(8),
-                child: const Padding(
-                  padding: EdgeInsets.all(6),
-                  child: Icon(Icons.remove_circle_outline, size: 20),
-                ),
-              ),
-              // Ancho elástico 52–72: a textScale >=1.3 «999» tabular se
-              // recortaba dentro de los 52 px fijos (fix a11y).
-              ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 52, maxWidth: 72),
-                child: TextField(
-                  controller: _qtyCtrl,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  style: VeText.displayNum(14, color: scheme.onSurface),
-                  onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(isDense: true),
-                ),
-              ),
-              InkWell(
-                onTap: () => setState(
-                  () => _qtyCtrl.text = '${(_qty + 1).clamp(1, 999)}',
-                ),
-                borderRadius: BorderRadius.circular(8),
-                child: const Padding(
-                  padding: EdgeInsets.all(6),
-                  child: Icon(Icons.add_circle_outline, size: 20),
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            VeIconBtn(
+              icon: LucideIcons.scanBarcode,
+              onTap: _scanBarcode,
+              label: 'Escanear código',
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        // Peso / tamaño de la presentación.
+        Text(
+          'PESO / TAMAÑO',
+          style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            VeChip(
+              active: _mode == _SizeMode.none,
+              onTap: () => setState(() => _mode = _SizeMode.none),
+              child: const Text('Sin peso'),
+            ),
+            VeChip(
+              active: _mode == _SizeMode.weight,
+              onTap: () => setState(() {
+                _mode = _SizeMode.weight;
+                _unit = _unit == 'l' || _unit == 'ml' ? 'g' : _unit;
+              }),
+              child: const Text('Peso (g · kg)'),
+            ),
+            VeChip(
+              active: _mode == _SizeMode.volume,
+              onTap: () => setState(() {
+                _mode = _SizeMode.volume;
+                _unit = _unit == 'g' || _unit == 'kg' ? 'ml' : _unit;
+              }),
+              child: const Text('Volumen (ml · L)'),
+            ),
+          ],
+        ),
+        if (_mode != _SizeMode.none) ...[
           const SizedBox(height: 10),
-          // Tienda (autocompletado con las tiendas del libro).
-          StoreAutocompleteField(
-            stores: widget.store.stores,
-            initialValue: _storeName,
-            onChanged: (v) => setState(() => _storeName = v),
-          ),
-          const SizedBox(height: 8),
-          // Código de barras (a mano o escaneado con ROI).
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _barcodeCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    hintText: 'Código de barras (opcional)',
-                    prefixIcon: Icon(Icons.qr_code_2, size: 17),
+                child: VeInput(
+                  controller: _sizeCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
                   ),
+                  onChanged: (_) => setState(() {}),
+                  placeholder: _mode == _SizeMode.weight
+                      ? 'Contenido (600)'
+                      : 'Contenido (500)',
+                  semantic: 'Contenido',
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton.filledTonal(
-                onPressed: _scanBarcode,
-                tooltip: 'Escanear código',
-                icon: const Icon(Icons.qr_code_scanner, size: 20),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final u
+                      in (_mode == _SizeMode.weight
+                          ? const ['g', 'kg']
+                          : const ['ml', 'l']))
+                    VeChip(
+                      active: _unit == u,
+                      onTap: () => setState(() => _unit = u),
+                      child: Text(u),
+                    ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          // Peso / tamaño de la presentación.
-          Text(
-            'PESO / TAMAÑO',
-            style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            children: [
-              ChipTag(
-                'Sin peso',
-                selected: _mode == _SizeMode.none,
-                onTap: () => setState(() => _mode = _SizeMode.none),
-              ),
-              ChipTag(
-                'Peso (g · kg)',
-                selected: _mode == _SizeMode.weight,
-                onTap: () => setState(() {
-                  _mode = _SizeMode.weight;
-                  _unit = _unit == 'l' || _unit == 'ml' ? 'g' : _unit;
-                }),
-              ),
-              ChipTag(
-                'Volumen (ml · L)',
-                selected: _mode == _SizeMode.volume,
-                onTap: () => setState(() {
-                  _mode = _SizeMode.volume;
-                  _unit = _unit == 'g' || _unit == 'kg' ? 'ml' : _unit;
-                }),
-              ),
-            ],
-          ),
-          if (_mode != _SizeMode.none) ...[
-            const SizedBox(height: 8),
-            Row(
+        ],
+        // Precio por unidad de compra (solo si size > 0 y precio > 0).
+        if (unitPrice != null) ...[
+          const SizedBox(height: 12),
+          ReadWindow(
+            semanticLabel: 'Precio por unidad de compra',
+            child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _sizeCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      hintText: _mode == _SizeMode.weight
-                          ? 'Contenido (600)'
-                          : 'Contenido (500)',
-                    ),
+                  child: Text(
+                    unitPrice,
+                    style: VeText.displayNum(16, color: scheme.onSurface),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Wrap(
-                  spacing: 6,
-                  children: [
-                    for (final u
-                        in (_mode == _SizeMode.weight
-                            ? const ['g', 'kg']
-                            : const ['ml', 'l']))
-                      ChipTag(
-                        u,
-                        selected: _unit == u,
-                        onTap: () => setState(() => _unit = u),
-                      ),
-                  ],
+                Text(
+                  'por unidad de compra',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
-          ],
-          // Precio por unidad de compra (solo si size > 0 y precio > 0).
-          if (unitPrice != null) ...[
-            const SizedBox(height: 10),
-            ReadWindow(
-              semanticLabel: 'Precio por unidad de compra',
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      unitPrice,
-                      style: VeText.displayNum(16, color: scheme.onSurface),
-                    ),
-                  ),
-                  Text(
-                    'por unidad de compra',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 14),
-          // Acción primaria única de la zona.
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.check, size: 16),
-              label: Text(editing ? 'Guardar cambios' : 'Agregar a la lista'),
-            ),
           ),
         ],
-      ),
+      ],
     );
   }
 }

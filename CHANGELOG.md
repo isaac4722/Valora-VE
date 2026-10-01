@@ -1,6 +1,46 @@
 # Changelog
 
 
+## 1.10.0-beta+30 · v20.0 — GUI del prototipo web sobre shadcn/ui (TASK-34)
+
+- **Tokens del prototipo (p2)**: theme.dart ahora reproduce EXACTOS los
+  CSS custom properties del prototipo de referencia (zinc claro/oscuro,
+  `--line-strong`, `--faint`, fondos tenues `--pos-bg`/`--neg-bg`/
+  `--warn-bg`/`--info-bg` en `VeInk`). El primario pasa a tinta invertida
+  (bg fg / texto bg) — cero acentos de marca, como Linear/Vercel.
+- **Kit «Ve» (p3)**: `lib/widgets/ve/` — capa shadcn_ui REAL: VeBtn
+  (28/36/44 px exactos), VeBadge por tono con fondo tenue, VeChip pill,
+  VeToggle 32×18, VeCheckbox con pop, VeSegmented de pastilla deslizante
+  (mejora sobre el original), VeStepper, VeInput/VeSelect con foco tinta,
+  VeCard/VeGroup/VeRow, VeEyebrow/VeTitle, showVeSheet (bottom móvil /
+  modal centrado escritorio), VeStickyBar con blur, VeEmpty punteado,
+  VeAmbient (radiales + rejilla de puntos), VeFlash, y los 5 gráficos del
+  prototipo (sparkline, área interactiva con crosshair, barras, donut,
+  heatmap) en CustomPainter ligero. Fuente JetBrains Mono para kbd/códigos.
+  Los bordes shadcn flush (sin reserva de foco) garantizan medidas al píxel.
+- **Shell del prototipo (p4)**: escritorio (≥700 px) sidebar de 224 px con
+  marca (rombo+tinta), búsqueda ⌘K, navegación de 5 pestañas + sección
+  «Libro» (Historial · Tickets · Ajustes) y pie con las tasas del país en
+  vivo; móvil barra inferior plana (tinta/faint) + FAB de búsqueda.
+- **FIX CRÍTICO de raíz (p4)**: `ShadApp.router` con el tipo default
+  construía un `WidgetsApp` SIN ScaffoldMessenger — todos los toasts de
+  la app morirían en runtime. La raíz pasa a `ShadApp.custom` +
+  `MaterialApp.router`: ShadTheme arriba, Material de verdad abajo.
+- **Pantallas (p5–p8)**: Inicio (cabecera del prototipo con campana/
+  búsqueda/ajustes, chispa de serie junto a la tasa, badges por tono),
+  Conversor (cifra display, chips rápidos, referencias en VeGroup/VeRow),
+  Lista (barra de presupuesto con progreso tinta/warn/neg, filas con
+  checkbox+stepper, alta rápida con chips, VeStickyBar de checkout) y
+  Productos (buscador+chips de categoría, filas con sparkline y badge de
+  estado, ficha en showVeSheet wide) — evolucionadas sobre el estado real,
+  sin perder una sola función (sala viva, escáner, plantillas, checkout,
+  exportación). 213→233 tests verdes; ajustes de viewport móvil en los
+  harness de lista.
+- **Pendiente del turno**: restilo fino de Análisis/Historial/Tickets/
+  Ajustes/Bienvenida al mismo lenguaje (p9–p11) y visual gate final
+  completo; la eliminación de `safe/docs-news` y el push quedan listos
+  para ejecutarse con las credenciales del dueño.
+
 ## 1.9.11-beta+29 · v19.11 — GUI nueva «Linear/Vercel» sobre shadcn/ui (TASK-33)
 
 - **Fundaciones shadcn**: `shadcn_ui` 0.57.1 con `ShadApp.router` en la

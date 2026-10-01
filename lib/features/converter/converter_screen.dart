@@ -14,6 +14,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart' show LucideIcons, ShadTheme;
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/currencies.dart';
@@ -486,126 +487,174 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final frescura = src?.category == SourceCategory.manual
         ? 'tu tasa manual'
         : (when != null ? timeAgo(when) : 'sin fecha aún');
+    // Subtítulo del título (prototipo): fuente activa y tasa del par.
+    final srcLabel = convSourceNames[primaryId] ?? src?.label ?? primaryId;
+    final subTitulo = (plan != null && plan.rate > 0)
+        ? '$srcLabel · 1 ${from.code} = ${fmtRate(plan.rate)} ${to.code}'
+        : 'Sin tasa disponible para este par';
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          const TipsTrigger(scope: 'conversor'),
-          const PageHeader(
-            'Conversor',
-            hint: 'Puente USD · EUR visible · ruta honesta',
-          ),
-          // Fecha de la tasa activa + selector histórico (calendario real).
-          KeyedSubtree(
-            key: TourKeys.convFecha,
-            child: _FechaTasas(
-              mode: _dateMode,
-              customDate: _customDate,
-              loading: _historicLoading,
-              sinDatos:
-                  _historicRates != null &&
-                  !_historicLoading &&
-                  (plan == null || plan.rate <= 0),
-              onMode: (m) {
-                setState(() => _dateMode = m);
-                _applyRateContext();
-              },
-              onOpenCalendar: _openHistoricCalendar,
+      body: VeEntry(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            const TipsTrigger(scope: 'conversor'),
+            // Título del prototipo: subtítulo con la fuente y la tasa del
+            // par. El selector de fuente vive en la línea de fuente del
+            // card (ancla del tour convFuente), como en la app real.
+            VeTitle(sub: Text(subTitulo), child: const Text('Conversor')),
+            // Fecha de la tasa activa + selector histórico (calendario real).
+            KeyedSubtree(
+              key: TourKeys.convFecha,
+              child: _FechaTasas(
+                mode: _dateMode,
+                customDate: _customDate,
+                loading: _historicLoading,
+                sinDatos:
+                    _historicRates != null &&
+                    !_historicLoading &&
+                    (plan == null || plan.rate <= 0),
+                onMode: (m) {
+                  setState(() => _dateMode = m);
+                  _applyRateContext();
+                },
+                onOpenCalendar: _openHistoricCalendar,
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-          // Ancla del tour (v17.8): el card del par con su fuente de tasa.
-          KeyedSubtree(
-            key: TourKeys.convFuente,
-            child: _DualInput(
-              fromCtrl: _fromCtrl,
-              toCtrl: _toCtrl,
+            const SizedBox(height: 14),
+            // Ancla del tour (v17.8): el card del par con su fuente de tasa.
+            KeyedSubtree(
+              key: TourKeys.convFuente,
+              child: _DualInput(
+                fromCtrl: _fromCtrl,
+                toCtrl: _toCtrl,
+                from: from,
+                to: to,
+                result: result,
+                plan: plan,
+                ctx: ctx,
+                activeSourceId: primaryId,
+                frescura: frescura,
+                hasOverride: _hasOverride(store, from),
+                onFromInput: (v) => setState(() {
+                  _fromTyped = v;
+                  _driver = 'from';
+                }),
+                onToInput: (v) => setState(() {
+                  _toTyped = v;
+                  _driver = 'to';
+                }),
+                onAdjust: (v) {
+                  // Los ajustes rápidos mueven el lado FROM (es el «monto»).
+                  setState(() {
+                    _fromTyped = v <= 0 ? 0 : v;
+                    _driver = 'from';
+                    _fromCtrl.text = fmtNum(
+                      _fromTyped,
+                      decimals: smartDecimals(_fromTyped, from),
+                    );
+                  });
+                },
+                // Swap XE: elegir la divisa del otro lado INTERCAMBIA lados; el
+                // número escrito se queda (el resultado pasa a ser el monto).
+                onSwap: () => _swapSides(store, from, to, plan, result),
+                onFrom: (c) => c == to
+                    ? _swapSides(store, from, to, plan, result)
+                    : store.setConverterPair(c.code, to.code),
+                onTo: (c) => c == from
+                    ? _swapSides(store, from, to, plan, result)
+                    : store.setConverterPair(from.code, c.code),
+                onPickSource: _pickSource,
+                onClearOverride: () =>
+                    store.setModuleRateSource(RateModule.converter, from, null),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              // Wrap: a textScale >=1.5 los 2 botones superan el ancho útil
+              // (fix overflow) — envuelven en vez de desbordar.
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  VeBtn(
+                    variant: VeBtnVariant.secondary,
+                    icon: LucideIcons.share2,
+                    enabled: plan != null && result > 0,
+                    onPressed: _shareCard,
+                    child: const Text('Compartir'),
+                  ),
+                  VeBtn(
+                    variant: VeBtnVariant.secondary,
+                    icon: LucideIcons.copy,
+                    enabled: plan != null && result > 0,
+                    onPressed: _copyResult,
+                    child: const Text('Copiar'),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Tarjeta de marca 1080 px · se comparte desde memoria.',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            _RutaCalculo(plan: plan),
+            // REQ 5: fuentes disponibles por divisa implicada en el par.
+            _ReferenciaFuentes(
+              ctx: ctx,
               from: from,
               to: to,
+              onPick: _pickSource,
+            ),
+            // Montos de referencia (tabla de equivalencias USD·BCV·Paralelo·Dif
+            // cuando hay ambas tasas): tocar un monto lo sube al conversor.
+            _TablaMontos(
+              ctx: ctx,
+              amount: amount,
+              from: from,
+              onAmount: (v) => setState(() {
+                _fromTyped = v <= 0 ? 0 : v;
+                _driver = 'from';
+                _fromCtrl.text = fmtNum(
+                  _fromTyped,
+                  decimals: smartDecimals(_fromTyped, from),
+                );
+              }),
+            ),
+            // dp6 · mejora 9: matriz completa de pares a un vistazo (plegada).
+            _Matriz6(ctx: ctx),
+            _Recientes(
+              from: from,
+              to: to,
+              amount: amount,
               result: result,
               plan: plan,
-              ctx: ctx,
-              activeSourceId: primaryId,
-              frescura: frescura,
-              hasOverride: _hasOverride(store, from),
-              onFromInput: (v) => setState(() {
-                _fromTyped = v;
-                _driver = 'from';
-              }),
-              onToInput: (v) => setState(() {
-                _toTyped = v;
-                _driver = 'to';
-              }),
-              onAdjust: (v) {
-                // Los ajustes rápidos mueven el lado FROM (es el «monto»).
+              // Prototipo: tocar una guardada restaura su par y su monto.
+              onRestore: (r) {
+                final rf = CurrencyX.from(r.from);
+                if (from != rf || to != CurrencyX.from(r.to)) {
+                  store.setConverterPair(r.from, r.to);
+                }
                 setState(() {
-                  _fromTyped = v <= 0 ? 0 : v;
+                  _fromTyped = r.amount;
                   _driver = 'from';
                   _fromCtrl.text = fmtNum(
-                    _fromTyped,
-                    decimals: smartDecimals(_fromTyped, from),
+                    r.amount,
+                    decimals: smartDecimals(r.amount, rf),
                   );
                 });
               },
-              // Swap XE: elegir la divisa del otro lado INTERCAMBIA lados; el
-              // número escrito se queda (el resultado pasa a ser el monto).
-              onSwap: () => _swapSides(store, from, to, plan, result),
-              onFrom: (c) => c == to
-                  ? _swapSides(store, from, to, plan, result)
-                  : store.setConverterPair(c.code, to.code),
-              onTo: (c) => c == from
-                  ? _swapSides(store, from, to, plan, result)
-                  : store.setConverterPair(from.code, c.code),
-              onPickSource: _pickSource,
-              onClearOverride: () =>
-                  store.setModuleRateSource(RateModule.converter, from, null),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            // Wrap: a textScale >=1.5 los 2 botones superan el ancho útil
-            // (fix overflow) — envuelven en vez de desbordar.
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                FilledButton.tonalIcon(
-                  onPressed: plan == null || result <= 0 ? null : _shareCard,
-                  icon: const Icon(Icons.ios_share, size: 16),
-                  label: const Text('Compartir'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: plan == null || result <= 0 ? null : _copyResult,
-                  icon: const Icon(Icons.copy_all, size: 16),
-                  label: const Text('Copiar'),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(
-              'Tarjeta de marca 1080 px · se comparte desde memoria.',
-              style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
-            ),
-          ),
-          _RutaCalculo(plan: plan),
-          // REQ 5: fuentes disponibles por divisa implicada en el par.
-          _ReferenciaFuentes(ctx: ctx, from: from, to: to, onPick: _pickSource),
-          _TablaMontos(ctx: ctx, amount: amount, from: from),
-          // dp6 · mejora 9: matriz completa de pares a un vistazo (plegada).
-          _Matriz6(ctx: ctx),
-          _Recientes(
-            from: from,
-            to: to,
-            amount: amount,
-            result: result,
-            plan: plan,
-          ),
-          _Notas(ctrl: _notesCtrl),
-        ],
+            _Notas(ctrl: _notesCtrl),
+          ],
+        ),
       ),
     );
   }
@@ -634,7 +683,7 @@ class _FechaTasas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sem = VeColors.of(context);
+    final ink = Theme.of(context).extension<VeInk>()!;
     final String periodo = switch (mode) {
       'yesterday' => 'de ayer',
       'week' => 'de hace 7 días',
@@ -642,104 +691,96 @@ class _FechaTasas extends StatelessWidget {
         customDate == null ? 'del día elegido' : 'del ${fmtDate(customDate!)}',
     };
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Fila 1: presets de fecha (todos cargan histórico real) + calendario.
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                ChipTag(
-                  'Hoy',
-                  selected: mode == 'today',
-                  onTap: () => onMode('today'),
+    return VeCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Fila 1: presets de fecha (todos cargan histórico real) + calendario.
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              VeChip(
+                active: mode == 'today',
+                onTap: () => onMode('today'),
+                child: const Text('Hoy'),
+              ),
+              VeChip(
+                active: mode == 'yesterday',
+                onTap: () => onMode('yesterday'),
+                child: const Text('Ayer'),
+              ),
+              VeChip(
+                active: mode == 'week',
+                onTap: () => onMode('week'),
+                child: const Text('Hace 7 días'),
+              ),
+              VeChip(
+                active: mode == 'custom',
+                onTap: onOpenCalendar,
+                child: const Text('Elegir fecha'),
+              ),
+            ],
+          ),
+          // Banner histórico honesto (REQ 4/8).
+          if (mode != 'today') ...[
+            const SizedBox(height: 10),
+            if (loading)
+              const Row(
+                children: [
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Buscando la tasa del día…',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
                 ),
-                ChipTag(
-                  'Ayer',
-                  selected: mode == 'yesterday',
-                  onTap: () => onMode('yesterday'),
+                decoration: BoxDecoration(
+                  color: ink.warnBg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: ink.warn.withValues(alpha: 0.35)),
                 ),
-                ChipTag(
-                  'Hace 7 días',
-                  selected: mode == 'week',
-                  onTap: () => onMode('week'),
-                ),
-                ChipTag(
-                  'Elegir fecha',
-                  selected: mode == 'custom',
-                  onTap: onOpenCalendar,
-                ),
-              ],
-            ),
-            // Banner histórico honesto (REQ 4/8).
-            if (mode != 'today') ...[
-              const SizedBox(height: 10),
-              if (loading)
-                const Row(
+                child: Row(
                   children: [
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                    Icon(Icons.history, size: 15, color: ink.warn),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        sinDatos
+                            ? 'Sin datos para esa fecha. Elige un día del calendario.'
+                            : 'Mostrando la tasa $periodo',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: ink.warn,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Buscando la tasa del día…',
-                      style: TextStyle(fontSize: 12),
+                    VeBtn(
+                      variant: VeBtnVariant.ghost,
+                      size: VeBtnSize.sm,
+                      onPressed: () => onMode('today'),
+                      child: const Text('Volver a hoy'),
                     ),
                   ],
-                )
-              else
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: sem.warn.withValues(alpha: 0.09),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: sem.warn.withValues(alpha: 0.35)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.history, size: 15, color: sem.warn),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          sinDatos
-                              ? 'Sin datos para esa fecha. Elige un día del calendario.'
-                              : 'Mostrando la tasa $periodo',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: sem.warn,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => onMode('today'),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: const Text(
-                          'Volver a hoy',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-            ],
+              ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -841,8 +882,8 @@ class _DualInput extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Icon(
-                    Icons.expand_more,
-                    size: 18,
+                    LucideIcons.chevronDown,
+                    size: 16,
                     color: scheme.onSurfaceVariant,
                   ),
                 ],
@@ -851,14 +892,11 @@ class _DualInput extends StatelessWidget {
           ),
         ),
         if (hasOverride)
-          TextButton(
+          VeBtn(
+            variant: VeBtnVariant.ghost,
+            size: VeBtnSize.sm,
             onPressed: onClearOverride,
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: const Text('Seguir global', style: TextStyle(fontSize: 11)),
+            child: const Text('Seguir global'),
           ),
       ],
     );
@@ -886,19 +924,34 @@ class _DualInput extends StatelessWidget {
     return result > 0 ? result / rate : 0;
   }
 
-  /// Fila de entrada: monto (30 px, secundario) a la IZQUIERDA y selector de
-  /// divisa a la derecha — el orden de lectura de XE/Wise. Siempre editable,
-  /// con formato de miles en vivo (MoneyField).
-  Widget _montoRow(ColorScheme scheme) {
+  /// Fila de entrada: número GRANDE del prototipo (38 px Space Grotesk
+  /// semibold, tabular) con el símbolo de la divisa en tinta faint y el
+  /// selector de divisa a la derecha. Siempre editable, con formato de
+  /// miles en vivo (MoneyField — mismo parser de siempre).
+  Widget _montoRow(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        Text(
+          from.symbol,
+          style: VeText.displayNum(
+            28,
+            color: scheme.onSurfaceVariant,
+            weight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(width: 8),
         Expanded(
           child: MoneyField(
             controller: fromCtrl,
             onChanged: onFromInput,
             maxDecimals: 6,
-            style: VeText.displayNum(30, color: scheme.onSurface),
+            style: VeText.displayNum(
+              38,
+              color: scheme.onSurface,
+              weight: FontWeight.w600,
+            ),
             decoration: const InputDecoration(
               hintText: 'Monto',
               border: InputBorder.none,
@@ -969,63 +1022,103 @@ class _DualInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
-            _fuenteLine(context, scheme),
-            const Divider(height: 18),
-            _montoRow(scheme),
-            // Swap centrado y GRANDE (v18.0): el gesto firma del conversor.
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
+    return VeCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        children: [
+          _fuenteLine(context, scheme),
+          const Divider(height: 18),
+          _montoRow(context),
+          // Swap del prototipo: círculo 32 px sobre el divisor entre los
+          // dos campos, con rotación animada (180°) al presionarlo.
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: SizedBox(
+              height: 36,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  const Expanded(child: SizedBox()),
-                  TapScale(
-                    onTap: onSwap,
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: scheme.primary.withValues(alpha: 0.08),
-                        border: Border.all(
-                          color: scheme.primary.withValues(alpha: 0.25),
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.swap_vert,
-                        size: 26,
-                        color: scheme.primary,
+                  const Positioned.fill(
+                    child: Center(child: Divider(height: 1)),
+                  ),
+                  _SwapBtn(onTap: onSwap),
+                ],
+              ),
+            ),
+          ),
+          _resultadoRow(scheme),
+          // REQ 6 · v18.0: ajustes rápidos al mismo ancho — 4 chips Expanded
+          // (±10 % · ±100) siempre alineados, sin Wrap que los reordene.
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Row(
+              children: [
+                for (final adj in quickAdjustments)
+                  Expanded(
+                    child: Center(
+                      child: VeChip(
+                        onTap: () =>
+                            onAdjust(adj.apply(_fromValueOf(result, plan))),
+                        child: Text(adj.label),
                       ),
                     ),
                   ),
-                  const Expanded(child: SizedBox()),
-                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Botón de intercambio del par (gesto firma del conversor): círculo 32 px
+/// con borde line-strong que gira 180° al presionarlo (active:rotate-180
+/// del prototipo, con la curva del sistema).
+class _SwapBtn extends StatefulWidget {
+  const _SwapBtn({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  State<_SwapBtn> createState() => _SwapBtnState();
+}
+
+class _SwapBtnState extends State<_SwapBtn> {
+  double _turns = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final shad = ShadTheme.of(context);
+    final scheme = shad.colorScheme;
+    final bool dark = shad.brightness == Brightness.dark;
+    return Semantics(
+      button: true,
+      label: 'Invertir par',
+      child: TapScale(
+        onTap: () {
+          setState(() => _turns += 0.5);
+          widget.onTap();
+        },
+        child: AnimatedRotation(
+          turns: _turns,
+          duration: const Duration(milliseconds: 220),
+          curve: kEaseVe,
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: scheme.card,
+              border: Border.all(
+                width: 1,
+                color: dark
+                    ? VeColors.lineStrongDark
+                    : VeColors.lineStrongLight,
               ),
             ),
-            _resultadoRow(scheme),
-            // REQ 6 · v18.0: ajustes rápidos al mismo ancho — 4 chips Expanded
-            // (±10 % · ±100) siempre alineados, sin Wrap que los reordene.
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Row(
-                children: [
-                  for (final adj in quickAdjustments)
-                    Expanded(
-                      child: Center(
-                        child: ChipTag(
-                          adj.label,
-                          onTap: () =>
-                              onAdjust(adj.apply(_fromValueOf(result, plan))),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
+            child: Icon(Icons.swap_vert, size: 16, color: scheme.foreground),
+          ),
         ),
       ),
     );
