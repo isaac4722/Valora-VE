@@ -1,53 +1,39 @@
-/// ─── Hoja de unirse (v19.8 · orden del dueño: conexión → nombre → PIN) ──────
-/// El flujo de ENTRADA a una sala en un solo lugar, por pasos:
-/// 1) Nombre (preguntado aquí, nunca antes: el lobby solo configura la
-///    conexión; el nombre es de QUIEN entra, no de la pantalla).
-/// 2) PIN de emojis si la sala lo pide (flag del QR/intento fallido).
-/// 3) Conectar: estado vivo, errores claros y reintento del PIN si falló.
+/// ─── Hoja de unirse (v19.8 → TASK-35 p4: diseño JoinSheet del prototipo) ───
+/// El flujo de ENTRADA a una sala en un solo lugar, por pasos (como el
+/// prototipo web): 1 · Conexión (chips) → 2 · Tu nombre (chips + propio) →
+/// 3 · Código de la sala (6 columnas con flechas) → PIN de 4 emojis si la
+/// sala lo pide. Barra de progreso al pie del título y botón principal en
+/// el pie de la hoja. TECHO: la hoja Ve nunca supera el 88 % útil.
 ///
 /// Puertas que la abren: código manual · escáner in-app · salas cercanas ·
 /// deep link del QR (valorave://sala?c=…&m=…&p=1) desde la cámara.
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/theme.dart';
 import '../../room/room_controller.dart';
 import '../../room/room_transport.dart'
     show RoomAd, RoomMode, RoomModeX, SalaInvite;
+import '../../widgets/ve/ve.dart';
 import 'pin_emoji.dart';
+
+/// Alfabeto del código de sala (RoomProtocol.newCode: 6 chars sin O/I).
+const String _kAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 /// Abre la hoja de unirse. [invite] prellena el código (QR/escáner);
 /// [ad] entra al marcar una sala avistada (marca el host/puerto para el
-/// dial directo). Si ambos son null, arranca pidiendo el código.
-
-/// Mayuscula lo tecleado SIN reescribir controller.text (conserva el
-/// cursor donde está: editar en medio del código ya no salta al final).
-class UpperCaseTextFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    return TextEditingValue(
-      text: newValue.text.toUpperCase(),
-      selection: newValue.selection,
-      composing: TextRange.empty,
-    );
-  }
-}
-
+/// dial directo). Si ambos son null, arranca con las ruedas de letras.
 Future<void> showJoinSheet(
   BuildContext context, {
   SalaInvite? invite,
   RoomAd? ad,
 }) {
-  return showModalBottomSheet<void>(
+  return showVeSheet<void>(
     context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
+    title: 'Unirse a una sala',
     builder: (_) => _JoinSheet(invite: invite, ad: ad),
   );
 }
@@ -64,21 +50,28 @@ class _JoinSheet extends StatefulWidget {
 
 class _JoinSheetState extends State<_JoinSheet> {
   late final TextEditingController _nameCtrl;
-  late final TextEditingController _codeCtrl;
+  late final List<int> _codeIdx;
   String _pin = '';
   bool _askPin = false; // pide el teclado de emojis
   bool _pinError = false;
   String? _busyError;
   bool _connecting = false;
+  bool _customName = false;
+
+  String get _word => String.fromCharCodes(
+    _codeIdx.map((i) => _kAlphabet.codeUnitAt(i)),
+  );
 
   @override
   void initState() {
     super.initState();
     final room = context.read<RoomController>();
     _nameCtrl = TextEditingController(text: room.myName);
-    _codeCtrl = TextEditingController(
-      text: widget.invite?.code ?? widget.ad?.code ?? '',
-    );
+    final preset = widget.invite?.code ?? widget.ad?.code ?? '';
+    _codeIdx = [
+      for (var i = 0; i < 6; i++)
+        _kAlphabet.indexOf(preset.length > i ? preset[i] : 'A').clamp(0, 31),
+    ];
     _askPin = widget.invite?.hasPin ?? false;
     if (widget.invite?.mode != null) {
       room.setMode(widget.invite!.mode!);
@@ -90,7 +83,6 @@ class _JoinSheetState extends State<_JoinSheet> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _codeCtrl.dispose();
     super.dispose();
   }
 
@@ -100,7 +92,7 @@ class _JoinSheetState extends State<_JoinSheet> {
     setState(() => _connecting = true);
     final err = await room.join(
       name: _nameCtrl.text,
-      code: _codeCtrl.text,
+      code: _word,
       ad: widget.ad,
       pin: _pin,
     );
@@ -125,14 +117,23 @@ class _JoinSheetState extends State<_JoinSheet> {
 
   bool get _canTry =>
       !_connecting &&
-      _codeCtrl.text.trim().length >= 4 &&
       _nameCtrl.text.trim().isNotEmpty &&
       (!_askPin || _pin.characters.length == kPinLength);
+
+  /// Paso vivo (como el prototipo): 1 conexión · 2 nombre · 3 código.
+  int get _step => 1 + (_nameCtrl.text.trim().isNotEmpty ? 1 : 0) + 1;
+
+  void _bump(int col, int delta) {
+    setState(() {
+      _codeIdx[col] = (_codeIdx[col] + delta + _kAlphabet.length) %
+          _kAlphabet.length;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final room = context.watch<RoomController>();
-    final scheme = Theme.of(context).colorScheme;
+    final scheme = ShadTheme.of(context).colorScheme;
     final inv = widget.invite;
     final ad = widget.ad;
     final isPrefilled = inv != null || ad != null;
@@ -143,364 +144,411 @@ class _JoinSheetState extends State<_JoinSheet> {
         ? inv!.hostName
         : (ad?.hostName ?? '');
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Cabecera con contexto.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0, 4, 0, 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      isPrefilled ? 'Unirme a la sala' : 'Unirme',
-                      style: const TextStyle(
-                        fontFamily: 'SpaceGrotesk',
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Cerrar',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(
-                      Icons.close_rounded,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Barra de progreso (h-1 del prototipo).
+        Container(
+          height: 4,
+          decoration: BoxDecoration(
+            color: scheme.muted,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: (_step / 3).clamp(0, 1),
+            child: Container(
+              decoration: BoxDecoration(
+                color: scheme.foreground,
+                borderRadius: BorderRadius.circular(999),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                isPrefilled
-                    ? 'Invitación por QR — revisa cómo quieres entrar'
-                    : 'Pon el código de 6 letras, tu nombre y conéctate',
-                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-              ),
-            ),
-            const SizedBox(height: 4),
-
-            // ── Paso 1 · Código (si no viene del QR/escáner) ──
-            if (!isPrefilled) ...[
-              TextField(
-                controller: _codeCtrl,
-                maxLength: 6,
-                textCapitalization: TextCapitalization.characters,
-                autofocus: true,
-                // FIX 9P·Prevención (fase auditoría): el onChanged anterior
-                // reescribía controller.text (mayúsculas) y forzaba la
-                // selección al FINAL — teclear en medio del campo saltaba
-                // al final en cada tecla. El TextInputFormatter mayuscula
-                // SIN tocar la selección.
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(6),
-                  FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
-                  UpperCaseTextFormatter(),
-                ],
-                onChanged: (v) => setState(() {}),
-                decoration: const InputDecoration(
-                  hintText: 'ABC123',
-                  labelText: 'Código de la sala',
-                  counterText: '',
-                  prefixIcon: Icon(Icons.tag),
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-              ),
-              const SizedBox(height: 12),
-            ] else
-              // Contexto de la invitación: sala + anfitrión.
-              _InviteContext(label: invLabel, host: invHost),
-
-            // ── Paso 2 · Cómo me conecto (4 modos, compacto) ──
-            Row(
-              children: [
-                for (final m in RoomMode.values)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: _ModeChip(
-                        mode: m,
-                        selected: room.mode == m,
-                        onTap: () => context.read<RoomController>().setMode(m),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // ── Paso 3 · Nombre ──
-            TextField(
-              controller: _nameCtrl,
-              maxLength: 24,
-              onChanged: (v) => setState(() {}),
-              decoration: const InputDecoration(
-                hintText: '¿Cómo te ven en la sala?',
-                labelText: 'Tu nombre',
-                counterText: '',
-                prefixIcon: Icon(Icons.badge_outlined),
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // ── Paso 3 · PIN de emojis (si la sala lo pide) ──
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child: _askPin
-                  ? Column(
-                      key: const ValueKey('pin-pad'),
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.lock_outline,
-                              size: 15,
-                              color: scheme.primary,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Esta sala pide un PIN de 4 emojis',
-                                style: VeText.labelCaps(
-                                  10.5,
-                                  color: scheme.primary,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: _pin.isEmpty
-                                  ? null
-                                  : () => setState(() {
-                                      _askPin = false;
-                                      _pin = '';
-                                      _pinError = false;
-                                    }),
-                              child: const Text(
-                                'No tengo PIN',
-                                style: TextStyle(fontSize: 11),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        PinEmojiPad(
-                          entered: _pin,
-                          onChanged: (v) => setState(() {
-                            _pin = v;
-                            _pinError = false;
-                          }),
-                          error: _pinError,
-                        ),
-                        const SizedBox(height: 4),
-                      ],
-                    )
-                  : Padding(
-                      key: const ValueKey('pin-off'),
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.lock_open_outlined,
-                            size: 14,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              'Si el anfitrión pidió PIN, te lo pedirá al '
-                              'conectar.',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-
-            // ── Estado: conectando / error ──
-            if (_connecting)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Conectando por ${room.modeLabel}…',
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => room.leave(),
-                      child: const Text('Cancelar'),
-                    ),
-                  ],
-                ),
-              ),
-            if (_busyError != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 15,
-                      color: VeColors.of(context).neg,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        _busyError!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: VeColors.of(context).neg,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // ── Acción ──
-            FilledButton.icon(
-              onPressed: _canTry ? _connect : null,
-              icon: const Icon(Icons.login, size: 17),
-              label: Text(
-                _askPin && _pin.characters.length < kPinLength
-                    ? 'Marca el PIN (${_pin.characters.length}/$kPinLength)'
-                    : 'Unirme por ${room.modeLabel}',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InviteContext extends StatelessWidget {
-  const _InviteContext({required this.label, required this.host});
-
-  final String label;
-  final String host;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: scheme.primary.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: scheme.primary.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.qr_code_2, size: 18, color: scheme.primary),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                label.isNotEmpty
-                    ? (host.isNotEmpty
-                          ? 'Sala «$label» de $host'
-                          : 'Sala «$label»')
-                    : 'Sala avistada cerca',
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Chip compacto de modo de conexión para la hoja de unirse.
-class _ModeChip extends StatelessWidget {
-  const _ModeChip({
-    required this.mode,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final RoomMode mode;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final icon = switch (mode) {
-      RoomMode.cerca => Icons.wifi_tethering,
-      RoomMode.wifi => Icons.router_outlined,
-      RoomMode.bt => Icons.bluetooth,
-      RoomMode.servidor => Icons.dns_rounded,
-    };
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? scheme.primary.withValues(alpha: 0.08) : null,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected
-                ? scheme.primary.withValues(alpha: 0.4)
-                : scheme.outlineVariant,
           ),
         ),
-        child: Column(
+        const SizedBox(height: 4),
+        Text(
+          'Paso $_step de 3',
+          style: VeText.labelCaps(
+            9.5,
+            color: scheme.mutedForeground,
+            weight: FontWeight.w600,
+          ),
+        ),
+
+        // Contexto de la invitación (QR/escáner): sala + anfitrión.
+        if (isPrefilled) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(LucideIcons.qrCode, size: 14, color: scheme.foreground),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  invLabel.isNotEmpty
+                      ? (invHost.isNotEmpty
+                            ? 'Sala «$invLabel» de $invHost'
+                            : 'Sala «$invLabel»')
+                      : 'Sala avistada cerca',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: scheme.foreground,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+
+        // ── 1 · Conexión ──
+        const _StepEyebrow('1 · Conexión', top: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
-            Icon(
-              icon,
-              size: 16,
-              color: selected ? scheme.primary : scheme.onSurfaceVariant,
+            for (final m in RoomMode.values)
+              VeChip(
+                active: room.mode == m,
+                onTap: () => context.read<RoomController>().setMode(m),
+                child: Text(m.id == 'wifi' ? 'WiFi local' : m.label),
+              ),
+          ],
+        ),
+
+        // ── 2 · Tu nombre ──
+        const _StepEyebrow('2 · Tu nombre', top: 18),
+        Builder(
+          builder: (context) {
+            final chips = <String>{
+              if (room.myName.trim().isNotEmpty) room.myName.trim(),
+              'Casa',
+              'Mamá',
+              'Luis',
+            }.toList();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final n in chips)
+                      VeChip(
+                        active: !_customName && _nameCtrl.text.trim() == n,
+                        onTap: () {
+                          setState(() {
+                            _customName = false;
+                            _nameCtrl.text = n;
+                          });
+                        },
+                        child: Text(n),
+                      ),
+                    VeChip(
+                      dashed: true,
+                      active: _customName,
+                      onTap: () => setState(() {
+                        _customName = true;
+                        _nameCtrl.clear();
+                      }),
+                      child: const Text('Elegir otro'),
+                    ),
+                  ],
+                ),
+                if (_customName) ...[
+                  const SizedBox(height: 8),
+                  VeInput(
+                    controller: _nameCtrl,
+                    autofocus: true,
+                    placeholder: 'Tu nombre en la sala',
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+
+        // ── 3 · Código de la sala ──
+        const _StepEyebrow('3 · Código de la sala', top: 18),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: scheme.card,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: scheme.border),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (var i = 0; i < 6; i++) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    _LetterWheel(
+                      letter: _kAlphabet[_codeIdx[i]],
+                      onUp: () => _bump(i, 1),
+                      onDown: () => _bump(i, -1),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text.rich(
+                TextSpan(
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    color: scheme.mutedForeground,
+                  ),
+                  children: [
+                    const TextSpan(
+                      text: 'Usa las flechas de cada columna para armar ',
+                    ),
+                    TextSpan(
+                      text: _word,
+                      style: TextStyle(
+                        fontFamily: 'JetBrainsMono',
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 2,
+                        color: scheme.foreground,
+                      ),
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+
+        // ── PIN de 4 emojis (si la sala lo pide) ──
+        const _StepEyebrow('PIN de 4 emojis (opcional)', top: 18),
+        if (!_askPin)
+          Text(
+            'Si el anfitrión pidió PIN, te lo pedirá al conectar.',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12.5,
+              color: scheme.mutedForeground,
             ),
-            const SizedBox(height: 3),
-            Text(
-              mode.id == 'wifi' ? 'WiFi' : mode.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 9.5,
-                fontWeight: FontWeight.w700,
-                color: selected ? scheme.primary : scheme.onSurfaceVariant,
+          )
+        else ...[
+          PinEmojiPad(
+            entered: _pin,
+            onChanged: (v) => setState(() {
+              _pin = v;
+              _pinError = false;
+            }),
+            error: _pinError,
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: VeBtn(
+              variant: VeBtnVariant.ghost,
+              size: VeBtnSize.sm,
+              onPressed: _pin.isEmpty
+                  ? null
+                  : () => setState(() {
+                      _askPin = false;
+                      _pin = '';
+                      _pinError = false;
+                    }),
+              child: const Text('No tengo PIN'),
+            ),
+          ),
+        ],
+
+        // ── Estado: conectando / error ──
+        if (_connecting) ...[
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Conectando por ${room.modeLabel}…',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.foreground,
+                  ),
+                ),
+              ),
+              VeBtn(
+                variant: VeBtnVariant.ghost,
+                size: VeBtnSize.sm,
+                onPressed: () => room.leave(),
+                child: const Text('Cancelar'),
+              ),
+            ],
+          ),
+        ],
+        if (_busyError != null) ...[
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                LucideIcons.circleAlert,
+                size: 15,
+                color: VeColors.of(context).neg,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  _busyError!,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: VeColors.of(context).neg,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+
+        // ── Acción principal (pie de la hoja) ──
+        const SizedBox(height: 16),
+        VeBtn(
+          variant: VeBtnVariant.primary,
+          size: VeBtnSize.lg,
+          expands: true,
+          icon: LucideIcons.logIn,
+          enabled: _canTry,
+          onPressed: _canTry ? _connect : null,
+          child: Text(
+            _askPin && _pin.characters.length < kPinLength
+                ? 'Marca el PIN (${_pin.characters.length}/$kPinLength)'
+                : 'Unirme por ${room.modeLabel}',
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Al unirte, la lista del anfitrión reemplaza la tuya aquí.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 11.5,
+            color: scheme.mutedForeground,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Rótulo de paso (eyebrow caps con aire propio, como el prototipo).
+class _StepEyebrow extends StatelessWidget {
+  const _StepEyebrow(this.text, {this.top = 0});
+
+  final String text;
+  final double top;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    return Padding(
+      padding: EdgeInsets.only(top: top, bottom: 8),
+      child: Text(
+        text,
+        style: VeText.labelCaps(
+          10.5,
+          color: scheme.mutedForeground,
+          weight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+/// Columna de letra del código (JoinSheet del prototipo): botón ▲ arriba,
+/// celda mono 20 px sobre bg-subtle con bordes horizontales, botón ▼ abajo.
+class _LetterWheel extends StatelessWidget {
+  const _LetterWheel({
+    required this.letter,
+    required this.onUp,
+    required this.onDown,
+  });
+
+  final String letter;
+  final VoidCallback onUp;
+  final VoidCallback onDown;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    final bool dark = ShadTheme.of(context).brightness == Brightness.dark;
+    final Color lineStrong = dark
+        ? VeColors.lineStrongDark
+        : VeColors.lineStrongLight;
+
+    return Container(
+      width: 44,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: scheme.background,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: lineStrong),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _wheelBtn(context, LucideIcons.chevronUp, onUp, 'Letra siguiente'),
+          Container(
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: scheme.muted,
+              border: Border.symmetric(
+                horizontal: BorderSide(color: scheme.border),
               ),
             ),
-          ],
+            child: Text(
+              letter,
+              style: TextStyle(
+                fontFamily: 'JetBrainsMono',
+                fontSize: 20,
+                fontWeight: FontWeight.w500,
+                color: scheme.foreground,
+              ),
+            ),
+          ),
+          _wheelBtn(
+            context,
+            LucideIcons.chevronDown,
+            onDown,
+            'Letra anterior',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _wheelBtn(
+    BuildContext context,
+    IconData icon,
+    VoidCallback onTap,
+    String label,
+  ) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: double.infinity,
+          height: 26,
+          child: Icon(icon, size: 14, color: scheme.mutedForeground),
         ),
       ),
     );

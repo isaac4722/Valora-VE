@@ -18,6 +18,7 @@ import '../core/fmt.dart';
 import '../core/models.dart';
 import '../core/shad_theme.dart' show kShadRadius;
 import '../core/theme.dart';
+import 've/ve.dart';
 
 /// Curva firma del sistema (EASE [0.16, 1, 0.3, 1]) — definida UNA sola vez
 /// en core/theme.dart (§8) y re-exportada aquí para no romper a quien ya la
@@ -1419,11 +1420,12 @@ class CurrencySelect extends StatelessWidget {
   }
 }
 
-/// ─── Pantalla completa EMPUJADA (v19) ────────────────────────────────────────
-/// Envoltorio para rutas push (Sala, Sala Viva, Tickets…): respeta la notch
-/// y las barras del sistema ARRIBA (AppBar con back) y ABAJO (SafeArea sobre
-/// el cuerpo), título de marca y subtítulo. Fin del contenido pegado al borde
-/// o escondido tras la barra de navegación de Android.
+/// ─── Pantalla completa EMPUJADA (v19 → TASK-35 p4: cabecera «Ve») ───────────
+/// Envoltorio para rutas push (Sala, Sala Viva, Tickets…): respeta el notch
+/// ARRIBA (SafeArea de la cabecera) y ABAJO (SafeArea del cuerpo), botón de
+/// vuelta en lenguaje Ve (icon-btn 32), título + subtítulo y acción a la
+/// derecha. Fin del contenido pegado al borde o escondido tras la barra de
+/// navegación de Android.
 class PushScreen extends StatelessWidget {
   const PushScreen({
     super.key,
@@ -1443,48 +1445,80 @@ class PushScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      backgroundColor: scheme.surfaceContainerLowest,
-      appBar: AppBar(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // Iconos de la barra de estado según el tema (la cabecera ya no es
+      // un AppBar Material que lo resuelva solo).
+      value: scheme.brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
+      child: Scaffold(
         backgroundColor: scheme.surfaceContainerLowest,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0.5,
-        elevation: 0,
-        centerTitle: false,
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.only(right: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'SpaceGrotesk',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (subtitle != null)
-                Text(
-                  subtitle!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: scheme.onSurfaceVariant,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            SafeArea(
+              bottom: false,
+              child: Container(
+                height: 56,
+                padding: const EdgeInsets.fromLTRB(8, 0, 12, 0),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: scheme.outlineVariant),
                   ),
                 ),
-            ],
-          ),
+                child: Row(
+                  children: <Widget>[
+                    VeIconBtn(
+                      icon: LucideIcons.chevronLeft,
+                      label: 'Volver',
+                      onTap: () => Navigator.of(context).maybePop(),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.2,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          if (subtitle != null)
+                            Text(
+                              subtitle!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11.5,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (action != null) ...<Widget>[
+                      const SizedBox(width: 8),
+                      action!,
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            // SafeArea inferior: el contenido NUNCA queda tras la barra de
+            // navegación de Android (el teclado sigue respetándose via scaffold).
+            Expanded(child: SafeArea(top: false, child: child)),
+          ],
         ),
-        actions: <Widget>[?action],
       ),
-      // SafeArea inferior: el contenido NUNCA queda tras la barra de
-      // navegación de Android (el teclado sigue respetándose via scaffold).
-      body: SafeArea(top: false, child: child),
     );
   }
 }

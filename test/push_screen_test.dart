@@ -12,6 +12,7 @@ import 'package:valorave/core/theme.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/features/room/room_screen.dart';
+import 'package:valorave/widgets/ui.dart' show VeInput;
 import 'package:valorave/room/room_controller.dart';
 
 void main() {
@@ -47,8 +48,9 @@ void main() {
     );
     await tester.tap(find.text('abrir'));
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
-    // Botón ATRÁS visible (AppBar) — la pantalla es empujada.
-    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    // Botón ATRÁS visible (cabecera Ve de PushScreen) — la pantalla es
+    // empujada. TASK-35 (p4): icon-btn chevron-left del kit Ve.
+    expect(find.byIcon(LucideIcons.chevronLeft), findsOneWidget);
     // SafeArea inferior protege la barra de navegación de Android.
     expect(find.byType(SafeArea), findsWidgets);
     // Los 4 modos: tres P2P + SERVIDOR (orden del dueño: no se elimina).
@@ -99,7 +101,8 @@ void main() {
       await tester.pumpAndSettle(const Duration(milliseconds: 60));
     }
     expect(find.text('Tu servidor (socket.io)'), findsOneWidget);
-    expect(find.byType(TextField), findsAtLeastNWidgets(2)); // URL + token
+    // TASK-35 (p4): los campos URL + token son VeInput (kit Ve).
+    expect(find.byType(VeInput), findsAtLeastNWidgets(2));
     expect(find.text('Probar conexión'), findsOneWidget);
     expect(find.text('¿Cómo monto mi servidor?'), findsOneWidget);
   });

@@ -6,12 +6,16 @@
 ///
 /// Formato: String de 4 emojis exactos, en orden: '🍏🌵⚡⭐'.
 /// Viaja en el payload del `hello` y se valida contra el del anfitrión.
+///
+/// TASK-35 (p4): cromática «Ve» del prototipo — celdas bg-subtle con borde
+/// fuerte, rejilla de 6 columnas con botones de 36 px, como el JoinSheet.
 library;
 
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/theme.dart';
-import '../../widgets/ui.dart' show VePanelCard;
+import '../../widgets/ve/ve.dart';
 
 /// Paleta fija de 12 (los mismos para todos: reconocibles, distinguibles
 /// entre sí y sin pares confusos).
@@ -68,81 +72,85 @@ class PinShowCard extends StatelessWidget {
 
   /// En Sala Viva: sin botones, solo consulta.
   final bool compact;
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return VePanelCard(
-      child: Padding(
-        padding: EdgeInsets.all(compact ? 14 : 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.emoji_events_outlined,
-                  size: 16,
-                  color: scheme.primary,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'PIN DE LA SALA',
-                    style: VeText.labelCaps(10.5, color: scheme.primary),
+    final scheme = ShadTheme.of(context).colorScheme;
+    return VeCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(LucideIcons.lock, size: 13, color: scheme.foreground),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'PIN DE LA SALA',
+                  style: VeText.labelCaps(
+                    10.5,
+                    color: scheme.mutedForeground,
+                    weight: FontWeight.w600,
                   ),
                 ),
-                if (onRegenerate != null)
-                  TextButton.icon(
-                    onPressed: onRegenerate,
-                    icon: const Icon(Icons.casino, size: 14),
-                    label: const Text(
-                      'Cambiar',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                for (final e in pin.characters.take(kPinLength))
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: scheme.outlineVariant),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(e, style: const TextStyle(fontSize: 28)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              compact
-                  ? 'Quien quiera unirse debe marcar estos 4 emojis en este '
-                        'orden. Muéstraselos en persona.'
-                  : 'Quien escanee el QR o tenga el código también necesitará '
-                        'estos 4 emojis en este orden. Dáselos en persona a '
-                        'quien invites.',
-              style: TextStyle(
-                fontSize: 11.5,
-                height: 1.4,
-                color: scheme.onSurfaceVariant,
               ),
+              if (onRegenerate != null)
+                VeBtn(
+                  variant: VeBtnVariant.ghost,
+                  size: VeBtnSize.sm,
+                  icon: LucideIcons.dice5,
+                  onPressed: onRegenerate,
+                  child: const Text('Cambiar'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              for (final e in pin.characters.take(kPinLength))
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: scheme.muted,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _lineStrong(context)),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(e, style: const TextStyle(fontSize: 24)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            compact
+                ? 'Quien quiera unirse debe marcar estos 4 emojis en este '
+                      'orden. Muéstraselos en persona.'
+                : 'Quien escanee el QR o tenga el código también necesitará '
+                      'estos 4 emojis en este orden. Dáselos en persona a '
+                      'quien invites.',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11.5,
+              height: 1.45,
+              color: scheme.mutedForeground,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
+Color _lineStrong(BuildContext context) {
+  final dark = ShadTheme.of(context).brightness == Brightness.dark;
+  return dark ? VeColors.lineStrongDark : VeColors.lineStrongLight;
+}
+
 /// Teclado de emojis del INVITADO: marca los 4 emojis del PIN. Estilo
-/// emparejamiento de Google: fichas grandes, orden visible, borrar y rehacer.
+/// emparejamiento de Google (JoinSheet del prototipo): fichas de 44 px
+/// bg-subtle + rejilla de 6 columnas con teclas de 36 px.
 class PinEmojiPad extends StatelessWidget {
   const PinEmojiPad({
     super.key,
@@ -160,77 +168,78 @@ class PinEmojiPad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final sem = VeColors.of(context);
+    final scheme = ShadTheme.of(context).colorScheme;
+    final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final chars = entered.characters.toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Fichas del progreso (4 huecos).
+        // Fichas del progreso (4 huecos de 44 px, como el prototipo).
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             for (var i = 0; i < kPinLength; i++)
               Container(
-                width: 58,
-                height: 58,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: error
-                      ? sem.neg.withValues(alpha: 0.10)
-                      : (i < chars.length
-                            ? scheme.primary.withValues(alpha: 0.08)
-                            : scheme.surfaceContainerHighest),
-                  borderRadius: BorderRadius.circular(14),
+                  color: i < chars.length ? scheme.accent : scheme.muted,
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: error
-                        ? sem.neg.withValues(alpha: 0.5)
+                        ? ink.neg
                         : (i < chars.length
-                              ? scheme.primary.withValues(alpha: 0.4)
-                              : scheme.outlineVariant),
+                              ? _lineStrong(context)
+                              : scheme.border),
+                    width: error || i < chars.length ? 1.2 : 1,
                   ),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   i < chars.length ? chars[i] : '',
-                  style: const TextStyle(fontSize: 28),
+                  style: const TextStyle(fontSize: 22),
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 14),
-        // Teclado: 4 columnas (12 emojis).
+        const SizedBox(height: 10),
+        // Teclado: 6 columnas × 2 filas (12 emojis), teclas de 36 px.
         GridView.count(
-          crossAxisCount: 4,
+          crossAxisCount: 6,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 1.15,
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
+          childAspectRatio: 1.35,
           padding: EdgeInsets.zero,
           children: [
             for (final e in kPinEmojis)
               InkWell(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 onTap: () {
                   if (chars.length >= kPinLength) return;
                   onChanged(entered + e);
                 },
                 child: Container(
                   decoration: BoxDecoration(
-                    color: scheme.surfaceContainerLowest,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: scheme.outlineVariant),
+                    color: scheme.card,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: scheme.border),
                   ),
                   alignment: Alignment.center,
-                  child: Text(e, style: const TextStyle(fontSize: 26)),
+                  child: Text(e, style: const TextStyle(fontSize: 17)),
                 ),
               ),
           ],
         ),
-        // Borrar / limpiar.
+        // Borrar / limpiar (ghost sm a la derecha, como el prototipo).
         Align(
           alignment: Alignment.centerRight,
-          child: TextButton.icon(
+          child: VeBtn(
+            variant: VeBtnVariant.ghost,
+            size: VeBtnSize.sm,
+            icon: LucideIcons.delete,
+            enabled: entered.isNotEmpty,
             onPressed: entered.isEmpty
                 ? null
                 : () => onChanged(
@@ -239,8 +248,7 @@ class PinEmojiPad extends StatelessWidget {
                         .sublist(0, chars.length - 1)
                         .join(),
                   ),
-            icon: const Icon(Icons.backspace_outlined, size: 15),
-            label: const Text('Borrar', style: TextStyle(fontSize: 12)),
+            child: const Text('Borrar'),
           ),
         ),
       ],

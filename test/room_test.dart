@@ -15,7 +15,8 @@ import 'package:valorave/core/models.dart';
 import 'package:valorave/data/store.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:valorave/core/shad_theme.dart';
-import 'package:valorave/widgets/ui.dart' show VePanelCard;
+import 'package:valorave/widgets/ui.dart'
+    show VeCard, VeInput;
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/features/room/pin_emoji.dart';
 import 'package:valorave/features/room/room_screen.dart';
@@ -381,12 +382,13 @@ void main() {
 
   group('Buscar sala (UI del lobby · v19.4)', () {
     // El campo de búsqueda vive dentro de la tarjeta CREAR SALA.
+    // TASK-35 (p4): la tarjeta es VeCard y el campo es VeInput (kit Ve).
     final searchField = find.byWidgetPredicate(
       (w) =>
-          w is TextField &&
-          (w.decoration?.hintText?.contains('Buscar sala') ?? false),
+          w is VeInput &&
+          (w.placeholder?.contains('Buscar sala') ?? false),
     );
-    // El scroll del lobby (hay TextFields con Scrollable propio).
+    // El scroll del lobby (hay inputs con Scrollable propio).
     final lobbyScroll = find
         .descendant(
           of: find.byType(ListView),
@@ -396,13 +398,11 @@ void main() {
 
     /// Aserciones de la BÚSQUEDA scopeadas a la tarjeta CREAR SALA: la
     /// misma sala puede vivir también en «Salas cercanas» (otra puerta).
-    // TASK-34 p11: la tarjeta de crear sala pasó de Card a VePanelCard
-    // (cromática Ve) — mismo scope, otro tipo de widget.
     Finder enBusqueda(Finder f) => find.descendant(
       of: find
           .ancestor(
             of: find.text('CREAR SALA'),
-            matching: find.byType(VePanelCard),
+            matching: find.byType(VeCard),
           )
           .first,
       matching: f,
