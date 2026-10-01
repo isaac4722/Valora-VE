@@ -13,10 +13,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
+import '../../core/shad_theme.dart' show kShadRadius;
 import '../../core/theme.dart';
 import '../../data/backup.dart';
 import '../../data/board.dart';
@@ -51,23 +53,54 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          const PageHeader(
-            'Ajustes',
-            hint: 'Todo lo que la app decide contigo',
-          ),
-          _Pais(store: store),
-          _DatosConexion(store: store),
-          _Personalizacion(store: store),
-          _Monedas(store: store),
-          _Diagnostico(),
-          _Apariencia(),
-          _Alertas(store: store),
-          _Respaldo(store: store),
-          _TutorialLegal(store: store),
-        ],
+      body: VeEntry(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            const VeTitle(
+              sub: Text('Todo lo que la app decide contigo'),
+              child: Text('Ajustes'),
+            ),
+            _Pais(store: store),
+            _DatosConexion(store: store),
+            _Personalizacion(store: store),
+            _Monedas(store: store),
+            _Diagnostico(),
+            _Apariencia(),
+            _Alertas(store: store),
+            _Respaldo(store: store),
+            _TutorialLegal(store: store),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tarjeta de sección de Ajustes con la cromática Ve del prototipo
+/// (TASK-34 p10): superficie shad, borde --line, radius 10 — sin elevación
+/// Material. Sustituye a las `Card` de Material 3 en toda la pantalla.
+class _VeSettingsCard extends StatelessWidget {
+  const _VeSettingsCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final shad = ShadTheme.of(context).colorScheme;
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: shad.card,
+        borderRadius: BorderRadius.circular(kShadRadius),
+        border: Border.all(color: shad.border),
+      ),
+      // Ancestro Material transparente: las secciones mezclan controles
+      // shadcn con ListTiles/SwitchListTiles Material que lo exigen (la
+      // Card de Material 3 que sustituye lo proveía).
+      child: Material(
+        type: MaterialType.transparency,
+        child: child,
       ),
     );
   }
@@ -95,11 +128,11 @@ class _DatosConexion extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Datos y conexión'),
+        const VeEyebrow(child: Text('DATOS Y CONEXIÓN')),
         // Ancla del tour (v17.8): el paso «Datos y conexión» enfoca este card.
         KeyedSubtree(
           key: TourKeys.conexion,
-          child: Card(
+          child: _VeSettingsCard(
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(

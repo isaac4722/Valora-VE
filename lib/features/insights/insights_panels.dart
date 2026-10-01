@@ -8,14 +8,15 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../../core/analytics.dart' as an;
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
+import '../../core/shad_theme.dart' show kShadRadius;
 import '../../core/theme.dart';
 import '../../data/rate_history.dart';
 import '../../data/store.dart';
@@ -46,8 +47,17 @@ class KpiTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final shad = ShadTheme.of(context).colorScheme;
     final c = color ?? scheme.onSurface;
-    return Card(
+    // TASK-34 p9: cromática del kit Ve — superficie shad, borde --line,
+    // radius 10 (igual que VeCard del prototipo, sin sombra Material).
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: shad.card,
+        borderRadius: BorderRadius.circular(kShadRadius),
+        border: Border.all(color: shad.border),
+      ),
       child: Padding(
         // 9P·Pulido: aire interno 12/12 (antes 11 vertical — los KPIs se
         // veían apretados contra el borde de la tarjeta en la auditoría
@@ -95,6 +105,7 @@ class KpiTile extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
+                  fontFamily: 'Inter',
                   fontSize: 10.5,
                   height: 1.35,
                   color: scheme.onSurfaceVariant,
@@ -153,7 +164,16 @@ class PanelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
+    final shad = ShadTheme.of(context).colorScheme;
+    // TASK-34 p9: cromática VeCard — la cabecera pasa de caps-primary al
+    // eyebrow del prototipo (caps 10.5 muted + tracking), acción derecha.
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: shad.card,
+        borderRadius: BorderRadius.circular(kShadRadius),
+        border: Border.all(color: shad.border),
+      ),
       child: Padding(
         padding: padding,
         child: Column(
@@ -164,7 +184,13 @@ class PanelCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title.toUpperCase(),
-                    style: VeText.labelCaps(10.5, color: scheme.primary),
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.84,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
                 // ignore: use_null_aware_elements
@@ -178,6 +204,7 @@ class PanelCard extends StatelessWidget {
               Text(
                 subtitle!,
                 style: TextStyle(
+                  fontFamily: 'Inter',
                   fontSize: 11,
                   height: 1.35,
                   color: scheme.onSurfaceVariant,
@@ -646,7 +673,7 @@ class CanastaAnchor extends StatelessWidget {
             ),
           ),
         // Agregar a canasta desde catálogo.
-        SectionTitle('Agregar a la canasta'),
+        const VeEyebrow(child: Text('AGREGAR A LA CANASTA')),
         Wrap(
           spacing: 6,
           children: [
@@ -776,7 +803,7 @@ class GastosAnchor extends StatelessWidget {
           ),
           // Donut por tienda (top 6 + Otras).
           if (byStore.length > 1) ...[
-            SectionTitle('Por tienda'),
+            const VeEyebrow(child: Text('POR TIENDA')),
             PanelCard(
               title: 'Distribución por tienda',
               child: SizedBox(
@@ -809,7 +836,7 @@ class GastosAnchor extends StatelessWidget {
               ),
             ),
           ] else ...[
-            SectionTitle('Por tienda'),
+            const VeEyebrow(child: Text('POR TIENDA')),
             PanelCard(
               title: 'Distribución por tienda',
               child: ListTile(
@@ -833,7 +860,7 @@ class GastosAnchor extends StatelessWidget {
           ],
           // Barras por mes (ventana 6 o 12 meses según el rango).
           if (byMonth.length > 1) ...[
-            SectionTitle('Gasto por mes'),
+            const VeEyebrow(child: Text('GASTO POR MES')),
             PanelCard(
               title: 'Gasto por mes',
               child: SizedBox(

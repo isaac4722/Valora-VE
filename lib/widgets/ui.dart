@@ -11,11 +11,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../core/currencies.dart';
 import '../core/fmt.dart';
 import '../core/models.dart';
+import '../core/shad_theme.dart' show kShadRadius;
 import '../core/theme.dart';
 
 /// Curva firma del sistema (EASE [0.16, 1, 0.3, 1]) — definida UNA sola vez
@@ -431,29 +432,36 @@ class ChipTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final c = color ?? scheme.onSurfaceVariant;
-    // TASK-33 Linear: badge plano — sin seleccionar es caja muted sin borde;
-    // seleccionado tiñe al 12 % con borde al 45 % y radio 8 (no píldora).
+    // TASK-34 p10 · lenguaje Ve del prototipo: píldora 28 px (radio 999)
+    // superficie card + borde line-strong; seleccionada invierte la tinta
+    // (fondo fg / texto bg) — idéntico al VeChip del kit, misma API.
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    final lineStrong = dark
+        ? VeColors.lineStrongDark
+        : VeColors.lineStrongLight;
+    final activeBg = color ?? scheme.onSurface;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(999),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        height: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: selected
-              ? c.withValues(alpha: 0.12)
-              : scheme.onSurfaceVariant.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? c.withValues(alpha: 0.45) : Colors.transparent,
-          ),
+          color: selected ? activeBg : scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? activeBg : lineStrong),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-            color: selected ? c : scheme.onSurfaceVariant,
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: selected
+                  ? scheme.surfaceContainerLowest
+                  : scheme.onSurface,
+            ),
           ),
         ),
       ),
@@ -488,6 +496,32 @@ class SegmentedChips<T> extends StatelessWidget {
             onTap: () => onChanged(o),
           ),
       ],
+    );
+  }
+}
+
+/// Panel con la cromática Ve del prototipo (TASK-34 p11): superficie shad
+/// card, borde --line, radius 10 — sustituye a las `Card` de Material 3 en
+/// las pantallas que aún no se migran pieza a pieza. Ancestro Material
+/// transparente para que ListTiles/InkWell internos sigan funcionando.
+class VePanelCard extends StatelessWidget {
+  const VePanelCard({super.key, required this.child, this.margin});
+
+  final Widget child;
+  final EdgeInsetsGeometry? margin;
+
+  @override
+  Widget build(BuildContext context) {
+    final shad = ShadTheme.of(context).colorScheme;
+    return Container(
+      margin: margin,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: shad.card,
+        borderRadius: BorderRadius.circular(kShadRadius),
+        border: Border.all(color: shad.border),
+      ),
+      child: Material(type: MaterialType.transparency, child: child),
     );
   }
 }

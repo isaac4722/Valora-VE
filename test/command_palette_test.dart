@@ -100,7 +100,17 @@ Widget _host(AppStore store) {
       Provider<NotificationsService>.value(value: NotificationsService()),
       ChangeNotifierProvider(create: (_) => RoomController(store)),
     ],
-    child: MaterialApp.router(theme: AppTheme.light(), routerConfig: _router()),
+    // Mismo patrón de main.dart (TASK-34 p4): ShadApp.custom envuelve al
+    // MaterialApp.router para que los overlays (palette, sheets) hereden
+    // el ShadTheme — igual que en producción.
+    child: ShadApp.custom(
+      theme: ShadThemeVe.light(),
+      darkTheme: ShadThemeVe.dark(),
+      appBuilder: (context) => MaterialApp.router(
+        theme: AppTheme.light(),
+        routerConfig: _router(),
+      ),
+    ),
   );
 }
 
@@ -129,10 +139,10 @@ void main() {
     expect(find.text('Inicio'), findsOneWidget);
     expect(find.text('Análisis'), findsOneWidget);
     expect(find.text('Ajustes'), findsOneWidget);
-    // Hints de teclado al pie (firma Linear).
+    // Hints de teclado al pie (firma del prototipo: navegar · ejecutar ·
+    // contador de resultados — «esc» vive en la fila de búsqueda).
     expect(find.text('navegar'), findsOneWidget);
-    expect(find.text('abrir'), findsOneWidget);
-    expect(find.text('cerrar'), findsOneWidget);
+    expect(find.text('ejecutar'), findsOneWidget);
 
     // ↵ navega al primero marcado (Inicio → '/'): el overlay se cierra.
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);

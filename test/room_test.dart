@@ -13,6 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/data/store.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:valorave/core/shad_theme.dart';
+import 'package:valorave/widgets/ui.dart' show VePanelCard;
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/features/room/pin_emoji.dart';
 import 'package:valorave/features/room/room_screen.dart';
@@ -393,9 +396,14 @@ void main() {
 
     /// Aserciones de la BÚSQUEDA scopeadas a la tarjeta CREAR SALA: la
     /// misma sala puede vivir también en «Salas cercanas» (otra puerta).
+    // TASK-34 p11: la tarjeta de crear sala pasó de Card a VePanelCard
+    // (cromática Ve) — mismo scope, otro tipo de widget.
     Finder enBusqueda(Finder f) => find.descendant(
       of: find
-          .ancestor(of: find.text('CREAR SALA'), matching: find.byType(Card))
+          .ancestor(
+            of: find.text('CREAR SALA'),
+            matching: find.byType(VePanelCard),
+          )
           .first,
       matching: f,
     );
@@ -411,7 +419,14 @@ void main() {
       await tester.pumpWidget(
         ChangeNotifierProvider<RoomController>.value(
           value: room,
-          child: MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
+          // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme
+          // que los widgets Ve (VeTitle/VePanelCard) de la sala exigen.
+          child: ShadApp.custom(
+            theme: ShadThemeVe.light(),
+            darkTheme: ShadThemeVe.dark(),
+            appBuilder: (context) =>
+                MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
+          ),
         ),
       );
       await tester.scrollUntilVisible(
@@ -475,7 +490,14 @@ void main() {
       await tester.pumpWidget(
         ChangeNotifierProvider<RoomController>.value(
           value: room,
-          child: MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
+          // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme
+          // que los widgets Ve (VeTitle/VePanelCard) de la sala exigen.
+          child: ShadApp.custom(
+            theme: ShadThemeVe.light(),
+            darkTheme: ShadThemeVe.dark(),
+            appBuilder: (context) =>
+                MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
+          ),
         ),
       );
       await tester.scrollUntilVisible(

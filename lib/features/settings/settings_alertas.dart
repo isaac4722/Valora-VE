@@ -37,8 +37,8 @@ class _AlertasState extends State<_Alertas> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Alertas'),
-        Card(
+        const VeEyebrow(child: Text('ALERTAS')),
+        _VeSettingsCard(
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(

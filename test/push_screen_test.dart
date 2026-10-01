@@ -6,6 +6,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/data/store.dart';
@@ -23,16 +25,21 @@ void main() {
           ChangeNotifierProvider.value(value: store),
           ChangeNotifierProvider(create: (_) => RoomController(store)),
         ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          // Se EMPUJA como en producción (push sobre otra ruta → hay back).
-          home: Builder(
-            builder: (ctx) => TextButton(
-              onPressed: () => Navigator.push(
-                ctx,
-                MaterialPageRoute<void>(builder: (_) => const RoomScreen()),
+        // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme.
+        child: ShadApp.custom(
+          theme: ShadThemeVe.light(),
+          darkTheme: ShadThemeVe.dark(),
+          appBuilder: (context) => MaterialApp(
+            theme: AppTheme.light(),
+            // Se EMPUJA como en producción (push sobre otra ruta → hay back).
+            home: Builder(
+              builder: (ctx) => TextButton(
+                onPressed: () => Navigator.push(
+                  ctx,
+                  MaterialPageRoute<void>(builder: (_) => const RoomScreen()),
+                ),
+                child: const Text('abrir'),
               ),
-              child: const Text('abrir'),
             ),
           ),
         ),
@@ -62,7 +69,13 @@ void main() {
           ChangeNotifierProvider.value(value: store),
           ChangeNotifierProvider.value(value: ctrl),
         ],
-        child: MaterialApp(theme: AppTheme.light(), home: const RoomScreen()),
+        // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme.
+        child: ShadApp.custom(
+          theme: ShadThemeVe.light(),
+          darkTheme: ShadThemeVe.dark(),
+          appBuilder: (context) =>
+              MaterialApp(theme: AppTheme.light(), home: const RoomScreen()),
+        ),
       ),
     );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));

@@ -150,10 +150,10 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          PageHeader(title, hint: 'En vivo · ${room.modeLabel}'),
+          VeTitle(sub: Text('En vivo · ${room.modeLabel}'), child: Text(title)),
           if (room.lastError != null) _ErrorBanner(msg: room.lastError!),
           if (!room.connected) ...[
-            Card(
+            VePanelCard(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -181,7 +181,7 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
           ],
           if (room.isViewer)
             _ViewerNotice(
-              card: Card(
+              card: VePanelCard(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
@@ -310,7 +310,7 @@ class _CodigoQrCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final sem = VeColors.of(context);
-    return Card(
+    return VePanelCard(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -411,7 +411,7 @@ class _MiembrosCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
+    return VePanelCard(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(

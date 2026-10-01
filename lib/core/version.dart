@@ -8,4 +8,4 @@ library;
 
 /// Versión visible (ronda v20.0 · GUI del prototipo web sobre shadcn/ui —
 /// TASK-34, orden del dueño).
-const String kAppVersionVisible = '20.0';
+const String kAppVersionVisible = '20.1';

@@ -95,9 +95,9 @@ class _RoomScreenState extends State<RoomScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          const PageHeader(
-            'Sala en vivo',
-            hint: 'Sincroniza la lista P2P — sin internet, sin cuentas',
+          const VeTitle(
+            sub: Text('Sincroniza la lista P2P — sin internet, sin cuentas'),
+            child: Text('Sala en vivo'),
           ),
           if (room.connected) _EnSalaBanner(room: room),
           if (_busyError != null || room.lastError != null) ...[
@@ -105,7 +105,7 @@ class _RoomScreenState extends State<RoomScreen> {
             const SizedBox(height: 10),
           ],
           if (busy && !_creating) ...[
-            Card(
+            VePanelCard(
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Row(
@@ -177,7 +177,7 @@ class _EnSalaBanner extends StatelessWidget {
     final title = room.roomName.isNotEmpty
         ? room.roomName
         : 'Sala ${room.code}';
-    return Card(
+    return VePanelCard(
       margin: const EdgeInsets.only(bottom: 10),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -267,7 +267,7 @@ class _JoinEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
+    return VePanelCard(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -317,7 +317,7 @@ class _ModePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
+    return VePanelCard(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -572,7 +572,7 @@ class _CreateCardState extends State<_CreateCard> {
     final room = widget.room;
     final scheme = Theme.of(context).colorScheme;
     final matches = _matches;
-    return Card(
+    return VePanelCard(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -773,7 +773,7 @@ class _ScanCardState extends State<_ScanCard> {
   Widget build(BuildContext context) {
     final room = context.watch<RoomController>();
     final scheme = Theme.of(context).colorScheme;
-    return Card(
+    return VePanelCard(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -882,7 +882,7 @@ class _ServerCardState extends State<_ServerCard> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
+    return VePanelCard(
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(

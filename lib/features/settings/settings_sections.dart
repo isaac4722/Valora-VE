@@ -17,8 +17,8 @@ class _Pais extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('País'),
-        Card(
+        const VeEyebrow(child: Text('PAÍS')),
+        _VeSettingsCard(
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -145,8 +145,8 @@ class _Personalizacion extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Personalización'),
-        Card(
+        const VeEyebrow(child: Text('PERSONALIZACIÓN')),
+        _VeSettingsCard(
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -249,8 +249,8 @@ class _Monedas extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Monedas y tasas'),
-        Card(
+        const VeEyebrow(child: Text('MONEDAS Y TASAS')),
+        _VeSettingsCard(
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -469,8 +469,8 @@ class _Apariencia extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Apariencia'),
-        Card(
+        const VeEyebrow(child: Text('APARIENCIA')),
+        _VeSettingsCard(
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -766,8 +766,8 @@ class _DiagnosticoState extends State<_Diagnostico> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Diagnóstico de fuentes'),
-        Card(
+        const VeEyebrow(child: Text('DIAGNÓSTICO DE FUENTES')),
+        _VeSettingsCard(
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(

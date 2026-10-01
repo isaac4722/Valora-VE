@@ -1,6 +1,53 @@
 # Changelog
 
 
+## 1.11.0-beta+31 · v20.1 — GUI del prototipo en TODAS las pantallas (TASK-34 · p9–p11)
+
+- **Historial (p9) reescrito al prototipo**: título con contador vivo
+  («N compras · $X»), chips de periodo con etiquetas legibles (7 días · 30
+  días · 90 días · 1 año), búsqueda compacta Ve, y las compras como FILAS
+  en grupo dividido (tienda + fecha/ítems + badge de ticket/fuente, total
+  tabular a la derecha) que abren la ficha en sheet Ve: cifra 32 px,
+  equivalente Bs + tasa, renglones con su tienda (multitienda v17.2),
+  miniatura del ticket → visor zoom 8×, editar/anular desde el pie.
+  Paginador «Anterior · Página X de Y · Siguiente» y export unificado
+  (compras CSV · movimientos CSV) en la barra pegadiza con blur.
+- **Análisis (p9) con cromática Ve**: PanelCard/KpiTile migran a la
+  superficie shad (borde `--line`, radio 10, sin elevación Material) y la
+  cabecera pasa a eyebrow del prototipo; barra de anclas segmentada Ve
+  (muted + píldora activa card/borde/sombra, iconos intactos), chips de
+  rango Ve, títulos de sección VeEyebrow. Los 6 anclas, el trackball y la
+  matemática testeada quedan intactos.
+- **Tickets (p10) del prototipo con MEJORA real**: grilla de tarjetas con
+  foto 4:3 (2 columnas en móvil, 3 en ≥560 px), tienda semibold +
+  fecha·total tabular, borde que sube a line-strong al hover; tile punteado
+  «Agregar» que **adjunta la foto a una compra existente** del historial
+  (picker de compras sin ticket → cámara → compresión 1024 px) — algo que
+  el prototipo no hace desde la galería. Contador de fotos + peso MB,
+  VeEmpty punteado y visor a pantalla completa con zoom 8× intacto.
+- **Ajustes (p10) al lenguaje Ve**: `_VeSettingsCard` (superficie shad +
+  Material transparente para los ListTiles) sustituye las 11 Card de las
+  8 secciones; SectionTitle → VeEyebrow; PageHeader → VeTitle; ChipTag
+  re-estilizado como píldora Ve 28 px (tinta invertida al seleccionar) —
+  heredado por todas las pantallas que lo usan.
+- **Bienvenida (p11)**: logo del prototipo (rombo de tinta + círculo del
+  fondo, CustomPaint) sobre el wordmark, botones Ve (ghost/primario) en la
+  barra de control, bullets y tarjeta de datos con cromática VeCard, chips
+  de país en píldora con tinta invertida. Los 4 slides del dueño (v19.0)
+  intactos.
+- **Paleta ⌘K (p11)**: cromática exacta del prototipo — superficie card,
+  borde line-strong, radio 14; filas con caja muted e icono que despierta
+  al marcarse (hover `--accent`), eyebrow de grupo Inter 10.5 w600, pie
+  «↑↓ navegar · ↵ ejecutar · N resultados». Teclado, grupos y matching sin
+  acentos intactos (tests adaptados al nuevo pie).
+- **Sala (p11)**: VePanelCard público en ui.dart (card shad + Material
+  transparente) sustituye las 12 Card de lobby/sala viva/PIN; PageHeader →
+  VeTitle en lobby y sala viva. La mecánica P2P completa (escáner, modos,
+  PIN de emojis, deep links) intacta.
+- **Tests**: hosts de room/push/palette ganan el ShadApp.custom de
+  producción (los widgets Ve lo exigen); suite 213 → **230/230 verdes**,
+  analyze 0.
+
 ## 1.10.0-beta+30 · v20.0 — GUI del prototipo web sobre shadcn/ui (TASK-34)
 
 - **Tokens del prototipo (p2)**: theme.dart ahora reproduce EXACTOS los

@@ -14,8 +14,8 @@ class _Respaldo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Respaldo'),
-        Card(
+        const VeEyebrow(child: Text('RESPALDO')),
+        _VeSettingsCard(
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -238,11 +238,11 @@ class _TutorialLegal extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionTitle('Tutorial y legal'),
+        const VeEyebrow(child: Text('TUTORIAL Y LEGAL')),
         // Ancla del tour (v17.8): el paso final explica este mismo sitio.
         KeyedSubtree(
           key: TourKeys.tutorial,
-          child: Card(
+          child: _VeSettingsCard(
             child: Column(
               children: [
                 Padding(
@@ -282,7 +282,7 @@ class _TutorialLegal extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Card(
+        _VeSettingsCard(
           child: Column(
             children: [
               ListTile(

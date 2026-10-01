@@ -1,38 +1,36 @@
-/// ─── Tickets · Galería de fotos de recibos (dp6, módulo 13) ────────────────
-/// Adaptación del dp6 a la arquitectura v17: las fotos NO viven como archivos
-/// sueltos sino como `ticketPhoto` (data URL comprimida) de cada compra, así
-/// cada ticket conserva su fecha, tienda y total. Grilla 3×, visor a pantalla
-/// completa con zoom hasta 8×, compartir imagen y quitar foto de la compra
-/// (la compra nunca se borra desde aquí). Foto perdida → estado honesto.
+/// ─── Tickets · Galería de fotos de recibos (dp6, módulo 13 · TASK-34 p10) ────
+/// Presentación del prototipo web: grilla de tarjetas con la foto en 4:3,
+/// tienda en semibold y fecha · total en tabular; tile punteado «Agregar»
+/// que adjunta una foto a una compra EXISTENTE del historial (mejora real
+/// sobre el prototipo: allí la foto solo se toma al cerrar la compra).
+/// Visor a pantalla completa con zoom 8×, compartir imagen y quitar foto
+/// de la compra (la compra nunca se borra desde aquí). Foto perdida →
+/// estado honesto.
 library;
 
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
+import '../../core/shad_theme.dart' show kShadRadius;
 import '../../core/theme.dart';
 import '../../data/store.dart';
+import '../../services/photo_compress.dart';
 import '../../services/sharing.dart';
 import '../../widgets/ui.dart';
+import '../lista/checkout_modal.dart' show photoToDataUrl;
 
 /// Extrae los bytes de un data URL 'data:image/...;base64,…' (o base64
 /// crudo). Devuelve null si no se puede decodificar — la celda muestra el
 /// estado «imagen rota» en vez de romper la grilla.
-Uint8List? ticketBytes(String? dataUrl) {
-  if (dataUrl == null || dataUrl.isEmpty) return null;
-  final b64 = dataUrl.contains(',') ? dataUrl.split(',').last : dataUrl;
-  try {
-    return base64Decode(b64);
-  } catch (_) {
-    return null;
-  }
-}
+Uint8List? ticketBytes(String? dataUrl) => decodeDataUrl(dataUrl);
 
 class TicketsScreen extends StatelessWidget {
   const TicketsScreen({super.key});
@@ -40,59 +38,209 @@ class TicketsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    final scheme = Theme.of(context).colorScheme;
+    final shad = ShadTheme.of(context).colorScheme;
     final withPhoto =
         store.purchases
             .where((p) => p.ticketPhoto != null && p.ticketPhoto!.isNotEmpty)
             .toList()
           ..sort((a, b) => b.date.compareTo(a.date));
+    // Peso estimado de las fotos guardadas (base64 ≈ 1.37 × bytes crudos).
+    final mb = withPhoto.fold<double>(
+      0,
+      (a, p) => a + (p.ticketPhoto!.length * 0.75) / 1048576,
+    );
 
     // v19: PushScreen — notch/barras respetadas + botón atrás visible.
     return PushScreen(
       title: 'Tickets',
       subtitle: 'Fotos de tus recibos, siempre a mano',
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-        children: [
-          if (withPhoto.isEmpty)
-            EmptyState(
-              'Sin tickets todavía',
-              icon: Icons.receipt_rounded,
-              hint:
-                  'Fotografía el recibo al cerrar una compra (Checkout · Añadir foto) y aparecerá aquí, con su fecha y total.',
-              actionLabel: 'Ir a la lista de compras',
-              onAction: () => context.push('/lista'),
-            )
-          else ...[
-            Text(
-              '${withPhoto.length} ${withPhoto.length == 1 ? 'foto' : 'fotos'} · de la más nueva a la más vieja',
-              style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 10),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 0.72,
+      child: VeEntry(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            VeTitle(
+              sub: Text(
+                withPhoto.isEmpty
+                    ? 'Sin fotos todavía'
+                    : '${withPhoto.length} ${withPhoto.length == 1 ? 'foto' : 'fotos'} · ${mb < 0.1 ? '≤0.1' : mb.toStringAsFixed(1)} MB',
               ),
-              itemCount: withPhoto.length,
-              itemBuilder: (context, i) => _TicketTile(
-                purchase: withPhoto[i],
-                onTap: () => _openViewer(context, store, withPhoto[i]),
+              child: const Text('Galería'),
+            ),
+            if (withPhoto.isEmpty && store.purchases.isNotEmpty)
+              // Hay compras pero ninguna con foto: la acción directa.
+              _NoTicketsYet(onAdd: () => _addTicket(context, store))
+            else if (withPhoto.isEmpty)
+              _NoTicketsYet(onAdd: null)
+            else ...[
+              // ── Grilla del prototipo: 2 columnas en móvil, 3 en tablet.
+              LayoutBuilder(
+                builder: (context, c) {
+                  final cols = c.maxWidth >= 560 ? 3 : 2;
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: cols,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      // Tarjeta: imagen 4:3 + bloque de texto (~52 px).
+                      childAspectRatio: cols == 2 ? 0.78 : 0.68,
+                    ),
+                    // +1 por el tile punteado «Agregar» al final.
+                    itemCount: withPhoto.length + 1,
+                    itemBuilder: (context, i) {
+                      if (i == withPhoto.length) {
+                        return _AddTile(
+                          onTap: () => _addTicket(context, store),
+                        );
+                      }
+                      final p = withPhoto[i];
+                      return _TicketCard(
+                        purchase: p,
+                        onTap: () => _openViewer(context, store, p),
+                      );
+                    },
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Las fotos se comprimen al guardarlas (~200 KB) para no llenar el teléfono.',
-              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-            ),
+              const SizedBox(height: 16),
+              Text(
+                'La foto se comprime a 1024 px al guardarla. Cada ticket queda atado a su compra del historial.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: shad.mutedForeground,
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
+  }
+
+  /// Adjunta (o reemplaza) la foto de una compra existente: picker de
+  /// compra → cámara → compresión 1024 px. El mismo conducto del checkout.
+  void _addTicket(BuildContext context, AppStore store) {
+    final candidates =
+        store.purchases
+            .where((p) => p.ticketPhoto == null || p.ticketPhoto!.isEmpty)
+            .toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+    String selected = '';
+
+    showVeSheet(
+      context: context,
+      title: 'Agregar ticket',
+      footer: Builder(
+        builder: (sheetCtx) => VeBtn(
+          variant: VeBtnVariant.primary,
+          size: VeBtnSize.lg,
+          expands: true,
+          icon: LucideIcons.camera,
+          onPressed: () async {
+            final purchaseId = selected.isEmpty ? null : selected;
+            Navigator.of(sheetCtx).pop();
+            await _pickAndAttach(context, store, purchaseId);
+          },
+          child: const Text('Tomar o elegir foto'),
+        ),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const VeEyebrow(child: Text('COMPRA ASOCIADA')),
+            if (candidates.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Todas tus compras ya tienen ticket. Cierra una compra nueva desde Lista para adjuntar otra foto.',
+                ),
+              )
+            else ...[
+              VeGroup(
+                semantic: 'Compras sin ticket',
+                children: [
+                  VeRow(
+                    label: const Text('Sin compra (suelta)'),
+                    onTap: () => setSheet(() => selected = ''),
+                    right: selected.isEmpty
+                        ? const Icon(LucideIcons.check, size: 15)
+                        : null,
+                  ),
+                  for (final p in candidates.take(12))
+                    VeRow(
+                      label: Text(
+                        p.store?.isNotEmpty == true ? p.store! : 'Multitienda',
+                      ),
+                      sub: Text('${fmtDate(p.date)} · ${fmtUSD(p.totalUSD)}'),
+                      onTap: () => setSheet(() => selected = p.id),
+                      right: selected == p.id
+                          ? const Icon(LucideIcons.check, size: 15)
+                          : null,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  'Solo se listan compras que aún no tienen ticket.',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 12),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndAttach(
+    BuildContext context,
+    AppStore store,
+    String? purchaseId,
+  ) async {
+    try {
+      final picker = ImagePicker();
+      final photo = await picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 72,
+      );
+      if (photo == null) return;
+      var bytes = await photo.readAsBytes();
+      final compressed = await compressJpeg(bytes, quality: 72, maxDim: 1024);
+      if (compressed != null) bytes = compressed;
+      if (purchaseId != null) {
+        final p = store.purchases.where((x) => x.id == purchaseId).firstOrNull;
+        if (p != null) {
+          store.updatePurchase(
+            p.id,
+            p.copyWith(ticketPhoto: photoToDataUrl(bytes)),
+          );
+          if (context.mounted) {
+            showToast(context, 'Ticket adjuntado', kind: ToastKind.ok);
+          }
+          return;
+        }
+      }
+      // Sin compra asociada (suelta): no hay dónde colgarla en el modelo de
+      // la app — se informa con honestidad en vez de perder la foto.
+      if (context.mounted) {
+        showToast(
+          context,
+          'Elige una compra para guardar la foto',
+          kind: ToastKind.warn,
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        showToast(context, 'No se pudo tomar la foto', kind: ToastKind.error);
+      }
+    }
   }
 
   void _openViewer(BuildContext context, AppStore store, Purchase p) {
@@ -105,67 +253,283 @@ class TicketsScreen extends StatelessWidget {
   }
 }
 
-/// Celda de la grilla: foto + fecha + tienda debajo. La imagen rota
-/// (data URL corrupto) degrada a icono sin romper el layout.
-class _TicketTile extends StatelessWidget {
-  const _TicketTile({required this.purchase, required this.onTap});
+/// Estado vacío punteado del prototipo: con compras → CTA directo a
+/// adjuntar; sin compras → ir a la lista para cerrar la primera.
+class _NoTicketsYet extends StatelessWidget {
+  const _NoTicketsYet({this.onAdd});
+
+  final VoidCallback? onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return VeEmpty(
+      title: 'Sin tickets todavía',
+      sub:
+          'Fotografía el recibo al cerrar una compra (Checkout · Añadir foto) '
+          'y aparecerá aquí, con su fecha y total.',
+      action: onAdd == null
+          ? VeBtn(
+              size: VeBtnSize.sm,
+              onPressed: () => context.push('/lista'),
+              child: const Text('Ir a la lista de compras'),
+            )
+          : VeBtn(
+              size: VeBtnSize.sm,
+              icon: LucideIcons.camera,
+              onPressed: onAdd,
+              child: const Text('Adjuntar a una compra'),
+            ),
+    );
+  }
+}
+
+/// Tarjeta del prototipo: imagen 4:3 (placeholder con degradado sutil e
+/// icono receipt si no hay foto) + tienda semibold + fecha · total tabular.
+/// El borde sube a line-strong al pasar el cursor (escritorio).
+class _TicketCard extends StatefulWidget {
+  const _TicketCard({required this.purchase, required this.onTap});
 
   final Purchase purchase;
   final VoidCallback onTap;
 
   @override
+  State<_TicketCard> createState() => _TicketCardState();
+}
+
+class _TicketCardState extends State<_TicketCard> {
+  bool _hover = false;
+
+  @override
   Widget build(BuildContext context) {
+    final shad = ShadTheme.of(context).colorScheme;
     final scheme = Theme.of(context).colorScheme;
-    final bytes = ticketBytes(purchase.ticketPhoto);
+    final bytes = ticketBytes(widget.purchase.ticketPhoto);
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+
     return Semantics(
       button: true,
       label:
-          'Ticket de ${purchase.date.day} de ${kMeses[purchase.date.month - 1]}${purchase.store == null || purchase.store!.isEmpty ? '' : ' · ${purchase.store}'}',
-      child: TapScale(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  width: double.infinity,
-                  color: scheme.surfaceContainerHigh.withValues(alpha: 0.5),
-                  child: bytes == null
-                      ? Icon(
-                          Icons.image_not_supported_outlined,
-                          size: 26,
-                          color: scheme.onSurfaceVariant,
-                        )
-                      : Image.memory(
-                          bytes,
-                          fit: BoxFit.cover,
-                          gaplessPlayback: true,
-                        ),
+          'Ticket de ${widget.purchase.date.day} de ${kMeses[widget.purchase.date.month - 1]}'
+          '${widget.purchase.store == null || widget.purchase.store!.isEmpty ? '' : ' · ${widget.purchase.store}'}',
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: shad.card,
+              borderRadius: BorderRadius.circular(kShadRadius),
+              border: Border.all(
+                color: _hover
+                    ? (dark
+                          ? VeColors.lineStrongDark
+                          : VeColors.lineStrongLight)
+                    : shad.border,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Zona de imagen 4:3 (como el prototipo).
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: dark
+                            ? [
+                                shad.muted,
+                                shad.mutedForeground.withValues(alpha: 0.08),
+                              ]
+                            : [
+                                shad.muted,
+                                shad.mutedForeground.withValues(alpha: 0.14),
+                              ],
+                      ),
+                    ),
+                    child: bytes == null
+                        ? Center(
+                            child: Icon(
+                              LucideIcons.imageOff,
+                              size: 26,
+                              color: shad.mutedForeground,
+                            ),
+                          )
+                        : Image.memory(
+                            bytes,
+                            fit: BoxFit.cover,
+                            gaplessPlayback: true,
+                            errorBuilder: (_, _, _) => Icon(
+                              LucideIcons.imageOff,
+                              size: 26,
+                              color: shad.mutedForeground,
+                            ),
+                          ),
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.purchase.store?.isNotEmpty == true
+                            ? widget.purchase.store!
+                            : 'Compra',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: shad.foreground,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${fmtDate(widget.purchase.date)} · ${fmtUSD(widget.purchase.totalUSD)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 5),
-            Text(
-              fmtDate(purchase.date),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            Text(
-              purchase.store?.isNotEmpty == true ? purchase.store! : 'Compra',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 9.5, color: scheme.onSurfaceVariant),
-            ),
-          ],
+          ),
         ),
       ),
     );
+  }
+}
+
+/// Tile punteado «Agregar» del prototipo (misma altura que las tarjetas).
+class _AddTile extends StatelessWidget {
+  const _AddTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final shad = ShadTheme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: 'Agregar foto de ticket',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(kShadRadius),
+          ),
+          foregroundDecoration: _DashedAddDecoration(
+            color: shad.mutedForeground.withValues(alpha: 0.55),
+            radius: kShadRadius,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Spacer(),
+              Icon(LucideIcons.camera, size: 24, color: shad.mutedForeground),
+              const SizedBox(height: 6),
+              Text(
+                'Foto del ticket',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.5,
+                  color: shad.mutedForeground,
+                ),
+              ),
+              const Spacer(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Agregar',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: shad.foreground,
+                    ),
+                  ),
+                  Text(
+                    'Zoom 1–8× al abrir',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: shad.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Marco punteado del tile «Agregar» (línea discontinua de 1.5 px).
+class _DashedAddDecoration extends Decoration {
+  const _DashedAddDecoration({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  @override
+  BoxPainter createBoxPainter([VoidCallback? onChanged]) {
+    return _DashedAddPainter(color, radius);
+  }
+}
+
+class _DashedAddPainter extends BoxPainter {
+  _DashedAddPainter(this.color, this.radius);
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Offset offset, ImageConfiguration configuration) {
+    if (configuration.size == null) return;
+    final size = configuration.size!;
+    final rect = offset & size;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final rrect = RRect.fromRectAndRadius(
+      rect.deflate(0.75),
+      Radius.circular(radius),
+    );
+    // Rejilla de guiones: camina el perímetro con dash 6 / gap 5.
+    final path = Path()..addRRect(rrect);
+    for (final metric in path.computeMetrics()) {
+      double dist = 0;
+      bool draw = true;
+      while (dist < metric.length) {
+        final len = draw ? 6.0 : 5.0;
+        if (draw) {
+          canvas.drawPath(
+            metric.extractPath(dist, (dist + len).clamp(0, metric.length)),
+            paint,
+          );
+        }
+        dist += len;
+        draw = !draw;
+      }
+    }
   }
 }
 
@@ -256,9 +620,9 @@ class _TicketViewerState extends State<_TicketViewer> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontFamily: 'SpaceGrotesk',
+                fontFamily: 'Inter',
                 fontSize: 14.5,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),
             ),
@@ -268,6 +632,7 @@ class _TicketViewerState extends State<_TicketViewer> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
+                  fontFamily: 'Inter',
                   fontSize: 11,
                   color: Colors.white.withValues(alpha: 0.72),
                 ),
@@ -304,6 +669,7 @@ class _TicketViewerState extends State<_TicketViewer> {
                         Text(
                           'Esta foto ya no está disponible.',
                           style: TextStyle(
+                            fontFamily: 'Inter',
                             fontSize: 12.5,
                             color: Colors.white.withValues(alpha: 0.72),
                           ),
@@ -344,6 +710,7 @@ class _TicketViewerState extends State<_TicketViewer> {
                 Text(
                   'Zoom con dos dedos hasta 8× · la compra vive en Historial',
                   style: TextStyle(
+                    fontFamily: 'Inter',
                     fontSize: 10.5,
                     color: Colors.white.withValues(alpha: 0.55),
                   ),

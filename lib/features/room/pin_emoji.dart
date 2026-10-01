@@ -11,6 +11,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
+import '../../widgets/ui.dart' show VePanelCard;
 
 /// Paleta fija de 12 (los mismos para todos: reconocibles, distinguibles
 /// entre sí y sin pares confusos).
@@ -70,7 +71,7 @@ class PinShowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Card(
+    return VePanelCard(
       child: Padding(
         padding: EdgeInsets.all(compact ? 14 : 14),
         child: Column(

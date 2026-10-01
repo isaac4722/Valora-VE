@@ -16,8 +16,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/fmt.dart';
 import '../../core/models.dart';
@@ -146,6 +146,7 @@ class _CommandPaletteState extends State<_CommandPalette> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final shad = ShadTheme.of(context).colorScheme;
     final store = context.watch<AppStore>();
     final width = MediaQuery.sizeOf(context).width;
     final paletteWidth = (width - 32).clamp(0, 620).toDouble();
@@ -238,10 +239,16 @@ class _CommandPaletteState extends State<_CommandPalette> {
         child: Container(
           width: paletteWidth,
           constraints: const BoxConstraints(maxHeight: 560),
+          // TASK-34 p11: cromática del palette del prototipo — superficie
+          // card, borde --line-strong, radio 14.
           decoration: BoxDecoration(
-            color: scheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: scheme.outlineVariant),
+            color: shad.card,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? VeColors.lineStrongDark
+                  : VeColors.lineStrongLight,
+            ),
             boxShadow: const <BoxShadow>[
               BoxShadow(
                 color: Color(0x1F0C1016),
@@ -256,12 +263,12 @@ class _CommandPaletteState extends State<_CommandPalette> {
             children: [
               // ── Input protagonista ────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+                padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
                 child: Row(
                   children: [
                     Icon(
                       LucideIcons.search,
-                      size: 17,
+                      size: 15,
                       color: scheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 10),
@@ -302,9 +309,9 @@ class _CommandPaletteState extends State<_CommandPalette> {
                             fontFamily: 'Inter',
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Buscar módulos, productos, compras…',
+                            hintText: 'Busca pantallas, acciones o productos…',
                             hintStyle: TextStyle(
-                              fontSize: 14.5,
+                              fontSize: 13.5,
                               color: scheme.onSurfaceVariant.withValues(
                                 alpha: 0.85,
                               ),
@@ -324,7 +331,7 @@ class _CommandPaletteState extends State<_CommandPalette> {
                   ],
                 ),
               ),
-              Divider(height: 1, color: scheme.outlineVariant),
+              Divider(height: 1, color: shad.border),
 
               // ── Resultados ────────────────────────────────────────────
               Flexible(
@@ -371,9 +378,9 @@ class _CommandPaletteState extends State<_CommandPalette> {
               ),
 
               // ── Hints de teclado al pie (firma Linear) ────────────────
-              Divider(height: 1, color: scheme.outlineVariant),
+              Divider(height: 1, color: shad.border),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                padding: const EdgeInsets.fromLTRB(14, 7, 14, 7),
                 child: Row(
                   children: [
                     _KeyHint(scheme: scheme, child: '↑↓'),
@@ -381,7 +388,8 @@ class _CommandPaletteState extends State<_CommandPalette> {
                     Text(
                       'navegar',
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontFamily: 'Inter',
+                        fontSize: 10.5,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
@@ -389,27 +397,19 @@ class _CommandPaletteState extends State<_CommandPalette> {
                     _KeyHint(scheme: scheme, child: '↵'),
                     const SizedBox(width: 4),
                     Text(
-                      'abrir',
+                      'ejecutar',
                       style: TextStyle(
-                        fontSize: 11.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    _KeyHint(scheme: scheme, child: 'esc'),
-                    const SizedBox(width: 4),
-                    Text(
-                      'cerrar',
-                      style: TextStyle(
-                        fontSize: 11.5,
+                        fontFamily: 'Inter',
+                        fontSize: 10.5,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
                     const Spacer(),
                     Text(
-                      'sin acentos también',
+                      '${hits.length} resultados',
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontFamily: 'Inter',
+                        fontSize: 10.5,
                         color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
                       ),
                     ),
@@ -442,90 +442,103 @@ class _PaletteRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final shad = ShadTheme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (groupLabel != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 3),
             child: Text(
               groupLabel!.toUpperCase(),
-              style: VeText.labelCaps(
-                10,
+              // Eyebrow del prototipo: Inter 10.5 w600 con tracking ancho.
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.84,
                 color: scheme.onSurfaceVariant,
-                weight: FontWeight.w700,
               ),
             ),
           ),
-        InkWell(
-          onTap: onTap,
-          child: ColoredBox(
-            color: marked
-                ? scheme.primary.withValues(alpha: 0.08)
-                : Colors.transparent,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-              child: Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(6),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(7),
+            child: ColoredBox(
+              color: marked ? shad.accent : Colors.transparent,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: shad.muted,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        hit.icon,
+                        size: 14,
+                        color: marked ? shad.foreground : shad.mutedForeground,
+                      ),
                     ),
-                    child: Icon(hit.icon, size: 15, color: scheme.primary),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          hit.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurface,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            hit.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w500,
+                              color: shad.foreground,
+                            ),
                           ),
+                          Text(
+                            hit.sub,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11.5,
+                              color: shad.mutedForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (marked) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
                         ),
-                        Text(
-                          hit.sub,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        decoration: BoxDecoration(
+                          color: shad.muted,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: shad.border, width: 0.5),
+                        ),
+                        child: Text(
+                          '↵',
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  if (marked) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
                       ),
-                      decoration: BoxDecoration(
-                        color: scheme.primary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '↵',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.primary,
-                        ),
-                      ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
