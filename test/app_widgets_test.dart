@@ -10,7 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:valorave/core/models.dart';
+import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/services/alerts.dart';
@@ -96,9 +98,15 @@ void main() {
           Provider<SharedPreferences>.value(value: prefs),
           ChangeNotifierProvider.value(value: poller),
         ],
-        child: MaterialApp.router(
-          theme: AppTheme.light(),
-          routerConfig: router,
+        // La app real arranca bajo ShadApp.custom + MaterialApp.router
+        // (main.dart · TASK-34 p4): ShadTheme arriba, Material de verdad.
+        child: ShadApp.custom(
+          theme: ShadThemeVe.light(),
+          darkTheme: ShadThemeVe.dark(),
+          appBuilder: (context) => MaterialApp.router(
+            theme: AppTheme.light(),
+            routerConfig: router,
+          ),
         ),
       ),
     );

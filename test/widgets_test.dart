@@ -3,12 +3,14 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valorave/core/currencies.dart';
 import 'package:valorave/core/models.dart';
+import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/features/converter/converter_screen.dart';
@@ -255,9 +257,13 @@ void main() {
             ChangeNotifierProvider.value(value: _poller),
             Provider<SharedPreferences>.value(value: _prefs),
           ],
-          child: MaterialApp.router(
-            theme: AppTheme.light(),
-            routerConfig: router2,
+          child: ShadApp.custom(
+            theme: ShadThemeVe.light(),
+            darkTheme: ShadThemeVe.dark(),
+            appBuilder: (context) => MaterialApp.router(
+              theme: AppTheme.light(),
+              routerConfig: router2,
+            ),
           ),
         ),
       );
@@ -549,6 +555,11 @@ void main() {
 
   group('Shell', () {
     testWidgets('navega 5 pestañas y badge de carrito', (tester) async {
+      // TASK-34 (p4): shell adaptativo — este test es de la BARRA MÓVIL,
+      // así que la superficie se fija a un teléfono (390×844 lógicos).
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
       final store = _pumpedStore(tester, dir: 'w9');
       await _initServices(store);
       // El tour auto-arranca con prefs frescas (como en la app real) y su
@@ -621,9 +632,13 @@ void main() {
             // v18.0: la Lista lee el controlador de sala del árbol.
             ChangeNotifierProvider(create: (_) => RoomController(store)),
           ],
-          child: MaterialApp.router(
-            theme: AppTheme.light(),
-            routerConfig: router,
+          child: ShadApp.custom(
+            theme: ShadThemeVe.light(),
+            darkTheme: ShadThemeVe.dark(),
+            appBuilder: (context) => MaterialApp.router(
+              theme: AppTheme.light(),
+              routerConfig: router,
+            ),
           ),
         ),
       );
@@ -814,9 +829,13 @@ void main() {
             // v18.0: el shell/Lista leen el controlador de sala del árbol.
             ChangeNotifierProvider(create: (_) => RoomController(store)),
           ],
-          child: MaterialApp.router(
-            theme: AppTheme.light(),
-            routerConfig: router,
+          child: ShadApp.custom(
+            theme: ShadThemeVe.light(),
+            darkTheme: ShadThemeVe.dark(),
+            appBuilder: (context) => MaterialApp.router(
+              theme: AppTheme.light(),
+              routerConfig: router,
+            ),
           ),
         ),
       );

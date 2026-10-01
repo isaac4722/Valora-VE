@@ -1,30 +1,30 @@
-/// ─── Shell «Linear» · top bar mínima + cinta (solo Inicio) + nav pill ────
-/// Port del GUI dp4 reconstruido con lenguaje Linear/Vercel (orden del dueño
-/// TASK-33): cabecera de 52 px con marca tipográfica y acciones fantasma,
-/// command palette ⌘K para buscar en toda la app, barra inferior pill con
-/// tintas Lucide. Estado real intacto: ticker del tablero vivo, campana del
-/// centro de notificaciones persistido, badge carrito, banner de salud,
-/// anclas del tour (kNavBarKey · kHeaderActionsKey).
-/// v17.8: Finanzas se retiró como pestaña (orden del dueño) — sus gráficos
-/// de gastos viven ahora en Análisis, alimentados por las compras.
+/// ─── Shell «Ve» · sidebar desktop + tabs móviles del prototipo (TASK-34) ──
+/// Port del App.tsx de referencia: en escritorio (≥700 px) sidebar de 224 px
+/// con marca, búsqueda ⌘K, navegación de 5 pestañas + sección «Libro»
+/// (Historial · Tickets · Ajustes) y pie de tasas con punto en vivo; en móvil
+/// barra inferior de 5 pestañas plana (tinta activa / faint inactivo) y FAB
+/// de búsqueda flotante — oculto en las pantallas con búsqueda propia, como
+/// el original. El fondo ambiental (radiales + puntos) vive detrás de todo.
+/// Estado real intacto: ticker del tablero, banner de salud, campana del
+/// centro de notificaciones, badge del carrito y anclas del tour
+/// (kNavBarKey · kHeaderActionsKey).
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
+import '../../core/fmt.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../state/app_state.dart';
 import '../../widgets/app_tour.dart';
 import '../../widgets/ui.dart';
 import 'command_palette.dart';
-import 'notifs_center.dart';
-import '../../widgets/app_router.dart' show kNavBarKey, kHeaderActionsKey;
+import '../../widgets/app_router.dart' show kNavBarKey;
 
 /// Ítems del ticker según modo: featured (protagonistas+EUR) / focus (orden
 /// usuario) / off (no se monta).
@@ -83,6 +83,13 @@ tickerItems(AppStore store) {
   return items;
 }
 
+/// Umbral de escritorio: sidebar a partir de 700 px (md del prototipo).
+const double kWideShell = 700;
+
+/// Rutas con búsqueda propia donde el FAB móvil NO aparece (como el
+/// prototipo: lista · productos · análisis · historial).
+const Set<int> _fabHiddenBranches = {2, 3, 4, 5};
+
 class MainShell extends StatelessWidget {
   const MainShell({super.key, required this.navigationShell});
 
@@ -123,14 +130,55 @@ class MainShell extends StatelessWidget {
 
     // v19 (orden del dueño): la tasa MANUAL es una tasa personalizada, NO un
     // estado «sin conexión». Si la fuente activa del país es manual — o el
-    // usuario eligió no consultar APIs — el banner de salud no aparece: la
-    // app funciona normal y natural con SU tasa.
+    // usuario eligió no consultar APIs — el banner de salud no aparece.
     final countryCur = CountryX.from(store.settings.country).currency;
     final manualActive =
         RateSource.of(store.sourceFor(countryCur))?.category ==
         SourceCategory.manual;
     final chosenOffline = store.settings.offlineMode;
     final showHealth = !manualActive && !chosenOffline;
+
+    final bool wide = MediaQuery.sizeOf(context).width >= kWideShell;
+
+    // Columna principal compartida: banner de salud + cinta (solo Inicio) +
+    // área de navegación.
+    final Widget mainColumn = Column(
+      children: [
+        AnimatedSize(
+          duration: kLayoutDur,
+          curve: kEaseVe,
+          alignment: Alignment.topCenter,
+          child: showHealth
+              ? RateHealthBanner(
+                  stale: poller.rateStale,
+                  offline: poller.offlineNet,
+                  onRetry: poller.offlineNet
+                      ? null
+                      : () => poller.refreshNow(),
+                )
+              : const SizedBox(width: double.infinity),
+        ),
+        if (current == 0) _HomeTicker(),
+        const _TourTrigger(),
+        Expanded(
+          child: wide
+              ? navigationShell
+              : Stack(
+                  children: [
+                    Positioned.fill(child: navigationShell),
+                    // FAB de búsqueda móvil (prototipo): fg invertido, 44 px,
+                    // oculto en pantallas con búsqueda propia.
+                    if (!_fabHiddenBranches.contains(current))
+                      Positioned(
+                        right: 16,
+                        bottom: 16,
+                        child: _SearchFab(onTap: () => showCommandPalette(context)),
+                      ),
+                  ],
+                ),
+        ),
+      ],
+    );
 
     return CallbackShortcuts(
       // ⌘K/Ctrl+K abre el command palette (firma SaaS · Linear/Vercel).
@@ -141,56 +189,38 @@ class MainShell extends StatelessWidget {
             showCommandPalette(context),
       },
       child: Scaffold(
-        body: Column(
+        backgroundColor: scheme.surfaceContainerLowest,
+        body: Stack(
           children: [
-            _Header(activeIndex: current),
-            // v19 · anti-salto: el banner ya no empuja el contenido de golpe —
-            // AnimatedSize lo despliega/pliega en 300 ms.
-            AnimatedSize(
-              duration: kLayoutDur,
-              curve: kEaseVe,
-              alignment: Alignment.topCenter,
-              child: showHealth
-                  ? RateHealthBanner(
-                      stale: poller.rateStale,
-                      offline: poller.offlineNet,
-                      onRetry: poller.offlineNet
-                          ? null
-                          : () => poller.refreshNow(),
-                    )
-                  : const SizedBox(width: double.infinity),
-            ),
-            if (current == 0) _HomeTicker(),
-            const _TourTrigger(),
-            Expanded(child: navigationShell),
-          ],
-        ),
-        bottomNavigationBar: Container(
-          key: kNavBarKey,
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerLowest,
-            border: Border(top: BorderSide(color: scheme.outlineVariant)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Row(
-              children: [
-                for (int i = 0; i < _tabs.length; i++)
-                  Expanded(
-                    child: _TabButton(
-                      spec: _tabs[i],
-                      active: i == current,
-                      badge: i == 2 ? _cartCount(context) : 0,
-                      onTap: () => navigationShell.goBranch(
-                        i,
-                        initialLocation: i == current,
-                      ),
+            // Fondo ambiental del prototipo: radiales pos/warn + puntos.
+            const Positioned.fill(child: VeAmbient()),
+            if (wide)
+              Row(
+                children: [
+                  _VeSidebar(
+                    current: current,
+                    onBranch: (i) => navigationShell.goBranch(
+                      i,
+                      initialLocation: i == current,
                     ),
                   ),
-              ],
-            ),
-          ),
+                  Expanded(child: mainColumn),
+                ],
+              )
+            else
+              Positioned.fill(child: mainColumn),
+          ],
         ),
+        bottomNavigationBar: wide
+            ? null
+            : _MobileTabs(
+                current: current,
+                cartCount: _cartCount(context),
+                onTab: (i) => navigationShell.goBranch(
+                  i,
+                  initialLocation: i == current,
+                ),
+              ),
       ),
     );
   }
@@ -200,6 +230,604 @@ class MainShell extends StatelessWidget {
     return store.cart.fold<int>(0, (acc, c) => acc + c.quantity);
   }
 }
+
+// ─────────────────────────────────────────────────────────── Sidebar ───────
+
+/// Ítem del sidebar: pestaña principal (branch del shell) o ruta libre
+/// (Tickets vive fuera del shell).
+class _SideItem {
+  const _SideItem({
+    required this.icon,
+    required this.label,
+    required this.location,
+    this.branch,
+  });
+
+  final IconData icon;
+  final String label;
+  final String location;
+
+  /// Índice de branch del StatefulShellRoute; null → `go()` directo.
+  final int? branch;
+}
+
+const List<_SideItem> _sideMain = [
+  _SideItem(
+      icon: LucideIcons.home, label: 'Inicio', location: '/', branch: 0),
+  _SideItem(
+      icon: LucideIcons.arrowLeftRight,
+      label: 'Conversor',
+      location: '/conversor',
+      branch: 1),
+  _SideItem(
+      icon: LucideIcons.shoppingCart,
+      label: 'Lista',
+      location: '/lista',
+      branch: 2),
+  _SideItem(
+      icon: LucideIcons.package,
+      label: 'Productos',
+      location: '/productos',
+      branch: 3),
+  _SideItem(
+      icon: LucideIcons.chartColumn,
+      label: 'Análisis',
+      location: '/analisis',
+      branch: 4),
+];
+
+const List<_SideItem> _sideLibro = [
+  _SideItem(
+      icon: LucideIcons.history,
+      label: 'Historial',
+      location: '/historial',
+      branch: 5),
+  _SideItem(
+      icon: LucideIcons.receipt, label: 'Tickets', location: '/tickets'),
+  _SideItem(
+      icon: LucideIcons.settings,
+      label: 'Ajustes',
+      location: '/ajustes',
+      branch: 6),
+];
+
+/// Sidebar de 224 px del prototipo (App.tsx): marca, búsqueda ⌘K, navegación
+/// con indicador de tinta, sección «Libro» y pie con las tasas del país.
+class _VeSidebar extends StatelessWidget {
+  const _VeSidebar({required this.current, required this.onBranch});
+
+  /// Branch activo del shell (0–6) o −1 si la ruta está fuera (Tickets).
+  final int current;
+
+  /// Cambia de branch del shell (pestañas y rutas internas).
+  final ValueChanged<int> onBranch;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    return Container(
+      width: 224,
+      decoration: BoxDecoration(
+        color: scheme.card.withValues(alpha: 0.92),
+        border: Border(right: BorderSide(color: scheme.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Marca: 56 px, logo rombo + palabra.
+          Container(
+            height: 56,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: scheme.border)),
+            ),
+            child: Row(
+              children: [
+                const VeLogo(size: 22),
+                const SizedBox(width: 10),
+                Text(
+                  'ValoraVE',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                    color: scheme.foreground,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Búsqueda → command palette ⌘K.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+            child: _SidebarSearch(onTap: () => showCommandPalette(context)),
+          ),
+          // Navegación: pestañas + sección «Libro».
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(8),
+              children: [
+                for (final item in _sideMain)
+                  _SideNavButton(
+                    item: item,
+                    active: current == item.branch,
+                    badge: item.branch == 2 ? _cartCount(context) : 0,
+                    onTap: () => onBranch(item.branch!),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    10, 16, 10, 6,
+                  ),
+                  child: Text(
+                    'LIBRO',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.84,
+                      color: scheme.mutedForeground,
+                    ),
+                  ),
+                ),
+                for (final item in _sideLibro)
+                  _SideNavButton(
+                    item: item,
+                    active: _isActive(context, item),
+                    onTap: () => item.branch != null
+                        ? onBranch(item.branch!)
+                        : context.go(item.location),
+                  ),
+              ],
+            ),
+          ),
+          // Pie de tasas del país + estado de red.
+          const _SidebarRates(),
+        ],
+      ),
+    );
+  }
+
+  int _cartCount(BuildContext context) {
+    final store = context.watch<AppStore>();
+    return store.cart.fold<int>(0, (acc, c) => acc + c.quantity);
+  }
+
+  /// Tickets vive fuera del shell: se compara la ruta actual.
+  bool _isActive(BuildContext context, _SideItem item) {
+    if (item.branch != null) return current == item.branch;
+    final path = GoRouterState.of(context).uri.path;
+    return path == item.location;
+  }
+}
+
+/// Logo del prototipo (Onboarding.tsx): rombo de tinta con núcleo de fondo.
+class VeLogo extends StatelessWidget {
+  const VeLogo({super.key, this.size = 22});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    final side = size * 34 / 48;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Transform.rotate(
+            angle: 45 * 3.14159265 / 180,
+            child: Container(
+              width: side,
+              height: side,
+              decoration: BoxDecoration(
+                color: scheme.foreground,
+                borderRadius: BorderRadius.circular(size * 9 / 48),
+              ),
+            ),
+          ),
+          Container(
+            width: size * 12 / 48,
+            height: size * 12 / 48,
+            decoration: BoxDecoration(
+              color: scheme.background,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SidebarSearch extends StatelessWidget {
+  const _SidebarSearch({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: scheme.background.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: scheme.border),
+          ),
+          child: Row(
+            children: [
+              Icon(LucideIcons.search, size: 13, color: scheme.mutedForeground),
+              const SizedBox(width: 10),
+              Text(
+                'Buscar…',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12.5,
+                  color: scheme.mutedForeground,
+                ),
+              ),
+              const Spacer(),
+              const VeKbd(label: '⌘K'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SideNavButton extends StatelessWidget {
+  const _SideNavButton({
+    required this.item,
+    required this.active,
+    required this.onTap,
+    this.badge = 0,
+  });
+
+  final _SideItem item;
+  final bool active;
+  final VoidCallback onTap;
+  final int badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          height: 32,
+          margin: const EdgeInsets.only(bottom: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: active ? scheme.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              // Indicador de tinta (3 px × 16) del prototipo.
+              if (active)
+                Container(
+                  width: 3,
+                  height: 16,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    color: scheme.foreground,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              Icon(
+                item.icon,
+                size: 15,
+                color: active ? scheme.foreground : scheme.mutedForeground,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: active ? scheme.foreground : scheme.mutedForeground,
+                  ),
+                ),
+              ),
+              if (badge > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  decoration: BoxDecoration(
+                    color: scheme.foreground,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$badge',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: scheme.background,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pie del sidebar: dos tasas del país (tabular) + punto en vivo.
+class _SidebarRates extends StatelessWidget {
+  const _SidebarRates();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    final VeInk ink = Theme.of(context).extension<VeInk>()!;
+    final store = context.watch<AppStore>();
+    final poller = context.watch<RatesPoller>();
+    final items = tickerItems(store).take(2).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: scheme.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final it in items)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      it.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: scheme.mutedForeground,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    fmtNum(it.value),
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: scheme.foreground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              VePulseDot(
+                color: poller.offlineNet ? ink.warn : ink.pos,
+                size: 6,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                poller.offlineNet ? 'Sin red · última lectura' : 'En vivo',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  color: scheme.mutedForeground,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────── Tabs móviles ─────
+
+class _TabSpec {
+  const _TabSpec({
+    required this.location,
+    required this.icon,
+    required this.label,
+  });
+  final String location;
+  final IconData icon;
+  final String label;
+}
+
+/// Barra inferior móvil del prototipo: 5 pestañas planas, icono 20 + label
+/// 10.5, activo en tinta / inactivo en faint, badge del carrito sobre el
+/// icono. Altura flexible por accesibilidad (fix a11y heredado).
+class _MobileTabs extends StatelessWidget {
+  const _MobileTabs({
+    required this.current,
+    required this.cartCount,
+    required this.onTab,
+  });
+
+  final int current;
+  final int cartCount;
+  final ValueChanged<int> onTab;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    final bool dark = ShadTheme.of(context).brightness == Brightness.dark;
+    final Color faint = dark ? VeColors.faintDark : VeColors.faintLight;
+
+    return Container(
+      key: kNavBarKey,
+      decoration: BoxDecoration(
+        color: scheme.card,
+        border: Border(top: BorderSide(color: scheme.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            for (int i = 0; i < MainShell._tabs.length; i++)
+              Expanded(
+                child: _TabButton(
+                  spec: MainShell._tabs[i],
+                  active: i == current,
+                  badge: i == 2 ? cartCount : 0,
+                  activeColor: scheme.foreground,
+                  inactiveColor: faint,
+                  onTap: () => onTab(i),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.spec,
+    required this.active,
+    required this.onTap,
+    required this.activeColor,
+    required this.inactiveColor,
+    this.badge = 0,
+  });
+
+  final _TabSpec spec;
+  final bool active;
+  final VoidCallback onTap;
+  final Color activeColor;
+  final Color inactiveColor;
+  final int badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Semantics(
+        button: true,
+        selected: active,
+        label: spec.label,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 58),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    spec.icon,
+                    size: 20,
+                    color: active ? activeColor : inactiveColor,
+                  ),
+                  if (badge > 0)
+                    Positioned(
+                      right: -6,
+                      top: -4,
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: activeColor,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          badge > 9 ? '9+' : '$badge',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w600,
+                            color: ShadTheme.of(context).colorScheme.background,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                spec.label,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w500,
+                  color: active ? activeColor : inactiveColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// FAB de búsqueda móvil del prototipo: círculo de tinta invertida 44 px con
+/// escala al presionar.
+class _SearchFab extends StatelessWidget {
+  const _SearchFab({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: 'Buscar',
+      child: Material(
+        color: scheme.foreground,
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Icon(
+              LucideIcons.search,
+              size: 17,
+              color: scheme.background,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────── Disparadores ───────
 
 /// Dispara el tour completo UNA vez por instalación (v17.8): al primer
 /// arranque del shell, tras la bienvenida o en la primera apertura tras la
@@ -228,109 +856,6 @@ class _TourTriggerState extends State<_TourTrigger> {
   Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
-class _TabSpec {
-  const _TabSpec({
-    required this.location,
-    required this.icon,
-    required this.label,
-  });
-  final String location;
-  final IconData icon;
-  final String label;
-}
-
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    required this.spec,
-    required this.active,
-    required this.onTap,
-    this.badge = 0,
-  });
-
-  final _TabSpec spec;
-  final bool active;
-  final VoidCallback onTap;
-  final int badge;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    return TapScale(
-      onTap: onTap,
-      // minHeight en vez de altura fija: con tamaños de accesibilidad
-      // (textScale >=2.35) la etiqueta supera los 58 px y se recortaba en
-      // la barra de navegación (fix a11y heredado). mainAxisSize.min —
-      // con .max la Column llenaría TODO el alto del slot bottomNavigationBar.
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 58),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Pill Linear: tintado al 10 %, SIN borde — más plano que el
-                // dp4 (que usaba 20 % + borde 25 %).
-                Container(
-                  width: 44,
-                  height: 26,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: active
-                        ? scheme.primary.withValues(alpha: 0.10)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Icon(
-                    spec.icon,
-                    size: 18,
-                    color: active ? scheme.primary : scheme.onSurfaceVariant,
-                  ),
-                ),
-                if (badge > 0)
-                  Positioned(
-                    right: -4,
-                    top: -3,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: scheme.primary,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        badge > 9 ? '9+' : '$badge',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          color: scheme.onPrimary,
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              spec.label,
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                letterSpacing: -0.1,
-                color: active ? scheme.primary : scheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Cinta solo-Inicio con las fuentes del tablero vivo. Sin datos NO hace
 /// shrink aquí: el placeholder anti-CLS vive dentro de RateTicker (misma
 /// altura, «Cargando cotizaciones…») para que la cinta no salte el layout.
@@ -344,206 +869,5 @@ class _HomeTicker extends StatelessWidget {
       size: store.settings.tickerSize,
       speed: store.settings.tickerSpeed,
     );
-  }
-}
-
-/// Cabecera Linear: 52 px, marca tipográfica a la izquierda y acciones
-/// fantasma a la derecha. Sin logo (lo pone el ícono del launcher), sin
-/// píldora «en vivo», sin frescura — la frescura vive en el héroe de Inicio
-/// y en RateHealthBanner. El botón de búsqueda lleva el hint «Ctrl K» en
-/// pantallas anchas (donde hay teclado físico) — firma SaaS.
-class _Header extends StatelessWidget {
-  const _Header({required this.activeIndex});
-  final int activeIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    final store = context.watch<AppStore>();
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-    final bool wide = MediaQuery.sizeOf(context).width >= 700;
-    final unread = store.notifs.where((n) => !n.read).length;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        // minHeight (ídem tab bar): el header crece con textScale de
-        // accesibilidad en vez de recortar la marca (fix a11y heredado).
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 52),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 16),
-            child: Row(
-              children: [
-                // Marca tipográfica pura: «Valora» + «VE» en tinta primaria.
-                // Tap → Inicio.
-                InkWell(
-                  onTap: () => context.go('/'),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 6,
-                    ),
-                    child: RichText(
-                      text: TextSpan(
-                        style: VeText.displayNum(
-                          17,
-                          color: scheme.onSurface,
-                          weight: FontWeight.w700,
-                        ),
-                        children: <InlineSpan>[
-                          const TextSpan(text: 'Valora'),
-                          TextSpan(
-                            text: 'VE',
-                            style: TextStyle(color: scheme.primary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  key: kHeaderActionsKey,
-                  child: Row(
-                    children: [
-                      // Búsqueda → command palette ⌘K (dp4 era pantalla
-                      // completa; TASK-33 la vuelve palette Linear).
-                      _HeaderIcon(
-                        icon: LucideIcons.search,
-                        tooltip: 'Buscar en la app (Ctrl K)',
-                        onTap: () => showCommandPalette(context),
-                        trailing: wide ? 'Ctrl K' : null,
-                      ),
-                      _HeaderIcon(
-                        icon: dark ? LucideIcons.sun : LucideIcons.moon,
-                        tooltip: dark ? 'Tema claro' : 'Tema oscuro',
-                        spin: dark ? 1 : -1,
-                        onTap: () => context.read<ThemeController>().setMode(
-                          dark ? ThemeMode.light : ThemeMode.dark,
-                          context.read<SharedPreferences>(),
-                        ),
-                      ),
-                      _HeaderIcon(
-                        icon: LucideIcons.bell,
-                        tooltip: 'Notificaciones',
-                        badge: unread,
-                        onTap: () => showNotificationCenter(context),
-                      ),
-                      _HeaderIcon(
-                        icon: LucideIcons.settings,
-                        tooltip: 'Ajustes',
-                        onTap: () => context.go('/ajustes'),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderIcon extends StatelessWidget {
-  const _HeaderIcon({
-    required this.icon,
-    required this.onTap,
-    this.tooltip,
-    this.badge = 0,
-    this.trailing,
-    this.spin,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final String? tooltip;
-  final int badge;
-
-  /// Hint de teclado a la derecha del icono (Linear lo usa para ⌘K).
-  final String? trailing;
-
-  /// Dirección del giro al cambiar de tema (-1 luna → 1 sol): hace legible
-  /// qué tema queda activo sin leer el tooltip.
-  final int? spin;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    final Widget button = InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        alignment: Alignment.center,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (spin != null)
-                  TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 0, end: spin!.toDouble()),
-                    duration: const Duration(milliseconds: 240),
-                    curve: kEaseVe,
-                    builder: (context, v, child) =>
-                        Transform.rotate(angle: v * 0.6, child: child),
-                    child: Icon(icon, size: 17, color: scheme.onSurfaceVariant),
-                  )
-                else
-                  Icon(icon, size: 17, color: scheme.onSurfaceVariant),
-                if (trailing != null) ...[
-                  const SizedBox(width: 6),
-                  Text(
-                    trailing!,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            if (badge > 0)
-              Positioned(
-                right: trailing != null ? -6 : -6,
-                top: -6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: scheme.primary,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    badge > 9 ? '9+' : '$badge',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      color: scheme.onPrimary,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-    return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
   }
 }

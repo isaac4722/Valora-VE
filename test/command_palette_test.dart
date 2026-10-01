@@ -11,12 +11,14 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valorave/core/models.dart';
+import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/features/shell/command_palette.dart';
@@ -226,9 +228,12 @@ void main() {
           Provider<SharedPreferences>.value(value: prefs),
           ChangeNotifierProvider(create: (_) => RoomController(store)),
         ],
-        child: MaterialApp.router(
-          theme: AppTheme.light(),
-          routerConfig: GoRouter(
+        child: ShadApp.custom(
+          theme: ShadThemeVe.light(),
+          darkTheme: ShadThemeVe.dark(),
+          appBuilder: (context) => MaterialApp.router(
+            theme: AppTheme.light(),
+            routerConfig: GoRouter(
             initialLocation: '/',
             routes: [
               StatefulShellRoute.indexedStack(
@@ -246,10 +251,13 @@ void main() {
               ),
             ],
           ),
+          ),
         ),
       ),
     );
     await tester.pump();
-    expect(find.text('Ctrl K'), findsOneWidget);
+    // TASK-34 (p4): el hint vive ahora en el botón de búsqueda del sidebar
+    // (kbd ⌘K del prototipo) — mismo contrato, mejor sitio.
+    expect(find.text('⌘K'), findsOneWidget);
   });
 }
