@@ -1,48 +1,135 @@
-/// ─── Centro de notificaciones (campana → bottom sheet, §9.9) ────────────────
+/// ─── Centro de notificaciones (campana → hoja Ve, §9.9 · TASK-35 p3) ────────
 /// Ring 50 · 9 kinds con tintes · marcar leída al tocar · Leídas · Limpiar ·
 /// CTA a permisos en Ajustes. Dedupe de título 10 min vive en el store.
+///
+/// Diseño del prototipo (Overlays.tsx · AlertsSheet): hoja con título
+/// «Alertas · N», filas divididas con chip de icono de 28 px sobre el fondo
+/// tenue del tono, y pie con el botón principal «Configurar alertas».
+/// Techo del sheet: 88 % de la altura útil (nada sube sin límite).
 library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../core/fmt.dart';
+import '../../widgets/ve/ve.dart';
 
+/// Abre el centro de avisos (hoja «Ve» del prototipo, con techo).
 void showNotificationCenter(BuildContext context) {
-  showModalBottomSheet<void>(
+  final store = context.read<AppStore>();
+  showVeSheet<void>(
     context: context,
-    isScrollControlled: true,
-    builder: (_) => const NotificationCenterSheet(),
+    title: 'Alertas · ${store.notifs.length}',
+    trailing: _AlertsTrailing(),
+    footer: Builder(
+      builder: (ctx) => VeBtn(
+        variant: VeBtnVariant.primary,
+        size: VeBtnSize.lg,
+        expands: true,
+        onPressed: () {
+          Navigator.of(ctx).pop();
+          ctx.go('/ajustes');
+        },
+        child: const Text('Configurar alertas'),
+      ),
+    ),
+    builder: (_) => const NotificationCenterBody(),
   );
 }
 
-class NotificationCenterSheet extends StatefulWidget {
-  const NotificationCenterSheet({super.key});
-
+/// Acciones compactas del título: «Leídas» y «Limpiar» (ghost sm), como
+/// los enlaces de texto del diseño anterior pero en lenguaje Ve.
+class _AlertsTrailing extends StatelessWidget {
   @override
-  State<NotificationCenterSheet> createState() =>
-      _NotificationCenterSheetState();
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final unread = store.notifs.where((n) => !n.read).length;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (unread > 0) ...[
+          VeBtn(
+            variant: VeBtnVariant.ghost,
+            size: VeBtnSize.sm,
+            onPressed: () => store.markAllRead(),
+            child: const Text('Leídas'),
+          ),
+          const SizedBox(width: 4),
+        ],
+        VeBtn(
+          variant: VeBtnVariant.ghost,
+          size: VeBtnSize.sm,
+          onPressed: store.notifs.isEmpty ? null : store.clearNotifications,
+          child: const Text('Limpiar'),
+        ),
+      ],
+    );
+  }
 }
 
-class _NotificationCenterSheetState extends State<NotificationCenterSheet> {
-  Color _ink(BuildContext context, NotifKind t) {
-    final VeInk sem = VeColors.of(context);
-    return switch (t) {
-      NotifKind.spike => sem.warn,
-      NotifKind.target => Theme.of(context).colorScheme.primary,
-      NotifKind.threshold => Theme.of(context).colorScheme.primary,
-      NotifKind.gap => sem.warn,
-      NotifKind.daily => sem.pos,
-      NotifKind.reminder => Theme.of(context).colorScheme.onSurfaceVariant,
-      NotifKind.bcv => sem.pos,
-      NotifKind.test => Theme.of(context).colorScheme.primary,
-      NotifKind.info => Theme.of(context).colorScheme.onSurfaceVariant,
-    };
+/// Cuerpo scrolleable del centro de avisos: filas divididas por borde con
+/// chip de icono por tono (patrón AlertsSheet del prototipo).
+class NotificationCenterBody extends StatelessWidget {
+  const NotificationCenterBody({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final items = store.notifs;
+
+    if (items.isEmpty) {
+      return const VeEmpty(
+        title: 'Todo tranquilo',
+        sub: 'Aquí van llegando los avisos de picos de tasa, tus metas, la '
+            'brecha y los recordatorios.',
+      );
+    }
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: ShadTheme.of(context).colorScheme.border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: ShadTheme.of(context).colorScheme.border,
+              ),
+            _NotifRow(n: items[i]),
+          ],
+        ],
+      ),
+    );
   }
+}
+
+class _NotifRow extends StatelessWidget {
+  const _NotifRow({required this.n});
+
+  final NotificationItem n;
+
+  (IconData, VeTone) _icon(NotifKind t) => switch (t) {
+    NotifKind.spike => (LucideIcons.zap, VeTone.warn),
+    NotifKind.target => (LucideIcons.crosshair, VeTone.info),
+    NotifKind.threshold => (LucideIcons.trendingUp, VeTone.info),
+    NotifKind.gap => (LucideIcons.arrowLeftRight, VeTone.warn),
+    NotifKind.daily => (LucideIcons.calendarDays, VeTone.pos),
+    NotifKind.reminder => (LucideIcons.alarmClock, VeTone.neutral),
+    NotifKind.bcv => (LucideIcons.landmark, VeTone.pos),
+    NotifKind.test => (LucideIcons.flaskConical, VeTone.info),
+    NotifKind.info => (LucideIcons.info, VeTone.neutral),
+  };
 
   String _label(NotifKind t) => switch (t) {
     NotifKind.spike => 'pico',
@@ -56,298 +143,114 @@ class _NotificationCenterSheetState extends State<NotificationCenterSheet> {
     NotifKind.info => 'aviso',
   };
 
-  IconData _icon(NotifKind t) => switch (t) {
-    NotifKind.spike => Icons.bolt_outlined,
-    NotifKind.target => Icons.adjust,
-    NotifKind.threshold => Icons.trending_up,
-    NotifKind.gap => Icons.call_split,
-    NotifKind.daily => Icons.today_outlined,
-    NotifKind.reminder => Icons.alarm,
-    NotifKind.bcv => Icons.account_balance_outlined,
-    NotifKind.test => Icons.science_outlined,
-    NotifKind.info => Icons.info_outline,
-  };
-
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    final items = store.notifs;
-    final unread = items.where((n) => !n.read).length;
+    final store = context.read<AppStore>();
+    final scheme = ShadTheme.of(context).colorScheme;
+    final (icon, tone) = _icon(n.kind);
 
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.62,
-      maxChildSize: 0.85,
-      builder: (context, scroll) => Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 2, 18, 10),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.notifications_outlined,
-                  size: 19,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                // Flexible + ellipsis: con badge y 2 acciones la fila supera
-                // los 324 px útiles de un sheet a 360 dp (fix overflow).
-                Flexible(
-                  child: Text(
-                    'Notificaciones',
+    return InkWell(
+      onTap: () => store.markRead(n.id),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Chip de icono 28 px sobre el fondo tenue del tono (AlertsSheet).
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(color: _toneBg(context, tone)),
+              child: Icon(icon, size: 14, color: _toneFg(context, tone)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    n.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w800,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      fontWeight: n.read ? FontWeight.w500 : FontWeight.w600,
+                      color: scheme.foreground,
                     ),
                   ),
-                ),
-                if (unread > 0) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
+                  const SizedBox(height: 2),
+                  Text(
+                    n.body,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      height: 1.4,
+                      color: scheme.mutedForeground,
                     ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '$unread nueva${unread == 1 ? '' : 's'}',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text(
+                        _label(n.kind).toUpperCase(),
+                        style: VeText.labelCaps(
+                          9,
+                          color: _toneFg(context, tone),
+                          weight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-                const Spacer(),
-                TextButton(
-                  onPressed: () => store.markAllRead(),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text('Leídas', style: TextStyle(fontSize: 12.5)),
-                ),
-                TextButton(
-                  onPressed: () => store.clearNotifications(),
-                  style: TextButton.styleFrom(
-                    foregroundColor: VeColors.of(context).neg,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text(
-                    'Limpiar',
-                    style: TextStyle(fontSize: 12.5),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Divider(
-            height: 1,
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
-          Expanded(
-            child: items.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.notifications_off_outlined,
-                          size: 40,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      const SizedBox(width: 8),
+                      Text(
+                        timeAgo(n.at),
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          color: scheme.mutedForeground,
                         ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Todo tranquilo',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 34),
-                          child: Text(
-                            'Aquí van llegando los avisos de picos de tasa, tus metas, la brecha y los recordatorios.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 13,
-                              height: 1.45,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    controller: scroll,
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    itemCount: items.length,
-                    itemBuilder: (context, i) {
-                      final n = items[i];
-                      final Color ink = _ink(context, n.kind);
-                      return InkWell(
-                        onTap: () => store.markRead(n.id),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 11,
-                          ),
-                          color: n.read
-                              ? null
-                              : Theme.of(
-                                  context,
-                                ).colorScheme.primary.withValues(alpha: 0.04),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: ink.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(9),
-                                ),
-                                child: Icon(
-                                  _icon(n.kind),
-                                  size: 15,
-                                  color: ink,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            n.title,
-                                            style: TextStyle(
-                                              fontSize: 13.5,
-                                              fontWeight: n.read
-                                                  ? FontWeight.w600
-                                                  : FontWeight.w800,
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.onSurface,
-                                            ),
-                                          ),
-                                        ),
-                                        Text(
-                                          timeAgo(n.at),
-                                          style: TextStyle(
-                                            fontSize: 11.5,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      n.body,
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        height: 1.4,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          _label(n.kind),
-                                          style: VeText.labelCaps(
-                                            9,
-                                            color: ink,
-                                            weight: FontWeight.w700,
-                                          ),
-                                        ),
-                                        if (!n.read) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            width: 6,
-                                            height: 6,
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.primary,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 6, 18, 10),
-              child: Row(
-                children: [
-                  // Flexible: a textScale >=1.1 el rótulo con tracking amplio
-                  // choca con el botón en 360 dp (fix overflow).
-                  Flexible(
-                    child: Text(
-                      'Avisos del sistema activos',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: VeText.labelCaps(
-                        9.5,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      context.go('/ajustes');
-                    },
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text(
-                      'Configurar alertas',
-                      style: TextStyle(fontSize: 12.5),
-                    ),
+                      const Spacer(),
+                      if (!n.read)
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: scheme.foreground,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  Color _toneBg(BuildContext context, VeTone tone) {
+    final ink = VeColors.of(context);
+    return switch (tone) {
+      VeTone.pos => ink.posBg,
+      VeTone.neg => ink.negBg,
+      VeTone.warn => ink.warnBg,
+      VeTone.info => ink.infoBg,
+      VeTone.neutral => ShadTheme.of(context).colorScheme.muted,
+    };
+  }
+
+  Color _toneFg(BuildContext context, VeTone tone) {
+    final ink = VeColors.of(context);
+    return switch (tone) {
+      VeTone.pos => ink.pos,
+      VeTone.neg => ink.neg,
+      VeTone.warn => ink.warn,
+      VeTone.info => ink.manual,
+      VeTone.neutral => ShadTheme.of(context).colorScheme.mutedForeground,
+    };
   }
 }

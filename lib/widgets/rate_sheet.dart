@@ -262,63 +262,70 @@ Future<void> showRateSheet(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (sheetCtx) => SafeArea(
-      child: ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
-            child: Row(
-              children: <Widget>[
-                Flag(currency, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title ?? 'Fuente de tasa · ${currency.label}',
-                    style: VeText.labelCaps(
-                      10.5,
-                      color: Theme.of(sheetCtx).colorScheme.primary,
+      // TASK-35 (p3): techo del 80 % de la pantalla — con muchas fuentes
+      // la lista scrollea dentro del límite en vez de crecer sin fin.
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(sheetCtx).height * 0.8,
+        ),
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
+              child: Row(
+                children: <Widget>[
+                  Flag(currency, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title ?? 'Fuente de tasa · ${currency.label}',
+                      style: VeText.labelCaps(
+                        10.5,
+                        color: Theme.of(sheetCtx).colorScheme.primary,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          for (final s in sources)
-            RateTile(
-              sourceId: s.id,
-              rate: ctx.rate(s.id),
-              selected: s.id == currentId,
-              freshness: _freshnessOf(store, s.id),
-              onTap: () async {
-                if (s.category == SourceCategory.manual &&
-                    ctx.rate(s.id) <= 0) {
-                  // Manual sin valor: el editor ES la selección.
-                  final saved = await showManualRateEditor(
-                    sheetCtx,
-                    sourceId: s.id,
-                  );
-                  if (saved && sheetCtx.mounted) {
-                    Navigator.of(sheetCtx).pop(s.id);
-                  }
-                  return;
-                }
-                Navigator.of(sheetCtx).pop(s.id);
-              },
-              onEdit: s.category == SourceCategory.manual
-                  ? () async {
-                      final saved = await showManualRateEditor(
-                        sheetCtx,
-                        sourceId: s.id,
-                      );
-                      if (saved && sheetCtx.mounted) {
-                        Navigator.of(sheetCtx).pop(s.id);
-                      }
+            for (final s in sources)
+              RateTile(
+                sourceId: s.id,
+                rate: ctx.rate(s.id),
+                selected: s.id == currentId,
+                freshness: _freshnessOf(store, s.id),
+                onTap: () async {
+                  if (s.category == SourceCategory.manual &&
+                      ctx.rate(s.id) <= 0) {
+                    // Manual sin valor: el editor ES la selección.
+                    final saved = await showManualRateEditor(
+                      sheetCtx,
+                      sourceId: s.id,
+                    );
+                    if (saved && sheetCtx.mounted) {
+                      Navigator.of(sheetCtx).pop(s.id);
                     }
-                  : null,
-            ),
-          const SizedBox(height: 6),
-        ],
+                    return;
+                  }
+                  Navigator.of(sheetCtx).pop(s.id);
+                },
+                onEdit: s.category == SourceCategory.manual
+                    ? () async {
+                        final saved = await showManualRateEditor(
+                          sheetCtx,
+                          sourceId: s.id,
+                        );
+                        if (saved && sheetCtx.mounted) {
+                          Navigator.of(sheetCtx).pop(s.id);
+                        }
+                      }
+                    : null,
+              ),
+            const SizedBox(height: 6),
+          ],
+        ),
       ),
     ),
   );

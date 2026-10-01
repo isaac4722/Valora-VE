@@ -348,12 +348,18 @@ class VeEntry extends StatelessWidget {
 /// (≥ 700 px), con la MISMA cromática exacta: cabecera 48 px (título + ✕),
 /// cuerpo scrollable y pie opcional con área segura.
 ///
+/// TECHO (TASK-35 · p3, como el `max-h-[88dvh]` del prototipo): la hoja
+/// completa JAMÁS supera el 88 % de la altura ÚTIL (bajo la barra de
+/// estado) — el cuerpo scrollea dentro de ese límite y nada «sube sin
+/// techo» por encima del notch.
+///
 /// Construido sobre `showShadSheet` (móvil) y `showShadDialog` (escritorio).
 Future<T?> showVeSheet<T>({
   required BuildContext context,
   required String title,
   required WidgetBuilder builder,
   Widget? footer,
+  Widget? trailing,
   bool wide = false,
   bool dismissible = true,
 }) {
@@ -368,12 +374,18 @@ Future<T?> showVeSheet<T>({
       context: context,
       barrierDismissible: dismissible,
       barrierColor: barrier,
-      builder: (context) => _VeSheetChrome(
-        title: title,
-        footer: footer,
-        wide: wide,
-        dismissible: dismissible,
-        body: builder(context),
+      // El overlay del PopupRoute posiciona al hijo ARRIBA-IZQUIERDA si
+      // nadie lo alinea (bug visto en runtime): el modal se centra aquí y
+      // el chrome se auto-limita con su maxWidth + techo.
+      builder: (context) => Center(
+        child: _VeSheetChrome(
+          title: title,
+          footer: footer,
+          trailing: trailing,
+          wide: wide,
+          dismissible: dismissible,
+          body: builder(context),
+        ),
       ),
     );
   }
@@ -382,17 +394,24 @@ Future<T?> showVeSheet<T>({
     side: ShadSheetSide.bottom,
     barrierColor: barrier,
     isDismissible: dismissible,
-    backgroundColor: shad.colorScheme.card,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-    ),
-    builder: (context) => _VeSheetChrome(
-      title: title,
-      footer: footer,
-      wide: wide,
-      dismissible: dismissible,
-      body: builder(context),
-      bottomSheet: true,
+    // FIX CRÍTICO (TASK-35 · p3): el overlay posiciona el contenido suelto
+    // arriba-izquierda — sin este Align, la hoja «subía» hasta el notch.
+    // Alineado al borde inferior + ancho completo + techo del chrome: hoja
+    // de abajo hacia arriba CON techo del 88 % útil.
+    builder: (context) => Align(
+      alignment: Alignment.bottomCenter,
+      child: SizedBox(
+        width: double.infinity,
+        child: _VeSheetChrome(
+          title: title,
+          footer: footer,
+          trailing: trailing,
+          wide: wide,
+          dismissible: dismissible,
+          body: builder(context),
+          bottomSheet: true,
+        ),
+      ),
     ),
   );
 }
@@ -405,12 +424,18 @@ class _VeSheetChrome extends StatelessWidget {
     required this.footer,
     required this.wide,
     required this.dismissible,
+    this.trailing,
     this.bottomSheet = false,
   });
 
   final String title;
   final Widget body;
   final Widget? footer;
+
+  /// Acción compacta junto al título (antes del ✕): p. ej. «Leídas ·
+  /// Limpiar» del centro de avisos.
+  final Widget? trailing;
+
   final bool wide;
   final bool dismissible;
   final bool bottomSheet;
@@ -419,86 +444,94 @@ class _VeSheetChrome extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = ShadTheme.of(context).colorScheme;
     final double maxW = wide ? 576 : 448;
+    // Techo del prototipo (Sheet · max-h-[88dvh]): altura ÚTIL (bajo la
+    // barra de estado) por 0.88 — móvil y escritorio.
+    final mq = MediaQuery.of(context);
+    final double ceiling = (mq.size.height - mq.padding.top) * 0.88;
 
-    Widget chrome = Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: scheme.card,
-        borderRadius: bottomSheet
-            ? const BorderRadius.vertical(top: Radius.circular(14))
-            : BorderRadius.circular(14),
-        border: Border.all(color: scheme.border),
-      ),
-      child: Material(
-        // Ancestro Material transparente: los cuerpos de la app mezclan
-        // controles shadcn con widgets Material propios (MoneyField,
-        // TextField de nombre, PopupMenu de divisas…) que lo exigen.
-        type: MaterialType.transparency,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              height: 48,
-              padding: const EdgeInsets.only(left: 16, right: 8),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: scheme.border)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.foreground,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (dismissible)
-                    ShadButton.raw(
-                      variant: ShadButtonVariant.ghost,
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      width: 32,
-                      height: 32,
-                      padding: EdgeInsets.zero,
-                      backgroundColor: Colors.transparent,
-                      hoverBackgroundColor: scheme.accent,
-                      foregroundColor: scheme.mutedForeground,
-                      hoverForegroundColor: scheme.foreground,
-                      child: Icon(LucideIcons.x, size: 15),
-                    ),
-                ],
-              ),
-            ),
-            Flexible(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.sizeOf(context).height * 0.66,
+    Widget chrome = ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: ceiling),
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: scheme.card,
+          borderRadius: bottomSheet
+              ? const BorderRadius.vertical(top: Radius.circular(14))
+              : BorderRadius.circular(14),
+          border: Border.all(color: scheme.border),
+        ),
+        child: Material(
+          // Ancestro Material transparente: los cuerpos de la app mezclan
+          // controles shadcn con widgets Material propios (MoneyField,
+          // TextField de nombre, PopupMenu de divisas…) que lo exigen.
+          type: MaterialType.transparency,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                height: 48,
+                padding: const EdgeInsets.only(left: 16, right: 8),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: scheme.border)),
                 ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.foreground,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (trailing != null) ...[
+                      const SizedBox(width: 8),
+                      trailing!,
+                    ],
+                    if (dismissible)
+                      ShadButton.raw(
+                        variant: ShadButtonVariant.ghost,
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        width: 32,
+                        height: 32,
+                        padding: EdgeInsets.zero,
+                        backgroundColor: Colors.transparent,
+                        hoverBackgroundColor: scheme.accent,
+                        foregroundColor: scheme.mutedForeground,
+                        hoverForegroundColor: scheme.foreground,
+                        child: Icon(LucideIcons.x, size: 15),
+                      ),
+                  ],
+                ),
+              ),
+              // El cuerpo ocupa lo que sobre bajo el techo y scrollea —
+              // JAMÁS empuja la cabecera sobre la barra de estado.
+              Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: body,
                 ),
               ),
-            ),
-            if (footer != null)
-              Container(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: scheme.border)),
+              if (footer != null)
+                Container(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: scheme.border)),
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    minimum: const EdgeInsets.only(bottom: 4),
+                    child: Row(children: [Expanded(child: footer!)]),
+                  ),
                 ),
-                child: SafeArea(
-                  top: false,
-                  minimum: const EdgeInsets.only(bottom: 4),
-                  child: Row(children: [Expanded(child: footer!)]),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -68,8 +68,13 @@ Future<void> showAppWidgetGallery(BuildContext context) {
     ),
     builder: (ctx) => DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.85,
-      maxChildSize: 0.95,
+      // TASK-35 (p3): techo real — nace a media pantalla y sube con snap
+      // hasta el 85 %, JAMÁS al 95 % «sin techo» de antes.
+      initialChildSize: 0.72,
+      minChildSize: 0.4,
+      maxChildSize: 0.85,
+      snap: true,
+      snapSizes: const <double>[0.72, 0.85],
       builder: (sheetCtx, scroll) => _AppWidgetsSheet(scrollController: scroll),
     ),
   );
