@@ -65,6 +65,10 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: store),
           ChangeNotifierProvider.value(value: poller),
+          // TASK-35 (p2): la cabecera de Inicio observa el tema (toggle).
+          ChangeNotifierProvider<ThemeController>.value(
+            value: ThemeController(),
+          ),
           // v19.4: los widgets de Inicio leen sus prefs (como la app).
           Provider<SharedPreferences>.value(value: prefs),
         ],
@@ -112,6 +116,10 @@ void main() {
         providers: [
           ChangeNotifierProvider.value(value: store),
           ChangeNotifierProvider.value(value: poller),
+          // TASK-35 (p2): la cabecera de Inicio observa el tema (toggle).
+          ChangeNotifierProvider<ThemeController>.value(
+            value: ThemeController(),
+          ),
           // v19.4: los widgets de Inicio leen sus prefs (como la app).
           Provider<SharedPreferences>.value(value: prefs),
         ],

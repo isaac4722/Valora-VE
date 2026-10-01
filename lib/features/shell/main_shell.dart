@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
@@ -85,6 +86,30 @@ tickerItems(AppStore store) {
 
 /// Umbral de escritorio: sidebar a partir de 700 px (md del prototipo).
 const double kWideShell = 700;
+
+/// ¿El brillo EFECTIVO es oscuro? (resuelve `system` contra la plataforma).
+/// Para pintar el icono del toggle de tema donde se necesite.
+bool veEffectiveDark(BuildContext context) {
+  final mode = context.watch<ThemeController>().mode;
+  if (mode != ThemeMode.system) return mode == ThemeMode.dark;
+  return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+      Brightness.dark;
+}
+
+/// Alterna claro ↔ oscuro (TASK-35 · p2 · orden del dueño): vuelve el botón
+/// de tema de la cabecera. Resuelve el brillo EFECTIVO (system incluido) y
+/// fija el opuesto explícito — un toque hace lo que el ojo espera.
+void toggleVeTheme(BuildContext context) {
+  final theme = context.read<ThemeController>();
+  final prefs = context.read<SharedPreferences>();
+  final platformDark =
+      WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+          Brightness.dark;
+  final dark =
+      theme.mode == ThemeMode.dark ||
+      (theme.mode == ThemeMode.system && platformDark);
+  theme.setMode(dark ? ThemeMode.light : ThemeMode.dark, prefs);
+}
 
 /// Rutas con búsqueda propia donde el FAB móvil NO aparece (como el
 /// prototipo: lista · productos · análisis · historial).
@@ -180,6 +205,31 @@ class MainShell extends StatelessWidget {
       ],
     );
 
+    // Contenido protegido del notch (TASK-35 · p2): el fondo ambiental
+    // sigue de borde a borde, pero sidebar + columnas nacen BAJO la barra
+    // de estado. En móvil el inset inferior lo consume la barra de tabs
+    // (bottomNavigationBar): se anula aquí para que las sticky bars de
+    // las pantallas no lo dupliquen; en escritorio el inset inferior es
+    // de las pantallas (no hay barra debajo).
+    final Widget content = wide
+        ? Row(
+            children: [
+              _VeSidebar(
+                current: current,
+                onBranch: (i) => navigationShell.goBranch(
+                  i,
+                  initialLocation: i == current,
+                ),
+              ),
+              Expanded(child: mainColumn),
+            ],
+          )
+        : MediaQuery.removePadding(
+            context: context,
+            removeBottom: true,
+            child: mainColumn,
+          );
+
     return CallbackShortcuts(
       // ⌘K/Ctrl+K abre el command palette (firma SaaS · Linear/Vercel).
       bindings: <ShortcutActivator, VoidCallback>{
@@ -188,39 +238,39 @@ class MainShell extends StatelessWidget {
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
             showCommandPalette(context),
       },
-      child: Scaffold(
-        backgroundColor: scheme.surfaceContainerLowest,
-        body: Stack(
-          children: [
-            // Fondo ambiental del prototipo: radiales pos/warn + puntos.
-            const Positioned.fill(child: VeAmbient()),
-            if (wide)
-              Row(
-                children: [
-                  _VeSidebar(
-                    current: current,
-                    onBranch: (i) => navigationShell.goBranch(
-                      i,
-                      initialLocation: i == current,
-                    ),
-                  ),
-                  Expanded(child: mainColumn),
-                ],
-              )
-            else
-              Positioned.fill(child: mainColumn),
-          ],
-        ),
-        bottomNavigationBar: wide
-            ? null
-            : _MobileTabs(
-                current: current,
-                cartCount: _cartCount(context),
-                onTab: (i) => navigationShell.goBranch(
-                  i,
-                  initialLocation: i == current,
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        // Iconos de la barra de estado según el tema (sin AppBar que lo
+        // haga): oscuro → iconos claros; claro → iconos oscuros.
+        value: Theme.of(context).brightness == Brightness.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        child: Scaffold(
+          backgroundColor: scheme.surfaceContainerLowest,
+          body: Stack(
+            children: [
+              // Fondo ambiental del prototipo: radiales pos/warn + puntos.
+              const Positioned.fill(child: VeAmbient()),
+              Positioned.fill(
+                child: SafeArea(
+                  // Abajo lo resuelven la barra de tabs (móvil) o las
+                  // propias pantallas (escritorio).
+                  bottom: false,
+                  child: content,
                 ),
               ),
+            ],
+          ),
+          bottomNavigationBar: wide
+              ? null
+              : _MobileTabs(
+                  current: current,
+                  cartCount: _cartCount(context),
+                  onTab: (i) => navigationShell.goBranch(
+                    i,
+                    initialLocation: i == current,
+                  ),
+                ),
+        ),
       ),
     );
   }
@@ -335,6 +385,10 @@ class _VeSidebar extends StatelessWidget {
                     color: scheme.foreground,
                   ),
                 ),
+                const Spacer(),
+                // Toggle de tema a la vista en escritorio (TASK-35 · p2):
+                // mismo interruptor que la cabecera móvil de Inicio.
+                const _SidebarThemeToggle(),
               ],
             ),
           ),
@@ -398,6 +452,24 @@ class _VeSidebar extends StatelessWidget {
     if (item.branch != null) return current == item.branch;
     final path = GoRouterState.of(context).uri.path;
     return path == item.location;
+  }
+}
+
+/// Toggle de tema del sidebar (escritorio): sol/luna según el brillo
+/// efectivo; un toque cambia al opuesto (mismo interruptor de Inicio).
+class _SidebarThemeToggle extends StatelessWidget {
+  const _SidebarThemeToggle();
+
+  @override
+  Widget build(BuildContext context) {
+    final bool dark = veEffectiveDark(context);
+    return VeIconBtn(
+      icon: dark ? LucideIcons.sun : LucideIcons.moon,
+      label: dark ? 'Tema claro' : 'Tema oscuro',
+      size: 28,
+      iconSize: 14,
+      onTap: () => toggleVeTheme(context),
+    );
   }
 }
 

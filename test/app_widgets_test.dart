@@ -95,6 +95,11 @@ void main() {
       MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: store),
+          // TASK-35 (p2): la cabecera de Inicio y el sidebar observan el
+          // tema (toggle claro/oscuro) — como appProviders en producción.
+          ChangeNotifierProvider<ThemeController>.value(
+            value: ThemeController(),
+          ),
           Provider<SharedPreferences>.value(value: prefs),
           ChangeNotifierProvider.value(value: poller),
         ],

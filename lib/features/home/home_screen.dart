@@ -32,6 +32,7 @@ import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/rate_sheet.dart';
 import '../../widgets/ui.dart';
 import '../shell/command_palette.dart' show showCommandPalette;
+import '../shell/main_shell.dart' show toggleVeTheme, veEffectiveDark;
 import '../shell/notifs_center.dart' show showNotificationCenter;
 import 'app_widgets.dart';
 
@@ -339,7 +340,8 @@ class _HeroState extends State<_Hero> {
           ),
           const SizedBox(width: 10),
           // Fila de iconos del prototipo: alertas (punto si hay sin leer) ·
-          // búsqueda (palette ⌘K) · ajustes.
+          // búsqueda (palette ⌘K) · tema (claro/oscuro, orden del dueño
+          // TASK-35: el botón de arriba vuelve) · ajustes.
           VeIconBtn(
             icon: LucideIcons.bell,
             label: 'Alertas',
@@ -351,6 +353,14 @@ class _HeroState extends State<_Hero> {
             icon: LucideIcons.search,
             label: 'Buscar',
             onTap: () => showCommandPalette(context),
+          ),
+          const SizedBox(width: 8),
+          VeIconBtn(
+            icon: veEffectiveDark(context)
+                ? LucideIcons.sun
+                : LucideIcons.moon,
+            label: veEffectiveDark(context) ? 'Tema claro' : 'Tema oscuro',
+            onTap: () => toggleVeTheme(context),
           ),
           if (movil) ...[
             const SizedBox(width: 8),
