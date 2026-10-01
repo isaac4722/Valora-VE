@@ -1,6 +1,9 @@
-/// Tema «El Instrumento» de ValoraVE — tokens exactos del sistema de diseño
-/// v15 (DESIGN.md). Superficie neutra de precisión: azul tinta señala lo
-/// tocable, el color de datos solo significa (oficial/paralelo, sube/baja).
+/// Tema de ValoraVE — tokens EXACTOS del prototipo web de referencia
+/// (TASK-34, orden del dueño): zinc neutro de precisión estilo Linear/Vercel,
+/// tinta casi negra como primario (botón invertido fg→bg), bordes 100 % y
+/// CERO sombras: plana como un instrumento. El color de datos solo
+/// significa (oficial/paralelo, sube/baja/meta) y cada tono trae su fondo
+/// tenue para badges legibles en ambos brillos.
 /// CONTRATO (§8): aquí vive la ÚNICA definición de kEaseVe — ui.dart la
 /// re-exporta para no romper a quien la importe desde ahí.
 library;
@@ -11,48 +14,94 @@ import 'package:flutter/services.dart';
 /// Curva firma del sistema (EASE [0.16, 1, 0.3, 1]).
 const Cubic kEaseVe = Cubic(0.16, 1.0, 0.3, 1.0);
 
-/// Paleta por rol, light (canónico) y dark (grafito frío).
+/// Paleta por rol, light (zinc del prototipo) y dark (grafito zinc).
+///
+/// Los valores son EXACTOS a los CSS custom properties del prototipo de
+/// referencia (`:root` y `.dark`): ni un tono inventado, ni una opacidad
+/// nueva. El «primario» es la propia tinta (Linear/Vercel): el botón
+/// principal es fg con texto bg — cero acentos de marca.
 class VeColors {
   const VeColors._();
 
-  // ── Claro (canónico) ──
-  static const Color bgLight = Color(0xFFF7F8F9);
-  static const Color cardLight = Color(0xFFFFFFFF);
-  static const Color fgLight = Color(0xFF1A1D21);
-  static const Color mutedLight = Color(0xFFF1F2F4);
-  static const Color mutedFgLight = Color(0xFF5F6672);
-  static const Color primaryLight = Color(0xFF22354E);
-  static const Color accentLight = Color(0xFFEEF1F4);
-  static const Color borderLight = Color(0xFFD3D9DF);
-  static const Color destructiveLight = Color(0xFFCF4437);
+  // ── Claro (zinc · `:root` del prototipo) ──
+  static const Color bgLight = Color(0xFFFAFAFA); // --bg
+  static const Color cardLight = Color(0xFFFFFFFF); // --surface
+  static const Color fgLight = Color(0xFF09090B); // --fg
+  static const Color mutedLight = Color(0xFFF4F4F5); // --subtle
+  static const Color mutedFgLight = Color(0xFF71717A); // --muted
+  static const Color primaryLight = fgLight; // botón invertido fg→bg
+  static const Color accentLight = Color(0xFFF0F0F1); // --hover
+  static const Color borderLight = Color(0xFFE8E8EA); // --line
+  static const Color destructiveLight = Color(0xFFD33A2C); // --neg
 
-  // ── Grafito (oscuro) ──
-  static const Color bgDark = Color(0xFF121417);
-  static const Color cardDark = Color(0xFF1A1D21);
-  static const Color fgDark = Color(0xFFECEEF1);
-  static const Color mutedDark = Color(0xFF202429);
-  static const Color mutedFgDark = Color(0xFF9AA1AB);
-  static const Color primaryDark = Color(0xFF8FA7C4);
-  static const Color onPrimaryDark = Color(0xFF0E1622);
-  static const Color accentDark = Color(0xFF242A32);
-  static const Color borderDark = Color(0xFF3A4048);
-  static const Color destructiveDark = Color(0xFFF07A6C);
+  // ── Oscuro (grafito zinc · `.dark` del prototipo) ──
+  static const Color bgDark = Color(0xFF08080A); // --bg
+  static const Color cardDark = Color(0xFF0E0E11); // --surface
+  static const Color fgDark = Color(0xFFF4F4F5); // --fg
+  static const Color mutedDark = Color(0xFF17171B); // --subtle
+  static const Color mutedFgDark = Color(0xFF8B8B95); // --muted
+  static const Color primaryDark = fgDark; // botón invertido fg→bg
+  static const Color onPrimaryDark = Color(0xFF08080A); // --bg
+  static const Color accentDark = Color(0xFF1D1D22); // --hover
+  static const Color borderDark = Color(0xFF222227); // --line
+  static const Color destructiveDark = Color(0xFFF0705F); // --neg
 
-  // ── Semánticas de dinero y tasas (light / dark) ──
-  static const Color posLight = Color(0xFF10755A);
-  static const Color posDark = Color(0xFF3ECF9E);
-  static const Color negLight = Color(0xFFCF4437);
-  static const Color negDark = Color(0xFFF07A6C);
-  static const Color warnLight = Color(0xFFB05E0E);
-  static const Color warnDark = Color(0xFFEDA25C);
-  static const Color manualLight = Color(0xFF6E5BB8);
-  static const Color manualDark = Color(0xFFB3A0EC);
+  // ── Bordes fuertes y texto terciario (inputs, chips, kbd) ──
+  /// `--line-strong` claro: el borde de controles vivos (inputs, botones
+  /// secundarios) — un punto más decidido que [borderLight].
+  static const Color lineStrongLight = Color(0xFFD4D4D8);
+
+  /// `--line-strong` oscuro.
+  static const Color lineStrongDark = Color(0xFF34343B);
+
+  /// `--faint` claro: texto terciario (placeholders, hints, kbd).
+  static const Color faintLight = Color(0xFFA1A1AA);
+
+  /// `--faint` oscuro.
+  static const Color faintDark = Color(0xFF5C5C66);
+
+  // ── Semánticas de dinero y tasas (light / dark · prototipo) ──
+  static const Color posLight = Color(0xFF0E7A57); // --pos
+  static const Color posDark = Color(0xFF3ECF9A);
+  static const Color negLight = Color(0xFFD33A2C); // --neg
+  static const Color negDark = Color(0xFFF0705F);
+  static const Color warnLight = Color(0xFFB45309); // --warn
+  static const Color warnDark = Color(0xFFF0A560);
+  static const Color manualLight = Color(0xFF5B4BC4); // --info
+  static const Color manualDark = Color(0xFF9D90F2);
+  // Monedas hermanas (fuera del prototipo VE): tonos propios que armonizan
+  // con el zinc, sin tocar la semántica oficial/paralelo.
   static const Color copLight = Color(0xFF5D6B13);
   static const Color copDark = Color(0xFFB5C65E);
   static const Color brlLight = Color(0xFF12873C);
   static const Color brlDark = Color(0xFF5FCD84);
   static const Color mxnLight = Color(0xFFB03D90);
   static const Color mxnDark = Color(0xFFE391CB);
+
+  // ── Fondos tenues de los tonos (badges del prototipo) ──
+  /// `--pos-bg` claro: badge verde sobre fondo mentolado.
+  static const Color posBgLight = Color(0xFFE6F4EE);
+
+  /// `--pos-bg` oscuro.
+  static const Color posBgDark = Color(0xFF0F2A21);
+
+  /// `--neg-bg` claro.
+  static const Color negBgLight = Color(0xFFFCEBE9);
+
+  /// `--neg-bg` oscuro.
+  static const Color negBgDark = Color(0xFF2D1411);
+
+  /// `--warn-bg` claro.
+  static const Color warnBgLight = Color(0xFFFDF1E1);
+
+  /// `--warn-bg` oscuro.
+  static const Color warnBgDark = Color(0xFF2B1E0F);
+
+  /// `--info-bg` claro.
+  static const Color infoBgLight = Color(0xFFEEEBFB);
+
+  /// `--info-bg` oscuro.
+  static const Color infoBgDark = Color(0xFF1C1840);
 
   /// Devuelve el set de semánticas del TEMA ACTIVO (v17.6 R1-1).
   ///
@@ -86,6 +135,10 @@ class VeInk extends ThemeExtension<VeInk> {
     required this.cop,
     required this.brl,
     required this.mxn,
+    this.posBg = const Color(0x1A0E7A57),
+    this.negBg = const Color(0x1AD33A2C),
+    this.warnBg = const Color(0x1AB45309),
+    this.infoBg = const Color(0x1A5B4BC4),
   });
 
   const VeInk.light()
@@ -97,6 +150,10 @@ class VeInk extends ThemeExtension<VeInk> {
         cop: VeColors.copLight,
         brl: VeColors.brlLight,
         mxn: VeColors.mxnLight,
+        posBg: VeColors.posBgLight,
+        negBg: VeColors.negBgLight,
+        warnBg: VeColors.warnBgLight,
+        infoBg: VeColors.infoBgLight,
       );
 
   const VeInk.dark()
@@ -108,6 +165,10 @@ class VeInk extends ThemeExtension<VeInk> {
         cop: VeColors.copDark,
         brl: VeColors.brlDark,
         mxn: VeColors.mxnDark,
+        posBg: VeColors.posBgDark,
+        negBg: VeColors.negBgDark,
+        warnBg: VeColors.warnBgDark,
+        infoBg: VeColors.infoBgDark,
       );
 
   final Color pos; // verde — oficiales, positivo
@@ -118,6 +179,13 @@ class VeInk extends ThemeExtension<VeInk> {
   final Color brl; // verde Brasil
   final Color mxn; // magenta
 
+  /// Fondos tenues de badge (`--pos-bg` & co. del prototipo): superficie
+  /// donde el tono correspondiente es texto — contraste AA sin esfuerzo.
+  final Color posBg;
+  final Color negBg;
+  final Color warnBg;
+  final Color infoBg;
+
   @override
   VeInk copyWith({
     Color? pos,
@@ -127,6 +195,10 @@ class VeInk extends ThemeExtension<VeInk> {
     Color? cop,
     Color? brl,
     Color? mxn,
+    Color? posBg,
+    Color? negBg,
+    Color? warnBg,
+    Color? infoBg,
   }) => VeInk(
     pos: pos ?? this.pos,
     neg: neg ?? this.neg,
@@ -135,6 +207,10 @@ class VeInk extends ThemeExtension<VeInk> {
     cop: cop ?? this.cop,
     brl: brl ?? this.brl,
     mxn: mxn ?? this.mxn,
+    posBg: posBg ?? this.posBg,
+    negBg: negBg ?? this.negBg,
+    warnBg: warnBg ?? this.warnBg,
+    infoBg: infoBg ?? this.infoBg,
   );
 
   @override
@@ -148,6 +224,10 @@ class VeInk extends ThemeExtension<VeInk> {
       cop: Color.lerp(cop, other.cop, t)!,
       brl: Color.lerp(brl, other.brl, t)!,
       mxn: Color.lerp(mxn, other.mxn, t)!,
+      posBg: Color.lerp(posBg, other.posBg, t)!,
+      negBg: Color.lerp(negBg, other.negBg, t)!,
+      warnBg: Color.lerp(warnBg, other.warnBg, t)!,
+      infoBg: Color.lerp(infoBg, other.infoBg, t)!,
     );
   }
 }

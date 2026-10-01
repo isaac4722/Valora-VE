@@ -7,3 +7,4 @@ Si no hay turno activo, el último cerrado está al final de `progress_warm.md`.
 
 2026-10-01 · DONE · TASK-34 abre turno — GUI prototipo web → Flutter shadcn_ui superior + migración docs safe/docs-news · gate n/a · 2_PLAN
 2026-10-01 · DONE · TASK-34 p1 docs: 4 .md de safe/docs-news (CHANGELOG_COLD/WARM + PROGRESS_COLD/WARM) + nota CHANGELOGs en AGENT.md + LICENSE sin legislación (intención del dueño 0adc35c) · gate n/a · 3_IMPLEMENT
+2026-10-01 · DONE · TASK-34 p2 tema: tokens EXACTOS del prototipo en theme.dart (zinc :root/.dark, line-strong, faint, pos/neg/warn/info-bg en VeInk, primario tinta invertida fg→bg) · gate analyze 0 · 213/213 · 3_IMPLEMENT
