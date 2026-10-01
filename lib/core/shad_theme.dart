@@ -40,7 +40,7 @@ abstract final class VeShadColors {
     popover: VeColors.cardLight,
     popoverForeground: VeColors.fgLight,
     primary: VeColors.primaryLight,
-    primaryForeground: Colors.white,
+    primaryForeground: VeColors.bgLight,
     secondary: VeColors.mutedLight,
     secondaryForeground: VeColors.fgLight,
     muted: VeColors.mutedLight,
@@ -50,9 +50,9 @@ abstract final class VeShadColors {
     destructive: VeColors.destructiveLight,
     destructiveForeground: Colors.white,
     border: VeColors.borderLight,
-    input: VeColors.borderLight,
+    input: VeColors.lineStrongLight,
     ring: VeColors.primaryLight,
-    selection: Color(0x3322354E),
+    selection: Color(0x3309090B),
   );
 
   /// Grafito (oscuro) — frío, sin negro puro.
@@ -74,9 +74,9 @@ abstract final class VeShadColors {
     destructive: VeColors.destructiveDark,
     destructiveForeground: VeColors.onPrimaryDark,
     border: VeColors.borderDark,
-    input: VeColors.borderDark,
+    input: VeColors.lineStrongDark,
     ring: VeColors.primaryDark,
-    selection: Color(0x4D8FA7C4),
+    selection: Color(0x4DF4F4F5),
   );
 }
 
@@ -93,12 +93,29 @@ ShadTextTheme _textTheme(Color fg, Color mutedFg) => ShadTextTheme(
   },
 );
 
-/// Borde plano Linear/Vercel: un solo lado al 100 % de opacidad.
-ShadBorder _flatBorder(Color color, {double radius = kShadControlRadius}) =>
-    ShadBorder.fromBorderSide(
-      ShadBorderSide(color: color, width: 1),
-      radius: BorderRadius.circular(radius),
-    );
+/// Borde plano Linear/Vercel: un solo lado al 100 % de opacidad. Desde
+/// TASK-34 (p3) lleva `padding: EdgeInsets.zero` EXPLÍCITO: el tema default
+/// de shadcn reserva 2 px por lado para su anillo de foco (un borde
+/// transparente), lo que infla TODOS los controles +4 px — el prototipo
+/// mide 28/36/44 y aquí se cumple al píxel.
+ShadBorder _flatBorder(
+  Color color, {
+  double radius = kShadControlRadius,
+  double width = 1,
+}) => ShadBorder.fromBorderSide(
+  ShadBorderSide(color: color, width: width),
+  padding: EdgeInsets.zero,
+  radius: BorderRadius.circular(radius),
+);
+
+/// Decoración de botón SIN espacio reservado de foco (flush): la indicación
+/// de foco es el cambio de color del borde — misma anchura, cero salto.
+ShadDecoration _flushButtonDecoration() => ShadDecoration(
+  border: _flatBorder(Colors.transparent, width: 0),
+  focusedBorder: _flatBorder(Colors.transparent, width: 0),
+  secondaryBorder: _flatBorder(Colors.transparent, width: 0),
+  secondaryFocusedBorder: _flatBorder(Colors.transparent, width: 0),
+);
 
 /// Tema shadcn completo «Linear/Vercel» para cada brillo.
 ///
@@ -145,23 +162,27 @@ abstract final class ShadThemeVe {
           colorScheme.primary,
           isDark ? .20 : -.14,
         ),
+        decoration: _flushButtonDecoration(),
       ),
       secondaryButtonTheme: ShadButtonTheme(
         height: 36,
         backgroundColor: colorScheme.secondary,
         hoverBackgroundColor: colorScheme.accent,
         foregroundColor: colorScheme.secondaryForeground,
+        decoration: _flushButtonDecoration(),
       ),
       outlineButtonTheme: ShadButtonTheme(
         height: 36,
         backgroundColor: colorScheme.background,
         hoverBackgroundColor: colorScheme.accent,
         foregroundColor: colorScheme.foreground,
+        decoration: _flushButtonDecoration(),
       ),
       ghostButtonTheme: ShadButtonTheme(
         height: 36,
         hoverBackgroundColor: colorScheme.accent,
         foregroundColor: colorScheme.foreground,
+        decoration: _flushButtonDecoration(),
       ),
       destructiveButtonTheme: ShadButtonTheme(
         height: 36,
@@ -171,6 +192,7 @@ abstract final class ShadThemeVe {
           isDark ? .12 : -.08,
         ),
         foregroundColor: colorScheme.destructiveForeground,
+        decoration: _flushButtonDecoration(),
       ),
       tooltipTheme: ShadTooltipTheme(
         decoration: ShadDecoration(
@@ -199,7 +221,15 @@ abstract final class ShadThemeVe {
         decoration: ShadDecoration(
           color: colorScheme.background,
           border: _flatBorder(colorScheme.input),
-          focusedBorder: _flatBorder(colorScheme.ring),
+          focusedBorder: _flatBorder(colorScheme.ring, width: 1.4),
+        ),
+      ),
+      // TASK-34 (p3): el checkbox del prototipo mide 18 px exactos — sin la
+      // reserva de 2 px por lado del anillo default.
+      checkboxTheme: ShadCheckboxTheme(
+        decoration: ShadDecoration(
+          border: _flatBorder(colorScheme.input),
+          focusedBorder: _flatBorder(colorScheme.ring, width: 1.4),
         ),
       ),
       sheetTheme: ShadSheetTheme(

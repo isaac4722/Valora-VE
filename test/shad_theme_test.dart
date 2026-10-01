@@ -27,7 +27,8 @@ void main() {
       expect(s.popover, VeColors.cardLight);
       expect(s.popoverForeground, VeColors.fgLight);
       expect(s.primary, VeColors.primaryLight);
-      expect(s.primaryForeground, Colors.white);
+      // TASK-34 · p2: primario invertido del prototipo (bg fg / texto bg).
+      expect(s.primaryForeground, VeColors.bgLight);
       expect(s.secondary, VeColors.mutedLight);
       expect(s.secondaryForeground, VeColors.fgLight);
       expect(s.muted, VeColors.mutedLight);
@@ -37,7 +38,8 @@ void main() {
       expect(s.destructive, VeColors.destructiveLight);
       expect(s.destructiveForeground, Colors.white);
       expect(s.border, VeColors.borderLight);
-      expect(s.input, VeColors.borderLight);
+      // TASK-34 · p2: los controles vivos usan --line-strong del prototipo.
+      expect(s.input, VeColors.lineStrongLight);
       expect(s.ring, VeColors.primaryLight);
     });
 
@@ -50,7 +52,8 @@ void main() {
       expect(s.popover, VeColors.cardDark);
       expect(s.popoverForeground, VeColors.fgDark);
       expect(s.primary, VeColors.primaryDark);
-      expect(s.primaryForeground, VeColors.onPrimaryDark);
+      // TASK-34 · p2: primario invertido (texto bg en grafito).
+      expect(s.primaryForeground, VeColors.bgDark);
       expect(s.secondary, VeColors.mutedDark);
       expect(s.secondaryForeground, VeColors.fgDark);
       expect(s.muted, VeColors.mutedDark);
@@ -60,7 +63,7 @@ void main() {
       expect(s.destructive, VeColors.destructiveDark);
       expect(s.destructiveForeground, VeColors.onPrimaryDark);
       expect(s.border, VeColors.borderDark);
-      expect(s.input, VeColors.borderDark);
+      expect(s.input, VeColors.lineStrongDark);
       expect(s.ring, VeColors.primaryDark);
     });
   });

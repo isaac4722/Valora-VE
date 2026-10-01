@@ -23,6 +23,11 @@ import '../core/theme.dart';
 /// importaba desde ui.dart.
 export '../core/theme.dart' show kEaseVe;
 
+/// Kit «Ve» del prototipo web (TASK-34): controles, composición y gráficos
+/// sobre shadcn_ui. Re-exportado aquí para que las pantallas sigan
+/// importando un solo archivo (contrato §8: ui.dart es el hub del diseño).
+export 've/ve.dart';
+
 const Duration kTapDur = Duration(milliseconds: 120);
 const Duration kStateDur = Duration(milliseconds: 200);
 const Duration kLayoutDur = Duration(milliseconds: 300);
