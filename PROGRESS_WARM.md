@@ -1,15 +1,16 @@
-# progress_warm.md · WARM — últimos ~10 turnos cerrados
+# PROGRESS_WARM.md · WARM — últimos ~10 turnos cerrados
 
 Una línea por pieza (`fecha · estado · pieza · gate · route`). Al cerrar un
 turno, sus líneas bajan del hot (`PROGRESS.md`) hasta aquí; si esto supera
-10 entradas, la más vieja baja a `progress_archive.md`. Solo se AÑADE.
+10 entradas, la más vieja baja a `PROGRESS_COLD.md`. Solo se AÑADE.
 
-2026-09-24 · DONE · TASK-31 rebuild en rama safe: pub get + analyze 0 + test 196/196 + quality_gate VERDE · gate verde · 5_CONTROL
-2026-09-24 · BLOCKED · TASK-31 npx skills add sin red ×2 → skills-lock.json sin refrescar (61 skills vendidas intactas; hashes del lock viejos) · n/a · 9_CLOSE
-2026-09-24 · DONE · TASK-31 CI+Build verde sobre da1e2d9 en rama safe (4 APK + AAB + ZIP) · CI success · 9_CLOSE
-2026-09-24 · DONE · TASK-32 skills 10/10 activas (rtk reinstall + init, caveman, ui-nice, vlm, frontend-design, mobile-design, humanizer, a11y, testing, taste) · n/a · 3_IMPLEMENT
-2026-09-24 · DONE · TASK-32 auditoría visual 1:1 web local privada (14 capturas, claro+grafito, sin preview del dueño) · gate n/a · 3.5_VISUAL_GATE
-2026-09-24 · DONE · TASK-32 fix notificaciones 2º plano: engine.drain() + flushNotifications() + worker determinista + test · test 199/199 · 4_AUDIT
-2026-09-24 · DONE · TASK-32 UI premium: onboarding centrado + héroe sin categoría duplicada + placeholder presupuesto + App Widgets web-off · gate VERDE · 5_CONTROL
-2026-09-24 · DONE · TASK-32 v1.9.10-beta+28 · visible 19.10 + CHANGELOG + TESTING.md base 199 · n/a · 7_PERSIST
-2026-09-24 · DONE · TASK-32 CI+Build verde sobre d373684 en rama safe · CI success · 9_CLOSE
+2026-10-01 · DONE · TASK-33 p7 · Ajustes: ThemePreviewRow (selector Claro/Grafito/Sistema con mocks de tokens reales, patrón Vercel/Linear) · fix overflow 320px (mock Stack + label flexible) · visual gate VLM APTO · gate VERDE 213/213 · 7_PERSIST
+2026-10-01 · DONE · TASK-34 p2 tema: tokens EXACTOS del prototipo en theme.dart (zinc :root/.dark, line-strong, faint, pos/neg/warn/info-bg en VeInk, primario tinta invertida fg→bg) · gate analyze 0 · 213/213 · 3_IMPLEMENT
+2026-10-01 · DONE · TASK-34 p3 kit Ve: lib/widgets/ve (controls+compose+charts) sobre shadcn_ui real — ShadButton.raw/Badge/Switch/Checkbox/Input/Select con medidas EXACTAS 28/36/44·32×18 (bordes flush sin reserva), VeSegmented deslizante, VeAreaChart con crosshair, VeDonut/VeBars/VeHeatmap, showVeSheet móvil/modal, VeAmbient, JetBrainsMono · gate analyze 0 · 230/230 · 3_IMPLEMENT
+2026-10-01 · DONE · TASK-34 p4 shell: sidebar 224px escritorio (marca+⌘K+nav+Libro+pie de tasas en vivo) + tabs móviles planos del prototipo + FAB búsqueda + VeAmbient de fondo; FIX CRÍTICO main.dart → ShadApp.custom+MaterialApp.router (el tipo default montaba WidgetsApp SIN ScaffoldMessenger: toasts rotos) · gate analyze 0 · 230/230 · VLM 6/6 APROBADO · 3_IMPLEMENT
+2026-10-01 · DONE · TASK-34 p5-8 pantallas: Inicio (cabecera campana/búsqueda/ajustes + chispa de serie + badges tono), Conversor (display+chips+referencias Ve), Lista (presupuesto con barra tinta/warn/neg + filas checkbox/stepper + sticky checkout), Productos (chips categoría + sparkline + badge estado + ficha sheet wide) · fixes overflow 390px (Wrap compartir, Flexible cartText) · gate analyze 0 · 233/233 · VLM lista/conversor APROBADO · 9_CLOSE
+2026-10-01 · DONE · TASK-34 p12 cierre: v1.10.0-beta+30 · visible 20.0 + CHANGELOG rotado + fixes VLM (hint corto) · PENDIENTE próximo turno: p9-11 (Análisis/Historial/Tickets/Ajustes/Bienvenida), push+Actions y borrado safe/docs-news (requieren PAT del dueño) · gate analyze 0 · 233/233 · 9_CLOSE
+2026-10-02 · DONE · TASK-34 p9: Historial reescrito al prototipo (VeTitle contador, chips periodo legibles, filas en VeGroup→ficha en showVeSheet con cifra 32px/multitienda/ticket→visor 8×, paginador Ve, export en VeStickyBar) + Análisis con cromática Ve (PanelCard/KpiTile→superficie shad, anclas segmentadas Ve con píldora activa, chips rango, VeEyebrow; 6 anclas+trackball intactos) · gate analyze 0 · 230/230 · 3_IMPLEMENT
+2026-10-02 · DONE · TASK-34 p10: Tickets del prototipo (grilla 4:3 2/3 cols, borde hover line-strong, VeEmpty) con MEJORA real: tile punteado «Agregar» adjunta foto a compra existente (picker→cámara→1024px) + Ajustes al lenguaje Ve (_VeSettingsCard con Material transparente, 11 Cards, SectionTitle→VeEyebrow, ChipTag→píldora Ve 28px) · gate analyze 0 · 230/230 (fix host Material) · 3_IMPLEMENT
+2026-10-02 · DONE · TASK-34 p11: Bienvenida (logo rombo+tinta CustomPaint, VeBtn ghost/primario, bullets/tarjeta VeCard, chips país píldora) + Paleta ⌘K cromática exacta (card/line-strong/r14, filas hover accent, pie navegar·ejecutar·N resultados) + Sala (VePanelCard público ×12, PageHeader→VeTitle) · tests room/push/palette al host ShadApp.custom de producción · gate analyze 0 · 230/230 · 3_IMPLEMENT
+2026-10-02 · DONE · TASK-34 p12 cierre: v1.11.0-beta+31 visible 20.1 + CHANGELOG rotado; push 6dc94f4→(p9-11) a origin con PAT del dueño (Build #167 verde: 4 APK+AAB+ZIP) y borrado de safe/docs-news pendiente en este paso · gate analyze 0 · 230/230 · 9_CLOSE

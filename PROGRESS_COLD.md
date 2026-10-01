@@ -1,4 +1,4 @@
-# progress_archive.md · COLD — historial comprimido por hito
+# PROGRESS_COLD.md · COLD — historial comprimido por hito
 
 Solo hechos, una línea por pieza (`fecha · estado · pieza · gate · route`).
 Detalle completo de cada turno: `git log` + `CHANGELOG.md` + el
@@ -54,3 +54,23 @@ Solo se AÑADE; prohibido reescribir entradas.
 2026-09-23 · DONE · TASK-30 contrato+docs+bitácora+skills+gate completos · CI+Build verde sobre 4e69f13 (4 APK + AAB + ZIP + símbolos) · FIN
 2026-09-24 · DONE · TASK-31 rama remota renombrada safe/v1.1.0-dp4-paridad (antes fix/…; orden dueño: red de seguridad) + refs vigentes (GIT_WORKFLOW, FLUTLAB, ci.yml, build.yml) · n/a · 7_PERSIST
 2026-09-24 · DONE · TASK-31 skills del contrato 10/10 en .agents/skills + rtk 0.50.0 instalado (init --global) + SKILL.md leídos (rtk, caveman) + comandos vía rtk · n/a · 7_PERSIST
+2026-09-24 · DONE · TASK-31 rebuild en rama safe: pub get + analyze 0 + test 196/196 + quality_gate VERDE · gate verde · 5_CONTROL
+2026-09-24 · BLOCKED · TASK-31 npx skills add sin red ×2 → skills-lock.json sin refrescar (61 skills vendidas intactas; hashes del lock viejos) · n/a · 9_CLOSE
+2026-09-24 · DONE · TASK-31 CI+Build verde sobre da1e2d9 en rama safe (4 APK + AAB + ZIP) · CI success · 9_CLOSE
+2026-09-24 · DONE · TASK-32 skills 10/10 activas (rtk reinstall + init, caveman, ui-nice, vlm, frontend-design, mobile-design, humanizer, a11y, testing, taste) · n/a · 3_IMPLEMENT
+2026-09-24 · DONE · TASK-32 auditoría visual 1:1 web local privada (14 capturas, claro+grafito, sin preview del dueño) · gate n/a · 3.5_VISUAL_GATE
+2026-09-24 · DONE · TASK-32 fix notificaciones 2º plano: engine.drain() + flushNotifications() + worker determinista + test · test 199/199 · 4_AUDIT
+2026-09-24 · DONE · TASK-32 UI premium: onboarding centrado + héroe sin categoría duplicada + placeholder presupuesto + App Widgets web-off · gate VERDE · 5_CONTROL
+2026-09-24 · DONE · TASK-32 v1.9.10-beta+28 · visible 19.10 + CHANGELOG + TESTING.md base 199 · n/a · 7_PERSIST
+2026-09-24 · DONE · TASK-32 CI+Build verde sobre d373684 en rama safe · CI success · 9_CLOSE
+
+## Hito 2026-10-01/02 · TASK-33 → TASK-34 (GUI Linear/Vercel → prototipo web)
+
+2026-10-01 · DONE · TASK-33 p1 · fundaciones shadcn_ui 0.57.1 + ShadThemeVe (tokens VeColors exactos L/D, orden dueño: GUI nueva Linear/Vercel) · gate VERDE analyze 0 + 207/207 · 7_PERSIST
+2026-10-01 · DONE · TASK-33 p2 · shell Linear/Vercel: header 52px fantasma + nav pill Lucide + command palette ⌘K (sustituye búsqueda global) + atajo Ctrl/⌘K · visual gate VLM 4 capturas APTO · gate VERDE analyze 0 + 213/213 · 7_PERSIST
+2026-10-01 · DONE · TASK-33 p3 · restyle Linear de ui.dart (Stamp/ChipTag/SectionTitle/PageHeader/LedgerRow/Estados/StatCard/ReadWindow, API intacta) + radios coherentes theme.dart (card 10·ctrl 8) · visual gate VLM APTO · gate VERDE 213/213 · 7_PERSIST
+2026-10-01 · DONE · TASK-33 p4 · Inicio Linear: héroe rótulo caps mute + cifra protagonista + icon-btn copiar r8 + badges brecha/vsAyer rectangulares + tool tiles con cajita muted · visual gate VLM APTO (home con datos) · gate VERDE 213/213 · 7_PERSIST
+2026-10-01 · DONE · TASK-33 p5 · Conversor+Lista Linear: CurrencySelect trigger outline+check (patrón shadcn Select), RateBadge/_FuenteChip planos · fix harness visual (host observa ThemeController — capturas oscuras ahora reales) · visual gate VLM APTO · gate VERDE 213/213 · 7_PERSIST
+2026-10-01 · DONE · TASK-33 p6 · Productos/Análisis/Historial: radios 10, seat labelCaps 10 + tienda w700 · visual gate VLM (falso positivo de contraste desmentido con WCAG real 6.49-14.55:1) APTO · gate VERDE 213/213 · 7_PERSIST
+2026-10-01 · DONE · TASK-34 abre turno — GUI prototipo web → Flutter shadcn_ui superior + migración docs safe/docs-news · gate n/a · 2_PLAN
+2026-10-01 · DONE · TASK-34 p1 docs: 4 .md de safe/docs-news (CHANGELOG_COLD/WARM + PROGRESS_COLD/WARM) + nota CHANGELOGs en AGENT.md + LICENSE sin legislación (intención del dueño 0adc35c) · gate n/a · 3_IMPLEMENT

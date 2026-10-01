@@ -1,22 +1,302 @@
 {
   "version": 1,
   "skills": {
+    "brandkit": {
+      "source": "./.agents/skills/brandkit",
+      "sourceType": "local",
+      "computedHash": "b63012f3c3d21197e0185d3e9cc7ec40c589fb10e0b5a32a561739de31aa3f20"
+    },
+    "brutalist-skill": {
+      "source": "./.agents/skills/brutalist-skill",
+      "sourceType": "local",
+      "computedHash": "8fc355c4aadb7d29c53ca28bc41be3cd6eea765d121e3737c4dc2d0f90a8effa"
+    },
+    "caveman": {
+      "source": "./.agents/skills/caveman",
+      "sourceType": "local",
+      "computedHash": "fa7c0951349ae3782a20e55c6d1e72e4c23585b7932bb5e021c17c4f8f055a07"
+    },
+    "dart-concurrency": {
+      "source": "./.agents/skills/dart-concurrency",
+      "sourceType": "local",
+      "computedHash": "cd8b98482247bc46724fd3b0ff977dc112a64ac94d92f99869a68e1519032b5a"
+    },
+    "dart-language": {
+      "source": "./.agents/skills/dart-language",
+      "sourceType": "local",
+      "computedHash": "3ffec8acffaf9ff1f006b1772b9ae864e87a6f997353deb2ff065f376495fdf7"
+    },
+    "flutter": {
+      "source": "./.agents/skills/flutter",
+      "sourceType": "local",
+      "computedHash": "ed11dfbbb55c677afc622169795e9b6e497d5739ba684e1bc92abcb6a6b287ca"
+    },
+    "flutter-accessibility": {
+      "source": "./.agents/skills/flutter-accessibility",
+      "sourceType": "local",
+      "computedHash": "77ac987235348020265039ae5afeefcea374e729a6f9e3a565fc54dac32d6b8a"
+    },
+    "flutter-ai-integration": {
+      "source": "./.agents/skills/flutter-ai-integration",
+      "sourceType": "local",
+      "computedHash": "23ce38a26e0482fa5144e9206ebf05e323603d34cd4e6fbea7ffd865becc4111"
+    },
+    "flutter-animation": {
+      "source": "./.agents/skills/flutter-animation",
+      "sourceType": "local",
+      "computedHash": "297773346ad1f34dc67dd49451ebf13bdf155f9ab508f3600d477c41228e7954"
+    },
+    "flutter-app-workflow": {
+      "source": "./.agents/skills/flutter-app-workflow",
+      "sourceType": "local",
+      "computedHash": "5669afb75bdadb8530c9cfb5d10c545f12bd5d65caf0826629ead027ff166d74"
+    },
+    "flutter-architecture": {
+      "source": "./.agents/skills/flutter-architecture",
+      "sourceType": "local",
+      "computedHash": "55502df8887d61d48a3540977750254b8125131d564b3715bc42d4b0fb942a30"
+    },
+    "flutter-authentication": {
+      "source": "./.agents/skills/flutter-authentication",
+      "sourceType": "local",
+      "computedHash": "9cf88ce3a393a6ce787118bcfa23e317d055e99a48f78c32fa2e41fd0031205a"
+    },
+    "flutter-background-execution": {
+      "source": "./.agents/skills/flutter-background-execution",
+      "sourceType": "local",
+      "computedHash": "330b80be9653edee1473ee6359993bcbdad71bea154f7ab4fa37cb8922351691"
+    },
+    "flutter-build-release": {
+      "source": "./.agents/skills/flutter-build-release",
+      "sourceType": "local",
+      "computedHash": "a92ff12fb8c443132684d1ffd3c67c70a36afb96d3c383311c40095e1f62a275"
+    },
+    "flutter-ci-cd": {
+      "source": "./.agents/skills/flutter-ci-cd",
+      "sourceType": "local",
+      "computedHash": "4ab2797514b51159a3077a953d3259940953fd4ad9afb077b5ad2ea6773aaf6c"
+    },
+    "flutter-code-review": {
+      "source": "./.agents/skills/flutter-code-review",
+      "sourceType": "local",
+      "computedHash": "0b513117f798973c4a1f5268781ee5e25b016d786cc922ea94b4e37f58eb9c62"
+    },
+    "flutter-dependency-upgrades": {
+      "source": "./.agents/skills/flutter-dependency-upgrades",
+      "sourceType": "local",
+      "computedHash": "6c30fca060b7adf4aa8b47d33b841c3d144f8cd8dd576b1bacc8ff85428bf880"
+    },
+    "flutter-device-testing": {
+      "source": "./.agents/skills/flutter-device-testing",
+      "sourceType": "local",
+      "computedHash": "2df3c9528231ccd82379f7842d72c2797a9679bcaa6212376117cd8ee648f711"
+    },
+    "flutter-figma-workflow": {
+      "source": "./.agents/skills/flutter-figma-workflow",
+      "sourceType": "local",
+      "computedHash": "c9319ac8bc501398cad6b4ee086bf55bd53dca8fc4c1d92c4dc4cbb0c6d9651a"
+    },
     "flutter-frontend-design": {
       "source": "syeduzaif/flutter-frontend-design",
       "sourceType": "github",
       "skillPath": "SKILL.md",
       "computedHash": "72526a8023dfd86cadfa5353c4b85aecc33998d8855a4b30e3c8ca18e2048ede"
     },
+    "flutter-in-app-purchases": {
+      "source": "./.agents/skills/flutter-in-app-purchases",
+      "sourceType": "local",
+      "computedHash": "c79c50e31d87890187448885b3462433fe5dfec66b9f6614fe2a3e670b0e77ba"
+    },
+    "flutter-localization": {
+      "source": "./.agents/skills/flutter-localization",
+      "sourceType": "local",
+      "computedHash": "b5d2c7d84387aef4e49d4a50a89be0d1d4d95b77e63d1b27cdcf3566f6568a63"
+    },
+    "flutter-navigation": {
+      "source": "./.agents/skills/flutter-navigation",
+      "sourceType": "local",
+      "computedHash": "6dc5d96d49e9e03b9a3745601e4a10c09880a18d4e4112c2b005824f91fa39c2"
+    },
+    "flutter-networking": {
+      "source": "./.agents/skills/flutter-networking",
+      "sourceType": "local",
+      "computedHash": "af055834ff7c621a321e53ca3830c9e1d52e893cf1c652f9859aa8c131f3f8d3"
+    },
+    "flutter-notifications": {
+      "source": "./.agents/skills/flutter-notifications",
+      "sourceType": "local",
+      "computedHash": "8b952c2ad37dc4d6e1174aed302afd008280669ab6413903fd71929bc446deb0"
+    },
+    "flutter-observability": {
+      "source": "./.agents/skills/flutter-observability",
+      "sourceType": "local",
+      "computedHash": "b0f0619d9af32162209a04e26f79b8848c2d4ab51956a7b5503d4ac7cd05034c"
+    },
+    "flutter-openapi-client": {
+      "source": "./.agents/skills/flutter-openapi-client",
+      "sourceType": "local",
+      "computedHash": "8845da9fd3dd8c7c35b59dc34fa5bae1f33ab330b7a61946505ea4d81a4ad5e4"
+    },
+    "flutter-package-development": {
+      "source": "./.agents/skills/flutter-package-development",
+      "sourceType": "local",
+      "computedHash": "a76c2e626ea0ec1a5941679f4a83e1d5a56bdd653801cbb80f8120e933bce583"
+    },
+    "flutter-performance": {
+      "source": "./.agents/skills/flutter-performance",
+      "sourceType": "local",
+      "computedHash": "1ec01509c35e9e699ef690e437c689f7a8b0c73cf6419f8d0a3d5d3d98fbb4d5"
+    },
+    "flutter-persistence": {
+      "source": "./.agents/skills/flutter-persistence",
+      "sourceType": "local",
+      "computedHash": "9c2455807d95a40b9c7c9dba64c373ba5a235acc578c66ef59ae86698fb0eda8"
+    },
+    "flutter-platform-integration": {
+      "source": "./.agents/skills/flutter-platform-integration",
+      "sourceType": "local",
+      "computedHash": "d1ea790664da7c5c36d7015a022fc19dbf4207abad34bd1b09cb01dd91ece591"
+    },
+    "flutter-product-analytics": {
+      "source": "./.agents/skills/flutter-product-analytics",
+      "sourceType": "local",
+      "computedHash": "49007489b87ae07fc7348451cdd0c260596f8760c9f170f9c3ae3a76d7411d20"
+    },
+    "flutter-project-creater": {
+      "source": "./.agents/skills/flutter-project-creater",
+      "sourceType": "local",
+      "computedHash": "33b0ff8efbf4443dbe3c3fa846cf795c9084d2bac5aaa1549288ed6d7ad31cc7"
+    },
+    "flutter-responsive-layout": {
+      "source": "./.agents/skills/flutter-responsive-layout",
+      "sourceType": "local",
+      "computedHash": "fe75b4b212a3aa3db58610b4b41c6ed136115498888749760d4f60f54cb86a51"
+    },
+    "flutter-runtime-debugging": {
+      "source": "./.agents/skills/flutter-runtime-debugging",
+      "sourceType": "local",
+      "computedHash": "2bd3d6df573bb5c46a18c628106600e1268c127cbb70fd015decf4c7346503d2"
+    },
+    "flutter-security": {
+      "source": "./.agents/skills/flutter-security",
+      "sourceType": "local",
+      "computedHash": "263e5f96755239e920f1584e0cf4452ab1e3f1f390c8a46bb76025f36f47f306"
+    },
+    "flutter-state-management": {
+      "source": "./.agents/skills/flutter-state-management",
+      "sourceType": "local",
+      "computedHash": "a2ec60f59f82ac3ba721f10efa1af88feed89689cde96275414faa75659685bf"
+    },
+    "flutter-testing": {
+      "source": "./.agents/skills/flutter-testing",
+      "sourceType": "local",
+      "computedHash": "436f4f4d53c6e3aacf6e02379597bec93a4492907a4235a95357d4a8471caad9"
+    },
+    "flutter-text-rendering": {
+      "source": "./.agents/skills/flutter-text-rendering",
+      "sourceType": "local",
+      "computedHash": "b9b190938e04506902d33a891532de2e7875b74a4779bfe237321c1d062c233d"
+    },
+    "flutter-ui-design": {
+      "source": "./.agents/skills/flutter-ui-design",
+      "sourceType": "local",
+      "computedHash": "9712b55046da3eedd93a89084b7e7d1b7309d41d1d996da767f2f6142b71b581"
+    },
+    "flutter-ui-patterns": {
+      "source": "./.agents/skills/flutter-ui-patterns",
+      "sourceType": "local",
+      "computedHash": "e841f48e0b41412f120dbbbd4ace918ae1f7b4398e0dca7931bbaa28bff2dc47"
+    },
+    "flutter-visual-effects": {
+      "source": "./.agents/skills/flutter-visual-effects",
+      "sourceType": "local",
+      "computedHash": "e3f91a707241b7f4dd6f7d8610ad3af81987d0523317255457199c278ae4a834"
+    },
+    "flutter-webview": {
+      "source": "./.agents/skills/flutter-webview",
+      "sourceType": "local",
+      "computedHash": "80afd21eac3e381b024b68a148aa9082ec3e11850a01074b1f2cd0d042851af5"
+    },
+    "gpt-tasteskill": {
+      "source": "./.agents/skills/gpt-tasteskill",
+      "sourceType": "local",
+      "computedHash": "cc8f0c601d8240a124e1d11634351a2be7b8a72fd807c75e5b6bf7afcd5ddee0"
+    },
     "humanizer": {
       "source": "./.agents/skills/humanizer",
       "sourceType": "local",
       "computedHash": "d70628be4fc857bbc92e94b7397e715e986d13d61663d3a0bfd7f93a5a9d2527"
+    },
+    "image-to-code-skill": {
+      "source": "./.agents/skills/image-to-code-skill",
+      "sourceType": "local",
+      "computedHash": "58517b03b2a01f4c9ba65861559d03df931400871bbc200978c975b24bb92c73"
+    },
+    "imagegen-frontend-mobile": {
+      "source": "./.agents/skills/imagegen-frontend-mobile",
+      "sourceType": "local",
+      "computedHash": "9ab7f4f6ce66a3cff02bbf5894e5bd5af50bf5d6ef0adffdc88e8fab772fe44f"
+    },
+    "imagegen-frontend-web": {
+      "source": "./.agents/skills/imagegen-frontend-web",
+      "sourceType": "local",
+      "computedHash": "65f5ae59fa317567809438310b1c54f78cd133426deb43e4d3d4ca4c8f541628"
+    },
+    "minimalist-skill": {
+      "source": "./.agents/skills/minimalist-skill",
+      "sourceType": "local",
+      "computedHash": "08873a3131d3be27bef9bf3304b310b16b44ca6e3561aebe532797be3443f6bd"
     },
     "mobile-design": {
       "source": "sickn33/agentic-awesome-skills",
       "sourceType": "github",
       "skillPath": "skills/mobile-design/SKILL.md",
       "computedHash": "f66841ab7e6e5f26f91d78d722955bd05caa3af6b8c88c3396a7ab1f1b352afb"
+    },
+    "output-skill": {
+      "source": "./.agents/skills/output-skill",
+      "sourceType": "local",
+      "computedHash": "26bd29ce4c5e02c7666b2d503609bf466bd32290822e91f0e984147048dbb924"
+    },
+    "redesign-skill": {
+      "source": "./.agents/skills/redesign-skill",
+      "sourceType": "local",
+      "computedHash": "b405eee0e0e80fc243f731d9aa368bca307e356db7e6157d27101d369dac6726"
+    },
+    "rtk": {
+      "source": "./.agents/skills/rtk",
+      "sourceType": "local",
+      "computedHash": "332bd3c1b55a05a3ebb2be42a0bdb97e7454ac2707ccea907e79750eadb9cb7d"
+    },
+    "soft-skill": {
+      "source": "./.agents/skills/soft-skill",
+      "sourceType": "local",
+      "computedHash": "7db385e4c5370e5a7fca9704a1361b056e4504ea6a03924bb86f33a4f00b5c73"
+    },
+    "stitch-skill": {
+      "source": "./.agents/skills/stitch-skill",
+      "sourceType": "local",
+      "computedHash": "13322f38406cd3abf16ba45e35bdc9b18002d0153a79b4612b97aefc65d5a335"
+    },
+    "taste-skill": {
+      "source": "./.agents/skills/taste-skill",
+      "sourceType": "local",
+      "computedHash": "6d838b246d0e35d0b53f4f23f98ba7a1dd561937e64f7d0c7553b0928e376c3e"
+    },
+    "taste-skill-v1": {
+      "source": "./.agents/skills/taste-skill-v1",
+      "sourceType": "local",
+      "computedHash": "d704ab912c4d0ca954ffa858983da755ae4cd5cad9ba22554db5557382f5bd34"
+    },
+    "ui-nice-skill": {
+      "source": "./.agents/skills/ui-nice-skill",
+      "sourceType": "local",
+      "computedHash": "dbedeecf912664b6dc4f836e9e94a5c5a28ef612ae4b9b1a24314286069420c4"
+    },
+    "vlm": {
+      "source": "./.agents/skills/vlm",
+      "sourceType": "local",
+      "computedHash": "e489fc8e0d048e3af546367cb11ed34040661e75ed89c0c23bc38f027344a93b"
     }
   }
 }
