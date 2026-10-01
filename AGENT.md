@@ -87,6 +87,10 @@ El registro vive en tres archivos. **Nunca reescribir entradas previas: solo añ
 | `progress_warm.md` | **Warm** | Últimos ~10 turnos cerrados. | ≤10 entradas |
 | `progress_archive.md` | **Cold** | Todo lo anterior, comprimido por mes o hito. | Sin límite |
 
+Nota: la rotación de tres niveles también aplica a los CHANGELOGs
+(`CHANGELOG.md` hot · `CHANGELOG_WARM.md` warm · `CHANGELOG_COLD.md`
+cold), con los archivos fríos preservados como historial.
+
 **Formato de línea (obligatorio, una línea por pieza):**
 ```
 YYYY-MM-DD · <estado> · <pieza> · <gate> · <route>
