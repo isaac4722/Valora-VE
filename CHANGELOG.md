@@ -1,6 +1,41 @@
 # Changelog
 
 
+## 1.12.0-beta+32 · v20.2 — Verificación visual web/VLM + auditoría 390 (TASK-35 · p5)
+
+- **Auditoría de rutas a 390 px con notch y fuentes REALES**: nuevo test
+  que recorre las 10 rutas (`/`·`/conversor`·`/lista`·`/productos`·
+  `/analisis`·`/historial`·`/ajustes`·`/tickets`·`/sala`·`/legal`) a
+  390×844 con insets físicos de notch (59/34 lógicos) cargando las fuentes
+  Inter/SpaceGrotesk/JetBrainsMono del asset (Ahem mide cada glifo al
+  ancho del fontSize y fabricaba overflows falsos). Cualquier RenderFlex
+  overflow o excepción de layout revienta en CI, no en el teléfono del
+  dueño. La bienvenida se audita además a 320 px (el más estrecho).
+- **Conversor (fix auditado)**: los chips de ajuste rápido (±10 % · ±100)
+  ahora LLENAN su celda (`VeChip.expands`) — alineados siempre, sin Wrap
+  que los reordene; a 390 con fuente real la etiqueta «−10 %» no desborda.
+- **Historial (fix doble, hallado por la auditoría)**: los botones de
+  export de la barra pegadiza vuelven al prototipo (Btn lg flex-1 SOLO
+  texto, sin icono: a 390 icono+«CSV movimientos» desbordaba 1.4 px el
+  Row interno del botón) y se elimina el `Expanded` manual que duplicaba
+  el que `VeStickyBar` ya pone a cada hijo (ParentData conflictivo
+  detectado por la auditoría al navegar a `/historial`).
+- **Sala · lobby (fix visual)**: las descripciones de los 4 modos de
+  conexión (Cerca · WiFi o Hotspot · Bluetooth · Servidor) ahora muestran
+  el texto completo en 3 líneas — antes quedaban «Sin configurar…»
+  «el Hot…» «los tel…» «la URL d…» truncados con elipsis a 390 px.
+- **Sala · hoja Unirse (fix de paso vivo)**: «Paso X de 3» vuelve a la
+  cuenta del prototipo (1 + nombre + código): arranca en 1 (o 2 si el
+  nombre viene pre-llenado) en vez de clavar 3, y avanza al dializar las
+  ruedas del código — la barra de progreso acompaña (33 % → 66 % → 100 %).
+- **Verificación visual con compilación web + VLM (nueva etapa del
+  flujo)**: `flutter build web --release` servido en puerto interno +
+  recorrido por las 10 pantallas y los sheets (centro de avisos, hoja de
+  Unirse) con análisis VLM: techo de sheets respetado (avisos ~40 % de la
+  pantalla con fondo visible arriba; Unirse con borde superior a ~35-40 %),
+  toggle claro/oscuro funcional y persistido en ambos sentidos, Sala viva
+  completa (lobby + unirse por código de 6 ruedas + PIN de emojis).
+
 ## 1.11.0-beta+31 · v20.1 — GUI del prototipo en TODAS las pantallas (TASK-34 · p9–p11)
 
 - **Historial (p9) reescrito al prototipo**: título con contador vivo

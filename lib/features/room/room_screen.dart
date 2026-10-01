@@ -293,7 +293,14 @@ class _ModePicker extends StatelessWidget {
               for (final m in RoomMode.values)
                 VeRow(
                   label: Text(m.label),
-                  sub: Text('${m.tech} · ${m.hint}'),
+                  // tech·hint es LARGO (verificación visual 390: a 1 línea
+                  // quedaba «Sin configurar…» «el Hot…» «los tel…» «URL d…»).
+                  // 3 líneas explícitas: el texto completo cabe y respira.
+                  sub: Text(
+                    '${m.tech} · ${m.hint}',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   onTap: () => room.setMode(m),
                   right: room.mode == m
                       ? Icon(

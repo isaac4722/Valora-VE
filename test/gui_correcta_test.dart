@@ -8,6 +8,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle, FontLoader, ByteData;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,9 +24,35 @@ import 'package:valorave/state/app_state.dart';
 import 'package:valorave/widgets/app_router.dart';
 import 'package:valorave/widgets/app_tour.dart' show kTourDoneKey;
 import 'package:valorave/widgets/ve/ve.dart' show showVeSheet;
+import 'package:valorave/features/welcome/welcome_screen.dart';
+import 'package:valorave/room/room_controller.dart';
 
 Future<void> main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  // Fuentes REALES (no Ahem): Ahem mide cada glifo al ancho del fontSize y
+  // fabrica overflows falsos («−10 %» = 60 px en Ahem, ~34 en Inter). Con
+  // las fuentes del asset las medidas son las del teléfono de verdad.
+  Future<void> una(String family, List<Future<ByteData>> assets) async {
+    final loader = FontLoader(family);
+    for (final a in assets) {
+      loader.addFont(a);
+    }
+    await loader.load();
+  }
+
+  final root = rootBundle;
+  await una('Inter', [
+    root.load('assets/fonts/Inter-Regular.ttf'),
+    root.load('assets/fonts/Inter-Medium.ttf'),
+    root.load('assets/fonts/Inter-SemiBold.ttf'),
+    root.load('assets/fonts/Inter-Bold.ttf'),
+  ]);
+  await una('SpaceGrotesk', [
+    root.load('assets/fonts/SpaceGrotesk-Medium.ttf'),
+    root.load('assets/fonts/SpaceGrotesk-Bold.ttf'),
+  ]);
+  await una('JetBrainsMono', [root.load('assets/fonts/JetBrainsMono.ttf')]);
 
   Future<(AppStore, ThemeController, SharedPreferences)> prep() async {
     SharedPreferences.setMockInitialValues({kTourDoneKey: true});
@@ -226,6 +253,116 @@ Future<void> main() async {
       greaterThanOrEqualTo(844 - (844 - 59) * 0.88 - 1),
       reason: 'el techo del 88 % de la altura útil se respeta',
     );
+    await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('auditoría: TODAS las rutas sin overflow a 390 con notch', (
+    tester,
+  ) async {
+    // Recorre cada pantalla de la app a 390×844 con notch real: cualquier
+    // RenderFlex overflow o excepción de layout revienta AQUÍ, no en el
+    // teléfono del dueño.
+    const routes = <String>[
+      '/',
+      '/conversor',
+      '/lista',
+      '/productos',
+      '/analisis',
+      '/historial',
+      '/ajustes',
+      '/tickets',
+      '/sala',
+      '/legal',
+    ];
+    for (final path in routes) {
+      final (store, theme, prefs) = await prep();
+      tester.view
+        ..physicalSize = const Size(780, 1688)
+        ..devicePixelRatio = 2.0
+        ..padding = FakeViewPadding(top: 118, bottom: 68);
+      addTearDown(tester.view.reset);
+
+      final router = buildRouter(store: store);
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: store),
+            ChangeNotifierProvider<ThemeController>.value(value: theme),
+            ChangeNotifierProvider(
+              create: (_) => RatesPoller(
+                store,
+                NotificationsService(),
+                AlertEngine(prefs),
+              ),
+            ),
+            // v18.0 · Sala Viva: la Lista y /sala comparten el controlador
+            // de aplicación — sin él la auditoría no puede navegar a /lista.
+            ChangeNotifierProvider(create: (_) => RoomController(store)),
+            Provider<SharedPreferences>.value(value: prefs),
+          ],
+          child: ShadApp.custom(
+            theme: ShadThemeVe.light(),
+            darkTheme: ShadThemeVe.dark(),
+            appBuilder: (context) => MaterialApp.router(
+              theme: AppTheme.light(),
+              darkTheme: AppTheme.dark(),
+              routerConfig: router,
+            ),
+          ),
+        ),
+      );
+      debugPrint("RUTA-AUDIT: $path");
+      router.go(path);
+      await tester.pump();
+      // Bombeo largo: animaciones de entrada + settle de cada pantalla.
+      await tester.pump(const Duration(milliseconds: 600));
+      // Cualquier excepción de layout (overflow incluido) se atribuye a la
+      // ruta que la causó.
+      final exc = tester.takeException();
+      expect(exc, isNull, reason: 'la ruta $path no debe lanzar: $exc');
+      // Un widget visible cualquiera: la pantalla no quedó en blanco.
+      expect(find.byType(Scaffold), findsWidgets);
+      // Limpia el árbol antes de la siguiente ruta.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  });
+
+  testWidgets('bienvenida (sin onboard): completa sin overflow a 320', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final store = AppStore.withData(const AppData());
+    final theme = ThemeController();
+    tester.view
+      ..physicalSize = const Size(640, 1414) // 320×707: el más estrecho
+      ..devicePixelRatio = 2.0
+      ..padding = FakeViewPadding(top: 118, bottom: 68);
+    addTearDown(tester.view.reset);
+
+    final router = buildRouter(store: store);
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: store),
+          ChangeNotifierProvider<ThemeController>.value(value: theme),
+          Provider<SharedPreferences>.value(value: prefs),
+        ],
+        child: ShadApp.custom(
+          theme: ShadThemeVe.light(),
+          darkTheme: ShadThemeVe.dark(),
+          appBuilder: (context) => MaterialApp.router(
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            routerConfig: router,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.byType(WelcomeScreen), findsOneWidget);
     await tester.pump(const Duration(seconds: 2));
   });
 }

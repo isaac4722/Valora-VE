@@ -1049,18 +1049,18 @@ class _DualInput extends StatelessWidget {
           _resultadoRow(scheme),
           // REQ 6 · v18.0: ajustes rápidos al mismo ancho — 4 chips Expanded
           // (±10 % · ±100) siempre alineados, sin Wrap que los reordene.
+          // TASK-35 (p5 · fix overflow 390): el chip LLENA su celda.
           Padding(
             padding: const EdgeInsets.only(top: 10),
             child: Row(
               children: [
                 for (final adj in quickAdjustments)
                   Expanded(
-                    child: Center(
-                      child: VeChip(
-                        onTap: () =>
-                            onAdjust(adj.apply(_fromValueOf(result, plan))),
-                        child: Text(adj.label),
-                      ),
+                    child: VeChip(
+                      expands: true,
+                      onTap: () =>
+                          onAdjust(adj.apply(_fromValueOf(result, plan))),
+                      child: Text(adj.label),
                     ),
                   ),
               ],

@@ -379,12 +379,17 @@ class VeChip extends StatelessWidget {
     this.onTap,
     this.active = false,
     this.dashed = false,
+    this.expands = false,
   });
 
   final Widget child;
   final VoidCallback? onTap;
   final bool active;
   final bool dashed;
+
+  /// Ocupa todo el ancho disponible (fila de chips al mismo ancho — REQ 6
+  /// v18.0: «±10 % · ±100» alineados sin Wrap que los reordene).
+  final bool expands;
 
   @override
   Widget build(BuildContext context) {
@@ -401,6 +406,10 @@ class VeChip extends StatelessWidget {
       variant: ShadButtonVariant.ghost,
       onPressed: onTap,
       height: 28,
+      width: expands ? double.infinity : null,
+      mainAxisAlignment: expands
+          ? MainAxisAlignment.center
+          : MainAxisAlignment.start,
       padding: dashed
           ? EdgeInsets.zero
           : const EdgeInsets.symmetric(horizontal: 12),

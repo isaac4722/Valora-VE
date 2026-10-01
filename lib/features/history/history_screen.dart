@@ -298,22 +298,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
             right: 0,
             bottom: 0,
             child: VeStickyBar(
+              // Prototipo: Btn lg flex-1 SOLO texto (sin icono — a 390 px
+              // icono+etiqueta desbordaba 1.4 px el Row interno del botón).
+              // VeStickyBar YA envuelve a cada hijo en Expanded: fills=true
+              // extiende el botón dentro de su celda (ExpandED doble =
+              // ParentData conflictivo — lo que esta auditoría descubrió).
               children: [
-                Expanded(
-                  child: VeBtn(
-                    size: VeBtnSize.lg,
-                    icon: LucideIcons.table2,
-                    onPressed: () => _exportPurchases(context, filtered),
-                    child: const Text('CSV compras'),
-                  ),
+                VeBtn(
+                  size: VeBtnSize.lg,
+                  expands: true,
+                  onPressed: () => _exportPurchases(context, filtered),
+                  child: const Text('CSV compras'),
                 ),
-                Expanded(
-                  child: VeBtn(
-                    size: VeBtnSize.lg,
-                    icon: LucideIcons.listOrdered,
-                    onPressed: () => _exportMovements(context, store),
-                    child: const Text('CSV movimientos'),
-                  ),
+                VeBtn(
+                  size: VeBtnSize.lg,
+                  expands: true,
+                  onPressed: () => _exportMovements(context, store),
+                  child: const Text('CSV movimientos'),
                 ),
               ],
             ),

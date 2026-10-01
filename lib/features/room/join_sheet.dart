@@ -57,6 +57,11 @@ class _JoinSheetState extends State<_JoinSheet> {
   String? _busyError;
   bool _connecting = false;
   bool _customName = false;
+  // ¿El usuario marcó el código? Las ruedas nacen en «AAAAAA» (código VÁLIDO
+  // desde el inicio, a diferencia del prototipo donde code nace vacío): el
+  // paso 3 se cuenta cuando el código fue MARCADO a mano o llega pre-llenado
+  // por invite/anuncio — así «Paso X de 3» arranca en 1 como el prototipo.
+  bool _codeTouched = false;
 
   String get _word => String.fromCharCodes(
     _codeIdx.map((i) => _kAlphabet.codeUnitAt(i)),
@@ -68,6 +73,7 @@ class _JoinSheetState extends State<_JoinSheet> {
     final room = context.read<RoomController>();
     _nameCtrl = TextEditingController(text: room.myName);
     final preset = widget.invite?.code ?? widget.ad?.code ?? '';
+    _codeTouched = preset.length == 6;
     _codeIdx = [
       for (var i = 0; i < 6; i++)
         _kAlphabet.indexOf(preset.length > i ? preset[i] : 'A').clamp(0, 31),
@@ -121,10 +127,14 @@ class _JoinSheetState extends State<_JoinSheet> {
       (!_askPin || _pin.characters.length == kPinLength);
 
   /// Paso vivo (como el prototipo): 1 conexión · 2 nombre · 3 código.
-  int get _step => 1 + (_nameCtrl.text.trim().isNotEmpty ? 1 : 0) + 1;
+  /// El prototipo cuenta 1 + nombre + código; aquí el código cuenta cuando
+  /// fue dializado (las ruedas nacen llenas) — «Paso 1 de 3» al abrir.
+  int get _step =>
+      1 + (_nameCtrl.text.trim().isNotEmpty ? 1 : 0) + (_codeTouched ? 1 : 0);
 
   void _bump(int col, int delta) {
     setState(() {
+      _codeTouched = true;
       _codeIdx[col] = (_codeIdx[col] + delta + _kAlphabet.length) %
           _kAlphabet.length;
     });
