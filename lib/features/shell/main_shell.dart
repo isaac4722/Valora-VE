@@ -113,8 +113,6 @@ void toggleVeTheme(BuildContext context) {
 
 /// Rutas con búsqueda propia donde el FAB móvil NO aparece (como el
 /// prototipo: lista · productos · análisis · historial).
-const Set<int> _fabHiddenBranches = {2, 3, 4, 5};
-
 class MainShell extends StatelessWidget {
   const MainShell({super.key, required this.navigationShell});
 
@@ -185,23 +183,10 @@ class MainShell extends StatelessWidget {
         ),
         if (current == 0) _HomeTicker(),
         const _TourTrigger(),
-        Expanded(
-          child: wide
-              ? navigationShell
-              : Stack(
-                  children: [
-                    Positioned.fill(child: navigationShell),
-                    // FAB de búsqueda móvil (prototipo): fg invertido, 44 px,
-                    // oculto en pantallas con búsqueda propia.
-                    if (!_fabHiddenBranches.contains(current))
-                      Positioned(
-                        right: 16,
-                        bottom: 16,
-                        child: _SearchFab(onTap: () => showCommandPalette(context)),
-                      ),
-                  ],
-                ),
-        ),
+        // v20 (orden del dueño): la LUPA flotante móvil SE RETIRA — tapaba
+        // contenido en pantallas que no la necesitan. La paleta ⌘K sigue
+        // en escritorio (sidebar) y teclado físico.
+        Expanded(child: navigationShell),
       ],
     );
 
@@ -865,39 +850,8 @@ class _TabButton extends StatelessWidget {
   }
 }
 
-/// FAB de búsqueda móvil del prototipo: círculo de tinta invertida 44 px con
-/// escala al presionar.
-class _SearchFab extends StatelessWidget {
-  const _SearchFab({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      label: 'Buscar',
-      child: Material(
-        color: scheme.foreground,
-        borderRadius: BorderRadius.circular(999),
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: SizedBox(
-            width: 44,
-            height: 44,
-            child: Icon(
-              LucideIcons.search,
-              size: 17,
-              color: scheme.background,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+// (v20) FAB de búsqueda móvil retirado por orden del dueño: la lupa
+// flotante tapaba contenido en pantallas que no la necesitaban.
 
 // ────────────────────────────────────────────────────── Disparadores ───────
 

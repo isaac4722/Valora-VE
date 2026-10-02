@@ -111,7 +111,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   // presente puede tapar la última fila + el paginador.
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 116),
                   children: [
+                    // v20 (orden del dueño): botón VOLVER — Historial se
+                    // abre con go() desde Inicio (sin stack) y con push()
+                    // desde Lista: siempre hay salida.
                     VeTitle(
+                      leading: VeIconBtn(
+                        icon: LucideIcons.chevronLeft,
+                        label: 'Volver',
+                        onTap: () {
+                          final go = GoRouter.of(context);
+                          if (go.canPop()) {
+                            go.pop();
+                          } else {
+                            go.go('/');
+                          }
+                        },
+                      ),
                       sub: Text('${filtered.length} compras · ${fmtUSD(sum)}'),
                       right: Row(
                         mainAxisSize: MainAxisSize.min,

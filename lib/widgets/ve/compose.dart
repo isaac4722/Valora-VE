@@ -268,11 +268,24 @@ class VeEyebrow extends StatelessWidget {
 /// Título de página del prototipo: eyebrow opcional arriba, 22 px Space
 /// Grotesk semibold tracking -0.02em, acciones a la derecha.
 class VeTitle extends StatelessWidget {
-  const VeTitle({super.key, required this.child, this.sub, this.right});
+  const VeTitle({
+    super.key,
+    required this.child,
+    this.sub,
+    this.right,
+    this.leading,
+  });
 
   final Widget child;
+
+  /// Subtítulo DEBAJO del título (v20 · orden del dueño): antes se pintaba
+  /// ENCIMA en caps y leía como «texto arriba del header». Ahora es un
+  /// subtítulo de verdad, mudo, bajo el número grande.
   final Widget? sub;
   final Widget? right;
+
+  /// Acción al inicio (botón atrás de rutas sin tab: Historial).
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -282,24 +295,12 @@ class VeTitle extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          if (leading != null) ...[leading!, const SizedBox(width: 8)],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (sub != null) ...[
-                  DefaultTextStyle(
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.84,
-                      color: scheme.mutedForeground,
-                    ),
-                    child: sub!,
-                  ),
-                  const SizedBox(height: 4),
-                ],
                 DefaultTextStyle(
                   style: VeText.displayNum(
                     22,
@@ -310,6 +311,20 @@ class VeTitle extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   child: child,
                 ),
+                if (sub != null) ...[
+                  const SizedBox(height: 4),
+                  DefaultTextStyle(
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: scheme.mutedForeground,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    child: sub!,
+                  ),
+                ],
               ],
             ),
           ),

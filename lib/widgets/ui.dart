@@ -11,6 +11,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart' show GoRouter;
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../core/currencies.dart';
@@ -1593,7 +1594,16 @@ class PushScreen extends StatelessWidget {
                     VeIconBtn(
                       icon: LucideIcons.chevronLeft,
                       label: 'Volver',
-                      onTap: () => Navigator.of(context).maybePop(),
+                      // v20 (orden del dueño): SIEMPRE hay vuelta — si no hay
+                      // stack (deep link, atajo de widget), cae a Inicio.
+                      onTap: () {
+                        final go = GoRouter.of(context);
+                        if (go.canPop()) {
+                          go.pop();
+                        } else {
+                          go.go('/');
+                        }
+                      },
                     ),
                     const SizedBox(width: 8),
                     Expanded(
