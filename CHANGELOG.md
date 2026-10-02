@@ -1,7 +1,7 @@
 # Changelog
 
 
-## 1.12.0-beta+32 · v20.2 — Verificación visual web/VLM + auditoría 390 (TASK-35 · p5)
+## 1.12.0-beta+32 · v20.2 — GUI correcta, rondas 2 y 3 (TASK-35 · p5–p13)
 
 - **Auditoría de rutas a 390 px con notch y fuentes REALES**: nuevo test
   que recorre las 10 rutas (`/`·`/conversor`·`/lista`·`/productos`·
@@ -35,6 +35,40 @@
   pantalla con fondo visible arriba; Unirse con borde superior a ~35-40 %),
   toggle claro/oscuro funcional y persistido en ambos sentidos, Sala viva
   completa (lobby + unirse por código de 6 ruedas + PIN de emojis).
+
+### Ronda 3 (p6–p12 · orden del dueño)
+
+- **Auditoría de rutas a 390 con fuentes reales (p5)**: test que recorre las
+  10 rutas con notch 118/68 — encontró y mató el doble Expanded del
+  Historial; export UNIFICADO en un botón «Exportar» (hoja canónica con los
+  dos CSV). Bienvenida sin overflow a 320.
+- **Selector de moneda profesional (p6)**: CurrencySelect abre
+  showCurrencySheet — filas estilo RateTile (bandera · nombre · fuentes
+  reales · símbolo mono · check) — UNA sola forma de elegir moneda en toda
+  la app. RateTile gana sello de categoría (OFICIAL/MERCADO/PROMEDIO/
+  MANUAL). Referencia de fuentes con colores. ELIMINADOS Ruta del cálculo y
+  Matriz 6×6. Recientes: dedupe por día calendario.
+- **Presupuesto entendible (p7)**: _PanelPresupuesto unifica presupuesto +
+  «Cálculos en» (moneda + fuente compactas); hoja con leyenda de la barra y
+  «Quitar tope». Tachado mejorado: nombre tachado legible, total sin tachar.
+- **Menús contextuales a media pantalla (p8)**: showVeHalfSheet — nace al
+  50 % con asa y snap [0.5 → 0.95]; ficha/alta de producto y editor de
+  ítem dejan ver la app debajo.
+- **Headers limpios + siempre volver (p9)**: subtítulo DEBAJO del título;
+  botón Volver en Historial y PushScreen robusto (canPop→pop, sino Inicio);
+  lupa flotante móvil retirada.
+- **Análisis trabajado (p10)**: KPIs con insignia de color + iconos de
+  trazo; lookup de fecha como píldora tocable; fuera la prosa decorativa.
+  Fix de harness: el «ribbon diagonal» de los goldens era el banner DEBUG
+  de Flutter — desactivado en los harnesses.
+- **Sala con INTENCIÓN + escáner contextual (p11)**: segmentado
+  «Unirme | Crear» con flujos exclusivos; FIX REAL: «Escanear QR» abría el
+  lector de EAN y un QR de sala jamás se leía — modo QR con copy propio.
+- **Widgets del launcher remodelados (p12)**: acento por categoría (BCV
+  verde · Paralelo rojo · Brecha ámbar), día/noche real, cifra 34 sp y
+  previews regenerados.
+
+
 
 ## 1.11.0-beta+31 · v20.1 — GUI del prototipo en TODAS las pantallas (TASK-34 · p9–p11)
 
@@ -122,27 +156,3 @@
   Ajustes/Bienvenida al mismo lenguaje (p9–p11) y visual gate final
   completo; la eliminación de `safe/docs-news` y el push quedan listos
   para ejecutarse con las credenciales del dueño.
-
-## 1.9.11-beta+29 · v19.11 — GUI nueva «Linear/Vercel» sobre shadcn/ui (TASK-33)
-
-- **Fundaciones shadcn**: `shadcn_ui` 0.57.1 con `ShadApp.router` en la
-  raíz y `ShadThemeVe` (lib/core/shad_theme.dart) — los tokens de color
-  son EXACTAMENTE los de siempre (papel-tinta claro · grafito oscuro):
-  ni un tono nuevo (orden del dueño: «solo del actual se mantendrán los
-  colores»). Test guardián del mapeo 1:1 en ambos temas.
-- **Shell Linear**: cabecera 52 px con acciones fantasma + iconografía
-  Lucide; barra inferior pill al 10 % sin borde; toggle de tema con giro.
-- **Command palette ⌘K**: la búsqueda global se vuelve overlay estilo
-  Linear (grupos módulos/productos/compras/avisos, teclado ↑↓·↵·esc,
-  hints al pie); atajo Ctrl/⌘+K en escritorio.
-- **Sistema de componentes Linear**: Stamp/ChipTag/RateBadge planos
-  (radio 8, sin píldoras), SectionTitle en tinta mute, LedgerRow con
-  etiqueta regular, icon-buttons cuadrados r8, radios coherentes
-  (tarjetas 10 · controles 8). API pública intacta: 199→213 tests sin
-  tocar una sola aserción previa.
-- **Héroe KPI**: rótulo caps mute + cifra protagonista; badges de
-  brecha/vs-ayer rectangulares; tool tiles con cajita muted.
-- **Ajustes**: selector de temas con PREVIEWS (Claro · Grafito ·
-  Sistema) pintadas con los tokens reales — patrón Vercel/Linear.
-- Puente `materialThemeBridge`: las pantallas Material mantienen VeInk,
-  transiciones firma y Material You durante la transición.
