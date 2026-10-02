@@ -36,6 +36,12 @@ class _RoomScreenState extends State<RoomScreen> {
   String? _busyError;
   bool _creating = false;
 
+  /// v20 (orden del dueño): INTENCIÓN primero — «dependiendo lo que se vaya
+  /// a usar salga algo y no salga otro». 0 = Unirme · 1 = Crear. Solo el
+  /// flujo elegido se pinta (antes salían las DOS tarjetas con todo el
+  /// texto de ambas).
+  int _intent = 0;
+
   @override
   void initState() {
     super.initState();
@@ -108,23 +114,34 @@ class _RoomScreenState extends State<RoomScreen> {
               const SizedBox(height: 10),
               _ServerCard(room: room),
             ],
-            // 3º UNIRSE: una sola puerta — la hoja pregunta el resto.
+            // 3º INTENCIÓN (v20): Unirme o Crear — y solo el flujo elegido.
             const SizedBox(height: 10),
-            _JoinEntryCard(room: room, busy: busy),
-            // 4º CREAR: anfitrión, con PIN de emojis opcional.
-            const SizedBox(height: 10),
-            _CreateCard(
-              room: room,
-              roomNameCtrl: _roomNameCtrl,
-              hostNameCtrl: _hostNameCtrl,
-              busy: busy,
-              creating: _creating,
-              onRun: _run,
-              onCreating: (v) => setState(() => _creating = v),
+            VeSegmented<int>(
+              value: _intent,
+              onChanged: (v) => setState(() => _intent = v),
+              segments: const [
+                VeSegment(value: 0, label: 'Unirme a una sala'),
+                VeSegment(value: 1, label: 'Crear una sala'),
+              ],
             ),
-            // 5º SALAS CERCANAS: escucha en vivo.
             const SizedBox(height: 10),
-            _ScanCard(room: room, busy: busy),
+            if (_intent == 0) ...[
+              // FLUJO UNIRSE: puerta + QR + salas cercanas — nada de crear.
+              _JoinEntryCard(room: room, busy: busy),
+              const SizedBox(height: 10),
+              _ScanCard(room: room, busy: busy),
+            ] else ...[
+              // FLUJO CREAR: anfitrión completo — nada de unirse.
+              _CreateCard(
+                room: room,
+                roomNameCtrl: _roomNameCtrl,
+                hostNameCtrl: _hostNameCtrl,
+                busy: busy,
+                creating: _creating,
+                onRun: _run,
+                onCreating: (v) => setState(() => _creating = v),
+              ),
+            ],
           ],
         ),
       ),
@@ -277,15 +294,6 @@ class _ModePicker extends StatelessWidget {
               weight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Tres modos P2P sin internet — y tu propio servidor si lo prefieres.',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 11.5,
-              color: scheme.mutedForeground,
-            ),
-          ),
           const SizedBox(height: 12),
           VeGroup(
             semantic: 'Modos de conexión',
@@ -336,7 +344,9 @@ class _JoinEntryCard extends StatelessWidget {
   final bool busy;
 
   Future<void> _scanQr(BuildContext context) async {
-    final raw = await ScannerScreen.scan(context);
+    // v20: modo QR del escáner — antes se abría el lector de EAN y el QR
+    // de invitación jamás se leía.
+    final raw = await ScannerScreen.scan(context, qr: true);
     if (raw == null || raw == '__manual__' || !context.mounted) return;
     final invite = SalaInvite.tryParse(raw);
     if (!context.mounted) return;
@@ -364,8 +374,7 @@ class _JoinEntryCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Tienes el código o un QR del anfitrión: te preguntamos cómo '
-            'conectarte, tu nombre y el PIN si la sala lo pide.',
+            'Con el código o el QR del anfitrión.',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 11.5,

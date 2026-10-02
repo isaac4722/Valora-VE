@@ -17,14 +17,20 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class ScannerScreen extends StatefulWidget {
-  const ScannerScreen({super.key});
+  const ScannerScreen({super.key, this.qr = false});
+
+  /// v20 (orden del dueño): el escáner se adapta a lo que se busca —
+  /// [qr] = true lee SOLO códigos QR (invitación de sala) con copy propio;
+  /// false lee códigos de barras de producto como siempre. Antes «Escanear
+  /// QR» de la Sala usaba el lector de EAN: un QR de sala JAMÁS se leía.
+  final bool qr;
 
   /// Abre el escáner y devuelve el código leído (null si se cerró sin leer).
   /// El valor especial `__manual__` = el usuario eligió escribirlo a mano.
-  static Future<String?> scan(BuildContext context) async {
-    return Navigator.of(
-      context,
-    ).push<String>(MaterialPageRoute(builder: (_) => const ScannerScreen()));
+  static Future<String?> scan(BuildContext context, {bool qr = false}) async {
+    return Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => ScannerScreen(qr: qr)),
+    );
   }
 
   @override
@@ -32,13 +38,17 @@ class ScannerScreen extends StatefulWidget {
 }
 
 class _ScannerScreenState extends State<ScannerScreen> {
-  final _controller = MobileScannerController(
+  // late: el controller depende de widget.qr (no accesible en el campo).
+  late final _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal,
-    formats: const [
-      BarcodeFormat.ean13,
-      BarcodeFormat.ean8,
-      BarcodeFormat.code128,
-    ],
+    formats: switch (widget.qr) {
+      true => const [BarcodeFormat.qrCode],
+      false => const [
+        BarcodeFormat.ean13,
+        BarcodeFormat.ean8,
+        BarcodeFormat.code128,
+      ],
+    },
   );
   bool _torch = false;
   bool _done = false; // evita doble pop por fotogramas consecutivos (como ROI)
@@ -79,7 +89,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: const Text('Escanear código'),
+        title: Text(widget.qr ? 'Escanear QR' : 'Escanear código'),
         actions: [
           IconButton(
             icon: Icon(_torch ? Icons.flash_on : Icons.flash_off),
@@ -165,10 +175,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
-                          'Apunta al código de barras — solo se lee el recuadro',
+                        Text(
+                          widget.qr
+                              ? 'Apunta al QR de la sala — solo se lee el recuadro'
+                              : 'Apunta al código de barras — solo se lee el recuadro',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                          style: const TextStyle(color: Colors.white70, fontSize: 13),
                         ),
                         const SizedBox(height: 10),
                         // Wrap centrado: a textScale >=1.3 los 2 botones

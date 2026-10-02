@@ -429,6 +429,20 @@ void main() {
           ),
         ),
       );
+      // v20 (orden del dueño): la búsqueda vive SOLO en el flujo CREAR —
+      // se elige la intención antes de buscar (scroll: el segmentado puede
+      // quedar bajo el doblez del viewport de prueba).
+      await tester.scrollUntilVisible(
+        find.text('Crear una sala'),
+        300,
+        scrollable: lobbyScroll,
+      );
+      // Arrastre extra: el scroll mínimo deja el segmento al borde y el
+      // tap central pica fuera del viewport.
+      await tester.drag(lobbyScroll, const Offset(0, -140));
+      await tester.pump();
+      await tester.tap(find.text('Crear una sala'));
+      await tester.pump();
       await tester.scrollUntilVisible(
         searchField,
         300,
@@ -500,6 +514,18 @@ void main() {
           ),
         ),
       );
+      // v20 (orden del dueño): la búsqueda vive SOLO en el flujo CREAR.
+      await tester.scrollUntilVisible(
+        find.text('Crear una sala'),
+        300,
+        scrollable: lobbyScroll,
+      );
+      // Arrastre extra: el scroll mínimo deja el segmento al borde y el
+      // tap central pica fuera del viewport.
+      await tester.drag(lobbyScroll, const Offset(0, -140));
+      await tester.pump();
+      await tester.tap(find.text('Crear una sala'));
+      await tester.pump();
       await tester.scrollUntilVisible(
         searchField,
         300,
@@ -520,7 +546,10 @@ void main() {
         enBusqueda(find.textContaining('Sin salas con ese nombre')),
         findsNothing,
       );
-      // La sala SÍ sigue en Salas cercanas (el escaneo es otra puerta).
+      // La sala SÍ sigue en Salas cercanas — que viven en el flujo UNIRME
+      // (v20: flujos exclusivos, no todo a la vez).
+      await tester.tap(find.text('Unirme a una sala'));
+      await tester.pump();
       await tester.scrollUntilVisible(
         find.text('SALAS CERCANAS'),
         300,
@@ -528,6 +557,8 @@ void main() {
       );
       expect(find.text('SALAS CERCANAS'), findsOneWidget);
       expect(find.text('Mercado del barrio'), findsAtLeastNWidgets(1));
+      // Y la búsqueda YA NO existe en este flujo.
+      expect(searchField, findsNothing);
     });
   });
 
