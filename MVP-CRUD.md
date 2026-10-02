@@ -6,9 +6,9 @@ en `PROGRESS.md` y se decide: o se corrige el código, o se evoluciona
 este documento con la orden del dueño.
 
 > Nota de procedencia: el MVP-CRUD original (privado) nunca estuvo en
-> git. Esta es la reconstrucción canónica desde el código implementado,
-> `docs/DESIGN-SYSTEM.md` y el historial de órdenes del dueño (los
-> antiguos archivos de paridad, retirados en la consolidación
+> git. Esta es la reconstrucción canónica desde el código implementado
+> y el historial de órdenes del dueño (los antiguos archivos de paridad
+> y el resumen del sistema de diseño, retirados en la consolidación
 > documental, viven en el historial git). La numeración § respeta las
 > citas históricas del repo
 > (§4.10, §4.16, §5, §6, §7, §8, §9, §12.2, §14…), para que ninguna
@@ -108,7 +108,7 @@ WorkManager ±1 h). Motor: `lib/services/alerts.dart` +
 
 ## §8 · Diseño «El Instrumento»
 
-Fuente canónica de tokens y firmas: `docs/DESIGN-SYSTEM.md` +
+Fuente canónica de tokens y firmas: `lib/core/shad_theme.dart` +
 `lib/core/theme.dart` + `lib/widgets/ui.dart`. Resumen operativo:
 papel-tinta (claro canónico, grafito oscuro), Inter cuerpo / Space
 Grotesk display con cifras tabulares, borde `border` SIEMPRE 100 %,

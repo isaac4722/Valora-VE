@@ -8,3 +8,4 @@ Si no hay turno activo, el último cerrado está al final de `PROGRESS_WARM.md`.
 
 2026-10-02 · DOING · TASK-35 abre turno — GUI correcta: notch/SafeArea en todas las superficies, techo en menús/sheets, Sala al lenguaje Ve del prototipo, toggle de tema en cabecera · docs-news reintegrados a nivel contenido (AGENT.md + bitácoras canónicas + skills-lock) · gate n/a · 3_IMPLEMENT
 2026-10-02 · DONE · repaso docs — consolidación new-docs aplicada (a1c3ad8: retiro de 11 .md, DESIGN-SYSTEM preservado) + referencias huérfanas corregidas en AGENT/README/MVP-CRUD y nombres de bitácora normalizados · CI verde · 9_CLOSE
+2026-10-02 · DONE · repaso docs 2 (orden del dueño) — docs/ retirado al 100% (DESIGN-SYSTEM.md a historial git) y referencias de AGENT/README/MVP-CRUD re-dirigidas al código canónico (shad_theme/theme/ui.dart) · CI verde · 9_CLOSE

@@ -81,7 +81,6 @@ Nada más. Sin FCM: las notificaciones son locales (canales
 - [AGENT.md](AGENT.md) — contrato de trabajo para agentes: método en 9 pasos
 - [PROGRESS.md](PROGRESS.md) — bitácora hot (3 niveles: PROGRESS · PROGRESS_WARM · PROGRESS_COLD)
 - [MVP-CRUD.md](MVP-CRUD.md) — verdad funcional del MVP
-- [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) — tokens «El Instrumento SaaS»
 - [CHANGELOG.md](CHANGELOG.md) — historial de versiones (3 niveles: CHANGELOG · CHANGELOG_WARM · CHANGELOG_COLD)
 
 ## Privacidad

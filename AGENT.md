@@ -25,7 +25,6 @@ Aplica para TODO agente (IA o humano). Lee este archivo y consulta `MVP-CRUD.md`
 - `lib/data/` + `lib/services/` + `lib/state/`: persistencia (Hive), servicios de plataforma y estado (`provider`).
 - `lib/features/`: Módulos funcionales (cada uno con su UI, lógica y tests).
 - `test/`: Tests unitarios y de widget. Refleja la estructura de `lib/`.
-- `docs/`: Documentación con alcance para el agente (ver abajo).
 - `.agents/skills/`: Ubicación estándar de skills del agente (ver abajo).
 - `PROGRESS.md`, `PROGRESS_WARM.md`, `PROGRESS_COLD.md`: Bitácora de tres niveles (ver abajo).
 
@@ -49,7 +48,7 @@ Aplica para TODO agente (IA o humano). Lee este archivo y consulta `MVP-CRUD.md`
 - Inventar cifras de mercado, tasas de cambio o datos de usuario.
 - Reemplazar el sistema de diseño o arquitectura; solo evolucionar lo existente.
 - Commitear tokens, API keys o secretos.
-- Inventar contenido en `docs/` o en los `PROGRESS*.md`: si falta información, escribe `TODO:`.
+- Inventar contenido en los `PROGRESS*.md`: si falta información, escribe `TODO:`.
 
 ## Flujo de Trabajo: Máquina de Estados (9.5 Pasos)
 
@@ -126,13 +125,13 @@ Las skills se invocan **dentro** de los estados del flujo. El agente debe leer s
 | Skill | Estado donde se usa | Cuándo Activarla |
 |---|---|---|
 | **`rtk`** (Rust Token Killer) | Transversal (todo estado que ejecute shell) | Siempre que se ejecuten comandos ruidosos: `rtk flutter analyze`, `rtk flutter test`, `rtk git status`, `rtk git diff --stat`, `rtk grep`. **Reduce tokens de entrada.** Instalar vía `brew install rtk` o releases de github.com/rtk-ai/rtk, luego `rtk init --global`. |
-| **`caveman`** | 3_IMPLEMENT, 4_AUDIT, 7_PERSIST (solo output al usuario) | Activar en modo **lite** o **full** para comprimir prosa del agente. **NUNCA para `docs/`, `PROGRESS.md`, `PROGRESS_WARM.md`, `PROGRESS_COLD.md`, commits ni documentación.** Solo para respuestas conversacionales. |
+| **`caveman`** | 3_IMPLEMENT, 4_AUDIT, 7_PERSIST (solo output al usuario) | Activar en modo **lite** o **full** para comprimir prosa del agente. **NUNCA para `PROGRESS.md`, `PROGRESS_WARM.md`, `PROGRESS_COLD.md`, commits ni documentación.** Solo para respuestas conversacionales. |
 
 **Regla RTK vs Caveman:**
 - RTK optimiza **input** (lo que el agente lee).
 - Caveman optimiza **output** (lo que el agente dice).
 - No son excluyentes; se usan en capas.
-- Si una skill de diseño sugiere verbosidad y Caveman sugiere brevedad, **prevalece Caveman para output conversacional**; los `docs/` y commits se escriben en español normal.
+- Si una skill de diseño sugiere verbosidad y Caveman sugiere brevedad, **prevalece Caveman para output conversacional**; la documentación y los commits se escriben en español normal.
 
 ### Skills de Diseño y Calidad
 
@@ -153,18 +152,18 @@ Las skills se invocan **dentro** de los estados del flujo. El agente debe leer s
 
 ## Definición de Hecho (Por Pieza)
 
-Código + Test que lo cubre + `quality_gate.sh` verde + Entrada en `PROGRESS.md` + `docs/` actualizado (si cambió comportamiento) + Run de Actions verde.
+Código + Test que lo cubre + `quality_gate.sh` verde + Entrada en `PROGRESS.md` + Run de Actions verde.
 
 ## Documentación con Alcance (Progressive Disclosure)
 
-Para mantener este archivo delgado, el detalle vive en `MVP-CRUD.md` y en `docs/` (p. ej. `docs/DESIGN-SYSTEM.md`). El agente **debe consultar** la referencia correspondiente cuando el estado del flujo lo requiera.
+Para mantener este archivo delgado, el detalle vive en `MVP-CRUD.md`; los tokens de diseño viven en el código canónico (`lib/core/shad_theme.dart`, `lib/core/theme.dart`, `lib/widgets/ui.dart`). El agente **debe consultar** la referencia correspondiente cuando el estado del flujo lo requiera.
 
 | Necesidad | Archivo de Referencia | Cuándo Consultarlo |
 |---|---|---|
 | Verdad funcional | `MVP-CRUD.md` (raíz; reconstrucción canónica v19.9 · ver su nota de procedencia) | Estado `1_ANALYZE` (siempre) |
-| Sistema de diseño y tokens | `docs/DESIGN-SYSTEM.md` | Estados `2_PLAN`/`3_IMPLEMENT` (si se toca UI) |
+| Sistema de diseño y tokens | `lib/core/shad_theme.dart` + `lib/widgets/ui.dart` (código canónico) | Estados `2_PLAN`/`3_IMPLEMENT` (si se toca UI) |
 | Bitácora hot | `PROGRESS.md` | Al inicio y fin de cada turno |
 | Bitácora warm | `PROGRESS_WARM.md` | Al cerrar turno (rotación) |
 | Bitácora cold | `PROGRESS_COLD.md` | Al rotar warm → cold |
 
-**Prohibido inventar contenido** en `docs/` y en los `PROGRESS*.md`: si falta información, escribe `TODO:` y sigue.
+**Prohibido inventar contenido** en los `PROGRESS*.md`: si falta información, escribe `TODO:` y sigue.
