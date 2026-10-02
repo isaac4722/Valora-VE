@@ -57,10 +57,11 @@ flutter build appbundle --release \
 ```
 
 ## Cómo hacer una release
-Ver **[docs/RELEASE.md](docs/RELEASE.md)**: gates locales, integration
-tests en emulador, tag `v*` → el workflow `build.yml` publica la GitHub
-Release con 4 APK (armeabi-v7a · arm64-v8a · x86_64 · universal) + AAB
-firmados con el keystore de secrets y ofuscados.
+Gates locales: `bash scripts/quality_gate.sh` (analyze + tests) e
+integration tests en emulador. Un tag `v*` dispara el workflow
+`build.yml`, que publica la GitHub Release con 4 APK (armeabi-v7a ·
+arm64-v8a · x86_64 · universal) + AAB firmados con el keystore de
+secrets y ofuscados.
 
 ## Permisos (y por qué)
 | Permiso | Uso |
@@ -78,13 +79,10 @@ Nada más. Sin FCM: las notificaciones son locales (canales
 
 ## Documentación
 - [AGENT.md](AGENT.md) — contrato de trabajo para agentes: método en 9 pasos
-- [PROGRESS.md](PROGRESS.md) — bitácora hot (3 niveles: PROGRESS · progress_warm · progress_archive)
-- [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) — tokens «El Instrumento»
-- [docs/agent/DEPENDENCIAS.md](docs/agent/DEPENDENCIAS.md) — plugins oficiales y trampas
-- [docs/PARIDAD.md](docs/PARIDAD.md) — paridad 1:1 contra el spec §14
-- [docs/MIGRACION.md](docs/MIGRACION.md) — decisiones desde 0
-- [docs/RELEASE.md](docs/RELEASE.md) — checklist de release
-- [CHANGELOG.md](CHANGELOG.md) — historial de versiones
+- [PROGRESS.md](PROGRESS.md) — bitácora hot (3 niveles: PROGRESS · PROGRESS_WARM · PROGRESS_COLD)
+- [MVP-CRUD.md](MVP-CRUD.md) — verdad funcional del MVP
+- [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) — tokens «El Instrumento SaaS»
+- [CHANGELOG.md](CHANGELOG.md) — historial de versiones (3 niveles: CHANGELOG · CHANGELOG_WARM · CHANGELOG_COLD)
 
 ## Privacidad
 Sin cuentas, sin telemetría, sin nube: todo vive en tu teléfono. Los

@@ -7,8 +7,10 @@ este documento con la orden del dueño.
 
 > Nota de procedencia: el MVP-CRUD original (privado) nunca estuvo en
 > git. Esta es la reconstrucción canónica desde el código implementado,
-> `docs/PARIDAD.md`, `docs/DESIGN-SYSTEM.md` y el historial de órdenes
-> del dueño. La numeración § respeta las citas históricas del repo
+> `docs/DESIGN-SYSTEM.md` y el historial de órdenes del dueño (los
+> antiguos archivos de paridad, retirados en la consolidación
+> documental, viven en el historial git). La numeración § respeta las
+> citas históricas del repo
 > (§4.10, §4.16, §5, §6, §7, §8, §9, §12.2, §14…), para que ninguna
 > referencia vieja quede huérfana.
 
@@ -162,10 +164,11 @@ exportaciones de Análisis. Foto 1024px comprimida ≤12MB; print nativo.
 
 ## §14 · Matriz de paridad
 
-La matriz viva con evidencia archivo/test por ítem vive en
-**`docs/PARIDAD.md`** (18 ítems + desviaciones conscientes D1–D5).
-`docs/PARIDAD-MVP-CRUD.md` conserva el scorecard histórico por fase
-(A modelo/persistencia · B motor/tasas · C pantallas · D nativo).
+La matriz viva con evidencia archivo/test por ítem se registraba en los
+archivos de paridad retirados en la consolidación documental
+(18 ítems + desviaciones conscientes D1–D5; scorecard histórico por
+fase: A modelo/persistencia · B motor/tasas · C pantallas · D nativo,
+recuperables del historial git).
 Regla: cerrar un ítem de §14 exige evidencia (archivo o test), no
 declaración.
 

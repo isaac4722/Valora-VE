@@ -14,7 +14,7 @@ Las skills se invocan **dentro** de los estados del flujo definido en `WORKFLOW.
 | Skill | Estados donde se usa | Cuándo | Notas |
 |---|---|---|---|
 | `rtk` (Rust Token Killer) | Transversal (cualquier estado que ejecute shell) | Comandos ruidosos: `rtk flutter analyze`, `rtk flutter test`, `rtk git status`, `rtk git diff --stat`, `rtk grep`. Reduce **input**. | Instalar vía `brew install rtk` o releases github.com/rtk-ai/rtk; luego `rtk init --global`. |
-| `caveman` | 3_IMPLEMENT, 4_AUDIT, 7_PERSIST (solo output conversacional) | Activar modo `lite` o `full` para comprimir respuestas al usuario. Reduce **output**. | **NUNCA** para `docs/`, `PROGRESS.md`, `progress_warm.md`, `progress_archive.md`, commits ni documentación. Solo respuestas conversacionales. |
+| `caveman` | 3_IMPLEMENT, 4_AUDIT, 7_PERSIST (solo output conversacional) | Activar modo `lite` o `full` para comprimir respuestas al usuario. Reduce **output**. | **NUNCA** para `docs/`, `PROGRESS.md`, `PROGRESS_WARM.md`, `PROGRESS_COLD.md`, commits ni documentación. Solo respuestas conversacionales. |
 
 **Regla:** RTK optimiza input, Caveman optimiza output. Son capas, no excluyentes. Si una skill de diseño sugiere verbosidad y Caveman sugiere brevedad, prevalece Caveman **solo en output conversacional**; `docs/` y commits van en español normal.
 

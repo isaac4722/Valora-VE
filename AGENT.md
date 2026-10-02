@@ -1,6 +1,6 @@
 # AGENT.md · Contrato de Trabajo (ValoraVE)
 
-Aplica para TODO agente (IA o humano). Lee este archivo y `docs/agent/` antes de empezar.
+Aplica para TODO agente (IA o humano). Lee este archivo y consulta `MVP-CRUD.md` antes de empezar.
 
 ## Comandos Ejecutables (Ejecutar en este orden)
 
@@ -25,7 +25,7 @@ Aplica para TODO agente (IA o humano). Lee este archivo y `docs/agent/` antes de
 - `lib/data/` + `lib/services/` + `lib/state/`: persistencia (Hive), servicios de plataforma y estado (`provider`).
 - `lib/features/`: Módulos funcionales (cada uno con su UI, lógica y tests).
 - `test/`: Tests unitarios y de widget. Refleja la estructura de `lib/`.
-- `docs/` y `docs/agent/`: Documentación con alcance para el agente (ver abajo).
+- `docs/`: Documentación con alcance para el agente (ver abajo).
 - `.agents/skills/`: Ubicación estándar de skills del agente (ver abajo).
 - `PROGRESS.md`, `PROGRESS_WARM.md`, `PROGRESS_COLD.md`: Bitácora de tres niveles (ver abajo).
 
@@ -49,7 +49,7 @@ Aplica para TODO agente (IA o humano). Lee este archivo y `docs/agent/` antes de
 - Inventar cifras de mercado, tasas de cambio o datos de usuario.
 - Reemplazar el sistema de diseño o arquitectura; solo evolucionar lo existente.
 - Commitear tokens, API keys o secretos.
-- Inventar contenido en `docs/agent/` o en los `PROGRESS*.md`: si falta información, escribe `TODO:`.
+- Inventar contenido en `docs/` o en los `PROGRESS*.md`: si falta información, escribe `TODO:`.
 
 ## Flujo de Trabajo: Máquina de Estados (9.5 Pasos)
 
@@ -66,7 +66,7 @@ El ciclo se ejecuta como una máquina de estados. Cada paso emite un "route" que
 | **6. RETRY** | **Sub-rama de recuperación.**<br>Diagnostica el fallo de `4` o `5` y decide a qué estado volver. | `1_ANALYZE` o `3_IMPLEMENT` | `9_BLOCKED` |
 | **7. PERSIST** | Commit (conventional) y push a rama de trabajo. | `8_CI` | `6_RETRY` |
 | **8. CI** | Espera a que GitHub Actions esté verde. | `9_CLOSE` | `6_RETRY` (si es de código) o `9_BLOCKED` (si es de entorno) |
-| **9. CLOSE / BLOCKED** | Cierra el turno.<br>Registra estado real y rota `PROGRESS.md` → `progress_warm.md` → `progress_archive.md`. | FIN | FIN |
+| **9. CLOSE / BLOCKED** | Cierra el turno.<br>Registra estado real y rota `PROGRESS.md` → `PROGRESS_WARM.md` → `PROGRESS_COLD.md`. | FIN | FIN |
 
 ### Sub-rama de Recuperación (RETRY)
 
@@ -126,7 +126,7 @@ Las skills se invocan **dentro** de los estados del flujo. El agente debe leer s
 | Skill | Estado donde se usa | Cuándo Activarla |
 |---|---|---|
 | **`rtk`** (Rust Token Killer) | Transversal (todo estado que ejecute shell) | Siempre que se ejecuten comandos ruidosos: `rtk flutter analyze`, `rtk flutter test`, `rtk git status`, `rtk git diff --stat`, `rtk grep`. **Reduce tokens de entrada.** Instalar vía `brew install rtk` o releases de github.com/rtk-ai/rtk, luego `rtk init --global`. |
-| **`caveman`** | 3_IMPLEMENT, 4_AUDIT, 7_PERSIST (solo output al usuario) | Activar en modo **lite** o **full** para comprimir prosa del agente. **NUNCA para `docs/`, `PROGRESS.md`, `progress_warm.md`, `progress_archive.md`, commits ni documentación.** Solo para respuestas conversacionales. |
+| **`caveman`** | 3_IMPLEMENT, 4_AUDIT, 7_PERSIST (solo output al usuario) | Activar en modo **lite** o **full** para comprimir prosa del agente. **NUNCA para `docs/`, `PROGRESS.md`, `PROGRESS_WARM.md`, `PROGRESS_COLD.md`, commits ni documentación.** Solo para respuestas conversacionales. |
 
 **Regla RTK vs Caveman:**
 - RTK optimiza **input** (lo que el agente lee).
@@ -157,18 +157,14 @@ Código + Test que lo cubre + `quality_gate.sh` verde + Entrada en `PROGRESS.md`
 
 ## Documentación con Alcance (Progressive Disclosure)
 
-Para mantener este archivo delgado, el detalle vive en `docs/agent/`. El agente **debe consultar** el archivo correspondiente cuando el estado del flujo lo requiera.
+Para mantener este archivo delgado, el detalle vive en `MVP-CRUD.md` y en `docs/` (p. ej. `docs/DESIGN-SYSTEM.md`). El agente **debe consultar** la referencia correspondiente cuando el estado del flujo lo requiera.
 
 | Necesidad | Archivo de Referencia | Cuándo Consultarlo |
 |---|---|---|
 | Verdad funcional | `MVP-CRUD.md` (raíz; reconstrucción canónica v19.9 · ver su nota de procedencia) | Estado `1_ANALYZE` (siempre) |
-| Dependencias y plugins | `docs/agent/DEPENDENCIAS.md` | Estado `2_PLAN` o `3_IMPLEMENT` (si se toca `pubspec`) |
-| Estilo de código y convenciones | `docs/agent/CODE_STYLE.md` | Estado `3_IMPLEMENT` (siempre) |
-| Estrategia de Testing | `docs/agent/TESTING.md` | Estado `4_AUDIT` (siempre) |
-| Flujo de Git y Commits | `docs/agent/GIT_WORKFLOW.md` | Estado `7_PERSIST` (siempre) |
-| Arquitectura y Patrones | `docs/agent/ARCHITECTURE.md` | Estado `2_PLAN` (siempre) |
+| Sistema de diseño y tokens | `docs/DESIGN-SYSTEM.md` | Estados `2_PLAN`/`3_IMPLEMENT` (si se toca UI) |
 | Bitácora hot | `PROGRESS.md` | Al inicio y fin de cada turno |
 | Bitácora warm | `PROGRESS_WARM.md` | Al cerrar turno (rotación) |
 | Bitácora cold | `PROGRESS_COLD.md` | Al rotar warm → cold |
 
-**Prohibido inventar contenido** en `docs/agent/` y en los `PROGRESS*.md`: si falta información, escribe `TODO:` y sigue.
+**Prohibido inventar contenido** en `docs/` y en los `PROGRESS*.md`: si falta información, escribe `TODO:` y sigue.
