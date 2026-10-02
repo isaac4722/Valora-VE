@@ -152,11 +152,12 @@ Future<String?> scanBarcode(BuildContext context) async {
   return code;
 }
 
-/// Abre la FICHA completa de un producto existente (req. 1) en sheet Ve
-/// wide (prototipo ProductSheet): pie con [Eliminar] + [Agregar a la lista].
+/// Abre la FICHA completa de un producto existente (req. 1) — v20: hoja
+/// a MEDIA PANTALLA arrastrable (orden del dueño: nace a la mitad, sube
+/// si el usuario quiere más detalle; pie con [Eliminar] + [Agregar]).
 Future<void> showProductSheet(BuildContext context, Product product) async {
   final key = GlobalKey<ProductSheetState>();
-  await showVeSheet(
+  await showVeHalfSheet(
     context: context,
     title: 'Ficha del producto',
     wide: true,
@@ -184,13 +185,14 @@ Future<void> showProductSheet(BuildContext context, Product product) async {
 }
 
 /// Abre el ALTA de producto nuevo (req. 2): nombre + código (con escáner) +
-/// primer precio en un paso → addProduct con firstRecord.
+/// primer precio en un paso → addProduct con firstRecord. v20: media
+/// pantalla arrastrable (el alta es corto; no cubre la app de golpe).
 Future<void> showNewProductSheet(
   BuildContext context, {
   String? initialBarcode,
 }) async {
   final key = GlobalKey<_NewProductSheetState>();
-  await showVeSheet(
+  await showVeHalfSheet(
     context: context,
     title: 'Nuevo producto',
     builder: (_) => NewProductSheet(key: key, initialBarcode: initialBarcode),

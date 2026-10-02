@@ -47,7 +47,9 @@ Future<ItemEditorResult?> showItemEditorSheet(
 }) {
   final key = GlobalKey<_ItemEditorState>();
   final editing = initial != null;
-  return showVeSheet<ItemEditorResult>(
+  // v20 (orden del dueño): menú contextual de ítem a MEDIA PANTALLA
+  // arrastrable — nace a la mitad, sube solo si el usuario desliza.
+  return showVeHalfSheet<ItemEditorResult>(
     context: context,
     title: editing ? 'Editar ítem' : 'Agregar ítem',
     builder: (_) => _ItemEditor(

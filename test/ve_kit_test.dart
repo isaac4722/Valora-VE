@@ -217,4 +217,61 @@ void main() {
       expect(find.text('Ir a Lista'), findsOneWidget);
     });
   });
+
+  group('Composición · media pantalla (v20 · orden del dueño)', () {
+    testWidgets('showVeHalfSheet NACE a la mitad y no cubre la pantalla', (
+      tester,
+    ) async {
+      // Teléfono 390×844 SIN notch de prueba: la hoja debe medir ~0.5 de
+      // la altura (±40) — los menús contextuales dejan ver la app debajo.
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(ShadApp(
+        theme: ShadThemeVe.light(),
+        darkTheme: ShadThemeVe.dark(),
+        materialThemeBuilder: (context, mTheme) =>
+            veMaterialBridge(Brightness.light, null),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Center(
+              child: VeBtn(
+                onPressed: () => showVeHalfSheet(
+                  context: context,
+                  title: 'Menú de producto',
+                  builder: (_) => Column(
+                    children: [
+                      for (var i = 0; i < 30; i++) Text('Fila $i'),
+                    ],
+                  ),
+                  footer: VeBtn(
+                    onPressed: () {},
+                    child: const Text('Aceptar'),
+                  ),
+                ),
+                child: const Text('Abrir'),
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(VeBtn));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Menú de producto'), findsOneWidget);
+      // La hoja (Material del showModalBottomSheet) mide ~422 (0.5×844).
+      final sheet = find.byType(DraggableScrollableSheet);
+      expect(sheet, findsOneWidget);
+      final rect = tester.getRect(sheet);
+      expect(rect.height, closeTo(844 * 0.5, 40),
+          reason: 'nace a media pantalla: ${rect.height}');
+      // El asa de arrastre está visible (señal nativa de hoja deslizable).
+      expect(find.byType(DraggableScrollableSheet), findsOneWidget);
+      // El contenido scrollea DENTRO de la hoja (asa + cabecera + pie).
+      expect(find.text('Aceptar'), findsOneWidget);
+    });
+  });
 }

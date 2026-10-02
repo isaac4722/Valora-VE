@@ -416,6 +416,193 @@ Future<T?> showVeSheet<T>({
   );
 }
 
+/// Hoja de MEDIA PANTALLA arrastrable (v20 · orden del dueño): los menús
+/// contextuales de producto/ítem NACEN a la mitad («suban y que den a la
+/// mitad») y solo cubren todo si el usuario las SUBE deslizando el
+/// contenido hacia arriba — snap en 0.5 y 0.95, nunca de golpe.
+///
+/// En escritorio (≥700) mantiene el modal centrado de [showVeSheet]: la
+/// media pantalla arrastrable es un patrón de teléfono.
+Future<T?> showVeHalfSheet<T>({
+  required BuildContext context,
+  required String title,
+  required WidgetBuilder builder,
+  Widget? footer,
+  Widget? trailing,
+  bool wide = false,
+  bool dismissible = true,
+}) {
+  final bool desktop = MediaQuery.sizeOf(context).width >= 700;
+  if (desktop) {
+    return showVeSheet<T>(
+      context: context,
+      title: title,
+      builder: builder,
+      footer: footer,
+      trailing: trailing,
+      wide: wide,
+      dismissible: dismissible,
+    );
+  }
+  final shad = ShadTheme.of(context);
+  final barrier = shad.brightness == Brightness.dark
+      ? Colors.black.withValues(alpha: 0.55)
+      : Colors.black.withValues(alpha: 0.40);
+
+  return showModalBottomSheet<T>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: barrier,
+    isDismissible: dismissible,
+    enableDrag: true,
+    builder: (context) => DraggableScrollableSheet(
+      expand: false,
+      // Nace a la mitad; mínimo utilizable 0.30; techo casi total.
+      initialChildSize: 0.5,
+      minChildSize: 0.30,
+      maxChildSize: 0.95,
+      snap: true,
+      snapSizes: const [0.5, 0.95],
+      builder: (context, scrollController) => _VeHalfChrome(
+        title: title,
+        footer: footer,
+        trailing: trailing,
+        wide: wide,
+        dismissible: dismissible,
+        scrollController: scrollController,
+        body: builder(context),
+      ),
+    ),
+  );
+}
+
+/// Chrome de la hoja a media pantalla: asa de arrastre + cabecera del
+/// sistema + cuerpo que scrollea CON el controlador de la hoja (subir el
+/// scroll expande la hoja) + pie pegado.
+class _VeHalfChrome extends StatelessWidget {
+  const _VeHalfChrome({
+    required this.title,
+    required this.body,
+    required this.footer,
+    required this.wide,
+    required this.dismissible,
+    required this.scrollController,
+    this.trailing,
+  });
+
+  final String title;
+  final Widget body;
+  final Widget? footer;
+  final Widget? trailing;
+  final bool wide;
+  final bool dismissible;
+  final ScrollController scrollController;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    final double maxW = wide ? 576 : 448;
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: scheme.card,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+        border: Border.all(color: scheme.border),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxW),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Asa de arrastre (señal nativa de hoja deslizable).
+              Container(
+                height: 18,
+                alignment: Alignment.center,
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: scheme.mutedForeground.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              Container(
+                height: 48,
+                padding: const EdgeInsets.only(left: 16, right: 8),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: scheme.border)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.foreground,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (trailing != null) ...[
+                      const SizedBox(width: 8),
+                      trailing!,
+                    ],
+                    if (dismissible)
+                      ShadButton.raw(
+                        variant: ShadButtonVariant.ghost,
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        width: 32,
+                        height: 32,
+                        padding: EdgeInsets.zero,
+                        backgroundColor: Colors.transparent,
+                        hoverBackgroundColor: scheme.accent,
+                        foregroundColor: scheme.mutedForeground,
+                        hoverForegroundColor: scheme.foreground,
+                        child: Icon(LucideIcons.x, size: 15),
+                      ),
+                  ],
+                ),
+              ),
+              // Cuerpo: el MISMO controlador de la hoja — al llegar al
+              // tope del contenido, seguir subiendo EXPANDE la hoja.
+              Flexible(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(16),
+                  child: body,
+                ),
+              ),
+              if (footer != null)
+                Container(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: scheme.border)),
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    minimum: const EdgeInsets.only(bottom: 4),
+                    child: Row(children: [Expanded(child: footer!)]),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Cromática compartida del sheet (cabecera · cuerpo · pie).
 class _VeSheetChrome extends StatelessWidget {
   const _VeSheetChrome({
