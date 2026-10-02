@@ -1,20 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Widget 4×1 «BCV» (v20 · mejor modelado): eyebrow caps · cifra HÉROE en
+     verde oficial (acento de categoría como en la app) · paralelo + hora
+     de secundarios. Día/noche por recursos. IDs intactos para el Kotlin. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_bg"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:gravity="center_vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp">
 
     <TextView
         android:id="@+id/widget_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="BCV · USD"
-        android:textColor="#8FA7C4"
+        android:textColor="@color/widget_eyebrow"
         android:textSize="11sp"
-        android:letterSpacing="0.1"
+        android:letterSpacing="0.08"
         android:textStyle="bold" />
 
     <TextView
@@ -22,9 +29,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="—"
-        android:textColor="#ECEEF1"
-        android:textSize="30sp"
-        android:textStyle="bold" />
+        android:textColor="@color/widget_accent_bcv"
+        android:textSize="34sp"
+        android:textStyle="bold"
+        android:letterSpacing="-0.02" />
 
     <LinearLayout
         android:id="@+id/widget_meta"
@@ -37,7 +45,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Paralelo —"
-            android:textColor="#9AA1AB"
+            android:textColor="@color/widget_secondary"
             android:textSize="11sp" />
 
         <TextView
@@ -46,7 +54,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text=""
-            android:textColor="#5F6672"
+            android:textColor="@color/widget_updated"
             android:textSize="10sp" />
     </LinearLayout>
 </LinearLayout>

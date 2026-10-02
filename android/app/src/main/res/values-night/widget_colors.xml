@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colores del widget · TEMA OSCURO (v20): grafito del prototipo con los
+     acentos claros de VeInk.dark para el mismo contraste que en la app. -->
+<resources>
+    <color name="widget_bg">#121417</color>
+    <color name="widget_border">#2A2F36</color>
+    <color name="widget_eyebrow">#8FA7C4</color>
+    <color name="widget_secondary">#9AA1AB</color>
+    <color name="widget_updated">#5F6672</color>
+    <color name="widget_accent_bcv">#3ECF9A</color>
+    <color name="widget_accent_parallel">#F0705F</color>
+    <color name="widget_accent_gap">#F0A560</color>
+</resources>

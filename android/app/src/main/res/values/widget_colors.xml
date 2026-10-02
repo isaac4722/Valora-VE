@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colores del widget · TEMA CLARO (v20 · orden del dueño: widgets mejor
+     modelados). Paleta Ve: tarjeta blanca + borde zinc + acentos por
+     categoría (BCV verde · Paralelo rojo · Brecha ámbar). -->
+<resources>
+    <color name="widget_bg">#FFFFFF</color>
+    <color name="widget_border">#E4E4E7</color>
+    <color name="widget_eyebrow">#71717A</color>
+    <color name="widget_secondary">#52525B</color>
+    <color name="widget_updated">#A1A1AA</color>
+    <color name="widget_accent_bcv">#0E7A57</color>
+    <color name="widget_accent_parallel">#D33A2C</color>
+    <color name="widget_accent_gap">#B45309</color>
+</resources>

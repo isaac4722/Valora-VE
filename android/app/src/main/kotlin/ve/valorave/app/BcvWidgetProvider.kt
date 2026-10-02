@@ -137,7 +137,8 @@ abstract class BaseRatesWidget : AppWidgetProvider() {
                 rv.setTextViewTextSize(R.id.widget_rate, TypedValue.COMPLEX_UNIT_SP, 18f)
             }
             Bucket.NORMAL -> {
-                rv.setTextViewTextSize(R.id.widget_rate, TypedValue.COMPLEX_UNIT_SP, 30f)
+                // v20: 34 sp — cuadra con el layout rediseñado (cifra héroe).
+                rv.setTextViewTextSize(R.id.widget_rate, TypedValue.COMPLEX_UNIT_SP, 34f)
                 rv.setTextViewTextSize(R.id.widget_title, TypedValue.COMPLEX_UNIT_SP, 11f)
                 rv.setTextViewTextSize(secondaryId, TypedValue.COMPLEX_UNIT_SP, 11f)
                 rv.setTextViewTextSize(updatedId, TypedValue.COMPLEX_UNIT_SP, 10f)
