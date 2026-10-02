@@ -1391,11 +1391,17 @@ class CurrencySelect extends StatelessWidget {
             children: [
               Flag(value, size: 18),
               const SizedBox(width: 6),
-              Text(
-                value.code,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w800,
+              // Flexible + ellipsis: en espacios ajustados (fila del panel
+              // de presupuesto) la pill encoge sin desbordar.
+              Flexible(
+                child: Text(
+                  value.code,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               const SizedBox(width: 2),

@@ -517,35 +517,20 @@ class _ListaScreenState extends State<ListaScreen> {
                   ],
                 ),
               ),
-              // Tasas de cálculo: moneda + FUENTE dependiente (requisito A).
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      'Moneda de cálculos',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    CurrencySelect(
-                      value: calcCur,
-                      onChanged: (c) =>
-                          store.setSetting('calcCurrency', c.code),
-                    ),
-                    _FuenteChip(store: store, currency: calcCur),
-                  ],
-                ),
-              ),
-              // Barra de presupuesto (prototipo): resumen tappable; el
-              // editor (monto + moneda) vive en su propio sheet.
+              // v20 (orden del dueño): UN panel de control con presupuesto
+              // + moneda de cálculo — antes eran un Wrap suelto de pills
+              // («no se vea mal las monedas de cálculo») y una barra
+              // aislada que nadie entendía cómo usar.
               Padding(
                 padding: const EdgeInsets.only(top: 14),
-                child: _BudgetBar(store: store, ctx: ctx, totalUsd: totals.usd),
+                child: _PanelPresupuesto(
+                  store: store,
+                  ctx: ctx,
+                  totalUsd: totals.usd,
+                  calcCur: calcCur,
+                  onCalcCurrency: (c) =>
+                      store.setSetting('calcCurrency', c.code),
+                ),
               ),
               // ── Zona de captura (ancla del tour v17.8) ─────────────────
               KeyedSubtree(
@@ -1007,30 +992,38 @@ class _FuenteChip extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        // TASK-33 Linear: trigger outline plano estilo shadcn Select.
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        // v20: pill COMPACTA al nivel del CurrencySelect — sello de
+        // categoría + nombre corto (edgeName) + chevron. El «Fuente: X»
+        // largo desbordaba la fila del panel (fix dueño).
         decoration: BoxDecoration(
           color: scheme.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: scheme.outlineVariant),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (current != null) ...[
-              SourceSeal(current.category),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              'Fuente: ${current?.label ?? currentId}',
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
+        // scaleDown: si el espacio aprieta (Ahem · textScale alto), la
+        // pill se REDUCE proporcionalmente en vez de desbordar — igual
+        // que los botones de la barra pegadiza.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (current != null) ...[
+                SourceSeal(current.category),
+                const SizedBox(width: 6),
+              ],
+              Text(
+                current?.edgeName ?? currentId,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            const SizedBox(width: 2),
-            Icon(Icons.expand_more, size: 15, color: scheme.onSurfaceVariant),
-          ],
+              const SizedBox(width: 2),
+              Icon(Icons.expand_more, size: 15, color: scheme.onSurfaceVariant),
+            ],
+          ),
         ),
       ),
     );
@@ -1190,12 +1183,17 @@ class _CartRow extends StatelessWidget {
                         fontFamily: 'Inter',
                         fontSize: 13.5,
                         fontWeight: FontWeight.w500,
+                        // v20 (orden del dueño): tachado MEJORADO — línea
+                        // más gruesa y bien trazada sobre texto atenuado;
+                        // el nombre se lee igual (no desaparece).
                         decoration: item.checked
                             ? TextDecoration.lineThrough
                             : null,
-                        decorationColor: muted,
+                        decorationThickness: item.checked ? 1.8 : null,
+                        decorationColor: scheme.mutedForeground
+                            .withValues(alpha: 0.85),
                         color: item.checked
-                            ? scheme.mutedForeground
+                            ? scheme.mutedForeground.withValues(alpha: 0.75)
                             : scheme.foreground,
                       ),
                     ),
@@ -1233,10 +1231,9 @@ class _CartRow extends StatelessWidget {
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   fontFeatures: const [FontFeature.tabularFigures()],
-                  decoration: item.checked
-                      ? TextDecoration.lineThrough
-                      : null,
-                  decorationColor: muted,
+                  // v20: el TOTAL no se tacha — el monto sigue legible
+                  // (dato útil aunque el ítem ya esté comprado); solo se
+                  // atenúa. Antes el doble tachado ensuciaba la fila.
                   color: item.checked ? muted : scheme.foreground,
                 ),
               ),
@@ -1248,20 +1245,31 @@ class _CartRow extends StatelessWidget {
   }
 }
 
-/// ─── Barra de presupuesto (prototipo BudgetBody) ────────────────────────────
-/// VeCard tappable: eyebrow «Presupuesto» + total/techo a la derecha, barra
-/// de progreso h6 (tinta normal · warn > 80 % · neg excedido) y debajo
-/// «Restan/Excedido X» + «En carrito Y». El editor vive en su propio sheet.
-class _BudgetBar extends StatelessWidget {
-  const _BudgetBar({
+/// ─── Panel de presupuesto + cálculo (v20 · orden del dueño) ──────────────────
+/// UNA tarjeta que explica sola cómo funciona el presupuesto:
+/// · Fila 1: eyebrow «Presupuesto del mes» + total de la lista sobre el
+///   tope («de Bs 5.000» · «sin tope»).
+/// · Barra de progreso h6 (tinta normal · warn > 80 % · neg excedido).
+/// · Fila 2: «Restan/Excedido X» + «En carrito Y».
+/// · Divisor y fila de CÁLCULO: en qué moneda se suma la lista y con qué
+///   fuente de tasa — dos pills compactas (bandera+código · sello+nombre),
+///   no el Wrap suelto de textos que había antes.
+/// Tocar el cuerpo abre el editor del presupuesto; las pills abren sus
+/// propias hojas (moneda / fuente).
+class _PanelPresupuesto extends StatelessWidget {
+  const _PanelPresupuesto({
     required this.store,
     required this.ctx,
     required this.totalUsd,
+    required this.calcCur,
+    required this.onCalcCurrency,
   });
 
   final AppStore store;
   final RateContext ctx;
   final double totalUsd;
+  final Currency calcCur;
+  final ValueChanged<Currency> onCalcCurrency;
 
   @override
   Widget build(BuildContext context) {
@@ -1306,7 +1314,7 @@ class _BudgetBar extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'PRESUPUESTO',
+                  'PRESUPUESTO DEL MES',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 10.5,
@@ -1385,7 +1393,7 @@ class _BudgetBar extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       )
                     : Text(
-                        'Sin tope: tócala y fija el del mes',
+                        'Fija tu tope del mes — toca esta tarjeta',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 12.5,
@@ -1407,6 +1415,42 @@ class _BudgetBar extends StatelessWidget {
                   ),
                 ),
               ),
+            ],
+          ),
+          // ── Divisor + fila de cálculo (v20): moneda y fuente, compactas.
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Divider(height: 24, color: scheme.border),
+          ),
+          Row(
+            children: [
+              Icon(
+                LucideIcons.calculator,
+                size: 14,
+                color: scheme.mutedForeground,
+              ),
+              const SizedBox(width: 7),
+              // Expanded + ellipsis: la etiqueta cede antes que romper la
+              // fila (Ahem/textScale extremos no desbordan).
+              Expanded(
+                child: Text(
+                  'Cálculos en',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.foreground,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: CurrencySelect(value: calcCur, onChanged: onCalcCurrency),
+              ),
+              const SizedBox(width: 8),
+              Flexible(child: _FuenteChip(store: store, currency: calcCur)),
             ],
           ),
         ],
@@ -1474,13 +1518,89 @@ class _BudgetSheetState extends State<_BudgetSheet> {
     Navigator.of(context).pop();
   }
 
+  /// v20: quitar el tope (monto 0) conservando la moneda elegida —
+  /// setBudget(0) ya NO resetea la divisa (v19).
+  void _clear() {
+    widget.store.setBudget(0, _cur.code);
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final budget = widget.store.data.budget;
+    final scheme = ShadTheme.of(context).colorScheme;
+    final VeInk ink = Theme.of(context).extension<VeInk>()!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // v20 (orden del dueño): cómo se USA — una línea de qué hace y
+        // leyenda de los tres estados de la barra.
+        Text(
+          'Es tu tope de gasto del mes. La barra de la Lista se llena con '
+          'el total del carrito:',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12.5,
+            height: 1.45,
+            color: scheme.mutedForeground,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Container(
+              width: 22,
+              height: 4,
+              decoration: BoxDecoration(
+                color: scheme.foreground,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: 7),
+            const Text(
+              'Dentro del presupuesto',
+              style: TextStyle(fontSize: 11.5),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Container(
+              width: 22,
+              height: 4,
+              decoration: BoxDecoration(
+                color: ink.warn,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: 7),
+            const Text(
+              'Cerca del tope (más del 80 %)',
+              style: TextStyle(fontSize: 11.5),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Container(
+              width: 22,
+              height: 4,
+              decoration: BoxDecoration(
+                color: ink.neg,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: 7),
+            const Text(
+              'Te pasaste del tope',
+              style: TextStyle(fontSize: 11.5),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -1515,12 +1635,26 @@ class _BudgetSheetState extends State<_BudgetSheet> {
           ],
         ),
         const SizedBox(height: 14),
-        VeBtn(
-          variant: VeBtnVariant.primary,
-          expands: true,
-          icon: LucideIcons.check,
-          onPressed: _save,
-          child: const Text('Guardar'),
+        Row(
+          children: [
+            if (budget.amount > 0) ...[
+              VeBtn(
+                variant: VeBtnVariant.ghost,
+                onPressed: _clear,
+                child: const Text('Quitar tope'),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Expanded(
+              child: VeBtn(
+                variant: VeBtnVariant.primary,
+                expands: true,
+                icon: LucideIcons.check,
+                onPressed: _save,
+                child: const Text('Guardar'),
+              ),
+            ),
+          ],
         ),
       ],
     );

@@ -129,6 +129,9 @@ AppStore _storeConDatos() {
           quantity: 1,
           price: 2.3,
           currency: 'USD',
+          // Marcado: el golden enseña el tachado de comprado (gate VLM).
+          checked: true,
+          checkedBy: 'Yo',
         ),
       ],
       settings: const Settings(onboarded: true, offlineMode: true),
