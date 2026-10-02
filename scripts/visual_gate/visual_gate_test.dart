@@ -242,7 +242,13 @@ void main() {
           theme: ShadThemeVe.light(),
           darkTheme: ShadThemeVe.dark(),
           appBuilder: (context) =>
-              MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+              MaterialApp.router(
+                // v20: sin banner DEBUG — la cinta diagonal roja
+                // ensuciaba los goldens (VLM la marcó como slop).
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.light(),
+                routerConfig: router,
+              ),
         ),
       ),
     );

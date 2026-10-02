@@ -84,6 +84,9 @@ Future<void> main() async {
         theme: ShadThemeVe.light(),
         darkTheme: ShadThemeVe.dark(),
         appBuilder: (context) => MaterialApp.router(
+            // v20: sin banner DEBUG — ensuciaba los goldens (cinta diagonal
+            // roja arriba a la derecha que el VLM marcaba como slop).
+            debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           routerConfig: router,
@@ -202,6 +205,7 @@ Future<void> main() async {
           theme: ShadThemeVe.light(),
           darkTheme: ShadThemeVe.dark(),
           appBuilder: (context) => MaterialApp(
+            debugShowCheckedModeBanner: false,
             theme: AppTheme.light(),
             home: Scaffold(
               backgroundColor: Colors.white,
@@ -304,6 +308,9 @@ Future<void> main() async {
             theme: ShadThemeVe.light(),
             darkTheme: ShadThemeVe.dark(),
             appBuilder: (context) => MaterialApp.router(
+            // v20: sin banner DEBUG — ensuciaba los goldens (cinta diagonal
+            // roja arriba a la derecha que el VLM marcaba como slop).
+            debugShowCheckedModeBanner: false,
               theme: AppTheme.light(),
               darkTheme: AppTheme.dark(),
               routerConfig: router,
@@ -353,6 +360,9 @@ Future<void> main() async {
           theme: ShadThemeVe.light(),
           darkTheme: ShadThemeVe.dark(),
           appBuilder: (context) => MaterialApp.router(
+            // v20: sin banner DEBUG — ensuciaba los goldens (cinta diagonal
+            // roja arriba a la derecha que el VLM marcaba como slop).
+            debugShowCheckedModeBanner: false,
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             routerConfig: router,

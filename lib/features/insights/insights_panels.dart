@@ -70,8 +70,22 @@ class KpiTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (icon != null) ...[
-                  Icon(icon, size: 12, color: c.withValues(alpha: 0.85)),
-                  const SizedBox(width: 4),
+                  // v20 (VLM gate): el icono va en CHIP tintado — antes era
+                  // un cuadradito pelado que leía como «checkbox». Tinte al
+                  // 15 % + borde sutil del mismo tono para que se lea como
+                  // insignia de color.
+                  Container(
+                    width: 22,
+                    height: 22,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: c.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(7),
+                      border: Border.all(color: c.withValues(alpha: 0.25)),
+                    ),
+                    child: Icon(icon, size: 14, color: c),
+                  ),
+                  const SizedBox(width: 6),
                 ],
                 Expanded(
                   child: Text(
@@ -88,7 +102,7 @@ class KpiTile extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 7),
+            if (icon != null) const SizedBox(height: 8) else const SizedBox(height: 0),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,

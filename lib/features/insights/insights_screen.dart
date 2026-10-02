@@ -65,7 +65,9 @@ class _InsightsScreenState extends State<InsightsScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             VeTitle(
-              sub: const Text('Lo que la inflación no te cuenta de corrido'),
+              // v20 (distill): fuera la prosa decorativa — subtítulo
+              // informativo de una línea.
+              sub: const Text('Tasas, inflación, canasta y gastos'),
               child: const Text('Análisis'),
             ),
             // ── Barra de anclas (v19.8): segmentada, 6 vistas del tablero.
@@ -342,7 +344,7 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
               sub: gap != null && gap.abs() >= 15
                   ? 'brecha alta'
                   : (gap != null ? 'brecha normal' : null),
-              icon: Icons.compare_arrows,
+              icon: LucideIcons.arrowLeftRight,
               color: gap == null ? scheme.onSurface : ink.warn,
             ),
             KpiTile(
@@ -351,7 +353,7 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
               sub: bcv.isEmpty
                   ? null
                   : fmtDayShort(DateTime.parse(bcv.last.date)),
-              icon: Icons.account_balance,
+              icon: LucideIcons.landmark,
               color: ink.pos,
             ),
             KpiTile(
@@ -360,7 +362,7 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
               sub: par.isEmpty
                   ? 'sin registro hoy'
                   : fmtDayShort(DateTime.parse(par.last.date)),
-              icon: Icons.currency_exchange,
+              icon: LucideIcons.store,
               color: ink.neg,
             ),
           ],
@@ -651,57 +653,82 @@ class _LookupFechaState extends State<_LookupFecha> {
           'consultar tasas',
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  fmtDate(_date),
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+          // v20 (VLM gate): el selector de fecha es un CAMPO de verdad —
+          // píldora tocable con icono de calendario y chevron (antes era
+          // texto plano + botón «Elegir» que nadie veía).
+          InkWell(
+            onTap: () async {
+              final d = await showDatePicker(
+                context: context,
+                initialDate: _date,
+                firstDate: DateTime(2023, 1, 3),
+                lastDate: DateTime.now(),
+                locale: const Locale('es'),
+              );
+              if (d == null || !context.mounted) return;
+              final store = context.read<AppStore>();
+              final day = SnapshotPoint.dayKey(d);
+              final b = store.snapshots
+                  .where((p) => p.sourceId == 'ves-bcv' && p.day == day)
+                  .firstOrNull;
+              final p = store.snapshots
+                  .where(
+                    (x) => x.sourceId == 'ves-parallel' && x.day == day,
+                  )
+                  .firstOrNull;
+              setState(() {
+                _date = d;
+                _rateB = b?.rate;
+                _rateP = p?.rate;
+                _searched = true;
+              });
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: scheme.outlineVariant),
               ),
-              TextButton(
-                onPressed: () async {
-                  final d = await showDatePicker(
-                    context: context,
-                    initialDate: _date,
-                    firstDate: DateTime(2023, 1, 3),
-                    lastDate: DateTime.now(),
-                    locale: const Locale('es'),
-                  );
-                  if (d == null || !context.mounted) return;
-                  final store = context.read<AppStore>();
-                  final day = SnapshotPoint.dayKey(d);
-                  final b = store.snapshots
-                      .where((p) => p.sourceId == 'ves-bcv' && p.day == day)
-                      .firstOrNull;
-                  final p = store.snapshots
-                      .where(
-                        (x) => x.sourceId == 'ves-parallel' && x.day == day,
-                      )
-                      .firstOrNull;
-                  setState(() {
-                    _date = d;
-                    _rateB = b?.rate;
-                    _rateP = p?.rate;
-                    _searched = true;
-                  });
-                },
-                child: const Text('Elegir'),
-              ),
-              if (_rateB != null)
-                TextButton(
-                  onPressed: () => copiarAlPortapapeles(
-                    context,
-                    'BCV ${fmtDate(_date)}: ${fmtRate(_rateB!)}',
-                    'Tasa copiada',
+              child: Row(
+                children: [
+                  Icon(
+                    LucideIcons.calendarDays,
+                    size: 15,
+                    color: scheme.onSurfaceVariant,
                   ),
-                  child: const Text('Copiar'),
-                ),
-            ],
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      fmtDate(_date),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    LucideIcons.chevronDown,
+                    size: 15,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
           ),
+          if (_rateB != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => copiarAlPortapapeles(
+                  context,
+                  'BCV ${fmtDate(_date)}: ${fmtRate(_rateB!)}',
+                  'Tasa copiada',
+                ),
+                child: const Text('Copiar'),
+              ),
+            ),
           if (_rateB != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
