@@ -1340,7 +1340,13 @@ class SourcePills extends StatelessWidget {
   }
 }
 
-/// Selector de moneda con banderas (CurrencySelect).
+/// Selector de moneda (v20 · orden del dueño): el trigger es la píldora de
+/// siempre [Bandera][CÓDIGO][chevron], pero abre una HOJA «Ve» con filas
+/// al estilo del selector de tasas (RateTile): bandera grande, nombre en
+/// negrita, símbolo en mono a la derecha y una línea honesta de detalle
+/// (código + cuántas fuentes de tasa reales tiene la divisa). La fila
+/// activa lleva borde + check. UNA sola forma de elegir moneda en toda la
+/// app (conversor, lista, productos, checkout).
 class CurrencySelect extends StatelessWidget {
   const CurrencySelect({
     super.key,
@@ -1355,69 +1361,179 @@ class CurrencySelect extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final options = CurrencyX.focusOrder(
-      null,
-    ).where((c) => withUsd || c != Currency.usd).toList();
-    return PopupMenuButton<Currency>(
-      initialValue: value,
-      onSelected: onChanged,
-      itemBuilder: (_) => [
-        for (final c in options)
-          PopupMenuItem(
-            value: c,
-            // TASK-33 Linear: ítem de menú con check del seleccionado
-            // (patrón shadcn Select).
-            child: Row(
-              children: [
-                Flag(c, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(c.label, style: const TextStyle(fontSize: 13.5)),
+    // Material transparente: el trigger vive en contexts sin Material
+    // cerca (cards, sheets) y el InkWell lo exige para el splash.
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () async {
+          final picked = await showCurrencySheet(
+            context,
+            value: value,
+            withUsd: withUsd,
+          );
+          if (picked != null && picked != value) onChanged(picked);
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          // Trigger outline plano estilo shadcn Select: fondo superficie y
+          // borde 100 %.
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flag(value, size: 18),
+              const SizedBox(width: 6),
+              Text(
+                value.code,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
                 ),
-                if (c == value)
-                  Icon(
-                    Icons.check,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-              ],
-            ),
-          ),
-      ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        // TASK-33 Linear: trigger outline plano estilo shadcn Select —
-        // fondo superficie y borde 100 % (antes tinte primario al 7 %).
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flag(value, size: 18),
-            const SizedBox(width: 6),
-            Text(
-              value.code,
-              style: const TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w800,
               ),
-            ),
-            const SizedBox(width: 2),
-            Icon(
-              Icons.expand_more,
-              size: 15,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ],
+              const SizedBox(width: 2),
+              Icon(
+                Icons.expand_more,
+                size: 15,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Fila de divisa de la hoja: [Bandera 22][Nombre + código·fuentes]
+/// [Símbolo mono (+ check si activa)] — espejo visual del RateTile de
+/// tasas para que TODA selección de la app se vea igual.
+class _CurrencyTile extends StatelessWidget {
+  const _CurrencyTile({
+    required this.currency,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Currency currency;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final fuentes = RateSource.sourcesFor(currency).length;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      child: Material(
+        color: selected
+            ? scheme.primary.withValues(alpha: 0.08)
+            : scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: selected
+                  ? Border.all(color: scheme.primary, width: 1.4)
+                  : Border.all(color: scheme.outlineVariant.withValues(
+                      alpha: 0.5,
+                    )),
+            ),
+            child: Row(
+              children: [
+                Flag(currency, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        currency.label,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        fuentes > 0
+                            ? '${currency.code} · $fuentes '
+                              '${fuentes == 1 ? 'fuente' : 'fuentes'} de tasa'
+                            : currency.code,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  currency.symbol,
+                  style: VeText.displayNum(
+                    16,
+                    weight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (selected)
+                  Icon(Icons.check_circle_rounded, size: 16,
+                      color: scheme.primary)
+                else
+                  const SizedBox(width: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Hoja de selección de divisa (v20): la ÚNICA forma de elegir moneda de
+/// la app. Devuelve la divisa elegida (null si se descarta).
+Future<Currency?> showCurrencySheet(
+  BuildContext context, {
+  required Currency value,
+  bool withUsd = true,
+}) async {
+  final options = CurrencyX.focusOrder(
+    null,
+  ).where((c) => withUsd || c != Currency.usd).toList();
+
+  return showVeSheet<Currency>(
+    context: context,
+    title: 'Elegir moneda',
+    builder: (ctx) => SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final c in options)
+            _CurrencyTile(
+              currency: c,
+              selected: c == value,
+              onTap: () => Navigator.of(ctx).pop(c),
+            ),
+          const SizedBox(height: 6),
+        ],
+      ),
+    ),
+  );
 }
 
 /// ─── Pantalla completa EMPUJADA (v19 → TASK-35 p4: cabecera «Ve») ───────────

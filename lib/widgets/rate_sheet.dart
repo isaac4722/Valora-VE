@@ -125,20 +125,38 @@ class RateTile extends StatelessWidget {
                       // TODA fila sin tasa, pero el lápiz solo existe en
                       // fuentes manuales — en oficiales/paralelo era una
                       // instrucción imposible de seguir.
-                      Text(
-                        has
-                            ? (freshness ?? s.detail)
-                            : (s.category == SourceCategory.manual
-                                  ? 'Toca el lápiz para fijar tu tasa'
-                                  : 'Sin tasa aún para esta fuente'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          color: has
-                              ? scheme.onSurfaceVariant
-                              : scheme.onSurfaceVariant.withValues(alpha: 0.8),
-                        ),
+                      //
+                      // v20 (orden del dueño): SELLO de categoría delante
+                      // del detalle — icono + palabra + color establecido en
+                      // TODA fila de tasa de la app (identificación
+                      // precisa, no solo el fondo tenue).
+                      Row(
+                        children: <Widget>[
+                          SourceSeal(s.category),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              has
+                                  ? (freshness ?? s.detail)
+                                  : (s.category == SourceCategory.manual
+                                        // v20: hint corto — con el sello
+                                        // delante la frase larga se
+                                        // truncaba (VLM gate).
+                                        ? 'Fija tu tasa con el lápiz'
+                                        : 'Sin tasa aún para esta fuente'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: has
+                                    ? scheme.onSurfaceVariant
+                                    : scheme.onSurfaceVariant.withValues(
+                                        alpha: 0.8,
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

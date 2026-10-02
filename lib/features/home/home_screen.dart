@@ -468,63 +468,56 @@ class _RateHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Settle(
-                  child: ReadWindow(
-                    semanticLabel:
-                        '1 dólar igual a ${fmtRate(e.rate)} bolívares',
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Flexible(
-                          // Flash del prototipo: el número destella en pos
-                          // cuando la tasa cambia (VeFlash vigila e.rate).
-                          child: VeFlash(
-                            value: e.rate,
-                            child: Text(
-                              fmtRate(e.rate),
-                              style: VeText.displayNum(
-                                38,
-                                color: scheme.onSurface,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
+          // v20 (VLM gate): a 390 el número 38 px + chispa 96 px + copiar
+          // NO caben en los ~326 px útiles de la tarjeta y la cifra salía
+          // «44,20…». En angosto la chispa baja a su propia fila.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final inline = constraints.maxWidth >= 420;
+              Widget cifra = Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Flexible(
+                    // Flash del prototipo: el número destella en pos
+                    // cuando la tasa cambia (VeFlash vigila e.rate).
+                    child: VeFlash(
+                      value: e.rate,
+                      child: Text(
+                        fmtRate(e.rate),
+                        style: VeText.displayNum(
+                          38,
+                          color: scheme.onSurface,
                         ),
-                        const SizedBox(width: 9),
-                        const Flag(Currency.usd, size: 21),
-                        const SizedBox(width: 6),
-                        Text(
-                          'USD',
-                          style: VeText.displayNum(
-                            20,
-                            color: scheme.onSurfaceVariant,
-                            weight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
-                ),
-              ),
-              if (serie.length >= 2) ...[
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 96,
-                  height: 44,
-                  child: VeSparkline(
-                    data: serie,
-                    tone: subio ? VeChartTone.pos : VeChartTone.neg,
-                    height: 44,
+                  const SizedBox(width: 9),
+                  const Flag(Currency.usd, size: 21),
+                  const SizedBox(width: 6),
+                  Text(
+                    'USD',
+                    style: VeText.displayNum(
+                      20,
+                      color: scheme.onSurfaceVariant,
+                      weight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
-              const SizedBox(width: 10),
-              VeIconBtn(
+                ],
+              );
+              final Widget? chispa = serie.length >= 2
+                  ? SizedBox(
+                      width: inline ? 96 : 120,
+                      height: 44,
+                      child: VeSparkline(
+                        data: serie,
+                        tone: subio ? VeChartTone.pos : VeChartTone.neg,
+                        height: 44,
+                      ),
+                    )
+                  : null;
+              final Widget copiar = VeIconBtn(
                 icon: LucideIcons.copy,
                 label: 'Copiar tasa',
                 onTap: () => copiarAlPortapapeles(
@@ -532,8 +525,50 @@ class _RateHero extends StatelessWidget {
                   fmtRate(e.rate).replaceAll('.', ','),
                   'Tasa copiada',
                 ),
-              ),
-            ],
+              );
+
+              if (inline) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Settle(
+                        child: ReadWindow(
+                          semanticLabel:
+                              '1 dólar igual a ${fmtRate(e.rate)} bolívares',
+                          child: cifra,
+                        ),
+                      ),
+                    ),
+                    if (chispa != null) ...[
+                      const SizedBox(width: 12),
+                      chispa,
+                    ],
+                    const SizedBox(width: 10),
+                    copiar,
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Settle(
+                    child: ReadWindow(
+                      semanticLabel:
+                          '1 dólar igual a ${fmtRate(e.rate)} bolívares',
+                      child: Row(
+                        children: [
+                          Expanded(child: cifra),
+                          const SizedBox(width: 10),
+                          copiar,
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (chispa != null) ...[const SizedBox(height: 10), chispa],
+                ],
+              );
+            },
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -722,9 +757,11 @@ class _CotizacionPrincipal extends StatelessWidget {
             child: Column(
               children: [
                 // ── Grupo USD: todas las fuentes «1 USD = X» ──
+                // v20: hint corto — el largo «· toca para activar» se
+                // truncaba con feo (VLM gate); tocar es descubrible.
                 const RateGroupHeader(
                   Currency.usd,
-                  hint: '1 USD = X · toca para activar',
+                  hint: '1 USD = X',
                 ),
                 ..._groupRows(context, store, ctx, [
                   Currency.ves,

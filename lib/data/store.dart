@@ -949,7 +949,11 @@ class AppStore extends ChangeNotifier {
 
   // ─── quick-tools: recientes y notas del conversor ────────────────────────
 
-  /// pushRecentConversion (10, dedupe misma from/to/amount <60s).
+  /// pushRecentConversion (10 · dedupe mismo día). v20 (orden del dueño):
+  /// una conversión con el MISMO par y el MISMO monto el MISMO día es el
+  /// mismo dato — no se duplica. Cambia el día (o el monto/par) → se
+  /// registra como nueva (antes la ventana era de 60 s y llenaba la lista
+  /// de copias).
   void pushRecentConversion(double amount, Currency from, Currency to) {
     final sp = prefs;
     if (sp == null) return;
@@ -966,7 +970,9 @@ class AppStore extends ChangeNotifier {
           r.from == from.code &&
           r.to == to.code &&
           r.amount == amount &&
-          now.difference(r.at).inSeconds < 60,
+          r.at.year == now.year &&
+          r.at.month == now.month &&
+          r.at.day == now.day,
     );
     if (dup) return;
     list.insert(

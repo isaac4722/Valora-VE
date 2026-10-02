@@ -31,106 +31,10 @@ class _SectionEyebrow extends StatelessWidget {
   }
 }
 
-/// Ruta del cálculo legible (arista directa · puente EUR · vía dólar).
-/// La ruta del puente EUR se pinta COMPLETA (4 tramos: EUR → local → USD →
-/// destino) con las fuentes usadas en cada tramo — nunca colapsada.
-class _RutaCalculo extends StatelessWidget {
-  const _RutaCalculo({required this.plan});
-  final ConversionPlan? plan;
-
-  /// Etiqueta del tipo de ruta (§1.11 del web): «Tasa directa» solo con
-  /// arista directa; el puente EUR se declara a la vista.
-  String _kindLabel(ConversionPlan p) {
-    if (p.direct) return 'Tasa directa';
-    if (p.path.contains(Currency.eur) &&
-        (p.path.first == Currency.eur || p.path.last == Currency.eur)) {
-      return 'Puente EUR visible';
-    }
-    return 'Vía dólar';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    if (plan == null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SectionEyebrow('Ruta del cálculo'),
-          Text(
-            'Sin tasa disponible para este par. Revisa tus fuentes en '
-            'Ajustes → Monedas y tasas, o pega una tasa manual.',
-            style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
-          ),
-        ],
-      );
-    }
-    final p = plan!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionEyebrow('Ruta del cálculo'),
-        VeCard(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _kindLabel(p).toUpperCase(),
-                style: VeText.labelCaps(10.5, color: scheme.primary),
-              ),
-              const SizedBox(height: 7),
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  for (int i = 0; i < p.path.length; i++) ...[
-                    if (i > 0) ...[
-                      Icon(
-                        Icons.arrow_forward,
-                        size: 13,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    Flag(p.path[i], size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      p.path[i].code,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                ],
-              ),
-              if (p.sourceIds.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final id in p.sourceIds)
-                      if (id.isNotEmpty)
-                        VeBadge(
-                          child: Text(
-                            (convSourceNames[id] ??
-                                    RateSource.of(id)?.label ??
-                                    id)
-                                .toUpperCase(),
-                          ),
-                        ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
+/// Ruta del cálculo — ELIMINADA (v20 · orden del dueño): «no creo que sea
+/// informativamente útil o necesaria… vamos a reducir y mejorar la
+/// estructura». La fuente activa sigue visible en la línea superior del
+/// card del par y en Referencia de fuentes.
 
 /// REQ 5 — Referencia de fuentes del par: TODAS las fuentes disponibles de
 /// la divisa de origen y de destino (VES: BCV · Paralelo · Promedio · Manual;
@@ -181,45 +85,20 @@ class _ReferenciaFuentes extends StatelessWidget {
   }
 
   Widget _fila(BuildContext context, RateSource s) {
-    final scheme = Theme.of(context).colorScheme;
-    final activa = ctx.sel(s.currency) == s.id;
     final r = ctx.rate(s.id);
-    return VeRow(
+    final store = context.watch<AppStore>();
+    // v20 (orden del dueño): la referencia de fuentes usa el MISMO tile
+    // visual de tasas de toda la app — fondo del color de categoría,
+    // sello con icono, precio en tinta y check en la activa. Antes eran
+    // filas planas sin color ni identificación.
+    return RateTile(
+      sourceId: s.id,
+      rate: r,
+      selected: ctx.sel(s.currency) == s.id,
+      freshness: store.board.sources[s.id] == null
+          ? null
+          : timeAgo(store.board.sources[s.id]!.updatedAt),
       onTap: () => onPick(s.currency, s.id),
-      label: Text(
-        '${s.currency.code} ${s.label}',
-        style: activa
-            ? TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)
-            : TextStyle(color: scheme.onSurface),
-      ),
-      sub: Text(s.detail),
-      right: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          VeNum(
-            r > 0 ? fmtRate(r) : '—',
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: activa ? FontWeight.w700 : FontWeight.w500,
-              color: scheme.onSurface,
-            ),
-          ),
-          Text(
-            ' ${s.quote.code}',
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: 8),
-          if (activa)
-            Icon(LucideIcons.check, size: 15, color: scheme.primary)
-          else
-            const SizedBox(width: 15),
-        ],
-      ),
-      showChevron: false,
     );
   }
 }
@@ -369,142 +248,7 @@ class _TablaMontos extends StatelessWidget {
   }
 }
 
-/// Matriz 6×6 plegable (dp6 · mejora 9): las 6 divisas del foco cruzadas con
-/// la tasa vigente de cada una (1 A = X B vía el plan activo). Celdas sin
-/// ruta honestas («—»), scroll horizontal y plegada por defecto para no
-/// robar altura al conversor.
-class _Matriz6 extends StatefulWidget {
-  const _Matriz6({required this.ctx});
-  final RateContext ctx;
-
-  @override
-  State<_Matriz6> createState() => _Matriz6State();
-}
-
-class _Matriz6State extends State<_Matriz6> {
-  bool _open = false;
-  final ScrollController _scroll = ScrollController();
-
-  @override
-  void dispose() {
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final focus = CurrencyX.focus;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionEyebrow(
-          'Tabla de referencia 6×6',
-          actionLabel: _open ? 'Ocultar' : 'Mostrar',
-          onAction: () => setState(() => _open = !_open),
-        ),
-        VeCard(
-          padding: const EdgeInsets.all(12),
-          child: _open
-              ? Scrollbar(
-                  controller: _scroll,
-                  thumbVisibility: true,
-                  child: SingleChildScrollView(
-                    controller: _scroll,
-                    scrollDirection: Axis.horizontal,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const SizedBox(width: 42),
-                            for (final c in focus)
-                              SizedBox(
-                                width: 58,
-                                child: Column(
-                                  children: [
-                                    Flag(c, size: 13),
-                                    const SizedBox(height: 2),
-                                    // labelCaps aplica el piso de
-                                    // legibilidad de 9.5 px (antes 8.5
-                                    // crudos, bajo el mínimo del sistema).
-                                    Text(
-                                      c.code,
-                                      style: VeText.labelCaps(
-                                        9.5,
-                                        color: scheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        for (final r in focus)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 42,
-                                  child: Center(child: Flag(r, size: 15)),
-                                ),
-                                for (final c in focus)
-                                  SizedBox(
-                                    width: 58,
-                                    child: Center(
-                                      child: r == c
-                                          ? Text(
-                                              '·',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: scheme.onSurfaceVariant,
-                                              ),
-                                            )
-                                          : () {
-                                              final rate = widget.ctx.convert(
-                                                1,
-                                                r,
-                                                c,
-                                              );
-                                              return rate > 0
-                                                  ? Text(
-                                                      fmtRate(rate),
-                                                      style: VeText.displayNum(
-                                                        10,
-                                                        weight: FontWeight.w600,
-                                                        color: scheme.onSurface,
-                                                      ),
-                                                    )
-                                                  : Text(
-                                                      '—',
-                                                      style: TextStyle(
-                                                        fontSize: 10,
-                                                        color: scheme
-                                                            .onSurfaceVariant,
-                                                      ),
-                                                    );
-                                            }(),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                )
-              : Text(
-                  'Toca «Mostrar» para cruzar las 6 divisas del foco con la '
-                  'tasa vigente de cada una.',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-        ),
-      ],
-    );
-  }
-}
+/// Matriz 6×6 — ELIMINADA (v20 · orden del dueño): «la tabla de referencia
+/// por 6 no creo que sea necesaria y es un poco más confusa de lo que en
+/// realidad puede ser útil». El par activo se convierte en el card
+/// principal; los demás pares viven en Recientes y en la hoja de monedas.

@@ -595,17 +595,6 @@ class _ConverterScreenState extends State<ConverterScreen> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                'Tarjeta de marca 1080 px · se comparte desde memoria.',
-                style: TextStyle(
-                  fontSize: 10.5,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            _RutaCalculo(plan: plan),
             // REQ 5: fuentes disponibles por divisa implicada en el par.
             _ReferenciaFuentes(
               ctx: ctx,
@@ -629,7 +618,6 @@ class _ConverterScreenState extends State<ConverterScreen> {
               }),
             ),
             // dp6 · mejora 9: matriz completa de pares a un vistazo (plegada).
-            _Matriz6(ctx: ctx),
             _Recientes(
               from: from,
               to: to,

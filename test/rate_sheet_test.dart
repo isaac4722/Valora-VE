@@ -177,6 +177,6 @@ void main() {
     expect(find.text('Manual'), findsOneWidget);
     expect(find.text('40,2500'), findsOneWidget); // fmtRate: 4 decimales ≥ 1
     expect(find.text('—'), findsOneWidget); // manual sin definir
-    expect(find.text('Toca el lápiz para fijar tu tasa'), findsOneWidget);
+    expect(find.text('Fija tu tasa con el lápiz'), findsOneWidget);
   });
 }

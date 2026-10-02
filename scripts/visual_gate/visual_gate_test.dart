@@ -105,7 +105,9 @@ AppStore _storeConDatos() {
       board: RateBoard(
         sources: {
           'ves-bcv': RateEntry(rate: 36.51, updatedAt: ahora),
-          'ves-paralelo': RateEntry(rate: 44.2, updatedAt: ahora),
+          // Id REAL del paralelo (ves-parallel): con 'ves-paralelo' la
+          // fila salía «sin tasa» en los goldens y el VLM lo marcaba.
+          'ves-parallel': RateEntry(rate: 44.2, updatedAt: ahora),
         },
         providers: const ['ve.dolarapi.com'],
         lastUpdate: ahora,

@@ -128,16 +128,22 @@ void main() {
       expect(find.text('100,00'), findsOneWidget);
     });
 
-    testWidgets('CurrencySelect abre menú y emite selección', (tester) async {
+    testWidgets('CurrencySelect abre hoja y emite selección', (tester) async {
       Currency picked = Currency.usd;
+      // v20: el selector ahora abre una HOJA «Ve» (showCurrencySheet) que
+      // exige ShadTheme en el árbol — mismo shell de producción.
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          home: Scaffold(
-            body: Center(
-              child: CurrencySelect(
-                value: Currency.usd,
-                onChanged: (c) => picked = c,
+        ShadApp.custom(
+          theme: ShadThemeVe.light(),
+          darkTheme: ShadThemeVe.dark(),
+          appBuilder: (context) => MaterialApp(
+            theme: AppTheme.light(),
+            home: Scaffold(
+              body: Center(
+                child: CurrencySelect(
+                  value: Currency.usd,
+                  onChanged: (c) => picked = c,
+                ),
               ),
             ),
           ),
@@ -145,6 +151,7 @@ void main() {
       );
       await tester.tap(find.byType(CurrencySelect));
       await tester.pumpAndSettle();
+      // La hoja lista las divisas con bandera + nombre; elegir Euro.
       await tester.tap(find.text('Euro').last);
       await tester.pumpAndSettle();
       expect(picked, Currency.eur);
@@ -332,7 +339,7 @@ void main() {
       expect(find.text('COTIZACIÓN PRINCIPAL'), findsOneWidget);
     });
 
-    testWidgets('Conversor: dual + swap + ruta + notas', (tester) async {
+    testWidgets('Conversor: dual + swap + referencia + notas', (tester) async {
       final store = _pumpedStore(tester, dir: 'w3');
       await _initServices(store);
       store.setRateBoard(
@@ -351,15 +358,18 @@ void main() {
       await tester.tap(find.byIcon(Icons.swap_vert));
       await tester.pumpAndSettle();
       expect(store.data.converter.from, isNot(fromBefore));
-      // La ruta del cálculo quedó MÁS ABAJO (v17.2 añade fecha de tasas +
-      // fuente encima): baja hasta ella antes de afirmar.
+      // v20: Ruta del cálculo ELIMINADA (orden del dueño) — la sección de
+      // tasas del par es ahora la Referencia de fuentes (RateTiles con
+      // color de categoría).
       await tester.dragUntilVisible(
-        find.text('RUTA DEL CÁLCULO'),
+        find.text('REFERENCIA DE FUENTES'),
         find.byType(ListView).first,
         const Offset(0, -250),
       );
       await tester.pumpAndSettle();
-      expect(find.text('RUTA DEL CÁLCULO'), findsOneWidget);
+      expect(find.text('REFERENCIA DE FUENTES'), findsOneWidget);
+      expect(find.text('RUTA DEL CÁLCULO'), findsNothing);
+      expect(find.text('TABLA DE REFERENCIA 6×6'), findsNothing);
     });
 
     testWidgets(
