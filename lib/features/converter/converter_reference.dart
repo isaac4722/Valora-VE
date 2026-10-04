@@ -2,7 +2,7 @@
 /// Ruta del cálculo + todas las fuentes del par + tabla de montos + matriz
 /// 6×6 (dp6). Parte del archivo principal: comparte la privacidad de la
 /// biblioteca y sus imports.
-part of 'converter_screen.dart';
+part of \'converter_screen.dart\';
 
 /// Encabezado de sección en el lenguaje del prototipo (TASK-34 · p6):
 /// eyebrow caps 10.5 px con la acción de texto a la derecha. Reemplaza a
@@ -31,11 +31,6 @@ class _SectionEyebrow extends StatelessWidget {
   }
 }
 
-/// Ruta del cálculo — ELIMINADA (v20 · orden del dueño): «no creo que sea
-/// informativamente útil o necesaria… vamos a reducir y mejorar la
-/// estructura». La fuente activa sigue visible en la línea superior del
-/// card del par y en Referencia de fuentes.
-
 /// REQ 5 — Referencia de fuentes del par: TODAS las fuentes disponibles de
 /// la divisa de origen y de destino (VES: BCV · Paralelo · Promedio · Manual;
 /// COP: TRM · Mercado · Manual; EUR: sus aristas; USD: referencia). Cada fila
@@ -53,51 +48,51 @@ class _ReferenciaFuentes extends StatelessWidget {
   final Currency from, to;
   final void Function(Currency c, String id) onPick;
 
+  List<RateSource> _buildSources() {
+    // PERF: deduplica sin contains() O(n²) y sin doble RateSource.of()
+    final seen = <String>{};
+    final out = <RateSource>[];
+    for (final s in [...RateSource.sourcesFor(from), ...RateSource.sourcesFor(to)]) {
+      if (seen.add(s.id)) out.add(s);
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Dedupe por id conservando el orden: primero la divisa de origen.
-    final ids = <String>[];
-    for (final s in [
-      ...RateSource.sourcesFor(from),
-      ...RateSource.sourcesFor(to),
-    ]) {
-      if (!ids.contains(s.id)) ids.add(s.id);
-    }
-    // v19.0 (orden del dueño): USD no aporta fuentes — 1 USD = 1 USD es
-    // obvio en el mismo contexto. Con USD en el par se listan las fuentes de
-    // la OTRA divisa; si no hay nada, la sección desaparece.
-    if (ids.isEmpty) return const SizedBox.shrink();
+    final sources = _buildSources();
+    // v19.0 (orden del dueño): USD no aporta fuentes
+    if (sources.isEmpty) return const SizedBox.shrink();
+
+    // PERF: un solo select para todas las frescuras, no un watch por fila
+    final freshnessMap = context.select<AppStore, Map<String, String?>>((s) {
+      return {for (final src in sources) src.id: s.board.sources[src.id] == null ? null : timeAgo(s.board.sources[src.id]!.updatedAt)};
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionEyebrow('Referencia de fuentes'),
-        // Filas divididas del prototipo (Group+Row): tocar una fila la usa
-        // como fuente (mismo camino del selector de chips).
-        VeGroup(
-          children: [
-            for (final id in ids)
-              if (RateSource.of(id) != null) _fila(context, RateSource.of(id)!),
-          ],
+        const _SectionEyebrow(\'Referencia de fuentes\'),
+        RepaintBoundary(
+          child: VeGroup(
+            children: [
+              for (final s in sources)
+                _fila(s, freshnessMap[s.id]),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _fila(BuildContext context, RateSource s) {
+  Widget _fila(RateSource s, String? freshness) {
     final r = ctx.rate(s.id);
-    final store = context.watch<AppStore>();
-    // v20 (orden del dueño): la referencia de fuentes usa el MISMO tile
-    // visual de tasas de toda la app — fondo del color de categoría,
-    // sello con icono, precio en tinta y check en la activa. Antes eran
-    // filas planas sin color ni identificación.
     return RateTile(
+      key: ValueKey(s.id),
       sourceId: s.id,
       rate: r,
       selected: ctx.sel(s.currency) == s.id,
-      freshness: store.board.sources[s.id] == null
-          ? null
-          : timeAgo(store.board.sources[s.id]!.updatedAt),
+      freshness: freshness,
       onTap: () => onPick(s.currency, s.id),
     );
   }
@@ -126,129 +121,105 @@ class _TablaMontos extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final amounts = quickAmounts[from] ?? const <double>[];
+    if (amounts.isEmpty) return const SizedBox.shrink();
 
-    // Tabla de equivalencias (USD · BCV · Paralelo · Dif) SOLO con datos
-    // reales de ambas fuentes; el resto de pares mantiene la versión de
-    // siempre (monto → Bs con la fuente activa).
-    final bcv = ctx.rate('ves-bcv');
-    final par = ctx.rate('ves-parallel');
+    final bcv = ctx.rate(\'ves-bcv\');
+    final par = ctx.rate(\'ves-parallel\');
     final dual = from == Currency.usd && bcv > 0 && par > 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionEyebrow('Montos de referencia'),
+        const _SectionEyebrow(\'Montos de referencia\'),
         if (dual)
-          VeGroup(
-            children: [
-              // Encabezado de columnas del prototipo (fondo subtle + caps).
-              Container(
-                padding: const EdgeInsets.fromLTRB(14, 7, 14, 7),
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.06),
-                child: Row(
-                  children: [
-                    for (final (i, h) in const [
-                      'USD',
-                      'BCV',
-                      'Paralelo',
-                      'Dif.',
-                    ].indexed)
-                      Expanded(
-                        child: Text(
-                          h,
-                          textAlign: i == 0 ? TextAlign.left : TextAlign.right,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.84,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              for (final a in amounts)
-                InkWell(
-                  onTap: onAmount == null ? null : () => onAmount!(a),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 9,
-                    ),
-                    child: Row(
-                      children: [
+          RepaintBoundary(
+            child: VeGroup(
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(14, 7, 14, 7),
+                  color: scheme.onSurfaceVariant.withValues(alpha: 0.06),
+                  child: Row(
+                    children: [
+                      for (final (i, h) in const [\'USD\', \'BCV\', \'Paralelo\', \'Dif.\'].indexed)
                         Expanded(
-                          child: VeNum(
-                            '\$${fmtNum(a, decimals: 0)}',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                          child: Text(
+                            h,
+                            textAlign: i == 0 ? TextAlign.left : TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.84,
+                              color: scheme.onSurfaceVariant,
                             ),
                           ),
                         ),
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: VeNum(
-                              fmtNum(a * bcv, decimals: 0),
-                              style: const TextStyle(fontSize: 12.5),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: VeNum(
-                              fmtNum(a * par, decimals: 0),
-                              style: const TextStyle(fontSize: 12.5),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: VeNum(
-                              '${a * (par - bcv) >= 0 ? '+' : '−'}'
-                              '${fmtNum((a * (par - bcv)).abs(), decimals: 0)}',
-                              style: TextStyle(fontSize: 12.5, color: ink.warn),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
-            ],
+                for (final a in amounts)
+                  _DualRow(
+                    key: ValueKey(a),
+                    amount: a,
+                    bcv: bcv,
+                    par: par,
+                    ink: ink,
+                    onTap: onAmount,
+                  ),
+              ],
+            ),
           )
         else
-          VeGroup(
-            children: [
-              for (final a in amounts)
-                VeRow(
-                  onTap: onAmount == null ? null : () => onAmount!(a),
-                  label: VeNum(
-                    fmtMoney(a, from),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+          RepaintBoundary(
+            child: VeGroup(
+              children: [
+                for (final a in amounts)
+                  VeRow(
+                    key: ValueKey(a),
+                    onTap: onAmount == null ? null : () => onAmount!(a),
+                    label: VeNum(
+                      fmtMoney(a, from),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                     ),
+                    right: Text(fmtCurrency(ctx.convert(a, from, Currency.ves), Currency.ves)),
                   ),
-                  right: Text(
-                    fmtCurrency(
-                      ctx.convert(a, from, Currency.ves),
-                      Currency.ves,
-                    ),
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
       ],
     );
   }
 }
 
-/// Matriz 6×6 — ELIMINADA (v20 · orden del dueño): «la tabla de referencia
-/// por 6 no creo que sea necesaria y es un poco más confusa de lo que en
-/// realidad puede ser útil». El par activo se convierte en el card
-/// principal; los demás pares viven en Recientes y en la hoja de monedas.
+// PERF: widget extraído para no crear closures dentro del loop
+class _DualRow extends StatelessWidget {
+  const _DualRow({
+    super.key,
+    required this.amount,
+    required this.bcv,
+    required this.par,
+    required this.ink,
+    required this.onTap,
+  });
+  final double amount, bcv, par;
+  final VeInk ink;
+  final ValueChanged<double>? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final diff = amount * (par - bcv);
+    return InkWell(
+      onTap: onTap == null ? null : () => onTap!(amount),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        child: Row(
+          children: [
+            Expanded(child: VeNum(\'\$${fmtNum(amount, decimals: 0)}\', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+            Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum(fmtNum(amount * bcv, decimals: 0), style: const TextStyle(fontSize: 12.5)))),
+            Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum(fmtNum(amount * par, decimals: 0), style: const TextStyle(fontSize: 12.5)))),
+            Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum(\'${diff >= 0 ? \'+\' : \'−\'}${fmtNum(diff.abs(), decimals: 0)}\', style: TextStyle(fontSize: 12.5, color: ink.warn)))),
+          ],
+        ),
+      ),
+    );
+  }
+}
