@@ -44,10 +44,17 @@ class BackupMergeResult {
 }
 
 /// Export: {version:12, data:{13 claves}, savedAt} (web §2.5).
-String exportBackupJson(AppData data) =>
+/// v20.4: si el dueño pasa [ticketFiles] (fotos-archivo como base64, ver
+/// ticket_files.dart) el bloque viaja aparte — sin fotos el formato queda
+/// IDÉNTICO al de siempre (respaldos viejos importan igual).
+String exportBackupJson(
+  AppData data, {
+  Map<String, String> ticketFiles = const {},
+}) =>
     const JsonEncoder.withIndent('  ').convert({
       'version': kDataVersion,
       'data': data.toJson(),
+      if (ticketFiles.isNotEmpty) 'ticketFiles': ticketFiles,
       'savedAt': DateTime.now().toIso8601String(),
     });
 

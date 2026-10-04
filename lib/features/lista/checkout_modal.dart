@@ -37,6 +37,7 @@ import '../../room/room_controller.dart';
 import '../../services/alerts.dart';
 import '../../services/notifications.dart';
 import '../../services/photo_compress.dart';
+import '../../services/ticket_files.dart';
 import '../../widgets/ui.dart';
 import 'item_editor.dart';
 
@@ -98,7 +99,7 @@ Purchase buildPurchase({
   bool multiStore = false,
   double? paidTotal,
   String? paidCurrency,
-  String? ticketDataUrl,
+  String? ticketPhoto,
   String? notes,
 }) {
   final rate = ctx.unitsPerUSD(Currency.ves) ?? 0;
@@ -129,7 +130,7 @@ Purchase buildPurchase({
     paidTotal: paidTotal,
     paidCurrency:
         paidCurrency ?? (cart.isNotEmpty ? cart.first.currency : 'VES'),
-    ticketPhoto: ticketDataUrl,
+    ticketPhoto: ticketPhoto,
     notes: notes,
   );
 }
@@ -157,7 +158,9 @@ class CheckoutModalState extends State<CheckoutModal> {
   final _paidCtrl = TextEditingController();
   late Currency _paidCurrency;
   final _notesCtrl = TextEditingController();
-  String? _ticketDataUrl;
+  // Referencia de la foto: data URL (web) o ruta relativa 'tickets/x.jpg'
+  // (nativo, v20.4 — la imagen vive en ARCHIVO, no dentro del JSON).
+  String? _ticketRef;
   bool _picking = false;
 
   /// H: decisiones «ya existe» — itemId → true = vincular al match;
@@ -278,7 +281,11 @@ class CheckoutModalState extends State<CheckoutModal> {
       );
       if (compressed != null) bytes = compressed;
       if (!mounted) return;
-      setState(() => _ticketDataUrl = photoToDataUrl(bytes));
+      // v20.4: en nativo la foto va a ARCHIVO (tickets/x.jpg) y el estado
+      // guarda SOLO la ruta relativa — el JSON de AppData deja de cargar
+      // ~200 KB base64 por compra. Web sin filesystem: data URL como siempre.
+      final path = await saveTicketFile(Uint8List.fromList(bytes));
+      setState(() => _ticketRef = path ?? photoToDataUrl(bytes));
     } finally {
       if (mounted) setState(() => _picking = false);
     }
@@ -306,7 +313,7 @@ class CheckoutModalState extends State<CheckoutModal> {
       multiStore: _multiStore,
       paidTotal: paid,
       paidCurrency: _paidCurrency.code,
-      ticketDataUrl: _ticketDataUrl,
+      ticketPhoto: _ticketRef,
       notes: notes,
     );
     _store.addPurchase(purchase);
@@ -625,12 +632,12 @@ class CheckoutModalState extends State<CheckoutModal> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Text(
-                      _ticketDataUrl == null
+                      _ticketRef == null
                           ? 'Foto del ticket'
                           : 'Foto lista',
                     ),
             ),
-            if (_ticketDataUrl != null) ...[
+            if (_ticketRef != null) ...[
               Icon(Icons.photo, size: 14, color: scheme.primary),
               Text(
                 'Ticket adjunto (~200 KB)',
@@ -642,7 +649,7 @@ class CheckoutModalState extends State<CheckoutModal> {
               VeBtn(
                 variant: VeBtnVariant.ghost,
                 size: VeBtnSize.sm,
-                onPressed: () => setState(() => _ticketDataUrl = null),
+                onPressed: () => setState(() => _ticketRef = null),
                 child: const Text('Quitar'),
               ),
             ],

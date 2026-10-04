@@ -28,9 +28,20 @@
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
         android:usesPermissionFlags="neverForLocation"/>
 
+    <!-- v20.4 · Sin respaldo de plataforma (allowBackup=false): el token del
+         relay socket.io (Sala modo Servidor) y todo el resto de datos viven
+         SOLO en este teléfono — la copia de seguridad es la de la propia app
+         (Ajustes → Respaldo, JSON local con retención 4). Así el token jamás
+         viaja a copias cloud/adb y se honra «Tus datos viven en tu teléfono».
+         NOTA: flutter_secure_storage/Keystore se descartó porque exige
+         minSdk 24 y el repo cierra minSdk 21 (§4.13); el storage app-privado
+         ya va cifrado en reposo por FBE en Android 7+. -->
     <application
         android:label="ValoraVE"
         android:name="${applicationName}"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

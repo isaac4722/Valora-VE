@@ -770,3 +770,551 @@ class VeHeatmap extends StatelessWidget {
     );
   }
 }
+
+// ────────────────────────────────────── Timeline multi-serie (v20.4) ─────
+
+/// Punto temporal de una serie [VeTimelineSeries].
+class VeTimelinePoint {
+  const VeTimelinePoint(this.t, this.v);
+
+  final DateTime t;
+  final double v;
+}
+
+/// Una serie temporal del [VeTimelineChart].
+///
+/// Cada serie se NORMALIZA a su propio rango vertical (equivalente al eje
+/// secundario que usaba syncfusion): el relleno muestra la forma, el tooltip
+/// el valor real. El grosor, el punteado y el formato del tooltip son propios.
+class VeTimelineSeries {
+  const VeTimelineSeries({
+    required this.name,
+    required this.points,
+    required this.color,
+    this.area = false,
+    this.dashed = false,
+    this.dashPattern = const <double>[5, 3],
+    this.width = 2,
+    this.format,
+  });
+
+  final String name;
+  final List<VeTimelinePoint> points;
+  final Color color;
+
+  /// Relleno degradado 28 % → 0 bajo la línea (serie protagonista).
+  final bool area;
+
+  /// Línea PUNTEADA (proyección / serie secundaria — jamás sólida si es
+  /// derivada: el dueño exige distinguirlas a la vista).
+  final bool dashed;
+  final List<double> dashPattern;
+  final double width;
+
+  /// Formato del valor en el tooltip (null → sin fila en el tooltip).
+  final String Function(double)? format;
+}
+
+/// Gráfico de líneas/área temporal MULTI-SERIE en CustomPainter puro
+/// (v20.4 — reemplaza a syncfusion_flutter_charts en brecha, canasta y
+/// producto: cero dependencia, APKs livianos, mismo lenguaje del prototipo).
+///
+/// · Rejilla punteada al 25/50/75 % (como VeAreaChart).
+/// · Eje X con etiquetas [xLabel] (típico «dd/MM») y eje Y opcional con la
+///   escala de la PRIMERA serie ([yLabel]).
+/// · Crosshair vertical punteado con puntos por serie + chip de valores
+///   (o [tooltipBuilder] para un chip a medida).
+/// · [onScrub] avisa la fecha bajo el dedo (null al soltar) — la pantalla
+///   de brecha sincroniza su panel de día con esto.
+/// · [legend] pinta la leyenda abajo (punto de color + nombre).
+class VeTimelineChart extends StatefulWidget {
+  const VeTimelineChart({
+    super.key,
+    required this.series,
+    this.height = 200,
+    this.margin = const EdgeInsets.fromLTRB(6, 10, 6, 0),
+    this.legend = false,
+    required this.xLabel,
+    this.yLabel,
+    this.onScrub,
+    this.tooltipBuilder,
+    this.semantic,
+  });
+
+  final List<VeTimelineSeries> series;
+  final double height;
+  final EdgeInsetsGeometry margin;
+  final bool legend;
+
+  /// Etiqueta del eje X (y del chip), p. ej. `DateFormat('dd/MM').format`.
+  final String Function(DateTime t) xLabel;
+
+  /// Etiqueta del eje Y sobre la escala de la primera serie (null = sin eje).
+  final String Function(double v)? yLabel;
+
+  /// Fecha bajo el crosshair (null = soltado / fuera).
+  final void Function(DateTime? t)? onScrub;
+
+  /// Chip a medida; por defecto superficie + borde fuerte (estilo prototipo).
+  final Widget Function(DateTime t, List<(String, String)> rows)?
+  tooltipBuilder;
+
+  final String? semantic;
+
+  @override
+  State<VeTimelineChart> createState() => _VeTimelineChartState();
+}
+
+class _VeTimelineChartState extends State<VeTimelineChart> {
+  /// Posición del crosshair en 0..1 sobre el ancho del plot.
+  double? _x;
+
+  bool get _hasData => widget.series.any((s) => s.points.length >= 2);
+
+  void _update(double dx, double width) {
+    if (width <= 0 || !_hasData) return;
+    final x = (dx / width).clamp(0.0, 1.0).toDouble();
+    if (x != _x) {
+      setState(() => _x = x);
+      final b = _timeBounds();
+      if (b != null) {
+        widget.onScrub?.call(
+          DateTime.fromMillisecondsSinceEpoch(
+            (b.$1 + (b.$2 - b.$1) * x).round(),
+          ),
+        );
+      }
+    }
+  }
+
+  void _release() {
+    setState(() => _x = null);
+    widget.onScrub?.call(null);
+  }
+
+  (int, int)? _timeBounds() {
+    int? lo, hi;
+    for (final s in widget.series) {
+      for (final p in s.points) {
+        final ms = p.t.millisecondsSinceEpoch;
+        if (lo == null || ms < lo) lo = ms;
+        if (hi == null || ms > hi) hi = ms;
+      }
+    }
+    if (lo == null || hi == null || lo == hi) return null;
+    return (lo, hi);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shad = ShadTheme.of(context).colorScheme;
+    final ink = Theme.of(context).extension<VeInk>()!;
+
+    if (!_hasData) return SizedBox(height: widget.height);
+
+    final chip = _x == null ? null : _buildTooltip(context);
+
+    return Semantics(
+      label: widget.semantic ?? 'Gráfico de evolución',
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final w = c.maxWidth;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragUpdate: (d) => _update(d.localPosition.dx, w),
+            onTapDown: (d) => _update(d.localPosition.dx, w),
+            onVerticalDragUpdate: (d) => _update(d.localPosition.dx, w),
+            onHorizontalDragEnd: (_) => _release(),
+            onPanCancel: _release,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onHover: (e) => _update(e.localPosition.dx, w),
+              onExit: (_) => _release(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: widget.margin,
+                    child: SizedBox(
+                      width: w,
+                      height: widget.height,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Positioned.fill(
+                            child: RepaintBoundary(
+                              child: CustomPaint(
+                                painter: _TimelinePainter(
+                                  series: widget.series,
+                                  x: _x,
+                                  grid: shad.border,
+                                  muted: shad.mutedForeground,
+                                  crosshair: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? VeColors.faintDark
+                                      : VeColors.faintLight,
+                                  xLabel: widget.xLabel,
+                                  yLabel: widget.yLabel,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (chip != null) chip,
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (widget.legend) _Legend(series: widget.series),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTooltip(BuildContext context) {
+    final bounds = _timeBounds();
+    if (bounds == null) return const SizedBox.shrink();
+    final t = DateTime.fromMillisecondsSinceEpoch(
+      (bounds.$1 + (bounds.$2 - bounds.$1) * _x!).round(),
+    );
+    final rows = <(String, String)>[];
+    for (final s in widget.series) {
+      final fmt = s.format;
+      if (fmt == null || s.points.isEmpty) continue;
+      final p = _nearest(s.points, t);
+      rows.add((s.name, fmt(p.v)));
+    }
+    if (rows.isEmpty) return const SizedBox.shrink();
+    final defaultChip = _ChartChip(
+      text: rows.length == 1
+          ? '${widget.xLabel(t)}  ${rows.first.$2}'
+          : '${widget.xLabel(t)}\n'
+                + rows.map((r) => '${r.$1}  ${r.$2}').join('\n'),
+    );
+    final built = widget.tooltipBuilder?.call(t, rows) ?? defaultChip;
+    return Align(
+      alignment: Alignment(-1 + 2 * _x!.clamp(0.1, 0.9).toDouble(), -1),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: built,
+      ),
+    );
+  }
+}
+
+/// Punto de una serie más cercano a [t] (por milisegundos).
+VeTimelinePoint _nearest(List<VeTimelinePoint> pts, DateTime t) {
+  final ms = t.millisecondsSinceEpoch;
+  var best = pts.first;
+  var bestD = (best.t.millisecondsSinceEpoch - ms).abs();
+  for (final p in pts) {
+    final d = (p.t.millisecondsSinceEpoch - ms).abs();
+    if (d < bestD) {
+      best = p;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
+/// Leyenda del prototipo: punto de color 8 px + nombre en 10 muted.
+class _Legend extends StatelessWidget {
+  const _Legend({required this.series});
+
+  final List<VeTimelineSeries> series;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Wrap(
+        spacing: 14,
+        runSpacing: 4,
+        alignment: WrapAlignment.center,
+        children: [
+          for (final s in series)
+            if (s.points.isNotEmpty)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: s.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    s.name,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 10,
+                      color: scheme.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Trazo de línea con patrón discontinuo (extracción por PathMetrics —
+/// el camino original queda intacto).
+ui.Path _dash(ui.Path source, List<double> pattern) {
+  if (pattern.isEmpty) return source;
+  final dest = ui.Path();
+  for (final metric in source.computeMetrics()) {
+    var dist = 0.0;
+    var draw = true;
+    var i = 0;
+    while (dist < metric.length) {
+      final len = pattern[i % pattern.length];
+      if (draw) {
+        dest.addPath(
+          metric.extractPath(dist, math.min(dist + len, metric.length)),
+          ui.Offset.zero,
+        );
+      }
+      dist += len;
+      draw = !draw;
+      i++;
+    }
+  }
+  return dest;
+}
+
+/// Pintor del timeline: rejilla punteada 25/50/75 %, ejes con etiquetas,
+/// áreas degradadas, líneas (sólidas o punteadas) y crosshair con puntos.
+class _TimelinePainter extends CustomPainter {
+  _TimelinePainter({
+    required this.series,
+    required this.x,
+    required this.grid,
+    required this.muted,
+    required this.crosshair,
+    required this.xLabel,
+    required this.yLabel,
+  });
+
+  final List<VeTimelineSeries> series;
+  final double? x; // 0..1 o null
+  final Color grid;
+  final Color muted;
+  final Color crosshair;
+  final String Function(DateTime) xLabel;
+  final String Function(double)? yLabel;
+
+  static const _gutterLeft = 36.0;
+  static const _gutterBottom = 16.0;
+
+  @override
+  void paint(ui.Canvas canvas, ui.Size size) {
+    // Orden del widget se respeta: áreas primero (llaman los call sites).
+    final paintable = series
+        .where((s) => s.points.length >= 2)
+        .toList();
+    if (paintable.isEmpty) return;
+
+    // Escala temporal global.
+    var loMs = paintable.first.points.first.t.millisecondsSinceEpoch;
+    var hiMs = loMs;
+    for (final s in paintable) {
+      for (final p in s.points) {
+        final ms = p.t.millisecondsSinceEpoch;
+        if (ms < loMs) loMs = ms;
+        if (ms > hiMs) hiMs = ms;
+      }
+    }
+    final span = math.max(1, hiMs - loMs);
+
+    // Rangos verticales POR serie (normalización propia, como el eje 2º).
+    final ranges = <VeTimelineSeries, (double, double)>{};
+    for (final s in paintable) {
+      var lo = s.points.first.v;
+      var hi = lo;
+      for (final p in s.points) {
+        if (p.v < lo) lo = p.v;
+        if (p.v > hi) hi = p.v;
+      }
+      if (hi - lo < 1e-9) {
+        lo -= 1;
+        hi += 1;
+      }
+      final pad = (hi - lo) * 0.06;
+      ranges[s] = (lo - pad, hi + pad);
+    }
+
+    final plot = ui.Rect.fromLTWH(
+      _gutterLeft,
+      4,
+      math.max(0, size.width - _gutterLeft - 4),
+      math.max(0, size.height - _gutterBottom - 4),
+    );
+    if (plot.isEmpty) return;
+
+    // Rejilla punteada al 25/50/75 %.
+    final gridPaint = Paint()
+      ..color = grid
+      ..strokeWidth = 1;
+    for (final f in const [0.25, 0.5, 0.75]) {
+      final y = plot.top + plot.height * f;
+      canvas.drawPath(
+        _dash(ui.Path()..moveTo(plot.left, y)..lineTo(plot.right, y),
+            const [3, 3]),
+        gridPaint,
+      );
+    }
+
+    // Etiquetas del eje Y (escala de la PRIMERA serie).
+    if (yLabel != null) {
+      final range = ranges[paintable.first]!;
+      for (final f in const [0.0, 0.5, 1.0]) {
+        final v = range.$2 - (range.$2 - range.$1) * f;
+        _label(
+          canvas,
+          yLabel!(v),
+          ui.Offset(plot.left - 6, plot.top + plot.height * f),
+          align: ui.TextAlign.right,
+        );
+      }
+    }
+
+    // Etiquetas del eje X: inicio, tercios, fin.
+    final ticks = [0.0, 1 / 3, 2 / 3, 1.0];
+    for (final f in ticks) {
+      final t = DateTime.fromMillisecondsSinceEpoch(loMs + (span * f).round());
+      _label(
+        canvas,
+        xLabel(t),
+        ui.Offset(plot.left + plot.width * f, plot.bottom + 4),
+        align: f == 0
+            ? ui.TextAlign.left
+            : (f == 1 ? ui.TextAlign.right : ui.TextAlign.center),
+      );
+    }
+
+    // Series: áreas primero, líneas después (como syncfusion las apila).
+    for (final s in paintable) {
+      final range = ranges[s]!;
+      final path = ui.Path();
+      for (var i = 0; i < s.points.length; i++) {
+        final p = s.points[i];
+        final fx =
+            (p.t.millisecondsSinceEpoch - loMs) / span;
+        final fy = (range.$2 - p.v) / (range.$2 - range.$1);
+        final px = plot.left + plot.width * fx.clamp(0.0, 1.0);
+        final py = plot.top + plot.height * fy.clamp(0.0, 1.0);
+        if (i == 0) {
+          path.moveTo(px, py);
+        } else {
+          path.lineTo(px, py);
+        }
+      }
+
+      if (s.area) {
+        final fill = ui.Path.from(path)
+          ..lineTo(
+            plot.left + plot.width,
+            plot.top + plot.height,
+          )
+          ..lineTo(plot.left, plot.top + plot.height)
+          ..close();
+        canvas.drawPath(
+          fill,
+          Paint()
+            ..shader = ui.Gradient.linear(
+              ui.Offset(0, plot.top),
+              ui.Offset(0, plot.bottom),
+              [
+                s.color.withValues(alpha: 0.28),
+                s.color.withValues(alpha: 0),
+              ],
+            ),
+        );
+      }
+
+      final line = Paint()
+        ..color = s.color
+        ..strokeWidth = s.width
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(s.dashed ? _dash(path, s.dashPattern) : path, line);
+    }
+
+    // Crosshair vertical punteado + punto por serie.
+    final sx = x;
+    if (sx != null) {
+      final cx = plot.left + plot.width * sx;
+      canvas.drawPath(
+        _dash(
+          ui.Path()..moveTo(cx, plot.top)..lineTo(cx, plot.bottom),
+          const [4, 3],
+        ),
+        Paint()
+          ..color = crosshair
+          ..strokeWidth = 1,
+      );
+      for (final s in paintable) {
+        final range = ranges[s]!;
+        final t = DateTime.fromMillisecondsSinceEpoch(
+          loMs + (span * sx).round(),
+        );
+        final p = _nearest(s.points, t);
+        final fy = (range.$2 - p.v) / (range.$2 - range.$1);
+        canvas.drawCircle(
+          ui.Offset(
+            cx,
+            plot.top + plot.height * fy.clamp(0.0, 1.0),
+          ),
+          3.2,
+          Paint()..color = s.color,
+        );
+      }
+    }
+  }
+
+  /// Etiqueta 9.5 px muted con [align] sobre el punto dado.
+  void _label(
+    ui.Canvas canvas,
+    String text,
+    ui.Offset at, {
+    ui.TextAlign align = ui.TextAlign.left,
+  }) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 9.5,
+          fontFeatures: const [FontFeature.tabularFigures()],
+          color: muted,
+        ),
+      ),
+      textAlign: align,
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final dx = switch (align) {
+      ui.TextAlign.right => at.dx - tp.width,
+      ui.TextAlign.center => at.dx - tp.width / 2,
+      _ => at.dx,
+    };
+    tp.paint(canvas, ui.Offset(dx, at.dy));
+  }
+
+  @override
+  bool shouldRepaint(covariant _TimelinePainter old) =>
+      old.x != x ||
+      old.series != series ||
+      old.grid != grid ||
+      old.muted != muted ||
+      old.crosshair != crosshair;
+}

@@ -8,6 +8,7 @@
 /// estado honesto.
 library;
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -30,7 +31,6 @@ import '../lista/checkout_modal.dart' show photoToDataUrl;
 /// Extrae los bytes de un data URL 'data:image/...;base64,…' (o base64
 /// crudo). Devuelve null si no se puede decodificar — la celda muestra el
 /// estado «imagen rota» en vez de romper la grilla.
-Uint8List? ticketBytes(String? dataUrl) => decodeDataUrl(dataUrl);
 
 class TicketsScreen extends StatelessWidget {
   const TicketsScreen({super.key});
@@ -44,11 +44,8 @@ class TicketsScreen extends StatelessWidget {
             .where((p) => p.ticketPhoto != null && p.ticketPhoto!.isNotEmpty)
             .toList()
           ..sort((a, b) => b.date.compareTo(a.date));
-    // Peso estimado de las fotos guardadas (base64 ≈ 1.37 × bytes crudos).
-    final mb = withPhoto.fold<double>(
-      0,
-      (a, p) => a + (p.ticketPhoto!.length * 0.75) / 1048576,
-    );
+    // Peso de las fotos: data URLs estimadas (length×0.75) + tamaño REAL
+    // de los archivos tickets/*.jpg (v20.4: las fotos viven fuera del JSON).
 
     // v19: PushScreen — notch/barras respetadas + botón atrás visible.
     return PushScreen(
@@ -59,11 +56,9 @@ class TicketsScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             VeTitle(
-              sub: Text(
-                withPhoto.isEmpty
-                    ? 'Sin fotos todavía'
-                    : '${withPhoto.length} ${withPhoto.length == 1 ? 'foto' : 'fotos'} · ${mb < 0.1 ? '≤0.1' : mb.toStringAsFixed(1)} MB',
-              ),
+              sub: withPhoto.isEmpty
+                  ? const Text('Sin fotos todavía')
+                  : _GallerySubtitle(withPhoto: withPhoto),
               child: const Text('Galería'),
             ),
             if (withPhoto.isEmpty && store.purchases.isNotEmpty)
@@ -217,9 +212,20 @@ class TicketsScreen extends StatelessWidget {
       if (purchaseId != null) {
         final p = store.purchases.where((x) => x.id == purchaseId).firstOrNull;
         if (p != null) {
+          // v20.4: la foto va a ARCHIVO (tickets/x.jpg) y la compra guarda
+          // SOLO la ruta relativa. Si ya tenía foto-archivo, se borra la
+          // anterior: cero huérfanos en el disco.
+          final oldRef = p.ticketPhoto;
+          final path = await saveTicketFile(bytes);
+          if (path != null &&
+              oldRef != null &&
+              oldRef.isNotEmpty &&
+              isTicketPath(oldRef)) {
+            unawaited(deleteTicketFile(oldRef));
+          }
           store.updatePurchase(
             p.id,
-            p.copyWith(ticketPhoto: photoToDataUrl(bytes)),
+            p.copyWith(ticketPhoto: path ?? photoToDataUrl(bytes)),
           );
           if (context.mounted) {
             showToast(context, 'Ticket adjuntado', kind: ToastKind.ok);
@@ -299,11 +305,16 @@ class _TicketCard extends StatefulWidget {
 class _TicketCardState extends State<_TicketCard> {
   bool _hover = false;
 
+  /// Caché de la carga (data URL o archivo): el hover re-dispara build y un
+  /// Future nuevo por build parpadearía el placeholder y releería el disco.
+  late final Future<Uint8List?> _bytesFuture = loadTicketBytes(
+    widget.purchase.ticketPhoto,
+  );
+
   @override
   Widget build(BuildContext context) {
     final shad = ShadTheme.of(context).colorScheme;
     final scheme = Theme.of(context).colorScheme;
-    final bytes = ticketBytes(widget.purchase.ticketPhoto);
     final bool dark = Theme.of(context).brightness == Brightness.dark;
 
     return Semantics(
@@ -352,24 +363,33 @@ class _TicketCardState extends State<_TicketCard> {
                               ],
                       ),
                     ),
-                    child: bytes == null
-                        ? Center(
+                    // v20.4: la foto puede venir de ARCHIVO (async) o de
+                    // un data URL legado — FutureBuilder resuelve ambos.
+                    child: FutureBuilder<Uint8List?>(
+                      future: _bytesFuture,
+                      builder: (context, snap) {
+                        final bytes = snap.data;
+                        if (bytes == null) {
+                          return Center(
                             child: Icon(
                               LucideIcons.imageOff,
                               size: 26,
                               color: shad.mutedForeground,
                             ),
-                          )
-                        : Image.memory(
-                            bytes,
-                            fit: BoxFit.cover,
-                            gaplessPlayback: true,
-                            errorBuilder: (_, _, _) => Icon(
-                              LucideIcons.imageOff,
-                              size: 26,
-                              color: shad.mutedForeground,
-                            ),
+                          );
+                        }
+                        return Image.memory(
+                          bytes,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                          errorBuilder: (_, _, _) => Icon(
+                            LucideIcons.imageOff,
+                            size: 26,
+                            color: shad.mutedForeground,
                           ),
+                        );
+                      },
+                    ),
                   ),
                 ),
                 Padding(
@@ -548,9 +568,19 @@ class _TicketViewer extends StatefulWidget {
 
 class _TicketViewerState extends State<_TicketViewer> {
   bool _removed = false;
+  Uint8List? _bytes;
+
+  @override
+  void initState() {
+    super.initState();
+    // v20.4: la foto puede vivir en archivo (async) o ser data URL legada.
+    loadTicketBytes(widget.purchase.ticketPhoto).then((b) {
+      if (mounted && !_removed) setState(() => _bytes = b);
+    });
+  }
 
   Future<void> _share() async {
-    final bytes = ticketBytes(widget.purchase.ticketPhoto);
+    final bytes = _bytes ?? await loadTicketBytes(widget.purchase.ticketPhoto);
     if (bytes == null) {
       showToast(
         context,
@@ -586,6 +616,11 @@ class _TicketViewerState extends State<_TicketViewer> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    // v20.4: si la foto era un ARCHIVO, se borra del disco (sin huérfanos).
+    final ref = widget.purchase.ticketPhoto;
+    if (ref != null && ref.isNotEmpty && isTicketPath(ref)) {
+      unawaited(deleteTicketFile(ref));
+    }
     widget.store.updatePurchase(
       widget.purchase.id,
       widget.purchase.copyWith(clearTicket: true),
@@ -603,7 +638,7 @@ class _TicketViewerState extends State<_TicketViewer> {
   @override
   Widget build(BuildContext context) {
     final p = widget.purchase;
-    final bytes = _removed ? null : ticketBytes(p.ticketPhoto);
+    final bytes = _removed ? null : _bytes;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -721,5 +756,41 @@ class _TicketViewerState extends State<_TicketViewer> {
         ],
       ),
     );
+  }
+}
+
+
+/// Subtítulo de la galería: nº de fotos + peso total. Las fotos-archivo se
+/// miden con su tamaño REAL en disco; las data URLs legadas se estiman
+/// (length × 0.75 ≈ bytes crudos del base64).
+class _GallerySubtitle extends StatelessWidget {
+  const _GallerySubtitle({required this.withPhoto});
+
+  final List<Purchase> withPhoto;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = withPhoto.length;
+    return FutureBuilder<int>(
+      future: _totalBytes(),
+      builder: (context, snap) {
+        final mb = (snap.data ?? 0) / 1048576;
+        final peso = mb < 0.1 ? '≤0.1' : mb.toStringAsFixed(1);
+        return Text('$n ${n == 1 ? 'foto' : 'fotos'} · $peso MB');
+      },
+    );
+  }
+
+  Future<int> _totalBytes() async {
+    var total = 0;
+    for (final p in withPhoto) {
+      final ref = p.ticketPhoto!;
+      if (isTicketPath(ref)) {
+        total += await ticketFileSize(ref);
+      } else {
+        total += (ref.length * 0.75).round();
+      }
+    }
+    return total;
   }
 }

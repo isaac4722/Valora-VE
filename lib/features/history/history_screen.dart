@@ -11,7 +11,6 @@
 /// movimientos CSV) desde la barra pegajosa, constancia mensual.
 library;
 
-import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -25,6 +24,7 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
+import '../../services/ticket_files.dart';
 import '../../widgets/export_sheet.dart';
 import '../../widgets/ui.dart';
 import '../statement/statement_screen.dart';
@@ -127,7 +127,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           }
                         },
                       ),
-                      sub: Text('${filtered.length} compras · ${fmtUSD(sum)}'),
+                      sub: Text(
+                        '${filtered.length} '
+                        '${filtered.length == 1 ? 'compra' : 'compras'} · '
+                        '${fmtUSD(sum)}',
+                      ),
                       right: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -509,7 +513,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       context,
       ExportSpec(
         title: 'Compras',
-        subtitle: '${list.length} compras guardadas',
+        subtitle:
+            '${list.length} ${list.length == 1 ? 'compra guardada' : 'compras guardadas'}',
         formats: [
           csvFormat(
             hint: 'Una fila por compra: tienda, montos y tasa',
@@ -575,7 +580,6 @@ class _DetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = ShadTheme.of(context).colorScheme;
-    final bytes = _ticketBytes();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -661,36 +665,47 @@ class _DetailBody extends StatelessWidget {
             ],
           ),
         ],
-        // ── Ticket: miniatura + visor (zoom 8×, compartir).
-        if (bytes != null) ...[
-          const VeEyebrow(child: Text('TICKET')),
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () => _viewTicket(context),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.memory(
-                    bytes,
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.cover,
-                    gaplessPlayback: true,
-                  ),
+        // ── Ticket: miniatura + visor (zoom 8×, compartir). v20.4: la
+        // foto puede vivir en ARCHIVO (tickets/x.jpg) → carga async.
+        FutureBuilder<Uint8List?>(
+          future: _ticketBytes(),
+          builder: (context, snap) {
+            final bytes = snap.data;
+            if (bytes == null) return const SizedBox.shrink();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const VeEyebrow(child: Text('TICKET')),
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _viewTicket(context, bytes),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          bytes,
+                          width: 56,
+                          height: 56,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: VeBtn(
+                        size: VeBtnSize.sm,
+                        icon: LucideIcons.scanSearch,
+                        onPressed: () => _viewTicket(context, bytes),
+                        child: const Text('Ver con zoom'),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: VeBtn(
-                  size: VeBtnSize.sm,
-                  icon: LucideIcons.scanSearch,
-                  onPressed: () => _viewTicket(context),
-                  child: const Text('Ver con zoom'),
-                ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            );
+          },
+        ),
       ],
     );
   }
@@ -728,17 +743,8 @@ class _DetailBody extends StatelessWidget {
     return [for (final k in order) (k.isEmpty ? null : k, map[k]!)];
   }
 
-  /// Bytes del ticket (data URL 'data:image/jpeg;base64,…' → JPEG crudo).
-  Uint8List? _ticketBytes() {
-    final raw = purchase.ticketPhoto;
-    if (raw == null || raw.isEmpty) return null;
-    try {
-      final b64 = raw.contains(',') ? raw.substring(raw.indexOf(',') + 1) : raw;
-      return base64Decode(b64);
-    } catch (_) {
-      return null;
-    }
-  }
+  /// Bytes del ticket: data URL legada o ARCHIVO tickets/x.jpg (v20.4).
+  Future<Uint8List?> _ticketBytes() => loadTicketBytes(purchase.ticketPhoto);
 
   /// Comparte el ticket como JPEG (mismo patrón share_plus del repo).
   Future<void> _shareTicket(Uint8List bytes) async {
@@ -756,9 +762,7 @@ class _DetailBody extends StatelessWidget {
     );
   }
 
-  void _viewTicket(BuildContext context) {
-    final bytes = _ticketBytes();
-    if (bytes == null) return;
+  void _viewTicket(BuildContext context, Uint8List bytes) {
     showDialog<void>(
       context: context,
       builder: (ctx) => Dialog(

@@ -10,12 +10,16 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:hive_ce/hive_ce.dart' show IsolatedBox, IsolatedHive;
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
+import 'package:path_provider/path_provider.dart' show getApplicationDocumentsDirectory;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import '../core/analytics.dart' as an;
 import '../core/currencies.dart';
 import '../core/models.dart';
+import 'ins_server.dart';
 
 /// Nombre de cajas Hive.
 const kBoxData = 'valorave.data';
@@ -60,12 +64,12 @@ class AppStore extends ChangeNotifier {
   List<ShoppingTemplate> get templates => _data.templates;
   List<BasketItem> get basket => _data.basket;
 
-  int _id = 0;
-  String newId() {
-    _id++;
-    final ms = DateTime.now().microsecondsSinceEpoch;
-    return 'v$ms${_id.toString().padLeft(4, '0')}';
-  }
+  /// IDs únicos GLOBALES (v20.4 · uuid v4): antes «v<microseg><contador>»
+  /// colisionaba si dos teléfonos creaban compras/ítems en el mismo
+  /// microsegundo y fusionaban la Sala Viva sin internet. v4 es aleatorio
+  /// 122 bits: la colisión es irrisoria incluso fusionando miles de listas.
+  static const Uuid _uuid = Uuid();
+  String newId() => _uuid.v4();
 
   // ─── Motor activo ───────────────────────────────────────────────────────
 
@@ -1041,25 +1045,49 @@ class AppStore extends ChangeNotifier {
   // ─── Hidratación / persistencia ─────────────────────────────────────────
 
   SharedPreferences? prefs;
-  Box<String>? _boxData;
-  Box<String>? _boxSnapshots;
-  Box<String>? _boxNotifs;
-  Box<String>? _boxOutbox;
+  _BoxRef? _boxData;
+  _BoxRef? _boxSnapshots;
+  _BoxRef? _boxNotifs;
+  _BoxRef? _boxOutbox;
 
   /// [testDir] habilita hidratación en tests (Hive.init plano, sin plugins).
+  ///
+  /// v20.4 · hive_ce: abrir la MISMA caja desde dos isolates corrompe las
+  /// cajas (advertencia del paquete) y el worker de workmanager hydrataba
+  /// aparte. Ahora en NATIVO la app y el worker pasan por IsolatedHive con
+  /// el IsolateNameServer del proceso: quien llegue primero crea el isolate
+  /// de Hive y el otro SE CONECTA a él — un solo dueño de los archivos, cero
+  /// corrupción. En web no hay isolates ni worker (delega en Hive plano) y
+  /// en tests se mantiene el camino plano para cajas sync.
   Future<void> hydrate({String? testDir}) async {
-    if (testDir != null) {
-      Hive.init(testDir);
+    // Nativo (app Y worker): IsolatedHive — todas las escrituras pasan por
+    // el isolate de Hive registrado en el IsolateNameServer del proceso.
+    // Web: sin isolates reales → IsolatedHiveImpl delega en Hive plano.
+    // Tests: Hive plano con init(testDir) como siempre (cajas sync).
+    final isolated = testDir == null && !kIsWeb;
+    if (isolated) {
+      final dir = await getApplicationDocumentsDirectory();
+      await IsolatedHive.init(dir.path, isolateNameServer: const SystemIsolateNameServer());
+      _boxData = _BoxRef.fromIsolated(await IsolatedHive.openBox<String>(kBoxData));
+      _boxSnapshots = _BoxRef.fromIsolated(
+        await IsolatedHive.openBox<String>(kBoxSnapshots),
+      );
+      _boxNotifs = _BoxRef.fromIsolated(await IsolatedHive.openBox<String>(kBoxNotifs));
+      _boxOutbox = _BoxRef.fromIsolated(await IsolatedHive.openBox<String>(kBoxOutbox));
     } else {
-      await Hive.initFlutter();
+      if (testDir != null) {
+        Hive.init(testDir);
+      } else {
+        await Hive.initFlutter();
+      }
+      _boxData = _BoxRef.fromBox(await Hive.openBox<String>(kBoxData));
+      _boxSnapshots = _BoxRef.fromBox(await Hive.openBox<String>(kBoxSnapshots));
+      _boxNotifs = _BoxRef.fromBox(await Hive.openBox<String>(kBoxNotifs));
+      _boxOutbox = _BoxRef.fromBox(await Hive.openBox<String>(kBoxOutbox));
     }
-    _boxData = await Hive.openBox<String>(kBoxData);
-    _boxSnapshots = await Hive.openBox<String>(kBoxSnapshots);
-    _boxNotifs = await Hive.openBox<String>(kBoxNotifs);
-    _boxOutbox = await Hive.openBox<String>(kBoxOutbox);
     prefs = await SharedPreferences.getInstance();
 
-    final raw = _boxData!.get(_kDataKey);
+    final raw = await _boxData!.get(_kDataKey);
     if (raw != null && raw.isNotEmpty) {
       try {
         _data = migrate(
@@ -1072,12 +1100,12 @@ class AppStore extends ChangeNotifier {
       _data = const AppData();
     }
     // Notificaciones.
+    final ringRaw = await _boxNotifs!.get('ring');
     notifs
       ..clear()
       ..addAll(
-        (_boxNotifs!.get('ring') ?? '[]').toString().isNotEmpty
-            ? ((jsonDecode(_boxNotifs!.get('ring') ?? '[]') as List?) ??
-                      const [])
+        (ringRaw ?? '[]').toString().isNotEmpty
+            ? ((jsonDecode(ringRaw ?? '[]') as List?) ?? const [])
                   .whereType<Map>()
                   .map(
                     (e) =>
@@ -1087,7 +1115,7 @@ class AppStore extends ChangeNotifier {
             : <NotificationItem>[],
       );
     // Snapshots.
-    final snapRaw = _boxSnapshots!.get('points');
+    final snapRaw = await _boxSnapshots!.get('points');
     if (snapRaw != null) {
       try {
         snapshots
@@ -1100,7 +1128,7 @@ class AppStore extends ChangeNotifier {
       } catch (_) {}
     }
     // Outbox.
-    final outRaw = _boxOutbox!.get('queue');
+    final outRaw = await _boxOutbox!.get('queue');
     if (outRaw != null) {
       try {
         outbox
@@ -1122,18 +1150,28 @@ class AppStore extends ChangeNotifier {
 
   void _persist() {
     final raw = jsonEncode(_data.toJson());
-    _boxData?.put(_kDataKey, raw);
-    // Durabilidad (v19.5): put() queda en el búfer de Hive; el flush fuerza
-    // la escritura a disco antes del próximo ciclo de eventos. Fire-and-forget
-    // con captura: si el disco falla, el dato sigue en memoria y el próximo
-    // _persist reintenta — un corte de luz ya no borra la última compra.
     final box = _boxData;
-    if (box != null) unawaited(box.flush().catchError((_) {}));
+    if (box != null) {
+      // Durabilidad (v19.5): put() queda en el búfer de Hive; el flush
+      // fuerza la escritura a disco antes del próximo ciclo de eventos.
+      // Fire-and-forget con captura: si el disco falla, el dato sigue en
+      // memoria y el próximo _persist reintenta — un corte de luz ya no
+      // borra la última compra.
+      unawaited(
+        box.put(_kDataKey, raw).then((_) => box.flush()).catchError((_) {}),
+      );
+    }
     notifyListeners();
   }
 
   void _persistNotifs() {
-    _boxNotifs?.put('ring', jsonEncode(notifs.map((e) => e.toJson()).toList()));
+    final box = _boxNotifs;
+    if (box != null) {
+      unawaited(
+        box.put('ring', jsonEncode(notifs.map((e) => e.toJson()).toList()))
+            .catchError((_) {}),
+      );
+    }
   }
 
   /// Fuerza la escritura en disco del anillo de notificaciones. En 2º plano
@@ -1149,14 +1187,20 @@ class AppStore extends ChangeNotifier {
   }
 
   void persistSnapshots() {
-    _boxSnapshots?.put(
-      'points',
-      jsonEncode(snapshots.map((e) => e.toJson()).toList()),
-    );
+    final box = _boxSnapshots;
+    if (box != null) {
+      unawaited(
+        box.put('points', jsonEncode(snapshots.map((e) => e.toJson()).toList()))
+            .catchError((_) {}),
+      );
+    }
   }
 
   void persistOutbox() {
-    _boxOutbox?.put('queue', jsonEncode(outbox));
+    final box = _boxOutbox;
+    if (box != null) {
+      unawaited(box.put('queue', jsonEncode(outbox)).catchError((_) {}));
+    }
   }
 
   // ─── Aplicación de eventos remotos de sala (guard baseline+suppress) ────
@@ -1233,5 +1277,52 @@ class AppStore extends ChangeNotifier {
         }
     }
     _persist();
+  }
+}
+
+/// ─── _BoxRef · caja Hive unificada (v20.4) ──────────────────────────────────
+///
+/// La app en primer plano y el worker de workmanager comparten hoy el MISMO
+/// isolate de Hive (IsolatedHive + IsolateNameServer del proceso), pero los
+/// tests siguen con cajas planas sincrónicas. Esta referencia esconde la
+/// diferencia: get/put/flush funcionan igual con Box (sync) e IsolatedBox
+/// (async por canal de isolate) — el store no sabe ni le importa cuál vive.
+class _BoxRef {
+  _BoxRef.fromBox(Box<String> b)
+      : _box = b,
+        _iso = null;
+
+  _BoxRef.fromIsolated(IsolatedBox<String> b)
+      : _box = null,
+        _iso = b;
+
+  final Box<String>? _box;
+  final IsolatedBox<String>? _iso;
+
+  /// Lectura. En caja plana es sync disfrazado; en aislada viaja por el
+  /// canal del isolate (solo se usa en hydrate: una vez por arranque).
+  Future<String?> get(dynamic key) async =>
+      _box?.get(key) ?? await _iso?.get(key);
+
+  /// Escritura. Siempre await-able; el store decide si espera (worker) o
+  /// dispara fire-and-forget con catchError (UI).
+  Future<void> put(dynamic key, String value) async {
+    final b = _box;
+    if (b != null) {
+      await b.put(key, value);
+      return;
+    }
+    await _iso?.put(key, value);
+  }
+
+  /// Fuerza el volcado del búfer a disco (durabilidad v19.5 y flush del
+  /// anillo de notificaciones del worker).
+  Future<void> flush() async {
+    final b = _box;
+    if (b != null) {
+      await b.flush();
+      return;
+    }
+    await _iso?.flush();
   }
 }

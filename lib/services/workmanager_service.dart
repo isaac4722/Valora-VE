@@ -13,6 +13,8 @@ import 'package:workmanager/workmanager.dart';
 
 import '../data/store.dart';
 import 'alerts.dart';
+import 'ticket_files.dart';
+import 've_log.dart';
 import 'notifications.dart';
 import 'widget_service.dart';
 
@@ -36,8 +38,9 @@ void callbackDispatcher() {
               parallel: rates['ves-parallel'],
             );
           }
-        } catch (_) {
-          /* sin red: nada */
+        } catch (e) {
+          // Sin red u origen caído: el widget queda con la última lectura.
+          VeLog.e('worker:rates-sync', e);
         }
         // Recordatorio diario con app cerrada (precisión horaria; el claim
         // por día en AlertEngine evita duplicar con el camino in-app) +
@@ -63,8 +66,9 @@ void callbackDispatcher() {
           );
           await engine.drain();
           await store.flushNotifications();
-        } catch (_) {
-          /* sin canal de notifs: no bloquea */
+        } catch (e) {
+          // Sin canal de notifs: no bloquea (queda en el registro local).
+          VeLog.w('worker:rates-sync', 'alertas en fondo: $e');
         }
         return true;
       case kBackupTask:
@@ -106,10 +110,13 @@ Future<void> autoBackup(AppStore store) async {
     await backups.create(recursive: true);
     final name =
         'backup-valorave-${DateTime.now().toIso8601String().substring(0, 10)}.json';
+    // v20.4: el respaldo semanal lleva las fotos-archivo aparte
+    // (ticketFiles) — restaurar en otro teléfono no pierde tickets.
     await File('${backups.path}/$name').writeAsString(
       const JsonEncoder.withIndent('  ').convert({
         'version': 12,
         'data': store.data.toJson(),
+        'ticketFiles': await collectTicketFiles(store.data),
         'savedAt': DateTime.now().toIso8601String(),
       }),
     );

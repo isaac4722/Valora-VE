@@ -2,10 +2,12 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y salas con su propia tecnología. Offline-first."
 publish_to: 'none'
 
-# 1.9.7-beta+25 · v19.7 — versión web (modo cliente): build web PWA
-# con marca propia (título, descripción es-VE, splash tipográfico que
-# se retira con el primer frame) e íconos de marca en el manifest.
-version: 1.12.0-beta+32
+# 1.13.0-beta+33 · v20.4 — auditoría de paquetes: fotos de ticket a ARCHIVO
+# (fuera del JSON de estado), IsolatedHive para 2º plano (hive_ce: sin
+# corrupción de cajas), uuid v4 para IDs P2P, csv RFC 4180, talker para
+# observabilidad 100 % local y syncfusion_flutter_charts RETIRADO (los 3
+# gráficos ahora son CustomPainter propio, APKs más livianos).
+version: 1.13.0-beta+33
 
 environment:
   sdk: ^3.9.2
@@ -19,12 +21,17 @@ dependencies:
   provider: ^6.1.5                  # estado + DI (decisión cerrada del dueño)
   nested: ^1.0.0                    # (transitivo de provider) tipado de listas de providers
   go_router: ^16.3.0                # shell 8 rutas + ramas stateful (GUI dp4)
+  flutter_web_plugins:              # deep link web (v20.3): usePathUrlStrategy —
+    sdk: flutter                    # ya venía transitivo por go_router, mismo lock
 
   # ── Persistencia offline-first ───────────────────────────────────────────
   hive_ce: ^2.20.0                  # libro, snapshots, outbox (Community Edition, v19)
   hive_ce_flutter: ^2.3.4           # initFlutter (path_provider integrado)
   path_provider: ^2.1.5             # rutas de datos (+ override abajo)
   shared_preferences: ^2.3.2        # prefs UI (ticker, tema, tips)
+  uuid: ^4.6.0                      # IDs únicos P2P (v4): newId() sin colisión
+                                    # cuando dos teléfonos editan la Sala Viva
+                                    # sin internet (antes era transitiva)
 
   # ── Red ──────────────────────────────────────────────────────────────────
   dio: ^5.7.0                       # tablero de tasas + SSE propio (§trap 1)
@@ -50,7 +57,16 @@ dependencies:
   # ── UI / visualización / documentos ────────────────────────────────────────
   shadcn_ui: ^0.57.1                # GUI nueva «Linear/Vercel» (orden del dueño TASK-33): componentes shadcn/ui con tokens VeColors exactos
   lucide_icons_flutter: ^3.1.20     # iconografía Lucide del rediseño (trazo fino, look Linear)
-  syncfusion_flutter_charts: ^34.2.8    # brecha, evolución, histórico (major 34: alineada a Flutter 3.47 / intl 0.20)
+  # syncfusion_flutter_charts RETIRADO (v20.4): los 3 gráficos (brecha,
+  # canasta, producto) viven en CustomPainter propio (ve/charts.dart) —
+  # APKs/AAB sensiblemente más livianos y cero condiciones de licencia.
+  csv: ^6.0.0                       # export RFC 4180 estricto (toCSV): comillas
+                                    # y saltos de línea de notas NO rompen columnas.
+                                    # (6.x: la última que acepta Dart 3.9 del CI;
+                                    # 7/8 exigen Dart 3.10.1)
+  talker_flutter: ^5.1.20           # observabilidad 100 % LOCAL: buffer en el
+                                    # teléfono, visor en Ajustes → Diagnóstico.
+                                    # Nada sale del dispositivo (privacidad).
   dynamic_color: ^1.7.0             # Material You opcional
   qr_flutter: ^4.1.0                # QR de sala
   pdf: ^3.11.1                      # constancias PDF

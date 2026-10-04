@@ -11,7 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:syncfusion_flutter_charts/charts.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 import '../../core/analytics.dart' as an;
 import '../../core/fmt.dart';
@@ -236,18 +236,6 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
 
   // Trackball tap-friendly: divisor vertical PUNTEADO en el punto exacto +
   // burbujas de ambas series + marcador en el punto tocado (§ interactivas).
-  final TrackballBehavior _trackball = TrackballBehavior(
-    enable: true,
-    activationMode: ActivationMode.singleTap,
-    lineType: TrackballLineType.vertical,
-    lineDashArray: const <double>[4, 3],
-    tooltipDisplayMode: TrackballDisplayMode.floatAllPoints,
-    tooltipSettings: const InteractiveTooltip(enable: true),
-    markerSettings: const TrackballMarkerSettings(
-      markerVisibility: TrackballVisibilityMode.visible,
-    ),
-  );
-
   @override
   void initState() {
     super.initState();
@@ -306,10 +294,23 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
   }
 
   // Guarda el punto tocado para el panel de brecha diaria (feedback visible).
-  void _onTrackball(TrackballArgs details) {
-    final idx = details.chartPointInfo.dataPointIndex;
-    if (idx == null || idx < 0) return;
-    if (idx != _gapIdx) setState(() => _gapIdx = idx);
+  /// Índice del punto de BCV más cercano a la fecha tocada en la gráfica
+  /// (v20.4: sustituye al trackball de syncfusion — el panel de día
+  /// sincroniza con el crosshair de VeTimelineChart).
+  int _nearestIdx(List<HistPoint> pts, DateTime t) {
+    final ms = t.millisecondsSinceEpoch;
+    var best = 0;
+    var bestD = (DateTime.parse(pts.first.date).millisecondsSinceEpoch - ms)
+        .abs();
+    for (var i = 1; i < pts.length; i++) {
+      final d =
+          (DateTime.parse(pts[i].date).millisecondsSinceEpoch - ms).abs();
+      if (d < bestD) {
+        best = i;
+        bestD = d;
+      }
+    }
+    return best;
   }
 
   @override
@@ -423,50 +424,47 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
             ),
             child: Column(
               children: [
-                SizedBox(
-                  height: 210,
-                  child: SfCartesianChart(
-                    // 9P·Pulido: margen interno para que la curva no roce
-                    // el borde superior de la tarjeta ni el eje X quede
-                    // pegado a la base (auditoría visual de la web).
-                    margin: const EdgeInsets.fromLTRB(6, 14, 10, 4),
-                    legend: const Legend(
-                      isVisible: true,
-                      position: LegendPosition.bottom,
-                      textStyle: TextStyle(fontSize: 10),
+                // v20.4: VeTimelineChart (CustomPainter propio) en lugar de
+                // syncfusion — área BCV + línea Paralelo, leyenda y el
+                // panel de día sincronizado con el dedo (onScrub).
+                VeTimelineChart(
+                  height: 190,
+                  // 9P·Pulido: margen interno para que la curva no roce
+                  // el borde superior de la tarjeta (auditoría de la web).
+                  margin: const EdgeInsets.fromLTRB(6, 14, 10, 4),
+                  legend: true,
+                  xLabel: (t) => DateFormat('dd/MM').format(t),
+                  yLabel: (v) => fmtNum(v, decimals: 0),
+                  semantic: 'Brecha entre BCV y Paralelo',
+                  onScrub: (t) {
+                    if (!mounted) return;
+                    setState(() {
+                      _gapIdx = t == null ? null : _nearestIdx(bcv, t);
+                    });
+                  },
+                  series: [
+                    VeTimelineSeries(
+                      name: 'BCV',
+                      points: [
+                        for (final p in bcv)
+                          VeTimelinePoint(DateTime.parse(p.date), p.rate),
+                      ],
+                      color: ink.pos,
+                      area: true,
+                      format: (v) => fmtRate(v),
                     ),
-                    primaryXAxis: DateTimeAxis(
-                      dateFormat: DateFormat('dd/MM'),
-                      majorGridLines: const MajorGridLines(width: 0),
-                      // 9P·Pulido: las fechas del eje respiran bajo la curva.
-                      axisLabelFormatter: (a) => ChartAxisLabel(
-                        a.text,
-                        const TextStyle(fontSize: 9.5),
+                    if (par.isNotEmpty)
+                      VeTimelineSeries(
+                        name: 'Paralelo',
+                        points: [
+                          for (final p in par)
+                            VeTimelinePoint(DateTime.parse(p.date), p.rate),
+                        ],
+                        color: ink.neg,
+                        width: 1.8,
+                        format: (v) => fmtRate(v),
                       ),
-                    ),
-                    trackballBehavior: _trackball,
-                    onTrackballPositionChanging: _onTrackball,
-                    series: [
-                      AreaSeries<HistPoint, DateTime>(
-                        dataSource: bcv,
-                        xValueMapper: (p, _) => DateTime.parse(p.date),
-                        yValueMapper: (p, _) => p.rate,
-                        name: 'BCV',
-                        color: ink.pos.withValues(alpha: 0.25),
-                        borderColor: ink.pos,
-                        borderWidth: 2,
-                      ),
-                      if (par.isNotEmpty)
-                        LineSeries<HistPoint, DateTime>(
-                          dataSource: par,
-                          xValueMapper: (p, _) => DateTime.parse(p.date),
-                          yValueMapper: (p, _) => p.rate,
-                          name: 'Paralelo',
-                          color: ink.neg,
-                          width: 1.8,
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 _DayPanel(bcv: bcv, parallel: par, index: _gapIdx),
@@ -908,69 +906,45 @@ class _InflacionAnchor extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  height: 200,
-                  child: SfCartesianChart(
-                    primaryXAxis: DateTimeAxis(
-                      dateFormat: DateFormat('dd/MM'),
-                      majorGridLines: const MajorGridLines(width: 0),
-                    ),
-                    tooltipBehavior: TooltipBehavior(
-                      enable: true,
-                      activationMode: ActivationMode.singleTap,
-                      builder:
-                          (
-                            dynamic s,
-                            dynamic point,
-                            dynamic series,
-                            int i,
-                            int si,
-                          ) {
-                            if (i < 0 || i >= costSeries.length) {
-                              return const SizedBox.shrink();
-                            }
-                            final p = costSeries[i];
-                            return TipBox(
-                              main: fmtUSD(p.cost),
-                              sub: fmtDayLabel(p.day),
-                              bg: scheme.primary,
-                              fg: scheme.onPrimary,
-                            );
-                          },
-                    ),
-                    crosshairBehavior: CrosshairBehavior(
-                      enable: true,
-                      lineType: CrosshairLineType.vertical,
-                      lineDashArray: const <double>[4, 3],
-                      activationMode: ActivationMode.singleTap,
-                    ),
-                    series: [
-                      AreaSeries<
-                        ({DateTime day, double cost, int items}),
-                        DateTime
-                      >(
-                        dataSource: costSeries,
-                        xValueMapper: (p, _) => p.day,
-                        yValueMapper: (p, _) => p.cost,
-                        name: 'Canasta',
-                        color: ink.manual.withValues(alpha: 0.2),
-                        borderColor: ink.manual,
-                        borderWidth: 2,
-                      ),
-                      // Proyección PUNTEADA (DAMP φ 0.85): se distingue a la
-                      // vista de la serie real — nunca se pinta sólida.
-                      if (costProj != null)
-                        LineSeries<({DateTime day, double value}), DateTime>(
-                          dataSource: costProj.points,
-                          xValueMapper: (p, _) => p.day,
-                          yValueMapper: (p, _) => p.value,
-                          name: 'Proyección 30 d',
-                          color: ink.warn,
-                          width: 1.6,
-                          dashArray: const <double>[6, 4],
-                        ),
-                    ],
+                // v20.4: VeTimelineChart — área real + proyección PUNTEADA
+                // (DAMP φ 0.85) que se distingue a la vista de la serie real.
+                VeTimelineChart(
+                  height: 190,
+                  margin: EdgeInsets.zero,
+                  xLabel: (t) => DateFormat('dd/MM').format(t),
+                  yLabel: (v) => fmtNum(v, decimals: 0),
+                  semantic: 'Costo de la canasta en dólares',
+                  tooltipBuilder: (t, rows) => TipBox(
+                    main: rows.isEmpty ? '' : rows.first.$2,
+                    sub: fmtDayLabel(t),
+                    bg: scheme.primary,
+                    fg: scheme.onPrimary,
                   ),
+                  series: [
+                    VeTimelineSeries(
+                      name: 'Canasta',
+                      points: [
+                        for (final p in costSeries)
+                          VeTimelinePoint(p.day, p.cost),
+                      ],
+                      color: ink.manual,
+                      area: true,
+                      format: fmtUSD,
+                    ),
+                    if (costProj != null)
+                      VeTimelineSeries(
+                        name: 'Proyección 30 d',
+                        points: [
+                          for (final p in costProj.points)
+                            VeTimelinePoint(p.day, p.value),
+                        ],
+                        color: ink.warn,
+                        dashed: true,
+                        dashPattern: const <double>[6, 4],
+                        width: 1.6,
+                        format: fmtUSD,
+                      ),
+                  ],
                 ),
                 if (costProj != null)
                   Padding(
@@ -1044,53 +1018,31 @@ class _InflacionAnchor extends StatelessWidget {
                   : DateTime.tryParse(devalPoints.first.date),
               sinceSubject: 'BCV',
             ),
-            child: SizedBox(
-              height: 200,
-              child: SfCartesianChart(
-                primaryXAxis: DateTimeAxis(
-                  dateFormat: DateFormat('dd/MM'),
-                  majorGridLines: const MajorGridLines(width: 0),
-                ),
-                tooltipBehavior: TooltipBehavior(
-                  enable: true,
-                  activationMode: ActivationMode.singleTap,
-                  builder:
-                      (
-                        dynamic s,
-                        dynamic point,
-                        dynamic series,
-                        int i,
-                        int si,
-                      ) {
-                        if (i < 0 || i >= devalPoints.length) {
-                          return const SizedBox.shrink();
-                        }
-                        final p = devalPoints[i];
-                        return TipBox(
-                          main: 'BCV ${fmtRate(p.rate)}',
-                          sub: fmtDayLabel(DateTime.parse(p.date)),
-                          bg: scheme.primary,
-                          fg: scheme.onPrimary,
-                        );
-                      },
-                ),
-                crosshairBehavior: CrosshairBehavior(
-                  enable: true,
-                  lineType: CrosshairLineType.vertical,
-                  lineDashArray: const <double>[4, 3],
-                  activationMode: ActivationMode.singleTap,
-                ),
-                series: [
-                  AreaSeries<HistPoint, DateTime>(
-                    dataSource: devalPoints,
-                    xValueMapper: (p, _) => DateTime.parse(p.date),
-                    yValueMapper: (p, _) => p.rate,
-                    color: ink.manual.withValues(alpha: 0.2),
-                    borderColor: ink.manual,
-                    borderWidth: 2,
-                  ),
-                ],
+            // v20.4: VeTimelineChart en lugar de syncfusion.
+            child: VeTimelineChart(
+              height: 190,
+              margin: EdgeInsets.zero,
+              xLabel: (t) => DateFormat('dd/MM').format(t),
+              yLabel: (v) => fmtNum(v, decimals: 0),
+              semantic: 'Devaluación diaria del BCV',
+              tooltipBuilder: (t, rows) => TipBox(
+                main: 'BCV ${rows.isEmpty ? '' : rows.first.$2}',
+                sub: fmtDayLabel(t),
+                bg: scheme.primary,
+                fg: scheme.onPrimary,
               ),
+              series: [
+                VeTimelineSeries(
+                  name: 'BCV',
+                  points: [
+                    for (final p in devalPoints)
+                      VeTimelinePoint(DateTime.parse(p.date), p.rate),
+                  ],
+                  color: ink.manual,
+                  area: true,
+                  format: fmtRate,
+                ),
+              ],
             ),
           )
         else

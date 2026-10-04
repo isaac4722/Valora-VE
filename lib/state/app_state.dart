@@ -20,6 +20,7 @@ import '../data/store.dart';
 import '../room/room_controller.dart';
 import '../services/alerts.dart';
 import '../services/connectivity.dart';
+import '../services/ve_log.dart';
 import '../services/widget_service.dart';
 import '../services/notifications.dart';
 
@@ -270,7 +271,10 @@ class RatesPoller extends ChangeNotifier {
         }
       },
       onDone: _sseDown,
-      onError: (_) => _sseDown(),
+      onError: (_) {
+        VeLog.w('sse', 'Stream interrumpido: $_sseLiveUrl');
+        _sseDown();
+      },
     );
     _sse!.start();
   }

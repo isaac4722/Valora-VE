@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:syncfusion_flutter_charts/charts.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 import '../../core/analytics.dart' as an;
 import '../../core/currencies.dart';
@@ -372,7 +372,8 @@ class ProductosAnchor extends StatelessWidget {
         else ...[
           PanelCard(
             title: 'Mayores subidas',
-            subtitle: '${up.length} productos al alza en ${rangeName(days)}',
+            subtitle:
+                '${up.length} ${up.length == 1 ? 'producto al alza' : 'productos al alza'} en ${rangeName(days)}',
             child: up.isEmpty
                 ? const Text('Ninguna subida en el rango.')
                 : Column(
@@ -395,7 +396,7 @@ class ProductosAnchor extends StatelessWidget {
           PanelCard(
             title: 'Mayores bajadas',
             subtitle:
-                '${down.length} productos a la baja en ${rangeName(days)}',
+                '${down.length} ${down.length == 1 ? 'producto a la baja' : 'productos a la baja'} en ${rangeName(days)}',
             child: down.isEmpty
                 ? const Text('Ninguna bajada en el rango.')
                 : Column(
@@ -818,34 +819,17 @@ class GastosAnchor extends StatelessWidget {
           // Donut por tienda (top 6 + Otras).
           if (byStore.length > 1) ...[
             const VeEyebrow(child: Text('POR TIENDA')),
+            // v20.4: VeDonut (CustomPainter propio, leyenda integrada) en
+            // lugar de SfCircularChart.
             PanelCard(
               title: 'Distribución por tienda',
-              child: SizedBox(
-                height: 210,
-                child: SfCircularChart(
-                  legend: const Legend(
-                    isVisible: true,
-                    position: LegendPosition.bottom,
-                    textStyle: TextStyle(fontSize: 10),
-                  ),
-                  series: [
-                    DoughnutSeries<
-                      ({String store, double totalUSD, int count}),
-                      String
-                    >(
-                      dataSource: byStore,
-                      xValueMapper: (e, _) => e.store,
-                      yValueMapper: (e, _) => e.totalUSD,
-                      pointColorMapper: (e, i) => chartPalette(
-                        context,
-                      )[i % chartPalette(context).length],
-                      radius: '70%',
-                      dataLabelSettings: const DataLabelSettings(
-                        isVisible: false,
-                      ),
-                      enableTooltip: true,
-                    ),
-                  ],
+              child: Center(
+                child: VeDonut(
+                  labels: [for (final e in byStore) e.store],
+                  data: [for (final e in byStore) e.totalUSD],
+                  size: 210,
+                  formatValue: (v) => fmtUSD(v),
+                  semantic: 'Gasto por tienda',
                 ),
               ),
             ),
@@ -877,28 +861,14 @@ class GastosAnchor extends StatelessWidget {
             const VeEyebrow(child: Text('GASTO POR MES')),
             PanelCard(
               title: 'Gasto por mes',
-              child: SizedBox(
+              // v20.4: VeBars (CustomPainter propio) en lugar de syncfusion.
+              child: VeBars(
+                labels: [for (final e in byMonth) e.month],
+                data: [for (final e in byMonth) e.totalUSD],
+                tone: VeChartTone.neg,
                 height: 200,
-                child: SfCartesianChart(
-                  primaryXAxis: const CategoryAxis(),
-                  tooltipBehavior: TooltipBehavior(enable: true),
-                  series: [
-                    ColumnSeries<
-                      ({String month, double totalUSD, int count}),
-                      String
-                    >(
-                      dataSource: byMonth,
-                      xValueMapper: (e, _) => e.month,
-                      yValueMapper: (e, _) => e.totalUSD,
-                      name: 'Gasto',
-                      color: sem.neg,
-                      dataLabelSettings: const DataLabelSettings(
-                        isVisible: false,
-                      ),
-                      enableTooltip: true,
-                    ),
-                  ],
-                ),
+                formatValue: (v) => fmtUSD(v),
+                semantic: 'Gasto por mes',
               ),
             ),
           ],
@@ -1028,59 +998,35 @@ class _HistoricaAnchorState extends State<HistoricaAnchor> {
                 first: firstDay,
                 sinceSubject: null,
               ),
-              child: SizedBox(
-                height: 210,
-                child: SfCartesianChart(
-                  legend: Legend(
-                    isVisible: multi,
-                    position: LegendPosition.bottom,
-                    textStyle: const TextStyle(fontSize: 10),
-                  ),
-                  primaryXAxis: DateTimeAxis(
-                    dateFormat: DateFormat('dd/MM'),
-                    majorGridLines: const MajorGridLines(width: 0),
-                  ),
-                  tooltipBehavior: TooltipBehavior(
-                    enable: true,
-                    activationMode: ActivationMode.singleTap,
-                    builder:
-                        (
-                          dynamic s,
-                          dynamic point,
-                          dynamic series,
-                          int i,
-                          int si,
-                        ) {
-                          if (i < 0 || s is! List || i >= s.length) {
-                            return const SizedBox.shrink();
-                          }
-                          final p = s[i] as SnapshotPoint;
-                          return TipBox(
-                            main: fmtRate(p.rate),
-                            sub: fmtDayLabel(DateTime.parse(p.day)),
-                            bg: scheme.primary,
-                            fg: scheme.onPrimary,
-                          );
-                        },
-                  ),
-                  crosshairBehavior: CrosshairBehavior(
-                    enable: true,
-                    lineType: CrosshairLineType.vertical,
-                    lineDashArray: const <double>[4, 3],
-                    activationMode: ActivationMode.singleTap,
-                  ),
-                  series: [
-                    for (var k = 0; k < selected.length; k++)
-                      LineSeries<SnapshotPoint, DateTime>(
-                        dataSource: seriesById[selected[k]]!,
-                        xValueMapper: (p, _) => DateTime.parse(p.day),
-                        yValueMapper: (p, _) => p.rate,
-                        name: RateSource.of(selected[k])?.label ?? selected[k],
-                        color: palette[k % palette.length],
-                        width: 1.8,
-                      ),
-                  ],
+              // v20.4: VeTimelineChart — hasta 3 tasas superpuestas con
+              // leyenda cuando hay varias y chip con TODOS los valores de
+              // la fecha tocada (antes: un valor suelto por toque).
+              child: VeTimelineChart(
+                height: 190,
+                margin: EdgeInsets.zero,
+                legend: multi,
+                xLabel: (t) => DateFormat('dd/MM').format(t),
+                yLabel: (v) => fmtNum(v, decimals: 0),
+                semantic: 'Tasas en el rango',
+                tooltipBuilder: (t, rows) => TipBox(
+                  main: rows.map((r) => r.$2).join(' · '),
+                  sub: fmtDayLabel(t),
+                  bg: scheme.primary,
+                  fg: scheme.onPrimary,
                 ),
+                series: [
+                  for (var k = 0; k < selected.length; k++)
+                    VeTimelineSeries(
+                      name: RateSource.of(selected[k])?.label ?? selected[k],
+                      points: [
+                        for (final p in seriesById[selected[k]]!)
+                          VeTimelinePoint(DateTime.parse(p.day), p.rate),
+                      ],
+                      color: palette[k % palette.length],
+                      width: 1.8,
+                      format: (v) => fmtRate(v),
+                    ),
+                ],
               ),
             )
           else if (allSeries.length == 1)

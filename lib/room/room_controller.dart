@@ -16,6 +16,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/models.dart';
 import '../data/store.dart';
+import '../services/ve_log.dart';
 import 'room_transport.dart';
 
 class RoomController extends ChangeNotifier {
@@ -271,6 +272,7 @@ class RoomController extends ChangeNotifier {
       return null;
     } catch (e) {
       await leave();
+      VeLog.e('sala:crear', e);
       _lastError = RoomProtocol.errorMessage(
         e is Exception && '$e'.length < 40 ? '$e' : 'bt_connect',
       );
@@ -352,6 +354,7 @@ class RoomController extends ChangeNotifier {
       return null;
     } catch (e) {
       await leave();
+      VeLog.e('sala:unir', e);
       final raw = '$e'.replaceAll('Exception: ', '');
       final human = RoomProtocol.errorMessage(raw);
       return human == 'Error: $raw' ? 'No se pudo conectar: $raw' : human;

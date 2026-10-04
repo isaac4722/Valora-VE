@@ -140,6 +140,18 @@ void main() {
       expect(parsed[0][2], 'c');
     });
 
+    test('v20.4: round-trip RFC 4180 con CRLF (csv package)', () {
+      final rows = [
+        ['Producto', 'Nota'],
+        ['Café "especial"', 'línea1\nlínea2, con coma'],
+      ];
+      final text = toCSV(rows); // ListToCsv/CsvEncoder usa CRLF (RFC 4180)
+      expect(text.contains('\r\n'), isTrue);
+      final parsed = parseCSV(text);
+      expect(parsed[1][0], 'Café "especial"');
+      expect(parsed[1][1], 'línea1\nlínea2, con coma');
+    });
+
     test('BOM se descarta', () {
       final parsed = parseCSV('\ufeffa,b');
       expect(parsed[0][0], 'a');

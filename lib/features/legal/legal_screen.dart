@@ -106,9 +106,8 @@ class LegalScreen extends StatelessWidget {
                     'Tipografías: Inter (SIL OFL 1.1) y Space Grotesk (SIL OFL 1.1), '
                     'empaquetadas localmente para que la primera ejecución sin red '
                     'tipografíe igual. Plugins oficiales de pub.dev con su licencia '
-                    'BSD/MIT correspondiente (Flutter, provider, hive, dio, '
-                    'flutter_local_notifications, syncfusion '
-                    'community license, entre otros).',
+                    'BSD/MIT correspondiente (Flutter, provider, hive_ce, dio, '
+                    'uuid, csv, talker, flutter_local_notifications, entre otros).',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.55,

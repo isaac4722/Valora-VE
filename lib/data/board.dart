@@ -12,6 +12,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 
 import 'package:valorave/core/models.dart';
+import 'package:valorave/services/ve_log.dart';
 
 final Dio _dio = () {
   final d = Dio(
@@ -182,6 +183,7 @@ Future<RegionBlock> _veBlock() async {
     dolarapiVivo = sources.isNotEmpty;
   } catch (e) {
     errors.add('ve.dolarapi/dolares: $e');
+    VeLog.e('board', e);
   }
   if (!sources.containsKey('ves-bcv') || !sources.containsKey('ves-parallel')) {
     try {
@@ -220,6 +222,7 @@ Future<RegionBlock> _veBlock() async {
     }
   } catch (e) {
     errors.add('ve.dolarapi/euros: $e');
+    VeLog.e('board', e);
   }
   return (sources, errors, providers.toList());
 }

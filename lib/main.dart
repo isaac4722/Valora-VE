@@ -9,12 +9,16 @@
 library;
 
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'core/shad_theme.dart';
@@ -24,6 +28,7 @@ import 'services/biometric.dart';
 import 'services/connectivity.dart';
 import 'services/deep_link.dart';
 import 'services/notifications.dart';
+import 'services/photo_compress.dart';
 import 'services/quick_actions.dart';
 import 'services/widget_service.dart';
 import 'services/workmanager_service.dart';
@@ -36,10 +41,22 @@ import 'widgets/app_tips.dart' show kSessionsKey;
 /// para que Hive hidrate sin canales de plataforma.
 Future<void> main({String? documentsDir}) async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Deep link web (v20.3): con la estrategia por defecto la ruta inicial
+  // llegaba como '/' y cualquier URL profunda (/conversor, /sala…) caía en
+  // Inicio. PathUrlStrategy expone el path real al router; en nativo no
+  // aplica (kIsWeb guard).
+  if (kIsWeb) usePathUrlStrategy();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   final store = AppStore();
   await store.hydrate(testDir: documentsDir);
+  // v20.4: migración única de tickets (data URL base64 → archivo JPEG en
+  // disco; el campo pasa a ruta relativa). Nativo de producción solamente:
+  // en web no hay filesystem y en pruebas no hay plugins. Fire-and-forget:
+  // la app arranca igual y el JSON de estado adelgaza en cuanto termine.
+  if (!kIsWeb && documentsDir == null) {
+    unawaited(migrateTicketPhotosToFiles(store));
+  }
   final prefs = await SharedPreferences.getInstance();
   // Sesiones para el motor de tips (v19): los tips contextuales empiezan a
   // partir de la SEGUNDA apertura — nunca «de una vez» tras el tutorial.

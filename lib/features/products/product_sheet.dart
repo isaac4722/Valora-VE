@@ -12,9 +12,9 @@
 ///  · «Registrar precio»: monto + moneda + tienda (autocompletado) →
 ///    addRecord con fecha de hoy; banner honesto «¡Bajo tu meta!» si el
 ///    precio quedó por debajo (TARGET_EPS).
-///  · Gráfica «Inflación/deflación del producto» (SfCartesianChart: área USD
-///    + precio por kg/L punteado en eje secundario), % acumulado del
-///    período, tooltip + trackball. Estado vacío honesto («sin datos»).
+///  · Gráfica «Inflación/deflación del producto» (VeTimelineChart: área USD
+///    + precio por kg/L punteado en escala propia), % acumulado del
+///    período, chip interactivo. Estado vacío honesto («sin datos»).
 ///  · Historial de registros: editar (updateRecord) y borrar (deleteRecord
 ///    con confirmación).
 ///  · Ajustes: código de barras (+ escáner), categoría/presentación/tamaño,
@@ -32,7 +32,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:syncfusion_flutter_charts/charts.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 import '../../core/analytics.dart' as an;
 import '../../core/currencies.dart';
@@ -1315,61 +1315,41 @@ class ProductSheetState extends State<ProductSheet> {
                   ),
                 )
               else
-                SizedBox(
-                  height: 200,
-                  child: SfCartesianChart(
-                    legend: const Legend(
-                      isVisible: true,
-                      position: LegendPosition.bottom,
-                      textStyle: TextStyle(fontSize: 10),
+                // v20.4: VeTimelineChart (CustomPainter propio) en lugar de
+                // syncfusion — mismo contenido: área USD + punteado por
+                // unidad en su propia escala, leyenda y chip al tocar.
+                VeTimelineChart(
+                  height: 186,
+                  margin: EdgeInsets.zero,
+                  legend: true,
+                  xLabel: (t) => DateFormat('dd/MM').format(t),
+                  yLabel: (v) => fmtNum(v, decimals: 0),
+                  semantic: 'Inflación o deflación del producto',
+                  series: [
+                    VeTimelineSeries(
+                      name: 'Precio (USD)',
+                      points: [
+                        for (final pt in points)
+                          VeTimelinePoint(pt.date, pt.price),
+                      ],
+                      color: scheme.primary,
+                      area: true,
+                      format: (v) => fmtUSD(v),
                     ),
-                    primaryXAxis: DateTimeAxis(
-                      dateFormat: DateFormat('dd/MM'),
-                      majorGridLines: const MajorGridLines(width: 0),
-                      labelStyle: const TextStyle(fontSize: 9.5),
-                    ),
-                    primaryYAxis: NumericAxis(
-                      majorGridLines: const MajorGridLines(width: 0.5),
-                      labelStyle: const TextStyle(fontSize: 9.5),
-                    ),
-                    axes: hasUnit
-                        ? [
-                            NumericAxis(
-                              name: 'unit',
-                              opposedPosition: true,
-                              majorGridLines: const MajorGridLines(width: 0),
-                              labelStyle: const TextStyle(fontSize: 9.5),
-                            ),
-                          ]
-                        : const <ChartAxis>[],
-                    tooltipBehavior: TooltipBehavior(enable: true),
-                    trackballBehavior: TrackballBehavior(
-                      enable: true,
-                      activationMode: ActivationMode.singleTap,
-                    ),
-                    series: [
-                      AreaSeries<_ChartPoint, DateTime>(
-                        dataSource: points,
-                        xValueMapper: (pt, _) => pt.date,
-                        yValueMapper: (pt, _) => pt.price,
-                        name: 'Precio (USD)',
-                        color: scheme.primary.withValues(alpha: 0.22),
-                        borderColor: scheme.primary,
-                        borderWidth: 2,
+                    if (hasUnit)
+                      VeTimelineSeries(
+                        name: 'Por ${baseUnitLabel(p)}',
+                        points: [
+                          for (final pt in points)
+                            VeTimelinePoint(pt.date, pt.perUnit),
+                        ],
+                        color: sem.manual,
+                        dashed: true,
+                        dashPattern: const <double>[5, 3],
+                        width: 1.6,
+                        format: (v) => fmtUSD(v),
                       ),
-                      if (hasUnit)
-                        LineSeries<_ChartPoint, DateTime>(
-                          dataSource: points,
-                          xValueMapper: (pt, _) => pt.date,
-                          yValueMapper: (pt, _) => pt.perUnit,
-                          yAxisName: 'unit',
-                          name: 'Por ${baseUnitLabel(p)}',
-                          color: sem.manual,
-                          width: 1.6,
-                          dashArray: const <double>[5, 3],
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
             ],
           ),
@@ -1609,7 +1589,7 @@ class ProductSheetState extends State<ProductSheet> {
 }
 
 /// Punto de la gráfica: fecha + precio USD (+ precio por unidad base si
-/// aplica; null → syncfusion lo salta).
+/// aplica; null → el pintor lo salta).
 class _ChartPoint {
   const _ChartPoint(this.date, this.price, this.perUnit);
 

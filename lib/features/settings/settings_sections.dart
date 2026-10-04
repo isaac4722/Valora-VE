@@ -854,3 +854,56 @@ class _DiagnosticoState extends State<_Diagnostico> {
     );
   }
 }
+
+
+/// ─── Registros de la app (v20.4 · observabilidad 100 % local) ──────────────
+/// Visor del buffer talker: errores de red del tablero, reconexiones SSE,
+/// fallos del worker en 2º plano y eventos de la Sala Viva. PRIVACIDAD: el
+/// buffer vive SOLO en la memoria del teléfono (rotación 500) — no hay
+/// envío a ningún servidor, coherente con «Tus datos viven en tu teléfono».
+class _Registros extends StatelessWidget {
+  const _Registros();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const VeEyebrow(child: Text('REGISTROS DE LA APP')),
+        _VeSettingsCard(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Errores de red, reconexiones y eventos de la sala, '
+                  'guardados solo en este teléfono (últimos 500). Nada sale '
+                  'del dispositivo.',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                GhostButton(
+                  'Ver registros',
+                  icon: Icons.receipt_long_outlined,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => TalkerScreen(
+                        talker: veTalker,
+                        appBarTitle: 'Registros de la app',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

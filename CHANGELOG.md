@@ -1,6 +1,63 @@
 # Changelog
 
 
+## 1.13.0-beta+33 · v20.4 — auditoría de paquetes (orden del dueño)
+
+Verificación punto por punto del análisis del dueño contra el código real
+(los 7 puntos eran reales; el alcance real de cada uno era mayor de lo que
+decía el análisis) y corrección completa:
+
+- **Fotos de ticket FUERA del JSON de estado (impacto crítico, confirmado)**:
+  `Purchase.ticketPhoto` guardaba un data URL base64 de ~200 KB DENTRO del
+  `AppData` — el `jsonEncode` de cada interacción movía megabytes. Ahora
+  (nativo) la foto vive una sola vez como JPEG en `<docs>/tickets/*.jpg`
+  (path_provider) y la compra guarda SOLO la ruta relativa. Migración única
+  en el arranque (`migrateTicketPhotosToFiles`, fire-and-forget, falla suave:
+  lo que no migra queda como data URL). Web sin filesystem: data URL como
+  siempre. Al quitar/reemplazar foto el archivo se borra del disco (cero
+  huérfanos) y `compressOldTicketPhotos` re-encodifica EN el archivo.
+- **IsolatedHive para 2º plano (confirmado — hive_ce corrompe cajas si dos
+  isolates abren la misma caja)**: en nativo la app Y el worker de
+  workmanager pasan por `IsolatedHive` con el `IsolateNameServer` del
+  proceso (`lib/data/ins_server*.dart`): quien llegue primero crea el
+  isolate de Hive y el otro SE CONECTA — un solo dueño de los archivos.
+  Web sin isolates (delega en Hive plano) y tests con el camino plano de
+  siempre (`_BoxRef` esconde la diferencia al store).
+- **uuid v4 para IDs P2P (confirmado)**: `newId()` era
+  `v<microsegundos><contador>` — colisionable si dos teléfonos crean
+  compras/ítems en el mismo microsegundo y fusionan la Sala Viva sin
+  internet. Ahora `Uuid().v4()` (paquete promovido de transitiva a directa).
+- **syncfusion_flutter_charts RETIRADO** — el análisis decía «la única
+  instancia»; la realidad eran **6 gráficos en 3 archivos** (brecha, canasta,
+  devaluación BCV, producto, gasto por mes, tasas superpuestas) más un
+  donut. Todos viven ahora en CustomPainter propio: `VeTimelineChart`
+  (multi-serie con escala por serie = eje secundario, área degradada,
+  punteados, leyenda, crosshair + chip/TipBox y `onScrub` que sigue
+  sincronizando el panel de día de la brecha), `VeBars` y `VeDonut` que ya
+  existían en el kit Ve. APKs/AAB sensiblemente más livianos y cero
+  condiciones de licencia comercial.
+- **package:csv adoptado (punto débil del análisis: el toCSV a mano ya
+  escapaba bien)**: se adopta igual por robustez — RFC 4180 estricto con
+  CRLF canónico; `parseCSV` ya toleraba CRLF y los tests ganan un
+  round-trip con comillas+comas+saltos embebidos. Versión 6.x: la última
+  que acepta el Dart 3.9 del CI (7/8 exigen 3.10.1).
+- **flutter_secure_storage: DESCARTADO con motivo** — exige minSdk 24 y el
+  repo cierra minSdk 21 (§4.13: «se sube solo si un plugin oficial lo
+  exige»; este no es un caso). El hardening REAL del token del relay va por
+  donde le duele a la fuga: `allowBackup=false` + `dataExtractionRules`
+  vacías — el token y el estado jamás viajan en copias cloud/adb o
+  migraciones de dispositivo; la copia de seguridad es la de la app
+  (JSON local, retención 4). El storage app-privado ya va cifrado en reposo
+  (FBE, Android 7+).
+- **Observabilidad 100 % LOCAL con talker_flutter**: `VeLog` (buffer de 500
+  en memoria del teléfono, sin nube) captura errores de proveedores del
+  tablero, cortes SSE, fallos del worker en fondo y fallos de conexión de
+  la Sala. Visor nuevo en Ajustes → Diagnóstico → «Registros de la app».
+  El buffer del worker es del isolate de fondo (se documenta en el hook).
+- **Paquetes**: hive_ce 2.20.0 (vigente, `IsolatedHive` incluido y ahora en
+  uso), dio 5.11.x, image_picker 1.2.x, flutter_image_compress 2.5.x al
+  día en el lock; uuid/csv/talker entran con su mayor vigente compatible.
+
 ## 1.12.0-beta+32 · v20.2 — GUI correcta, rondas 2 y 3 (TASK-35 · p5–p13)
 
 - **Auditoría de rutas a 390 px con notch y fuentes REALES**: nuevo test

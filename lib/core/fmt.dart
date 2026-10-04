@@ -3,6 +3,7 @@
 /// Parsers tolerantes que aceptan «1.234,56», «1234.56», «$915,38», «Bs. 40».
 library;
 
+import 'package:csv/csv.dart';
 import 'package:intl/intl.dart';
 
 import 'currencies.dart';
@@ -251,18 +252,14 @@ DateTime? parseDateField(dynamic v) {
 
 // ─── CSV (§3.3): delim «,»/«;», comillas «""», BOM opcional ────────────────
 
-/// Serializa filas a CSV (escapa con «""» y saltos dentro de comillas).
-String toCSV(List<List<String>> rows, {String delimiter = ','}) {
-  String esc(String cell) {
-    final s = cell;
-    if (s.contains(delimiter) || s.contains('"') || s.contains('\n')) {
-      return '"${s.replaceAll('"', '""')}"';
-    }
-    return s;
-  }
-
-  return rows.map((r) => r.map(esc).join(delimiter)).join('\n');
-}
+/// Serializa filas a CSV (v20.4: paquete csv — RFC 4180 estricto probado:
+/// comillas escapadas, delimitadores y saltos de línea dentro de notas de
+/// compra ya no rompen columnas en Excel/Sheets). CRLF como manda el estándar.
+String toCSV(List<List<String>> rows, {String delimiter = ','}) =>
+    const ListToCsvConverter(eol: '\r\n').convert(
+      rows,
+      fieldDelimiter: delimiter,
+    );
 
 /// Parsea CSV tolerante: detecta delimitador, soporta «""» y \n embebido.
 List<List<String>> parseCSV(String text) {
