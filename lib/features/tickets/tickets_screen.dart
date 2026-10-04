@@ -582,6 +582,7 @@ class _TicketViewerState extends State<_TicketViewer> {
   Future<void> _share() async {
     final bytes = _bytes ?? await loadTicketBytes(widget.purchase.ticketPhoto);
     if (bytes == null) {
+      if (!mounted) return;
       showToast(
         context,
         'La foto no se puede leer para compartir.',

@@ -469,7 +469,10 @@ class _ListaScreenState extends State<ListaScreen> {
                         // Contador de ítems VISIBLE (fix): antes un LiveBadge
                         // con live:false — que colapsa a SizedBox.shrink() y
                         // jamás se pintaba (elemento muerto en el héroe).
-                        Stamp('${store.cart.length} ítems'),
+                        Stamp(
+                          '${store.cart.length} '
+                          '${store.cart.length == 1 ? 'ítem' : 'ítems'}',
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -1297,8 +1300,9 @@ class _PanelPresupuesto extends StatelessWidget {
       if (iu > 0) cartUsd += it.price * it.quantity / iu;
     }
     final cartText = u > 0
-        ? 'En carrito: $cartCount ítems · ${fmtMoney(cartUsd * u, bCur)}'
-        : 'En carrito: $cartCount ítems';
+        ? 'En carrito: $cartCount ${cartCount == 1 ? 'ítem' : 'ítems'}'
+            ' · ${fmtMoney(cartUsd * u, bCur)}'
+        : 'En carrito: $cartCount ${cartCount == 1 ? 'ítem' : 'ítems'}';
 
     final diffB = u > 0 ? (budgetUsd - totalUsd) * u : 0.0;
 
@@ -1969,7 +1973,11 @@ class _Plantillas extends StatelessWidget {
                 for (final t in store.templates)
                   VeRow(
                     label: Text(t.name),
-                    sub: Text('${t.items.length} ítems · ${fmtDate(t.createdAt)}'),
+                    sub: Text(
+                      '${t.items.length} '
+                      '${t.items.length == 1 ? 'ítem' : 'ítems'} · '
+                      '${fmtDate(t.createdAt)}',
+                    ),
                     right: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

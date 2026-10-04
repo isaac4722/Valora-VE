@@ -41,7 +41,12 @@ final GlobalKey kHeroRateKey = GlobalKey(debugLabel: 'hero-rate');
 
 GoRouter buildRouter({required AppStore store}) {
   return GoRouter(
-    initialLocation: store.settings.onboarded ? '/' : '/bienvenida',
+    // Deep link web (v20.3): go_router solo restaura la URL del navegador
+    // cuando NO se pasa initialLocation — pasarla siempre mandaba cualquier
+    // ruta profunda (/conversor, /sala…) de vuelta a Inicio. El gate de
+    // onboarding lo resuelve el redirect de abajo (nativo incluido: sin URL
+    // el default es '/' y el redirect manda a /bienvenida si falta).
+    initialLocation: store.settings.onboarded ? null : '/bienvenida',
     // El store (ChangeNotifier) re-evalúa el redirect en cada mutación sin
     // perder el estado de navegación: onboarding 0→1 con setCountry ya no
     // rebota al paso 0, y el tutorial rejugable vuelve a enganchar solo.

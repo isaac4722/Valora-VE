@@ -958,7 +958,7 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
                               ),
                             ),
                           ),
-                          if (chip != null) chip,
+                          ?chip,
                         ],
                       ),
                     ),
@@ -990,8 +990,10 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
     final defaultChip = _ChartChip(
       text: rows.length == 1
           ? '${widget.xLabel(t)}  ${rows.first.$2}'
-          : '${widget.xLabel(t)}\n'
-                + rows.map((r) => '${r.$1}  ${r.$2}').join('\n'),
+          : [
+              widget.xLabel(t),
+              ...rows.map((r) => '${r.$1}  ${r.$2}'),
+            ].join('\n'),
     );
     final built = widget.tooltipBuilder?.call(t, rows) ?? defaultChip;
     return Align(

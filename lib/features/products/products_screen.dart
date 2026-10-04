@@ -315,7 +315,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      '${list.length} productos',
+                      '${list.length} ${list.length == 1 ? 'producto' : 'productos'}',
                       style: TextStyle(
                         fontSize: 11,
                         color: scheme.onSurfaceVariant,

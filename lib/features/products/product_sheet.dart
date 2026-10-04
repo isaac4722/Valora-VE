@@ -32,7 +32,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:intl/intl.dart' show DateFormat;
 
 import '../../core/analytics.dart' as an;
 import '../../core/currencies.dart';
@@ -1341,7 +1340,9 @@ class ProductSheetState extends State<ProductSheet> {
                         name: 'Por ${baseUnitLabel(p)}',
                         points: [
                           for (final pt in points)
-                            VeTimelinePoint(pt.date, pt.perUnit),
+                            // perUnit es nullable: si no hay tamaño la
+                            // punteada sigue al precio (fallback honesto).
+                            VeTimelinePoint(pt.date, pt.perUnit ?? pt.price),
                         ],
                         color: sem.manual,
                         dashed: true,

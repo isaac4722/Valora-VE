@@ -41,7 +41,15 @@ class _Respaldo extends StatelessWidget {
                             run: (share) async {
                               final name =
                                   'backup-valorave-${SnapshotPoint.dayKey(DateTime.now())}.json';
-                              final text = exportBackupJson(store.data);
+                              // v20.4: las fotos-archivo viajan en el
+                              // bloque ticketFiles (el JSON de estado queda
+                              // como siempre; las fotos no se pierden).
+                              final text = exportBackupJson(
+                                store.data,
+                                ticketFiles: await collectTicketFiles(
+                                  store.data,
+                                ),
+                              );
                               if (share) {
                                 await shareFile(name, text);
                                 return 'Respaldo compartido';
@@ -170,6 +178,11 @@ class _Respaldo extends StatelessWidget {
         );
       }
       return;
+    }
+    // v20.4: restaurar las fotos-archivo del bloque ticketFiles si viene.
+    final tfRaw = (jsonDecode(raw) as Map)['ticketFiles'];
+    if (tfRaw is Map && tfRaw.isNotEmpty) {
+      await restoreTicketFiles(Map<String, dynamic>.from(tfRaw));
     }
     if (merge) {
       final r = mergeBackupData(

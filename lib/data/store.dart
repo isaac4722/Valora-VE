@@ -10,7 +10,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:hive_ce/hive_ce.dart' show IsolatedBox, IsolatedHive;
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:path_provider/path_provider.dart' show getApplicationDocumentsDirectory;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -64,7 +63,7 @@ class AppStore extends ChangeNotifier {
   List<ShoppingTemplate> get templates => _data.templates;
   List<BasketItem> get basket => _data.basket;
 
-  /// IDs únicos GLOBALES (v20.4 · uuid v4): antes «v<microseg><contador>»
+  /// IDs únicos GLOBALES (v20.4 · uuid v4): antes `v<microseg><contador>`
   /// colisionaba si dos teléfonos creaban compras/ítems en el mismo
   /// microsegundo y fusionaban la Sala Viva sin internet. v4 es aleatorio
   /// 122 bits: la colisión es irrisoria incluso fusionando miles de listas.

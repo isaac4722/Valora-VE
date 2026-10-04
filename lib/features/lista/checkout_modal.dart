@@ -37,7 +37,6 @@ import '../../room/room_controller.dart';
 import '../../services/alerts.dart';
 import '../../services/notifications.dart';
 import '../../services/photo_compress.dart';
-import '../../services/ticket_files.dart';
 import '../../widgets/ui.dart';
 import 'item_editor.dart';
 

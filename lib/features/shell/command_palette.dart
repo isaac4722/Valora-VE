@@ -406,7 +406,7 @@ class _CommandPaletteState extends State<_CommandPalette> {
                     ),
                     const Spacer(),
                     Text(
-                      '${hits.length} resultados',
+                      '${hits.length} ${hits.length == 1 ? 'resultado' : 'resultados'}',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 10.5,
