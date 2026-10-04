@@ -2,9 +2,9 @@
 /// Recientes + notas persistentes + hoja del calendario histórico (REQ 4).
 /// Parte del archivo principal: comparte la privacidad de la biblioteca y
 /// sus imports.
-part of 'converter_screen.dart';
+part of \'converter_screen.dart\';
 
-class _Recientes extends StatelessWidget {
+class _Recientes extends StatefulWidget {
   const _Recientes({
     required this.from,
     required this.to,
@@ -22,17 +22,47 @@ class _Recientes extends StatelessWidget {
   final void Function(RecentConversion r)? onRestore;
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    final recents = store.readRecentConversions();
+  State<_Recientes> createState() => _RecientesState();
+}
 
-    // Registra la conversión actual con el MONTO REAL del campo
-    // (dedupe <60s dentro del store).
+class _RecientesState extends State<_Recientes> {
+  String? _lastPushedKey;
+
+  @override
+  void didUpdateWidget(covariant _Recientes oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _tryPush();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _tryPush();
+  }
+
+  void _tryPush() {
+    if (widget.result <= 0 || widget.plan == null || widget.amount <= 0) return;
+    // PERF: evita push duplicado en cada rebuild/frame
+    final key = \'${widget.amount}_${widget.from.code}_${widget.to.code}\';
+    if (_lastPushedKey == key) return;
+    _lastPushedKey = key;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (result > 0 && plan != null && amount > 0) {
-        store.pushRecentConversion(amount, from, to);
-      }
+      if (!mounted) return;
+      context.read<AppStore>().pushRecentConversion(
+            widget.amount,
+            widget.from,
+            widget.to,
+          );
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // PERF: Selector -> solo rebuild si cambia la lista de recientes
+    final recents = context.select<AppStore, List<RecentConversion>>(
+      (s) => s.readRecentConversions(),
+    );
 
     if (recents.isEmpty) return const SizedBox.shrink();
 
@@ -40,23 +70,20 @@ class _Recientes extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionEyebrow(
-          'Recientes',
-          actionLabel: 'Vaciar',
-          onAction: () => store.clearRecentConversions(),
+          \'Recientes\',
+          actionLabel: \'Vaciar\',
+          onAction: context.read<AppStore>().clearRecentConversions,
         ),
-        // Conversiones guardadas del prototipo: filas tappables que
-        // restauran par y monto.
         VeGroup(
           children: [
             for (final r in recents.take(10))
               VeRow(
-                onTap: onRestore == null ? null : () => onRestore!(r),
+                key: ValueKey(\'${r.from}_${r.to}_${r.at.millisecondsSinceEpoch}\'),
+                onTap: widget.onRestore == null ? null : () => widget.onRestore!(r),
                 label: Row(
                   children: [
                     Flag(CurrencyX.from(r.from), size: 15),
                     const SizedBox(width: 6),
-                    // Flexible + ellipsis: montos enormes (10^12+) son
-                    // datos del usuario y desbordaban la fila (fix).
                     Flexible(
                       child: VeNum(
                         fmtNum(r.amount, decimals: 2),
@@ -73,7 +100,7 @@ class _Recientes extends StatelessWidget {
                     Flag(CurrencyX.from(r.to), size: 15),
                   ],
                 ),
-                right: Text('${r.from} → ${r.to} · ${fmtDate(r.at)}'),
+                right: Text(\'${r.from} → ${r.to} · ${fmtDate(r.at)}\'),
                 showChevron: true,
               ),
           ],
@@ -89,27 +116,28 @@ class _Notas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionEyebrow(
-          'Notas',
-          actionLabel: 'Limpiar',
+          \'Notas\',
+          actionLabel: \'Limpiar\',
           onAction: () {
             ctrl.clear();
-            store.writeConversionNotes('');
+            context.read<AppStore>().writeConversionNotes(\'\');
           },
         ),
-        VeCard(
-          padding: const EdgeInsets.all(12),
-          child: TextField(
-            controller: ctrl,
-            maxLines: 4,
-            maxLength: 5000,
-            decoration: const InputDecoration(
-              hintText: 'Apunta aquí: dónde vi la tasa, qué comparé…',
-              border: InputBorder.none,
+        RepaintBoundary(
+          child: VeCard(
+            padding: const EdgeInsets.all(12),
+            child: TextField(
+              controller: ctrl,
+              maxLines: 4,
+              maxLength: 5000,
+              decoration: const InputDecoration(
+                hintText: \'Apunta aquí: dónde vi la tasa, qué comparé…\',
+                border: InputBorder.none,
+              ),
             ),
           ),
         ),
@@ -120,8 +148,7 @@ class _Notas extends StatelessWidget {
 
 /// REQ 4 — Calendario histórico REAL: rejilla mensual con los días que
 /// tienen snapshot guardado para las fuentes del par. Solo esos días son
-/// tocables; hoy lleva borde; el día elegido va relleno. Tema light/dark
-/// con tokens del sistema (nada de Material por defecto sin tratar).
+/// tocables; hoy lleva borde; el día elegido va relleno.
 class _CalendarioHistorico extends StatefulWidget {
   const _CalendarioHistorico({
     required this.days,
@@ -130,17 +157,9 @@ class _CalendarioHistorico extends StatefulWidget {
     this.futureDays,
   });
 
-  /// Días disponibles YYYY-MM-DD al abrir (snapshots locales — REQ 8: nunca
-  /// días vacíos). v17.6 FIX: el calendario ya NO depende solo del dispositivo:
-  /// [futureDays] trae los días de la serie REMOTA (180 días por fuente,
-  /// seriesForSource) y se fusionan en vivo — así un teléfono recién instalado
-  /// ve un calendario real, no «no aparece nada».
   final Set<String> days;
   final DateTime? initial;
   final String sourceLabel;
-
-  /// Días remotos en camino (null = no consultar). Se fusionan con [days]
-  /// al completar; errores se ignoran (los locales cubren).
   final Future<Set<String>>? futureDays;
 
   @override
@@ -151,6 +170,11 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
   late DateTime _month;
   late Set<String> _days;
   bool _remotosPendientes = false;
+  // PERF: cache para no hacer DateTime.parse() 30+ veces por build
+  final Map<String, DateTime> _parsedCache = {};
+
+  DateTime _parseCached(String day) =>
+      _parsedCache.putIfAbsent(day, () => DateTime.parse(day));
 
   @override
   void initState() {
@@ -159,34 +183,44 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
     _remotosPendientes = widget.futureDays != null;
     final anchor = widget.initial ?? _ultimoDia() ?? DateTime.now();
     _month = DateTime(anchor.year, anchor.month, 1);
-    // FIX (v17.6): fusiona los días de la API cuando llegan. Si el equipo
-    // apenas se instaló, el calendario pasa de 1-2 días locales a la serie
-    // completa sin cerrar ni reabrir la hoja.
-    widget.futureDays
-        ?.then((extra) {
-          if (!mounted) return;
-          setState(() {
-            _days.addAll(extra);
-            _remotosPendientes = false;
-          });
-        })
-        .catchError((_) {
-          if (!mounted) return;
-          setState(() => _remotosPendientes = false);
-        });
+    _loadRemotos();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CalendarioHistorico oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.days != widget.days) {
+      _days = {...widget.days};
+      _parsedCache.clear();
+    }
+  }
+
+  Future<void> _loadRemotos() async {
+    if (widget.futureDays == null) return;
+    try {
+      final extra = await widget.futureDays!;
+      if (!mounted) return;
+      setState(() {
+        _days.addAll(extra);
+        _remotosPendientes = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _remotosPendientes = false);
+    }
   }
 
   DateTime? _ultimoDia() {
     if (_days.isEmpty) return null;
     final last = _days.reduce((a, b) => a.compareTo(b) >= 0 ? a : b);
-    final d = DateTime.parse(last);
+    final d = _parseCached(last);
     return DateTime(d.year, d.month, 1);
   }
 
   DateTime? get _minMonth {
     if (_days.isEmpty) return null;
     final first = _days.reduce((a, b) => a.compareTo(b) <= 0 ? a : b);
-    final d = DateTime.parse(first);
+    final d = _parseCached(first);
     return DateTime(d.year, d.month, 1);
   }
 
@@ -218,9 +252,9 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Elegir fecha histórica',
+              \'Elegir fecha histórica\',
               style: TextStyle(
-                fontFamily: 'SpaceGrotesk',
+                fontFamily: \'SpaceGrotesk\',
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
                 color: scheme.onSurface,
@@ -228,15 +262,13 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
             ),
             const SizedBox(height: 2),
             Text(
-              'Fuentes: ${widget.sourceLabel}',
+              \'Fuentes: ${widget.sourceLabel}\',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 12),
             if (_days.isEmpty && _remotosPendientes)
-              // FIX (v17.6): mientras la API responde NUNCA se muestra un
-              // calendario vacío — estado de carga explícito.
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 28),
                 child: Column(
@@ -248,7 +280,7 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
                     ),
                     SizedBox(height: 12),
                     Text(
-                      'Consultando los días disponibles…',
+                      \'Consultando los días disponibles…\',
                       style: TextStyle(fontSize: 12.5),
                     ),
                   ],
@@ -258,13 +290,13 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: EmptyState(
-                  'Aún no hay fechas guardadas',
+                  \'Aún no hay fechas guardadas\',
                   icon: Icons.calendar_month,
                   hint:
-                      'Sin conexión y sin snapshots locales todavía. La app '
-                      'guarda un snapshot por día cada vez que se refrescan '
-                      'las tasas; con internet este calendario llena sus 180 '
-                      'días al instante.',
+                      \'Sin conexión y sin snapshots locales todavía. La app \'
+                      \'guarda un snapshot por día cada vez que se refrescan \'
+                      \'las tasas; con internet este calendario llena sus 180 \'
+                      \'días al instante.\',
                 ),
               )
             else ...[
@@ -273,12 +305,12 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
                   IconButton(
                     onPressed: puedePrev ? () => _mover(-1) : null,
                     icon: const Icon(Icons.chevron_left, size: 20),
-                    tooltip: 'Mes anterior',
+                    tooltip: \'Mes anterior\',
                   ),
                   Expanded(
                     child: Center(
                       child: Text(
-                        '${mes[0].toUpperCase()}${mes.substring(1)} ${_month.year}',
+                        \'${mes[0].toUpperCase()}${mes.substring(1)} ${_month.year}\',
                         style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w800,
@@ -290,14 +322,14 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
                   IconButton(
                     onPressed: puedeNext ? () => _mover(1) : null,
                     icon: const Icon(Icons.chevron_right, size: 20),
-                    tooltip: 'Mes siguiente',
+                    tooltip: \'Mes siguiente\',
                   ),
                 ],
               ),
               const SizedBox(height: 4),
               Row(
                 children: [
-                  for (final d in const ['L', 'M', 'X', 'J', 'V', 'S', 'D'])
+                  for (final d in const [\'L\', \'M\', \'X\', \'J\', \'V\', \'S\', \'D\'])
                     Expanded(
                       child: Center(
                         child: Text(
@@ -312,13 +344,15 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
                 ],
               ),
               const SizedBox(height: 4),
-              ..._semanas(scheme),
+              RepaintBoundary(
+                child: Column(children: _semanas(scheme)),
+              ),
               const SizedBox(height: 10),
               Text(
                 _remotosPendientes
-                    ? 'Llegando más días desde la API…'
-                    : 'Los días sombreados vienen de la API y de tus '
-                          'snapshots guardados.',
+                    ? \'Llegando más días desde la API…\'
+                    : \'Los días sombreados vienen de la API y de tus \'
+                          \'snapshots guardados.\',
                 style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
               ),
             ],
@@ -328,7 +362,6 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
     );
   }
 
-  /// Rejilla de 7 columnas (lunes primero) con semanas completas.
   List<Widget> _semanas(ColorScheme scheme) {
     final lead = DateTime(_month.year, _month.month, 1).weekday - 1;
     final total = DateTime(_month.year, _month.month + 1, 0).day;
@@ -362,17 +395,13 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
     final fondo = elegido
         ? scheme.primary
         : disponible
-        ? scheme.primary.withValues(alpha: 0.08)
-        : Colors.transparent;
+            ? scheme.primary.withValues(alpha: 0.08)
+            : Colors.transparent;
     final tinta = elegido
         ? scheme.onPrimary
         : disponible
-        ? scheme.onSurface
-        : scheme.onSurfaceVariant.withValues(
-            // 0.55 (antes 0.4): la tinta de día sin datos quedaba a ≈1.9:1
-            // de contraste sobre la tarjeta — ilegible para fecha (fix).
-            alpha: 0.55,
-          );
+            ? scheme.onSurface
+            : scheme.onSurfaceVariant.withValues(alpha: 0.55);
     return SizedBox(
       height: 42,
       child: Padding(
@@ -382,7 +411,6 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
           borderRadius: BorderRadius.circular(10),
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
-            // REQ 4/8: solo días con datos son seleccionables.
             onTap: disponible ? () => Navigator.of(context).pop(date) : null,
             child: Center(
               child: Container(
@@ -390,18 +418,14 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   border: esHoy && !elegido
-                      ? Border.all(
-                          color: scheme.primary.withValues(alpha: 0.55),
-                        )
+                      ? Border.all(color: scheme.primary.withValues(alpha: 0.55))
                       : null,
                 ),
                 child: Text(
-                  '$day',
+                  \'$day\',
                   style: TextStyle(
                     fontSize: 12.5,
-                    fontWeight: elegido || esHoy
-                        ? FontWeight.w800
-                        : FontWeight.w600,
+                    fontWeight: elegido || esHoy ? FontWeight.w800 : FontWeight.w600,
                     color: tinta,
                   ),
                 ),
