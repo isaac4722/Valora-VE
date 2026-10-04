@@ -908,7 +908,6 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
   @override
   Widget build(BuildContext context) {
     final shad = ShadTheme.of(context).colorScheme;
-    final ink = Theme.of(context).extension<VeInk>()!;
 
     if (!_hasData) return SizedBox(height: widget.height);
 
@@ -1168,7 +1167,7 @@ class _TimelinePainter extends CustomPainter {
       final y = plot.top + plot.height * f;
       canvas.drawPath(
         _dash(ui.Path()..moveTo(plot.left, y)..lineTo(plot.right, y),
-            const [3, 3]),
+            const <double>[3, 3]),
         gridPaint,
       );
     }
@@ -1257,7 +1256,7 @@ class _TimelinePainter extends CustomPainter {
       canvas.drawPath(
         _dash(
           ui.Path()..moveTo(cx, plot.top)..lineTo(cx, plot.bottom),
-          const [4, 3],
+          const <double>[4, 3],
         ),
         Paint()
           ..color = crosshair
