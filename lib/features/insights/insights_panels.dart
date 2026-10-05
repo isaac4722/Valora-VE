@@ -629,14 +629,18 @@ class CanastaAnchor extends StatelessWidget {
           ),
         const SizedBox(height: 10),
         if (store.basket.isEmpty)
-          EmptyState(
-            'Canasta vacía',
-            icon: Icons.shopping_basket_outlined,
-            hint:
+          VeEmpty(
+            icon: LucideIcons.shoppingBasket,
+            title: 'Canasta vacía',
+            sub:
                 'Agrega desde tus productos: sigue su precio mensual y Análisis medirá '
                 'la variación del costo de la canasta completa.',
-            actionLabel: 'Ir a productos',
-            onAction: () => context.go('/productos'),
+            action: VeBtn(
+              size: VeBtnSize.sm,
+              variant: VeBtnVariant.secondary,
+              onPressed: () => context.go('/productos'),
+              child: const Text('Ir a productos'),
+            ),
           )
         else
           PanelCard(
@@ -792,10 +796,10 @@ class GastosAnchor extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (inRange.isEmpty)
-          EmptyState(
-            'Sin compras en el rango',
-            icon: Icons.payments_outlined,
-            hint:
+          VeEmpty(
+            icon: LucideIcons.receiptText,
+            title: 'Sin compras en el rango',
+            sub:
                 'Finaliza una compra en Lista (botón «Finalizar compra») y '
                 'este resumen se llena solo: total, tiendas y meses.',
           )
@@ -954,14 +958,18 @@ class _HistoricaAnchorState extends State<HistoricaAnchor> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (sources.isEmpty)
-          EmptyState(
-            'Sin historial local aún',
-            icon: Icons.history,
-            hint:
+          VeEmpty(
+            icon: LucideIcons.history,
+            title: 'Sin historial local aún',
+            sub:
                 'Cada día que la app consulta tasas guarda un punto por fuente (máx 180 días). '
                 'Entra a Inicio y actualiza para empezar tu libro de tasas.',
-            actionLabel: 'Ir a Inicio',
-            onAction: () => context.go('/'),
+            action: VeBtn(
+              size: VeBtnSize.sm,
+              variant: VeBtnVariant.secondary,
+              onPressed: () => context.go('/'),
+              child: const Text('Ir a Inicio'),
+            ),
           )
         else ...[
           PanelCard(

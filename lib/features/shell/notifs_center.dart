@@ -84,6 +84,7 @@ class NotificationCenterBody extends StatelessWidget {
 
     if (items.isEmpty) {
       return const VeEmpty(
+        icon: LucideIcons.bell,
         title: 'Todo tranquilo',
         sub: 'Aquí van llegando los avisos de picos de tasa, tus metas, la '
             'brecha y los recordatorios.',

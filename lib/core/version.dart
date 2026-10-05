@@ -6,6 +6,7 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v20.4 · auditoría de paquetes: fotos a archivo,
-/// IsolatedHive, uuid v4, csv RFC 4180, talker local, syncfusion retirado).
-const String kAppVersionVisible = '20.4';
+/// Versión visible (ronda v21.0 · GUI superior: estados vacíos con
+/// medallón, cotización calmada, chip de unidad en el héroe, KPI sin
+/// truncar, filas y galería sin redundancias).
+const String kAppVersionVisible = '21.0';

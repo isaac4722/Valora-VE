@@ -289,10 +289,10 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
             else if (_days.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
-                child: EmptyState(
-                  'Aún no hay fechas guardadas',
-                  icon: Icons.calendar_month,
-                  hint:
+                child: VeEmpty(
+                  icon: LucideIcons.calendar,
+                  title: 'Aún no hay fechas guardadas',
+                  sub:
                       'Sin conexión y sin snapshots locales todavía. La app '
                       'guarda un snapshot por día cada vez que se refrescan '
                       'las tasas; con internet este calendario llena sus 180 '

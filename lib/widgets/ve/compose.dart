@@ -796,13 +796,29 @@ class VeStickyBar extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────── Empty ─────
 
 /// Estado vacío del prototipo: tarjeta punteada (borde discontinuo
-/// `--line-strong`), título, subtítulo y acción opcional centrada.
+/// `--line-strong`), icono en medallón, título, subtítulo y acción
+/// opcional centrada.
+///
+/// v21 (GUI superior): el medallón de icono es OPCIONAL pero presente en
+/// todos los estados de la app — un vacío sin señal visual leía como
+/// «algo se rompió»; con el medallón lee como «aquí aún no hay nada, y
+/// así se llena». La jerarquía sube: título 14/700, pista 12.5 con aire.
 class VeEmpty extends StatelessWidget {
-  const VeEmpty({super.key, required this.title, this.sub, this.action});
+  const VeEmpty({
+    super.key,
+    required this.title,
+    this.sub,
+    this.action,
+    this.icon,
+  });
 
   final String title;
   final String? sub;
   final Widget? action;
+
+  /// Icono del medallón (Lucide en toda la app: receiptText, images,
+  /// shoppingCart…). Sin icono el título queda solo, como siempre.
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -812,9 +828,10 @@ class VeEmpty extends StatelessWidget {
     final Color lineStrong = dark
         ? VeColors.lineStrongDark
         : VeColors.lineStrongLight;
+    final Color line = dark ? VeColors.borderDark : VeColors.borderLight;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(kShadRadius),
       ),
@@ -824,29 +841,44 @@ class VeEmpty extends StatelessWidget {
       ),
       child: Column(
         children: [
+          if (icon != null) ...[
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: scheme.muted.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: line),
+              ),
+              child: Icon(icon, size: 20, color: scheme.mutedForeground),
+            ),
+            const SizedBox(height: 14),
+          ],
           Text(
             title,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 13.5,
-              fontWeight: FontWeight.w500,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
               color: scheme.foreground,
             ),
             textAlign: TextAlign.center,
           ),
           if (sub != null) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 5),
             Text(
               sub!,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 12,
+                fontSize: 12.5,
+                height: 1.5,
                 color: scheme.mutedForeground,
               ),
               textAlign: TextAlign.center,
             ),
           ],
-          if (action != null) ...[const SizedBox(height: 12), action!],
+          if (action != null) ...[const SizedBox(height: 14), action!],
         ],
       ),
     );

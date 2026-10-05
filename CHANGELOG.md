@@ -1,6 +1,53 @@
 # Changelog
 
 
+## 1.14.0-beta+34 · v21.0 — GUI superior (pulido de sistema, identidad intacta)
+
+Ronda de pulido Impeccable sobre la interfaz ya validada: nada de
+rediseño — la identidad zinc Linear/Vercel, los 19 arreglos del dueño y
+la minimalidad de En vivo quedan intactos. Seis mejoras, cada una en el
+nivel correcto del sistema:
+
+- **VeEmpty 2.0 (un solo lenguaje de vacíos)**: el estado vacío del kit
+  ahora trae medallón de icono (Lucide, 44 px con fondo muted y borde
+  `--line`), título 14/700 y pista 12.5 con aire de línea. Antes era una
+  caja punteada con dos renglones tímidos que leía como «algo se rompió»;
+  ahora lee como «aquí aún no hay nada, y así se llena». Migrados los 7
+  `EmptyState` de Material que sobrevivían (Inicio · Resumen del mes,
+  Canasta, Gastos, Fuentes, Inflación personal, Calendario del conversor)
+  al componente del kit — cero sistemas tipográficos mezclados y cero
+  tarjetas anidadas. Iconos puestos en los 9 vacíos de la app
+  (shoppingCart, receiptText, images, scanBarcode, bell, searchX, history,
+  flame, shoppingBasket).
+- **Cotización principal calmada (jerarquía Linear)**: ANTES toda fila
+  llevaba el tinte de su categoría al 7 % y el tablero era un mosaico de
+  pastillas verdes/rojas/ámbar/violeta compitiendo. AHORA la superficie es
+  neutra y SOLO la fuente activa se tinta (12 % + borde 1.4 + check): la
+  selección se encuentra de un vistazo. El color semántico no se pierde:
+  los sellos OFICIAL/MERCADO/PROMEDIO/MANUAL (v20, orden del dueño) y el
+  símbolo de la divisa lo conservan en todas las filas.
+- **Héroe de Inicio: bandera + moneda como UN token**: la banderita
+  flotaba entre la cifra y «USD» y el trío leía suelto. Ahora es un chip
+  con borde que apoya en la línea base de la cifra — el número respira y
+  la unidad se lee de una pieza.
+- **KPI «Brecha» sin truncar**: «Brecha BCV ↔ Paralelo» no cabía ni en 2
+  líneas en la fila de 3 KPIs del móvil y salía con «…». Queda «Brecha» a
+  secas — el par lo escribe el panel que sigue («BCV ↔ PARALELO») y el
+  sub sigue diciendo si es alta o normal.
+- **Filas de Producto sin redundancia triple**: «Sin precios registrados»
+  + «—» + badge «Sin dato» decían lo mismo tres veces. Sin registros, la
+  fila queda en nombre + subtítulo + guion; con registros conserva
+  sparkline y badge de estado.
+- **Galería de Tickets sin eco**: con la galería vacía, «Sin fotos
+  todavía» aparecía DOS veces (subtítulo del título y dentro del estado
+  vacío). Fuera el eco — el vacío ya explica cómo llenarla.
+
+Verificación: flutter analyze 0 · 238/238 tests · quality_gate VERDE ·
+detector Impeccable sin hallazgos · web recompilada y recorrida en el
+navegador (390×844) en claro y oscuro: Inicio, Divisas, Lista, Productos,
+Análisis, Historial, Tickets.
+
+
 ## 1.13.0-beta+33 · v20.4 — auditoría de paquetes (orden del dueño)
 
 Verificación punto por punto del análisis del dueño contra el código real

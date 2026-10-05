@@ -493,15 +493,38 @@ class _RateHero extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 9),
-                  const Flag(Currency.usd, size: 21),
-                  const SizedBox(width: 6),
-                  Text(
-                    'USD',
-                    style: VeText.displayNum(
-                      20,
-                      color: scheme.onSurfaceVariant,
-                      weight: FontWeight.w600,
+                  const SizedBox(width: 10),
+                  // v21 (GUI superior): bandera + moneda como UN token de
+                  // unidad — antes la bandera flotaba suelta entre la cifra
+                  // y «USD» y el trío leía desordenado. El chip apoya en la
+                  // línea base y le da a la cifra su propio aire.
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(
+                        color: scheme.outlineVariant.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Flag(Currency.usd, size: 15),
+                        const SizedBox(width: 5),
+                        Text(
+                          'USD',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -1078,15 +1101,14 @@ class _ResumenMes extends StatelessWidget {
           onAction: () => context.go('/analisis'),
         ),
         if (monthPurchases.isEmpty)
-          VeCard(
-            padding: const EdgeInsets.all(14),
-            child: EmptyState(
-              'Sin compras este mes',
-              icon: Icons.shopping_cart_outlined,
-              hint:
-                  'Finaliza una compra en Lista y este resumen se llena solo: '
-                  'total del mes, tiendas y comparación con el mes anterior.',
-            ),
+          // v21: un solo lenguaje de vacíos — VeEmpty (dashed) como en Lista
+          // e Historial; fuera el Card+EmptyState de Material (nested cards).
+          VeEmpty(
+            icon: LucideIcons.receiptText,
+            title: 'Sin compras este mes',
+            sub:
+                'Finaliza una compra en Lista y este resumen se llena solo: '
+                'total del mes, tiendas y comparación con el mes anterior.',
           )
         else
           VeCard(

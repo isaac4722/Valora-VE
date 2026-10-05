@@ -339,7 +339,10 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
         KpiRow(
           tiles: [
             KpiTile(
-              label: 'Brecha BCV ↔ Paralelo',
+              // v21 (GUI superior): «Brecha» a secas — el par queda escrito
+              // en el panel que sigue («BCV ↔ PARALELO») y en móvil la
+              // etiqueta larga se cortaba con «…» aunque pidiera 2 líneas.
+              label: 'Brecha',
               value: gap == null ? '—' : fmtPct(gap),
               sub: gap != null && gap.abs() >= 15
                   ? 'brecha alta'
@@ -876,14 +879,18 @@ class _InflacionAnchor extends StatelessWidget {
             ),
           )
         else
-          EmptyState(
-            'Sin inflación personal medible todavía',
-            icon: Icons.local_fire_department_outlined,
-            hint:
+          VeEmpty(
+            icon: LucideIcons.flame,
+            title: 'Sin inflación personal medible todavía',
+            sub:
                 'Tu inflación personal sale de tu canasta: necesita productos con ≥2 registros '
                 'dentro del rango elegido. Agrega productos a la canasta y registra sus precios.',
-            actionLabel: 'Ver canasta',
-            onAction: onGoToBasket,
+            action: VeBtn(
+              size: VeBtnSize.sm,
+              variant: VeBtnVariant.secondary,
+              onPressed: onGoToBasket,
+              child: const Text('Ver canasta'),
+            ),
           ),
         if (b != null && b.skipped > 0)
           InlineHint(

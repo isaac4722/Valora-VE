@@ -217,6 +217,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     // ── Asientos: grupo dividido con una fila por compra.
                     if (items.isEmpty)
                       VeEmpty(
+                        icon: LucideIcons.receiptText,
                         title: 'Sin compras',
                         sub:
                             'No hay compras con este filtro. Cierra una compra desde Lista.',

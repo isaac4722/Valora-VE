@@ -686,6 +686,7 @@ class _ListaScreenState extends State<ListaScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: VeEmpty(
+                    icon: LucideIcons.shoppingCart,
                     title: 'Lista vacía',
                     sub: 'Agrega productos o usa una plantilla.',
                     action: VeBtn(
@@ -1841,7 +1842,11 @@ class _ProductPickerState extends State<_ProductPicker> {
         ),
         const SizedBox(height: 12),
         if (list.isEmpty)
-          const VeEmpty(title: 'Sin coincidencias', sub: 'Prueba otra palabra.')
+          const VeEmpty(
+            icon: LucideIcons.searchX,
+            title: 'Sin coincidencias',
+            sub: 'Prueba otra palabra.',
+          )
         else
           VeGroup(
             children: [

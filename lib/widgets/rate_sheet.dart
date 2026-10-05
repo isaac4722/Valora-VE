@@ -72,8 +72,15 @@ class RateTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: Material(
+        // v21 (GUI superior): jerarquía calmada estilo Linear — la lista
+        // respira en superficie neutra y SOLO la fila activa lleva el tinte
+        // de su categoría + borde; la selección se encuentra de un vistazo.
+        // El color semántico no desaparece: los sellos (v20) y el símbolo
+        // de la divisa lo conservan en TODAS las filas.
         color: has
-            ? ink.withValues(alpha: selected ? 0.14 : 0.07)
+            ? (selected
+                  ? ink.withValues(alpha: 0.12)
+                  : Colors.transparent)
             : scheme.surfaceContainerHigh.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
@@ -83,7 +90,9 @@ class RateTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: selected ? Border.all(color: ink, width: 1.4) : null,
+              border: selected
+                  ? Border.all(color: ink, width: 1.4)
+                  : Border.all(color: Colors.transparent, width: 1.4),
             ),
             child: Row(
               children: <Widget>[

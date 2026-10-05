@@ -56,8 +56,10 @@ class TicketsScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             VeTitle(
+              // v21: cuando la galería está vacía NO se repite «Sin fotos
+              // todavía» — el estado vacío de abajo ya dice cómo llenarla.
               sub: withPhoto.isEmpty
-                  ? const Text('Sin fotos todavía')
+                  ? null
                   : _GallerySubtitle(withPhoto: withPhoto),
               child: const Text('Galería'),
             ),
@@ -269,6 +271,7 @@ class _NoTicketsYet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return VeEmpty(
+      icon: LucideIcons.images,
       title: 'Sin tickets todavía',
       sub:
           'Fotografía el recibo al cerrar una compra (Checkout · Añadir foto) '

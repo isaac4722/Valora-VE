@@ -289,6 +289,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               if (list.isEmpty) ...[
                 const SizedBox(height: 14),
                 VeEmpty(
+                  icon: LucideIcons.scanBarcode,
                   title: 'Sin productos',
                   sub: _query.isEmpty
                       ? 'Agrega uno nuevo o importa un CSV con «Nombre» y «Código».'
@@ -573,22 +574,27 @@ class _ProductRow extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (hasSeries)
-                  SizedBox(
-                    width: 200,
-                    child: VeSparkline(
-                      data: product.records.map((r) => r.price).toList(),
-                      tone: st.spark,
-                      height: 32,
+            // v21 (GUI superior): sin registros NO hay fila inferior —
+            // «Sin precios registrados» + «—» ya lo dicen; el badge «Sin
+            // dato» repetía la misma información por triplicado.
+            if (last != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (hasSeries)
+                    SizedBox(
+                      width: 200,
+                      child: VeSparkline(
+                        data: product.records.map((r) => r.price).toList(),
+                        tone: st.spark,
+                        height: 32,
+                      ),
                     ),
-                  ),
-                const Spacer(),
-                VeBadge(tone: st.tone, child: Text(st.label)),
-              ],
-            ),
+                  const Spacer(),
+                  VeBadge(tone: st.tone, child: Text(st.label)),
+                ],
+              ),
+            ],
           ],
         ),
       ),

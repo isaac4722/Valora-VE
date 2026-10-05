@@ -2,12 +2,12 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y salas con su propia tecnología. Offline-first."
 publish_to: 'none'
 
-# 1.13.0-beta+33 · v20.4 — auditoría de paquetes: fotos de ticket a ARCHIVO
-# (fuera del JSON de estado), IsolatedHive para 2º plano (hive_ce: sin
-# corrupción de cajas), uuid v4 para IDs P2P, csv RFC 4180, talker para
-# observabilidad 100 % local y syncfusion_flutter_charts RETIRADO (los 3
-# gráficos ahora son CustomPainter propio, APKs más livianos).
-version: 1.13.0-beta+33
+# 1.14.0-beta+34 · v21.0 — GUI superior: estados vacíos con medallón
+# (VeEmpty icono + jerarquía, migrados los 7 EmptyState de Material),
+# lista de cotización calmada estilo Linear (solo la fila activa se tinta),
+# chip de unidad en el héroe de Inicio, KPI «Brecha» sin truncar, filas de
+# productos sin triple redundancia y Tickets sin subtítulo duplicado.
+version: 1.14.0-beta+34
 
 environment:
   sdk: ^3.9.2
