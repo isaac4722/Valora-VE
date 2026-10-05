@@ -2,7 +2,7 @@
 /// Ruta del cálculo + todas las fuentes del par + tabla de montos + matriz
 /// 6×6 (dp6). Parte del archivo principal: comparte la privacidad de la
 /// biblioteca y sus imports.
-part of \'converter_screen.dart\';
+part of 'converter_screen.dart';
 
 /// Encabezado de sección en el lenguaje del prototipo (TASK-34 · p6):
 /// eyebrow caps 10.5 px con la acción de texto a la derecha. Reemplaza a
@@ -72,7 +72,7 @@ class _ReferenciaFuentes extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionEyebrow(\'Referencia de fuentes\'),
+        const _SectionEyebrow('Referencia de fuentes'),
         RepaintBoundary(
           child: VeGroup(
             children: [
@@ -123,14 +123,14 @@ class _TablaMontos extends StatelessWidget {
     final amounts = quickAmounts[from] ?? const <double>[];
     if (amounts.isEmpty) return const SizedBox.shrink();
 
-    final bcv = ctx.rate(\'ves-bcv\');
-    final par = ctx.rate(\'ves-parallel\');
+    final bcv = ctx.rate('ves-bcv');
+    final par = ctx.rate('ves-parallel');
     final dual = from == Currency.usd && bcv > 0 && par > 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionEyebrow(\'Montos de referencia\'),
+        const _SectionEyebrow('Montos de referencia'),
         if (dual)
           RepaintBoundary(
             child: VeGroup(
@@ -140,7 +140,7 @@ class _TablaMontos extends StatelessWidget {
                   color: scheme.onSurfaceVariant.withValues(alpha: 0.06),
                   child: Row(
                     children: [
-                      for (final (i, h) in const [\'USD\', \'BCV\', \'Paralelo\', \'Dif.\'].indexed)
+                      for (final (i, h) in const ['USD', 'BCV', 'Paralelo', 'Dif.'].indexed)
                         Expanded(
                           child: Text(
                             h,
@@ -213,10 +213,10 @@ class _DualRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         child: Row(
           children: [
-            Expanded(child: VeNum(\'\$${fmtNum(amount, decimals: 0)}\', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
+            Expanded(child: VeNum('\$${fmtNum(amount, decimals: 0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
             Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum(fmtNum(amount * bcv, decimals: 0), style: const TextStyle(fontSize: 12.5)))),
             Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum(fmtNum(amount * par, decimals: 0), style: const TextStyle(fontSize: 12.5)))),
-            Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum(\'${diff >= 0 ? \'+\' : \'−\'}${fmtNum(diff.abs(), decimals: 0)}\', style: TextStyle(fontSize: 12.5, color: ink.warn)))),
+            Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum('${diff >= 0 ? '+' : '−'}${fmtNum(diff.abs(), decimals: 0)}', style: TextStyle(fontSize: 12.5, color: ink.warn)))),
           ],
         ),
       ),
