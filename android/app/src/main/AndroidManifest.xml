@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- PERMISOS JUSTIFICADOS (MVP §Fase 6 · cada uno con su porqué) -->
 
-    <!-- Tablero de tasas (dolarapi/pydolarve), sala por servidor y respaldo: -->
+    <!-- Tablero de tasas (dolarapi/dolarvzla), sala por servidor y respaldo: -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Detectar conectividad para el modo offline-first y degradar la UI: -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>

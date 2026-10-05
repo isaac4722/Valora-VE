@@ -7,7 +7,7 @@ publish_to: 'none'
 # inferior (bug de expansión de Container cazado por el test de notch),
 # presión táctil en VeCard y vacío de Productos con criterio de búsqueda;
 # pubspec.lock al día (csv/talker* de v20.4).
-version: 1.14.0-beta+36
+version: 1.14.0-beta+37
 
 environment:
   sdk: ^3.9.2

@@ -40,7 +40,7 @@ class LegalScreen extends StatelessWidget {
                     'Los respaldos son archivos JSON tuyos: los exportas y los '
                     'importas donde quieras.\n\n'
                     'Para las tasas, la app consulta en directo fuentes públicas '
-                    '(ve.dolarapi.com, pydolarve.org, co.dolarapi.com, mx.dolarapi.com, '
+                    '(ve.dolarapi.com, rates.dolarvzla.com, co.dolarapi.com, mx.dolarapi.com, '
                     'br.dolarapi.com y respaldos de datos.gov.co y AwesomeAPI). '
                     'Esas consultas son anónimas: llevan la URL y nada más.',
                     style: TextStyle(

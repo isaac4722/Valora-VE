@@ -86,7 +86,7 @@ Nada más. Sin FCM: las notificaciones son locales (canales
 ## Privacidad
 Sin cuentas, sin telemetría, sin nube: todo vive en tu teléfono. Los
 respaldos son JSON tuyos. Fuentes de tasas: dolarapi.com (VE/CO/MX/BR),
-pydolarve.org, datos.gov.co, AwesomeAPI — consultas anónimas directas.
+dolarvzla.com (respaldo BCV), datos.gov.co, AwesomeAPI — consultas anónimas directas.
 
 ## Licencia
 Software **PROPIETARIO** — Copyright (c) 2026 isaac4722. Todos los

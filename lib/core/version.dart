@@ -6,7 +6,7 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v21.2 · tacto y movimiento: transición unificada
-/// de pantallas empujadas, háptica sutil en confirmaciones clave y
-/// controles mudos que hablan — tooltips y semántica).
-const String kAppVersionVisible = '21.2';
+/// Versión visible (ronda v21.3 · fiabilidad: el respaldo BCV de Venezuela
+/// pasa de pydolarve.org —dominio caducado desde 07/2025— a DolarVZLA
+/// rates.dolarvzla.com, CDN sin auth y con CORS abierto).
+const String kAppVersionVisible = '21.3';

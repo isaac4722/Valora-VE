@@ -1,6 +1,33 @@
 # Changelog
 
 
+## 1.14.0-beta+37 · v21.3 — Respaldo BCV vivo (auditoría externa)
+
+Un test tipo pentest sobre el build web encontró la fuente de respaldo
+venezolana muerta y este release la reemplaza. También desmiente un
+hallazgo con evidencia de navegador.
+
+- **El respaldo de tasas VE ya no apunta a un dominio muerto**: la app
+  consultaba `pydolarve.org` cuando DolarAPI falla, pero ese dominio
+  caducó el 07/2025 y hoy resuelve NXDOMAIN — el respaldo llevaba meses
+  siendo decorativo. Ahora el oficial BCV (USD y EUR) viene de
+  `rates.dolarvzla.com/bcv/current.json`: JSON estático en CDN, sin
+  auth, CORS abierto, verificado en vivo el 05/10/2026 con el mismo
+  valor que muestra la app (871,37). Se consulta solo si el oficial no
+  llegó (no publica paralelo); si el bloque de euros de DolarAPI vive,
+  su dato más fresco sobreescribe el del respaldo. Parser puro con
+  tests del payload real, y las pantallas Acerca de/README actualizadas
+  con la fuente nueva.
+- **Hallazgo 2.1 del informe desmentido**: «assets/ 404, fuentes y
+  banderas rotas» era un artefacto de leer el AssetManifest sin
+  navegador. El build de Flutter 3.47.4 guarda los assets propios un
+  nivel más adentro (`assets/assets/…`) y el runtime pide EXACTAMENTE
+  esas rutas anidadas — verificadas con el log de red real: banderas y
+  fuentes 200. Las rutas de un nivel que el informe probó jamás son
+  pedidas por la app.
+
+analyze 0 · 240/240 tests (2 nuevos del parser DolarVZLA) · gate VERDE.
+
 ## 1.14.0-beta+36 · v21.2 — Tacto y movimiento (una ronda de craft)
 
 La app ya se ve bien; esta ronda la hace sentir bien. Tres cambios de

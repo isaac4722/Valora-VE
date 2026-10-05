@@ -74,6 +74,52 @@ void main() {
     });
   });
 
+  group('parseDolarVzlaBcv (respaldo BCV USD/EUR · v21.3)', () {
+    // Payload REAL de rates.dolarvzla.com/bcv/current.json (curl 05/10/2026).
+    final real = {
+      'current': {
+        'date': '2026-10-05',
+        'usd': 871.3689,
+        'eur': 981.17880877,
+      },
+      'previous': {'date': '2026-10-02', 'usd': 866.5612, 'eur': 973.92813268},
+      'changePercentage': {'usd': 0.5548021305362009, 'eur': 0.7444775283416522},
+    };
+
+    test('formato real bcv/current.json: usd y eur de current', () {
+      final usd = parseDolarVzlaBcv(real, euro: false);
+      expect(usd, isNotNull);
+      expect(usd!.rate, closeTo(871.3689, 1e-9));
+      expect(usd.updatedAt, DateTime(2026, 10, 5));
+      final eur = parseDolarVzlaBcv(real, euro: true);
+      expect(eur, isNotNull);
+      expect(eur!.rate, closeTo(981.17880877, 1e-9));
+    });
+
+    test('sin current, tasa inválida o cero → null (nunca lanza)', () {
+      expect(parseDolarVzlaBcv(null, euro: false), isNull);
+      expect(parseDolarVzlaBcv(<dynamic, dynamic>{}, euro: false), isNull);
+      expect(
+        parseDolarVzlaBcv({
+          'current': {'date': '2026-10-05'},
+        }, euro: false),
+        isNull,
+      );
+      expect(
+        parseDolarVzlaBcv({
+          'current': {'usd': 0},
+        }, euro: false),
+        isNull,
+      );
+      expect(
+        parseDolarVzlaBcv({
+          'current': {'eur': -1},
+        }, euro: true),
+        isNull,
+      );
+    });
+  });
+
   group('parseTrmGob (respaldo TRM · Superfinanciera)', () {
     test('formato real datos.gov.co: valor + vigenciadesde', () {
       final v = [

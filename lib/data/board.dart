@@ -1,6 +1,7 @@
 /// ─── Tablero de tasas en cliente (capa de DATOS) ────────────────────────────
 /// Consulta directa con `dio` a las 4 regiones de DolarAPI con RESPALDO por
-/// región si cae (v19.0, orden del dueño): VE → pyDolarVenezuela · CO →
+/// región si cae (v19.0, orden del dueño): VE → DolarVZLA (rates.dolarvzla.com,
+/// v21.3 — pydolarve.org caducó 07/2025 y ya resuelve NXDOMAIN) · CO →
 /// Superfinanciera (datos.gov.co) + AwesomeAPI · MX → Frankfurter · BR →
 /// AwesomeAPI. Reintentos anti-ráfaga, punto medio compra/venta, degradación
 /// por región y diff de cambios para flashes/alertas. Sustituye al middleware
@@ -155,11 +156,31 @@ RateEntry? parseTrmGob(dynamic v) {
   );
 }
 
+/// DolarVZLA CDN `bcv/current.json` (v21.3, respaldo VE — pydolarve.org
+/// caducó): {"current":{"date":"2026-10-05","usd":871.3689,"eur":981.17},
+/// "previous":…,"changePercentage":…}. JSON estático de CDN, sin auth, CORS
+/// abierto (verificado 05/10/2026). Publica SOLO el oficial BCV — el
+/// paralelo no tiene tercera fuente pública estable, y eso está bien: el
+/// respaldo existe para que el tablero y el conversor nunca se queden sin
+/// la tasa oficial.
+RateEntry? parseDolarVzlaBcv(dynamic v, {required bool euro}) {
+  if (v is! Map) return null;
+  final current = v['current'];
+  if (current is! Map) return null;
+  final rate = (current[euro ? 'eur' : 'usd'] as num?)?.toDouble();
+  if (rate == null || !rate.isFinite || rate <= 0) return null;
+  return RateEntry(
+    rate: rate,
+    // `date` es la fecha de publicación (sin hora) — basta para el sello.
+    updatedAt: DateTime.tryParse('${current['date'] ?? ''}') ?? DateTime.now(),
+  );
+}
+
 /// Resultado de un bloque regional: fuentes, errores y proveedores usados
 /// (v19.0: los respaldos cuentan su origen real en el tablero).
 typedef RegionBlock = (Map<String, RateEntry>, List<String>, List<String>);
 
-/// Venezuela: USD oficial/paralelo + EUR oficial/paralelo (respaldo pyDolar).
+/// Venezuela: USD oficial/paralelo + EUR oficial/paralelo (respaldo DolarVZLA).
 Future<RegionBlock> _veBlock() async {
   final sources = <String, RateEntry>{};
   final errors = <String>[];
@@ -185,22 +206,26 @@ Future<RegionBlock> _veBlock() async {
     errors.add('ve.dolarapi/dolares: $e');
     VeLog.e('board', e);
   }
-  if (!sources.containsKey('ves-bcv') || !sources.containsKey('ves-parallel')) {
+  // Respaldo VE (v21.3): DolarVZLA — solo si el OFICIAL no llegó, porque no
+  // publica paralelo. Cubre USD y EUR oficiales en una sola llamada; si el
+  // bloque de euros de DolarAPI vive, su dato (más fresco) sobreescribe el
+  // nuestro más abajo.
+  if (!sources.containsKey('ves-bcv')) {
     try {
       final data = await _fetchJson(
-        Uri.parse('https://pydolarve.org/api/v1/dollar'),
+        Uri.parse('https://rates.dolarvzla.com/bcv/current.json'),
         timeout: const Duration(seconds: 4),
       );
-      final monitors = (data is Map ? data['monitors'] : null) as Map?;
-      final bcv = monitors?['bcv'] as Map?;
-      final paralelo = monitors?['enparalelovzla'] as Map?;
-      final b = SourceEntryX.entry(bcv?['price'] as num?);
-      final p = SourceEntryX.entry(paralelo?['price'] as num?);
-      if (b != null) sources.putIfAbsent('ves-bcv', () => b);
-      if (p != null) sources.putIfAbsent('ves-parallel', () => p);
-      if (b != null || p != null) providers.add('pydolarve.org');
+      final b = parseDolarVzlaBcv(data, euro: false);
+      final eur = parseDolarVzlaBcv(data, euro: true);
+      if (b != null) sources['ves-bcv'] = b;
+      if (eur != null && !sources.containsKey('eur-ves-oficial')) {
+        sources['eur-ves-oficial'] = eur;
+      }
+      if (b != null || eur != null) providers.add('dolarvzla.com');
     } catch (e) {
-      errors.add('pydolarve (respaldo VE): $e');
+      errors.add('dolarvzla (respaldo VE): $e');
+      VeLog.e('board', e);
     }
   }
   if (dolarapiVivo) providers.add('dolarapi.com');
