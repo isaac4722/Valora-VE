@@ -783,6 +783,7 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -790,59 +791,81 @@ class _TabButton extends StatelessWidget {
         button: true,
         selected: active,
         label: spec.label,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 58),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
+        // v21.1: píldora activa — el tab vivo se apoya en `--subtle`
+        // (scheme.secondary) con la curva firma; el inactivo queda plano.
+        //
+        // ESTRUCTURA SENSIBLE: aquí NADA puede expandirse al alto ofertado
+        // (Scaffold → bottomNavigationBar pasa constraints holgadas hasta
+        // el alto completo). Un Container/Align/Center con alignment se
+        // expandiría y dejaba el body en 0 px — el bug que el test de
+        // notch caza. Por eso la píldora es decoración pura dentro del
+        // ConstrainedBox de siempre y el Padding la hace respirar.
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 5, 6, 3),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 50),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: kEaseVe,
+              decoration: BoxDecoration(
+                color: active ? scheme.secondary : Colors.transparent,
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    spec.icon,
-                    size: 20,
-                    color: active ? activeColor : inactiveColor,
-                  ),
-                  if (badge > 0)
-                    Positioned(
-                      right: -6,
-                      top: -4,
-                      child: Container(
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: activeColor,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          badge > 9 ? '9+' : '$badge',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w600,
-                            color: ShadTheme.of(context).colorScheme.background,
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        spec.icon,
+                        size: 20,
+                        color: active ? activeColor : inactiveColor,
+                      ),
+                      if (badge > 0)
+                        Positioned(
+                          right: -6,
+                          top: -4,
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                            ),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: activeColor,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              badge > 9 ? '9+' : '$badge',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
+                                color: scheme.background,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    spec.label,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 10.5,
+                      fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                      color: active ? activeColor : inactiveColor,
                     ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                spec.label,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w500,
-                  color: active ? activeColor : inactiveColor,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

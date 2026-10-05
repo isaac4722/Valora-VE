@@ -47,6 +47,36 @@ detector Impeccable sin hallazgos · web recompilada y recorrida en el
 navegador (390×844) en claro y oscuro: Inicio, Divisas, Lista, Productos,
 Análisis, Historial, Tickets.
 
+## 1.14.0-beta+35 · v21.1 — pulido de instrumento (continuación de la ronda GUI)
+
+Segunda pasada sobre la v21.0, rebase incluido. Refinamiento que preserva
+el mundo visual zinc/Linear — nada de rediseño, todo con los tokens de
+siempre:
+
+- **Superficies del navegador tematizadas**: `TextSelectionThemeData`
+  (cursor tinta, selección `--muted` al 28 %) y `ScrollbarThemeData`
+  (pulgar fino 4 px redondeado que sube al hover/arrastre, sin pista).
+  La selección de texto y el scroll dejaron de ser azules de fábrica.
+- **Píldora activa en la barra inferior**: el tab vivo se apoya en
+  `--subtle` (muted) con la curva firma kEaseVe (220 ms) y el rótulo pasa
+  a w700; el inactivo queda plano. Mismo patrón en ambos brillos.
+  ESTRUCTURA SENSIBLE documentada en el código: dentro de
+  `bottomNavigationBar` nada puede expandirse al alto ofertado (un
+  Container/Align con `alignment` llenaba la pantalla y dejaba el body en
+  0 px — el test de notch del dueño cazó el bug en el primer intento).
+- **Presión táctil en VeCard**: las tarjetas interactivas se asientan
+  1.5 % al tocar (140 ms) y respetan `disableAnimations`. El hover de
+  escritorio sigue igual.
+- **Vacío de Productos con criterio de búsqueda**: el medallón
+  scanBarcode solo se pinta sin filtro — con una búsqueda sin resultados
+  el vacío queda solo-texto, que es lo honesto.
+- **pubspec.lock al día**: el lock comprometido databa de gui-33 y no
+  contenía csv/talker* (v20.4) — `pub get` lo completa; ahora está en el
+  repo.
+
+Gates: flutter analyze 0 · 238/238 tests · detector Impeccable sin
+hallazgos · build web verificado en 127.0.0.1:3000 (Inicio/Divisas/Lista/
+Análisis en claro y oscuro).
 
 ## 1.13.0-beta+33 · v20.4 — auditoría de paquetes (orden del dueño)
 

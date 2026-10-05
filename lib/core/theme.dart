@@ -369,6 +369,31 @@ abstract final class AppTheme {
         },
       ),
       dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
+      // Superficies del navegador (§craft-floor): la selección de texto y
+      // las barras de scroll también son parte del sistema — no quedan con
+      // los defaults del navegador azul.
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: effPrimary,
+        selectionColor: mutedFg.withValues(alpha: 0.28),
+        selectionHandleColor: effPrimary,
+      ),
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: WidgetStateProperty.all(4),
+        minThumbLength: 40,
+        radius: Radius.circular(999),
+        thumbColor: WidgetStateProperty.resolveWith((Set<WidgetState> s) {
+          if (s.contains(WidgetState.dragged)) {
+            return isDark ? VeColors.lineStrongDark : VeColors.lineStrongLight;
+          }
+          if (s.contains(WidgetState.hovered)) {
+            return mutedFg.withValues(alpha: 0.55);
+          }
+          return mutedFg.withValues(alpha: 0.32);
+        }),
+        trackVisibility: WidgetStateProperty.all(false),
+        crossAxisMargin: 2,
+        mainAxisMargin: 2,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: muted.withValues(alpha: 0.55),

@@ -289,7 +289,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
               if (list.isEmpty) ...[
                 const SizedBox(height: 14),
                 VeEmpty(
-                  icon: LucideIcons.scanBarcode,
+                  // Con búsqueda activa el vacío queda solo-texto: el
+                  // medallón de catálogo solo tiene sentido sin filtro.
+                  icon: _query.isEmpty ? LucideIcons.scanBarcode : null,
                   title: 'Sin productos',
                   sub: _query.isEmpty
                       ? 'Agrega uno nuevo o importa un CSV con «Nombre» y «Código».'

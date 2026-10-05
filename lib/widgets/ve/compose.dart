@@ -37,6 +37,7 @@ class VeCard extends StatefulWidget {
 
 class _VeCardState extends State<VeCard> {
   bool _hover = false;
+  bool _press = false;
 
   @override
   Widget build(BuildContext context) {
@@ -46,32 +47,40 @@ class _VeCardState extends State<VeCard> {
     final Color lineStrong = dark
         ? VeColors.lineStrongDark
         : VeColors.lineStrongLight;
+    final bool interactive = widget.onTap != null;
 
     return MouseRegion(
-      onEnter: widget.onTap == null
-          ? null
-          : (_) => setState(() => _hover = true),
-      onExit: widget.onTap == null
-          ? null
-          : (_) => setState(() => _hover = false),
+      onEnter: interactive ? (_) => setState(() => _hover = true) : null,
+      onExit: interactive ? (_) => setState(() => _hover = false) : null,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
+        onTapDown: interactive ? (_) => setState(() => _press = true) : null,
+        onTapUp: interactive ? (_) => setState(() => _press = false) : null,
+        onTapCancel: interactive ? () => setState(() => _press = false) : null,
         onTap: widget.onTap,
-        child: AnimatedContainer(
+        child: AnimatedScale(
+          // v21.1: presión táctil — la tarjeta se asienta 1.5 % al tocar
+          // (solo interactivas) con la curva firma. Respeta
+          // disableAnimations: sin escala si el sistema lo pide.
           duration: const Duration(milliseconds: 140),
           curve: Curves.easeOut,
-          padding: widget.padding,
-          clipBehavior: widget.clip ? Clip.antiAlias : Clip.none,
-          decoration: BoxDecoration(
-            color: scheme.card,
-            borderRadius: BorderRadius.circular(kShadRadius),
-            border: Border.all(
-              color: _hover && widget.onTap != null
-                  ? lineStrong
-                  : scheme.border,
+          scale: _press && !MediaQuery.disableAnimationsOf(context)
+              ? 0.985
+              : 1.0,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            curve: Curves.easeOut,
+            padding: widget.padding,
+            clipBehavior: widget.clip ? Clip.antiAlias : Clip.none,
+            decoration: BoxDecoration(
+              color: scheme.card,
+              borderRadius: BorderRadius.circular(kShadRadius),
+              border: Border.all(
+                color: _hover && interactive ? lineStrong : scheme.border,
+              ),
             ),
+            child: widget.child,
           ),
-          child: widget.child,
         ),
       ),
     );
