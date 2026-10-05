@@ -843,7 +843,12 @@ class VeSegmented<T> extends StatelessWidget {
                     Expanded(
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: () => onChanged(segments[i].value),
+                        // v21.2: clic de selección al cambiar de segmento —
+                        // el gesto táctil confirma sin ruido (no-op en web).
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          onChanged(segments[i].value);
+                        },
                         child: Center(
                           child: AnimatedDefaultTextStyle(
                             duration: const Duration(milliseconds: 150),

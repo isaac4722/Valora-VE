@@ -250,10 +250,16 @@ class MainShell extends StatelessWidget {
               : _MobileTabs(
                   current: current,
                   cartCount: _cartCount(context),
-                  onTab: (i) => navigationShell.goBranch(
-                    i,
-                    initialLocation: i == current,
-                  ),
+                  onTab: (i) {
+                    // v21.2: confirmación táctil del cambio de pestaña —
+                    // vibración sutil (no-op en web). El layout del shell
+                    // NO se toca (test de notch = guardián).
+                    HapticFeedback.selectionClick();
+                    navigationShell.goBranch(
+                      i,
+                      initialLocation: i == current,
+                    );
+                  },
                 ),
         ),
       ),

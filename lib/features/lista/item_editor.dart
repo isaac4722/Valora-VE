@@ -16,6 +16,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/currencies.dart';
@@ -305,6 +306,9 @@ class _ItemEditorState extends State<_ItemEditor> {
               sizeUnit: hasSize ? _unit : null,
               clearSizeUnit: !hasSize,
             );
+    // v21.2: el guardado confirmado lleva su toque de luz — la mano sabe
+    // que el ítem quedó en la lista sin depender solo del toast.
+    HapticFeedback.lightImpact();
     Navigator.of(context).pop(ItemEditorResult(item: item));
   }
 

@@ -1,6 +1,32 @@
 # Changelog
 
 
+## 1.14.0-beta+36 · v21.2 — Tacto y movimiento (una ronda de craft)
+
+La app ya se ve bien; esta ronda la hace sentir bien. Tres cambios de
+sistema, todos invisibles hasta que los usas:
+
+- **Transición unificada de pantallas empujadas**: legal, tickets, sala y
+  sala en vivo compartían las transiciones por defecto de cada plataforma,
+  así que la app se sentía distinta según el sistema. Ahora las cuatro
+  entran con el mismo gesto (fade + subida de 10 px, kEaseVe, 220 ms — el
+  easing propio de la app). Las pestañas siguen cambiando al instante, sin
+  animación de por medio, y el shell no se tocó.
+- **Háptica en las confirmaciones** (Android/iOS; en web no hace nada):
+  clic de selección al cambiar de pestaña, al copiar una tasa y al mover
+  un segmento; toque de luz cuando un ítem queda agregado a la lista. El
+  toast avisa a la vista y la vibración avisa a la mano — antes solo uno
+  de los dos trabajaba.
+- **Los controles mudos hablan**: las flechas subir/bajar del orden de
+  foco en Ajustes ahora dicen a qué país se refieren («Subir Bolívar»), y
+  el LED de SSE en vivo explica su estado («Conectado en vivo», «Sin
+  conexión — sigue el ciclo normal») por tooltip y por semántica de
+  accesibilidad. Antes era un punto de color sin nombre.
+
+analyze 0 · 238/238 tests · detector Impeccable limpio · web puerto 3000
+verificado en claro y oscuro.
+
+
 ## 1.14.0-beta+34 · v21.0 — GUI superior (pulido de sistema, identidad intacta)
 
 Ronda de pulido Impeccable sobre la interfaz ya validada: nada de

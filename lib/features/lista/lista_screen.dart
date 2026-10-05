@@ -17,6 +17,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -319,6 +320,9 @@ class _ListaScreenState extends State<ListaScreen> {
       );
       return;
     }
+    // v21.2: toque de luz al comprometer el ítem — feedback físico del
+    // «ya quedó», complementa el toast (no-op en web).
+    HapticFeedback.lightImpact();
     store.addToCart(
       CartItem(
         id: '',

@@ -18,6 +18,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/theme.dart';
 import '../data/store.dart';
 import '../features/converter/converter_screen.dart';
 import '../features/history/history_screen.dart';
@@ -117,16 +118,64 @@ GoRouter buildRouter({required AppStore store}) {
           ),
         ],
       ),
-      GoRoute(path: '/legal', builder: (_, _) => const LegalScreen()),
+      GoRoute(
+        path: '/legal',
+        pageBuilder: (context, s) => vePage(context, s, const LegalScreen()),
+      ),
       // Tickets (dp6): galería de fotos de recibos de las compras.
-      GoRoute(path: '/tickets', builder: (_, _) => const TicketsScreen()),
+      GoRoute(
+        path: '/tickets',
+        pageBuilder: (context, s) =>
+            vePage(context, s, const TicketsScreen()),
+      ),
       // Sala en vivo: PANTALLA COMPLETA (v17.2, decisión del dueño — no
       // vuelve a ser un sheet deslizable). v18.0: esta ruta es la
       // CONFIGURACIÓN de la sala; la sala EN VIVO tiene pantalla propia.
-      GoRoute(path: '/sala', builder: (_, _) => const RoomScreen()),
+      GoRoute(
+        path: '/sala',
+        pageBuilder: (context, s) => vePage(context, s, const RoomScreen()),
+      ),
       // Sala Viva (v18.0): la sala en vivo — código+QR, miembros con roles,
       // gobierno del anfitrión y regreso automático a la Lista.
-      GoRoute(path: '/sala-viva', builder: (_, _) => const SalaVivaScreen()),
+      GoRoute(
+        path: '/sala-viva',
+        pageBuilder: (context, s) =>
+            vePage(context, s, const SalaVivaScreen()),
+      ),
     ],
+  );
+}
+
+/// ─── Transición unificada de pantallas EMPUJADAS (v21.2) ───────────────────
+/// Las rutas fuera del shell (legal, tickets, sala, sala-viva) comparten un
+/// solo gesto: fade + subida de 10 px con el easing propio de la app
+/// (kEaseVe, 220 ms — el mismo del resto del sistema). Antes cada push usaba
+/// la transición por defecto de la plataforma y la app se sentía distinta
+/// según el sistema. Las TABS del shell quedan INTACTAS (IndexedStack sin
+/// transición — el cambio de pestaña es instantáneo por diseño) y el test de
+/// notch del dueño no se toca.
+CustomTransitionPage<void> vePage(
+  BuildContext context,
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 220),
+    reverseTransitionDuration: const Duration(milliseconds: 180),
+    transitionsBuilder: (context, animation, reverse, child) {
+      final curved = CurvedAnimation(parent: animation, curve: kEaseVe);
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.03),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        ),
+      );
+    },
   );
 }

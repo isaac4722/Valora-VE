@@ -2183,7 +2183,9 @@ class LogoMark extends StatelessWidget {
 }
 
 /// Copia al portapapeles con toast unificado (v17.5).
+/// v21.2: clic de selección — la copia se siente confirmada en la mano.
 void copiarAlPortapapeles(BuildContext context, String text, String aviso) {
+  HapticFeedback.selectionClick();
   Clipboard.setData(ClipboardData(text: text));
   showToast(context, aviso, kind: ToastKind.ok);
 }

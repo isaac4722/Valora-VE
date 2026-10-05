@@ -204,17 +204,33 @@ class _DatosConexion extends StatelessWidget {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     dense: true,
-                    leading: Container(
-                      width: 10,
-                      height: 10,
-                      margin: const EdgeInsets.only(top: 4),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: s.sseUrl.isEmpty
-                            ? scheme.outlineVariant
+                    // v21.2: el LED de estado ya no es un punto mudo —
+                    // tooltip y etiqueta semántica según su color real.
+                    leading: Tooltip(
+                      message: s.sseUrl.isEmpty
+                          ? 'Sin servidor configurado'
+                          : (poller.sseConnected
+                                ? 'Conectado en vivo'
+                                : 'Sin conexión — sigue el ciclo normal'),
+                      child: Semantics(
+                        label: s.sseUrl.isEmpty
+                            ? 'Estado: sin servidor configurado'
                             : (poller.sseConnected
-                                  ? VeColors.of(context).pos
-                                  : VeColors.of(context).warn),
+                                  ? 'Estado: conectado en vivo'
+                                  : 'Estado: sin conexión'),
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          margin: const EdgeInsets.only(top: 4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: s.sseUrl.isEmpty
+                                ? scheme.outlineVariant
+                                : (poller.sseConnected
+                                      ? VeColors.of(context).pos
+                                      : VeColors.of(context).warn),
+                          ),
+                        ),
                       ),
                     ),
                     title: const Text(

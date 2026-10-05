@@ -61,14 +61,18 @@ class _Pais extends StatelessWidget {
                           style: const TextStyle(fontSize: 12.5),
                         ),
                       ),
+                      // v21.2: las flechas mudas hablan — tooltip en hover/
+                      // long-press y etiqueta semántica para screen readers.
                       IconButton(
                         icon: const Icon(Icons.arrow_upward, size: 15),
+                        tooltip: 'Subir ${order[i].label}',
                         onPressed: i == 0
                             ? null
                             : () => _move(context, order, i, i - 1),
                       ),
                       IconButton(
                         icon: const Icon(Icons.arrow_downward, size: 15),
+                        tooltip: 'Bajar ${order[i].label}',
                         onPressed: i == order.length - 1
                             ? null
                             : () => _move(context, order, i, i + 1),

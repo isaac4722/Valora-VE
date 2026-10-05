@@ -6,7 +6,7 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v21.0 · GUI superior: estados vacíos con
-/// medallón, cotización calmada, chip de unidad en el héroe, KPI sin
-/// truncar, filas y galería sin redundancias).
-const String kAppVersionVisible = '21.0';
+/// Versión visible (ronda v21.2 · tacto y movimiento: transición unificada
+/// de pantallas empujadas, háptica sutil en confirmaciones clave y
+/// controles mudos que hablan — tooltips y semántica).
+const String kAppVersionVisible = '21.2';
