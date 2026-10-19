@@ -15,8 +15,9 @@
  *
  * Fallback sin WebSocket para pilotos: SSE GET /api/sse + POST /api/cmd.
  * El token (BRIDGE_TOKEN o autogenerado en .token) viaja inyectado en las
- * páginas servidas — la URL del preview es el portador. Roles únicos: UN
- * bridge a la vez; N pilotos.
+ * páginas servidas — la URL del preview es el portador. UN bridge ACTIVO:
+ * la conexión más nueva TOMA EL CONTROL y la vieja se cierra (4003) — una
+ * pestaña olvidada no bloquea al cliente real. N pilotos.
  */
 'use strict';
 
@@ -78,6 +79,17 @@ function readBody(req, cb) {
   req.on('end', () => cb(Buffer.concat(chunks)));
 }
 
+// CORS restringido a orígenes locales: la página servida por el helper
+// (http://127.0.0.1:8790) consulta /api/health y /api/token del relay.
+function localCors(req, headers) {
+  const origin = req.headers.origin || '';
+  if (/^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/i.test(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Vary'] = 'Origin';
+  }
+  return headers;
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
   const p = url.pathname;
@@ -86,19 +98,20 @@ const server = http.createServer((req, res) => {
     const body = {
       ok: true,
       tool: 'valora-remote-bridge',
-      version: '1.0.0',
+      version: '1.1.0',
       uptimeSec: Math.floor((Date.now() - startedAt) / 1000),
       bridge: bridge ? 'conectado' : 'sin puente',
       device: bridgeInfo,
       pilots: pilots.size + ssePilots.size,
     };
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    res.writeHead(200, localCors(req, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }));
     return res.end(JSON.stringify(body));
   }
 
   if (p === '/api/token') {
     // El dueño consulta su token desde el propio cliente (la URL es el portador).
-    return injectTemplate === null || res.writeHead(200, { 'Content-Type': 'application/json' }), res.end(JSON.stringify({ token: TOKEN }));
+    res.writeHead(200, localCors(req, { 'Content-Type': 'application/json' }));
+    return res.end(JSON.stringify({ token: TOKEN }));
   }
 
   // Fallback piloto sin WebSocket: SSE (frames + eventos) y POST de comandos.
@@ -183,10 +196,13 @@ wss.on('connection', (ws, req) => {
   }
   if (role === 'bridge') {
     if (bridge && bridge.readyState === 1) {
-      // Un solo puente: se rechaza al NUEVO (el que ya está sirviendo
-      // streaming/comandos no se toca).
-      ws.close(4002, 'ya hay un puente conectado');
-      return log('WS bridge rechazado: ya hay un puente');
+      // TOMA DE CONTROL: la conexión más nueva gana y la vieja se cierra con
+      // 4003 — una pestaña olvidada (zombi, sin dispositivo) nunca debe
+      // bloquear al cliente real del dueño.
+      try {
+        bridge.close(4003, 'reemplazado por otra pestaña del cliente');
+      } catch (_) {}
+      log('WS bridge anterior reemplazado (toma de control)');
     }
     bridge = ws;
     bridgeInfo = null;

@@ -3,7 +3,7 @@
  * ─── Test E2E del relay (v21.6) ──────────────────────────────────────────────
  * Verifica TODO el canal que no exige hardware real:
  *   1. Token: WS sin token válido es rechazado (4001).
- *   2. Rol: solo un bridge; segundo es expulsado.
+ *   2. Rol: solo un bridge ACTIVO; el más nuevo toma el control (viejo 4003).
  *   3. Roundtrip: pilot → cmd tap → bridge recibe → result → pilot.
  *   4. Binarios: shot del bridge llega íntegro al piloto (PNG de prueba).
  *   5. Fallback: POST /api/cmd (HTTP puro) + frames vía SSE.
@@ -118,13 +118,15 @@ async function main() {
     const h2 = await (await fetch(`${BASE}/api/health`)).json();
     check('health con bridge = "conectado"', h2.bridge === 'conectado');
 
-    // segundo bridge → expulsado
+    // toma de control: el segundo bridge REEMPLAZA al primero (el viejo, 4003)
     const bridge2 = await wsConnect('bridge', TOKEN);
     await sleep(400);
-    check('segundo bridge expulsado (4002)', bridge2.msgs.some((m) => m.type === '__closed' && m.code === 4002));
+    check('segundo bridge toma el control (viejo cerrado 4003)', bridge.msgs.some((m) => m.type === '__closed' && m.code === 4003));
+    check('nuevo bridge sigue activo', !bridge2.msgs.some((m) => m.type === '__closed'));
 
-    // mock bridge responde cmds: shot → binario falso + result; tap → result
-    bridge.ws.on('message', (data, isBinary) => {
+    // mock bridge responde cmds (el ACTIVO ahora es bridge2):
+    // shot → binario falso + result; resto → result
+    bridge2.ws.on('message', (data, isBinary) => {
       if (isBinary) return;
       const m = JSON.parse(data.toString('utf8'));
       if (m.type === 'cmd') {
@@ -134,10 +136,10 @@ async function main() {
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABh6FO1AAAAABJRU5ErkJggg==',
             'base64',
           );
-          bridge.ws.send(png);
-          bridge.ws.send(JSON.stringify({ type: 'result', id: m.id, ok: true, data: { png: true } }));
+          bridge2.ws.send(png);
+          bridge2.ws.send(JSON.stringify({ type: 'result', id: m.id, ok: true, data: { png: true } }));
         } else {
-          bridge.ws.send(JSON.stringify({ type: 'result', id: m.id, ok: true, data: { done: m.action, args: m.args } }));
+          bridge2.ws.send(JSON.stringify({ type: 'result', id: m.id, ok: true, data: { done: m.action, args: m.args } }));
         }
       }
     });
@@ -166,7 +168,7 @@ async function main() {
     check('frame binario íntegro (PNG 1×1)', shotPng.length === 70 && shotPng[1] === 0x50 /* P de PNG */);
 
     // cmd sin puente → error honesto
-    bridge.ws.close();
+    bridge2.ws.close();
     await sleep(400);
     const noBridge = await new Promise((resolve) => {
       pilot.ws.send(JSON.stringify({ type: 'cmd', id: 't3', action: 'tap', args: { x: 1, y: 1 } }));

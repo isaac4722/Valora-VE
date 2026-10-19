@@ -50,8 +50,28 @@
     <div class="muted" style="margin-top:8px">
       USB: activa «Depuración USB» y acepta el diálogo de Chrome. Wi-Fi: ejecuta
       <code>node tools/remote-bridge/adb-ws-helper.js &lt;ip-del-teléfono&gt; 5555</code> en tu PC
-      (requiere <code>adb tcpip 5555</code> hecho una vez por cable) y pega la dirección del helper.
+      (requiere <code>adb tcpip 5555</code> hecho una vez por cable) y pega la dirección del helper
+      (<code>ws://127.0.0.1:8790</code>).
     </div>
+    <div class="muted" style="margin-top:6px" id="tokWrap" hidden>
+      token de sesión: <code id="tokVal"></code>
+      <button id="btnTok" class="ghost" style="padding:3px 8px;font-size:12px">copiar</button>
+      <span>— pégalo en la página local del helper si la usas.</span>
+    </div>
+  </div>
+
+  <div class="card" id="cfgCard" hidden>
+    <div class="muted" style="margin-bottom:8px"><b>Modo local</b> — esta página la sirve tu helper (sin permiso de red local). Apúntala al relay del preview:</div>
+    <div class="row">
+      <input type="text" id="cfgRelay" placeholder="https://preview-….space-z.ai" style="width:330px">
+      <input type="text" id="cfgToken" placeholder="token de sesión (autollena si dejas vacío)">
+      <button id="btnCfg" class="sec">Guardar y conectar</button>
+    </div>
+    <div class="muted" style="margin-top:6px">El token se copia desde el cliente abierto en el preview (arriba, «token de sesión»). Se recuerda en este navegador.</div>
+  </div>
+
+  <div class="card">
+    <div class="muted"><b>Permisos que vas a ver (una sola vez):</b> ① Chrome — «acceso a la red local»: acéptalo cuando pregunte al conectar por Wi-Fi; si lo bloqueaste, ícono de la barra de direcciones → Permisos → <i>Acceso a la red local</i> → Permitir. ② Teléfono — «¿Permitir depuración USB?» para la clave <b>valora-bridge</b>: acéptalo en la pantalla del teléfono (marca «Siempre»). ③ USB (opcional) — Chrome pide elegir el dispositivo.</div>
   </div>
 
   <div class="card">
@@ -74,7 +94,18 @@
 <script src="/adb.js"></script>
 <script>
 'use strict';
-const TOKEN = '{{TOKEN}}';
+const TOKEN_INJECTED = '{{TOKEN}}';
+const INJECTED = !TOKEN_INJECTED.includes('{{');
+const CFG = {
+  get relay() { try { return localStorage.getItem('valora.relay') || ''; } catch (_) { return ''; } },
+  get token() { try { return localStorage.getItem('valora.token') || ''; } catch (_) { return ''; } },
+  set(k, v) { try { localStorage.setItem('valora.' + k, v); } catch (_) {} },
+};
+const TOKEN = INJECTED ? TOKEN_INJECTED : CFG.token;
+function relayOrigin() {
+  if (INJECTED) return location.origin;
+  return (CFG.relay || '').trim().replace(/\/+$/, '');
+}
 const $ = (id) => document.getElementById(id);
 const logEl = $('log');
 function log(msg) {
@@ -84,6 +115,7 @@ function log(msg) {
 }
 
 let ws = null;
+let wsGen = 0;
 let adb = null;           // ValoraAdb conectado
 let streaming = false;
 let streamingBusy = false;
@@ -91,8 +123,15 @@ let deviceInfo = null;
 let lastPilots = 0;
 
 async function connectServer() {
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const url = `${proto}//${location.host}/api/ws?role=bridge&token=${TOKEN}`;
+  const gen = ++wsGen;
+  const base = relayOrigin();
+  if (!base || (!INJECTED && !TOKEN)) {
+    $('stServer').textContent = base ? 'servidor: falta token' : 'servidor: sin configurar';
+    setTimeout(() => { if (gen === wsGen) connectServer(); }, 5000);
+    return;
+  }
+  const proto = base.startsWith('https') ? 'wss:' : 'ws:';
+  const url = `${proto}//${base.replace(/^https?:\/\//, '')}/api/ws?role=bridge&token=${encodeURIComponent(TOKEN)}`;
   ws = new WebSocket(url);
   ws.binaryType = 'arraybuffer';
   ws.onopen = () => {
@@ -100,11 +139,20 @@ async function connectServer() {
     $('stBridge').className = 'pill on';
     log('Conectado al servidor del puente (rol: bridge)');
   };
-  ws.onclose = () => {
+  ws.onclose = (ev) => {
+    if (gen !== wsGen) return; // fue reemplazada por una reconexión manual
     $('stBridge').textContent = 'puente local';
     $('stBridge').className = 'pill off';
+    if (ev && ev.code === 4003) {
+      log('Esta pestaña fue REEMPLAZADA por otra del cliente (la más nueva manda). Recarga aquí para retomar el control.');
+      return; // sin reintento: la pestaña nueva es la activa
+    }
+    if (ev && ev.code === 4001) {
+      log('Token inválido — corrígelo en «Modo local» y guarda.');
+      return;
+    }
     log('Servidor desconectado — reintentando en 3 s');
-    setTimeout(connectServer, 3000);
+    setTimeout(() => { if (gen === wsGen) connectServer(); }, 3000);
   };
   ws.onmessage = async (ev) => {
     if (ev.data instanceof ArrayBuffer) return; // no esperamos binarios aquí
@@ -122,7 +170,7 @@ async function handleCmd(msg) {
       case 'swipe':    await adb.swipe(args.x1, args.y1, args.x2, args.y2, args.ms || 300); return reply(id, true, {done:'swipe'});
       case 'text':     await adb.text(args.text || ''); return reply(id, true, {done:'text'});
       case 'key':      await adb.key(args.keycode); return reply(id, true, {done:'key'});
-      case 'shell':    { const out = await adb.shell(args.cmd || ''); return reply(id, true, {out: b64(new TextEncoder().encode(out))}); }
+      case 'shell':    { const out = await adb.shell(args.cmd || ''); return reply(id, true, {out: b64(out)}); }
       case 'shot':     { const png = await adb.screenshot(); sendBinary(png); return reply(id, true, {png:true}); }
       case 'stream':   { streaming = !!args.on; return reply(id, true, {streaming}); }
       case 'appcmd':   {
@@ -148,6 +196,40 @@ function sendBinary(bytes) {
 }
 
 // ── Conexión al teléfono ─────────────────────────────────────────────────────
+/** Preflight Wi-Fi: valida dirección, mixed content y el permiso de red local
+ *  (Chrome LNA) ANTES de abrir el WebSocket — errores con instrucciones. */
+async function pingHelper(wsUrl) {
+  let u;
+  try { u = new URL(wsUrl); } catch (_) {
+    throw new Error('Dirección inválida — ejemplo: ws://127.0.0.1:8790');
+  }
+  if (u.protocol !== 'ws:' && u.protocol !== 'wss:') {
+    throw new Error('La dirección del helper debe empezar por ws://');
+  }
+  const loopback = ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(u.hostname);
+  if (location.protocol === 'https:' && u.protocol === 'ws:' && !loopback) {
+    throw new Error(
+      'Desde la página https solo puedes abrir ws:// hacia 127.0.0.1 (mixed content). ' +
+      'Usa ws://127.0.0.1:8790 — el helper corre en tu misma PC — o abre la página local http://127.0.0.1:8790',
+    );
+  }
+  const httpUrl = (u.protocol === 'wss:' ? 'https://' : 'http://') + u.host + '/ping';
+  // Pista para el permiso de red local (Chrome LNA); navegadores sin el
+  // option simplemente la ignoran.
+  const opts = { cache: 'no-store', targetAddressSpace: loopback ? 'loopback' : 'private' };
+  let res;
+  try {
+    res = await fetch(httpUrl, opts);
+  } catch (_) {
+    throw new Error(
+      'No llego al helper en ' + httpUrl + '. ① ¿corre `node adb-ws-helper.js <ip> 5555`? ' +
+      '② Si Chrome preguntó por «acceso a la red local», acéptalo; si lo bloqueaste: ' +
+      'ícono de la barra de direcciones → Permisos → Acceso a la red local → Permitir y recarga.',
+    );
+  }
+  if (!res.ok) throw new Error('El helper respondió ' + res.status + ' en /ping — ¿es adb-ws-helper.js?');
+}
+
 async function connectPhone(kind) {
   try {
     let transport;
@@ -155,7 +237,10 @@ async function connectPhone(kind) {
       transport = new AdbTransports.WebUsbTransport(log);
     } else {
       const u = $('wsUrl').value.trim();
-      if (!u) return log('Pega la dirección del helper Wi-Fi (ws://…)');
+      if (!u) return log('Pega la dirección del helper Wi-Fi (ws://127.0.0.1:8790)');
+      log('Verificando helper y permiso de red local…');
+      await pingHelper(u);
+      log('Helper accesible — abriendo canal ADB…');
       transport = new AdbTransports.WsTransport(u, log);
     }
     log('Conectando al teléfono…');
@@ -175,6 +260,8 @@ async function connectPhone(kind) {
     streamLoop();
   } catch (e) {
     log('ERROR de conexión: ' + e.message);
+    try { if (typeof transport !== 'undefined' && transport) transport.close(); } catch (_) {}
+    if (!deviceInfo) adb = null;
   }
 }
 
@@ -227,7 +314,10 @@ async function streamLoop() {
 }
 
 $('btnUsb').onclick = () => connectPhone('usb');
-$('btnWifi').onclick = () => connectPhone('wifi');
+$('btnWifi').onclick = () => {
+  try { localStorage.setItem('valora.helper', $('wsUrl').value.trim()); } catch (_) {}
+  connectPhone('wifi');
+};
 $('btnDisc').onclick = disconnectPhone;
 $('btnShot').onclick = () => handleCmd({ id: 'ui', action: 'shot' });
 $('btnHealth').onclick = async () => {
@@ -237,8 +327,10 @@ $('btnHealth').onclick = async () => {
 $('btnWake').onclick = () => handleCmd({ id: 'ui', action: 'key', args: { keycode: 224 } });
 
 async function pollHealth() {
+  const base = relayOrigin();
+  if (!base) { $('stServer').textContent = 'servidor: sin configurar'; return; }
   try {
-    const r = await fetch('/api/health');
+    const r = await fetch(base + '/api/health');
     const j = await r.json();
     $('stServer').textContent = `servidor: ${j.bridge}`;
     $('stServer').className = 'pill ' + (j.bridge === 'conectado' ? 'on' : 'off');
@@ -247,6 +339,44 @@ async function pollHealth() {
 }
 pollHealth();
 setInterval(pollHealth, 5000);
+
+// Modo hospedado (relay): muestra el token para copiarlo a la página local.
+// Modo local (helper): tarjeta de configuración relay+token, recordada.
+if (INJECTED) {
+  $('tokWrap').hidden = false;
+  $('tokVal').textContent = TOKEN;
+  $('btnTok').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(TOKEN);
+      $('btnTok').textContent = '¡copiado!';
+      setTimeout(() => ($('btnTok').textContent = 'copiar'), 1500);
+    } catch (_) {}
+  };
+} else {
+  $('cfgCard').hidden = false;
+  $('cfgRelay').value = CFG.relay;
+  $('cfgToken').value = CFG.token;
+  $('btnCfg').onclick = async () => {
+    const r = $('cfgRelay').value.trim().replace(/\/+$/, '');
+    let t = $('cfgToken').value.trim();
+    if (r && !t) {
+      try {
+        const res = await fetch(r + '/api/token');
+        if (res.ok) {
+          t = ((await res.json()).token || '').trim();
+          if (t) log('Token tomado del relay automáticamente');
+        }
+      } catch (_) {}
+    }
+    CFG.set('relay', r);
+    CFG.set('token', t);
+    log('Configuración guardada — reconectando al servidor…');
+    connectServer();
+    pollHealth();
+  };
+}
+try { $('wsUrl').value = localStorage.getItem('valora.helper') || 'ws://127.0.0.1:8790'; } catch (_) { $('wsUrl').value = 'ws://127.0.0.1:8790'; }
+
 connectServer();
 </script>
 </body>

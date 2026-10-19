@@ -58,7 +58,13 @@ const AdbKeys = {
   NAME: 'valora-bridge',
 
   async load() {
-    const saved = localStorage.getItem('valora.adbkey');
+    if (typeof crypto === 'undefined' || !crypto.subtle) {
+      throw new Error(
+        'WebCrypto no disponible — abre el cliente por HTTPS (preview) o http://127.0.0.1 (página local del helper)',
+      );
+    }
+    let saved = null;
+    try { saved = localStorage.getItem('valora.adbkey'); } catch (_) {}
     if (saved) {
       try {
         const jwk = JSON.parse(saved);
@@ -71,16 +77,23 @@ const AdbKeys = {
         );
         return { jwk, priv };
       } catch (_) {
-        localStorage.removeItem('valora.adbkey');
+        try { localStorage.removeItem('valora.adbkey'); } catch (_) {}
       }
     }
+    // RsaHashedKeyGenParams EXIGE modulusLength y publicExponent; ADB exige
+    // RSA-2048 con SHA-1 (adbd rechaza claves de otra longitud).
     const pair = await crypto.subtle.generateKey(
-      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-1' },
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([0x01, 0x00, 0x01]), // 65537
+        hash: 'SHA-1',
+      },
       true,
       ['sign'],
     );
     const jwk = await crypto.subtle.exportKey('jwk', pair.privateKey);
-    localStorage.setItem('valora.adbkey', JSON.stringify(jwk));
+    try { localStorage.setItem('valora.adbkey', JSON.stringify(jwk)); } catch (_) {}
     return { jwk, priv: pair.privateKey };
   },
 
@@ -300,10 +313,11 @@ class AdbConnection {
     this._send(A_CNXN, A_VERSION, A_MAXDATA, enc('host::features=shell_v2,cmd,stat_v2,ls_v2'));
 
     let authAttempts = 0;
+    let waitMs = 60000;
     for (;;) {
       const msg = await this._waitMessage(
         (m) => m.cmd === A_CNXN || m.cmd === A_AUTH,
-        60000,
+        waitMs,
       );
       if (msg.cmd === A_CNXN) {
         this.maxData = msg.arg1 || A_MAXDATA;
@@ -314,10 +328,15 @@ class AdbConnection {
           const sig = await AdbKeys.sign(this.key, msg.data);
           this._send(A_AUTH, AUTH_SIGNATURE, 0, sig);
         } else {
-          // El teléfono no conoce la clave: publica y pide confirmación
-          // (el usuario debe marcar «Permitir depuración USB» en el teléfono).
+          // El teléfono no conoce la clave: publica y pide confirmación.
           const pub = await AdbKeys.publicKeyAdb(this.key);
           this._send(A_AUTH, AUTH_RSAPUBLICKEY, 0, enc(pub));
+          if (authAttempts === 2) {
+            this.log(
+              'Clave publicada — MIRA EL TELÉFONO: acepta «Permitir depuración USB» de valora-bridge (ideal: marca «Siempre permitir»)',
+            );
+            waitMs = 180000; // tiempo de sobra para aceptar en el teléfono
+          }
         }
         authAttempts++;
       }
@@ -494,6 +513,13 @@ class AdbConnection {
   }
 
   _dropAll(err) {
+    // También despierta a las esperas globales (CNXN/AUTH/OKAY): si el
+    // transporte muere a mitad del handshake no debe colgar 60 s.
+    const waiters = this._waiters.splice(0);
+    for (const w of waiters) {
+      clearTimeout(w.timer);
+      w.reject(err);
+    }
     for (const id of [...this.streams.keys()]) {
       const s = this.streams.get(id);
       this.streams.delete(id);
@@ -611,5 +637,5 @@ if (typeof window !== 'undefined') {
   window.AdbTransports = { WebUsbTransport, WsTransport };
 }
 if (typeof module !== 'undefined') {
-  module.exports = { ValoraAdb, AdbTransports: { WebUsbTransport, WsTransport } };
+  module.exports = { ValoraAdb, AdbKeys, AdbTransports: { WebUsbTransport, WsTransport } };
 }

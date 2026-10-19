@@ -1,4 +1,4 @@
-# Puente de depuración remota · Valora-VE (v21.6)
+# Puente de depuración remota · Valora-VE (v21.6.1)
 
 Depuración y pruebas en tiempo real del teléfono Android del dueño desde la
 máquina del desarrollador — sin USB del desarrollador, sin servicios de pago,
@@ -31,8 +31,9 @@ sin nube intermedia: todo corre en el servidor del preview + tu navegador.
 | `public/adb.js` | Protocolo ADB propio (CNXN/AUTH/OPEN/WRTE) sobre WebUSB o WS. |
 | `public/pilot.html` | Consola visual: ver la pantalla, tocar, comandos de app. |
 | `pilot_cli.js` | Consola del desarrollador por CLI (automatización). |
-| `adb-ws-helper.js` | Helper de la PC del dueño para ADB por Wi-Fi. |
+| `adb-ws-helper.js` | Helper de la PC del dueño para ADB por Wi-Fi. También SIRVE el cliente en `http://127.0.0.1:8790/` (modo local, sin permiso de red local). |
 | `test_relay.js` | Test E2E del relay (sin hardware): `node test_relay.js`. |
+| `test_adb_keys.js` | Test del keygen/firma RSA-2048 de ADB en Node: `node test_adb_keys.js`. |
 
 ## Del lado de la app (repo `lib/services/dev_bridge*`)
 
@@ -52,15 +53,28 @@ DevTools). Toggle en **Ajustes → Diagnóstico → Servidor de pruebas**
 
 ## Cómo se usa (dueño)
 
-1. **USB (recomendado):** activa «Depuración USB» en el teléfono → abre la
-   página del puente (`/` en el preview) → «Conectar por USB» → acepta los
-   diálogos (WebUSB + «Permitir depuración USB» con la clave del navegador).
-2. **Wi-Fi:** una vez por cable: `adb tcpip 5555`; luego en la PC:
-   `node tools/remote-bridge/adb-ws-helper.js <ip-del-teléfono> 5555` y en el
-   cliente pega `ws://127.0.0.1:8790` antes de «Conectar por Wi-Fi».
-3. Activa el servidor de pruebas en Ajustes (y pega el token en el cliente
-   una sola vez: queda en `localStorage`).
-4. La pantalla empieza a transmitir (1–3 fps, screencap adaptativo).
+1. **Wi-Fi (probado con TECNO BF6):** una vez por cable: `adb tcpip 5555`;
+   luego en la PC: `node tools/remote-bridge/adb-ws-helper.js <ip-del-teléfono> 5555`
+   y abre la **página local** `http://127.0.0.1:8790/` — pega ahí la URL del
+   preview y el token (se recuerda; si dejas el token vacío lo busca solo en
+   `<relay>/api/token`). No hace falta permiso de red local: la página y el
+   helper viven en tu misma máquina.
+   - Alternativa: el cliente hospedado en el preview con `ws://127.0.0.1:8790`
+     — ahí Chrome pedirá «acceso a la red local» UNA vez (acéptalo; si lo
+     bloqueaste: ícono de la barra → Permisos → Permitir) y solo funciona
+     hacia `127.0.0.1` (mixed content: nada de `ws://192.168.x.x` desde https).
+2. **USB:** activa «Depuración USB» → cliente (`/` del preview) → «Conectar
+   por USB» → diálogos de WebUSB + «Permitir depuración USB».
+3. **Autorización del teléfono (ambos modos):** al conectar verás en el log
+   «Clave publicada — MIRA EL TELÉFONO»: acepta «¿Permitir depuración USB?»
+   de la clave **valora-bridge** (marca «Siempre» y no vuelve a preguntar).
+4. Activa el servidor de pruebas en Ajustes (y pega el token de la app en el
+   cliente para `/erase`: queda en `localStorage`).
+5. La pantalla empieza a transmitir (1–3 fps, screencap adaptativo).
+
+Notas: si abres DOS pestañas del cliente, la más nueva TOMA EL CONTROL (la
+vieja se cierra con aviso — cero puentes zombis). Si el teléfono no responde,
+el helper corta a los 8 s con diagnóstico en su consola.
 
 ## Cómo se usa (desarrollador — yo)
 

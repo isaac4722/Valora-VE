@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 /**
- * ─── Valora-VE · Helper ADB sobre Wi-Fi (v21.6) ──────────────────────────────
+ * ─── Valora-VE · Helper ADB sobre Wi-Fi (v21.6.1) ──────────────────────────────
  * Un navegador NO puede abrir sockets TCP crudos: para ADB por Wi-Fi este
  * helper corre EN LA PC DEL DUEÑO y puentea WebSocket local ↔ TCP al puerto
  * ADB del teléfono. Cero nube, cero pago: todo queda en tu red local.
+ *
+ * Además SIRVE el cliente web localmente (http://127.0.0.1:8790/) — así el
+ * navegador del dueño nunca cruza de un sitio público a la red local y NO
+ * hace falta el permiso de «acceso a la red local» de Chrome.
  *
  * Preparación (una sola vez, con el teléfono por USB y platform-tools):
  *   adb tcpip 5555          (reinicia adbd en modo TCP)
@@ -12,27 +16,56 @@
  * Uso del helper:
  *   node adb-ws-helper.js <ip-del-teléfono> [puerto=5555] [ws=8790]
  *
- * Luego en el cliente web: «Conectar por Wi-Fi (helper)» con
- *   ws://127.0.0.1:8790
+ * Luego abre http://127.0.0.1:<ws>/ y pega ahí el relay del preview + token
+ * (o usa el cliente hospedado del preview con ws://127.0.0.1:<ws>).
  */
 'use strict';
 
 const http = require('http');
 const net = require('net');
+const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 
 const HOST_PHONE = process.argv[2];
 const PORT_PHONE = parseInt(process.argv[3] || '5555', 10);
 const WS_PORT = parseInt(process.argv[4] || '8790', 10);
+const PUB = path.join(__dirname, 'public');
 
 if (!HOST_PHONE) {
   console.error('uso: node adb-ws-helper.js <ip-del-teléfono> [puerto=5555] [ws=8790]');
   process.exit(2);
 }
 
+// ── Cliente web local (evita el permiso LNA de Chrome) ──────────────
+function sendFile(res, file, type) {
+  try {
+    const body = fs.readFileSync(file);
+    res.writeHead(200, { 'Content-Type': type + '; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(body);
+  } catch (_) {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('no encontrado');
+  }
+}
+
 const server = http.createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('Valora-VE adb-ws-helper activo\n');
+  const p = (req.url || '/').split('?')[0];
+  if (p === '/ping') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    return res.end('ok');
+  }
+  if (p === '/' || p === '/index.html') {
+    return sendFile(res, path.join(PUB, 'index.html'), 'text/html');
+  }
+  if (p === '/pilot' || p === '/pilot.html') {
+    return sendFile(res, path.join(PUB, 'pilot.html'), 'text/html');
+  }
+  if (p === '/adb.js') {
+    return sendFile(res, path.join(PUB, 'adb.js'), 'text/javascript');
+  }
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('no encontrado');
 });
 
 server.on('upgrade', (req, socket) => {
@@ -52,6 +85,12 @@ server.on('upgrade', (req, socket) => {
 
   const phone = net.connect(PORT_PHONE, HOST_PHONE, () => {
     console.log(`[helper] teléfono conectado: ${HOST_PHONE}:${PORT_PHONE}`);
+  });
+  phone.setTimeout(8000, () => {
+    // Sin respuesta en 8 s (SYN colgado): feedback rápido en vez de minutos.
+    console.error(`[helper] timeout TCP con ${HOST_PHONE}:${PORT_PHONE} (¿IP correcta? ¿adb tcpip 5555 activo?)`);
+    socket.destroy();
+    phone.destroy();
   });
   phone.on('error', (e) => {
     console.error(`[helper] error TCP: ${e.message} (¿adb tcpip 5555 y misma red?)`);
@@ -128,5 +167,10 @@ function encodeWsFrame(data) {
 }
 
 server.listen(WS_PORT, () => {
-  console.log(`[helper] WebSocket listo en ws://127.0.0.1:${WS_PORT} → ADB ${HOST_PHONE}:${PORT_PHONE}`);
+  console.log('[helper] listo:');
+  console.log('  · página local (recomendada, sin permiso de red local):');
+  console.log(`      http://127.0.0.1:${WS_PORT}/`);
+  console.log('  · canal ADB para el cliente hospedado (preview):');
+  console.log(`      ws://127.0.0.1:${WS_PORT}  →  ADB ${HOST_PHONE}:${PORT_PHONE}`);
+  console.log('  En la página local pega la URL del preview y el token de sesión (una sola vez).');
 });
