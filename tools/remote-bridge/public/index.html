@@ -43,7 +43,7 @@
       <button id="btnDisc" class="ghost" disabled>Desconectar</button>
     </div>
     <div class="row" style="margin-top:10px">
-      <input type="text" id="wsUrl" placeholder="ws://127.0.0.1:8790 (helper Wi-Fi)">
+      <input type="text" id="wsUrl" placeholder="ws://127.0.0.1:8790 (helper en tu PC)">
       <label class="cb"><input type="checkbox" id="autoStream" checked> transmitir pantalla al conectar</label>
       <label class="cb"><input type="checkbox" id="jpeg" checked> comprimir JPEG (stream)</label>
     </div>
@@ -55,6 +55,9 @@
       (requiere <code>adb tcpip 5555</code> hecho una vez por cable) y pega la dirección del helper
       (<code>ws://127.0.0.1:8790</code>).
     </div>
+    <div class="muted" style="margin-top:6px">El campo pide el <b>helper en tu PC</b> (<code>ws://127.0.0.1:8790</code>); la dirección del
+      teléfono (<code>192.168.x.x:5555</code>) va en el <b>comando</b> del helper. ¿Sin helper? Usa
+      <b>USB</b> — tras autorizar una vez, reconecta solo.</div>
     <div class="muted" style="margin-top:6px" id="tokWrap" hidden>
       token de sesión: <code id="tokVal"></code>
       <button id="btnTok" class="ghost" style="padding:3px 8px;font-size:12px">copiar</button>
@@ -198,8 +201,39 @@ function sendBinary(bytes) {
 }
 
 // ── Conexión al teléfono ─────────────────────────────────────────────────────
-/** Preflight Wi-Fi: valida dirección, mixed content y el permiso de red local
- *  (Chrome LNA) ANTES de abrir el WebSocket — errores con instrucciones. */
+/** Normaliza y DIAGNOSTICA la dirección del helper ANTES de tocar la red.
+ *  El dueño suele pegar aquí la dirección del TELÉFONO (192.168.x.x:5555) —
+ *  eso va en el COMANDO del helper, no en este campo; el error se lo dice
+ *  con el comando exacto. Acepta host:puerto sin esquema (asume ws://) —
+ *  también con hosts de letras (localhost:8790), que new URL() confunde
+ *  con un esquema si no se normaliza primero. */
+function normalizeHelperUrl(raw) {
+  const inv = (s) => 'Dirección inválida («' + s + '») — ejemplo: ws://127.0.0.1:8790';
+  const phoneMsg = (h) =>
+    '«' + h + '» es la dirección del TELÉFONO — esa va en el comando del helper, en tu PC:\n' +
+    '  node adb-ws-helper.js ' + h + ' 5555\n' +
+    'Aquí va el HELPER de tu misma PC: ws://127.0.0.1:8790 (o usa el modo USB, sin helper).';
+  const isPhone = (h) => /^(192\.168|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h || '');
+  let s = (raw || '').trim();
+  if (!s) return { error: 'Falta la dirección del helper — ejemplo: ws://127.0.0.1:8790' };
+  let u = null;
+  if (/^wss?:\/\//i.test(s)) {
+    try { u = new URL(s); } catch (_) { return { error: inv(s) }; }
+  } else if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(s)) {
+    // Dirección WEB pegada (https://…): si es el teléfono, dilo; si no, pide ws://.
+    let w; try { w = new URL(s); } catch (_) { return { error: inv(s) }; }
+    if (isPhone(w.hostname)) return { error: phoneMsg(w.hostname) };
+    return { error: 'Eso es una dirección web (' + w.protocol + '//' + w.host + ') — el helper se anota con ws:// — ejemplo: ws://127.0.0.1:8790' };
+  } else {
+    s = 'ws://' + s; // «127.0.0.1:8790» y «localhost:8790» → ws://…
+    try { u = new URL(s); } catch (_) { return { error: inv(s) }; }
+  }
+  if (isPhone(u.hostname)) return { error: phoneMsg(u.hostname) };
+  return { url: s };
+}
+
+/** Preflight Wi-Fi: mixed content y el permiso de red local (Chrome LNA)
+ *  ANTES de abrir el WebSocket — errores con instrucciones. */
 async function pingHelper(wsUrl) {
   let u;
   try { u = new URL(wsUrl); } catch (_) {
@@ -248,12 +282,14 @@ async function connectPhone(kind, opts = {}) {
       }
       transport = new AdbTransports.WebUsbTransport(log);
     } else {
-      const u = $('wsUrl').value.trim();
-      if (!u) return log('Pega la dirección del helper Wi-Fi (ws://127.0.0.1:8790)');
+      const norm = normalizeHelperUrl($('wsUrl').value);
+      if (norm.error) return log('ERROR: ' + norm.error);
+      $('wsUrl').value = norm.url; // el dueño ve la forma que sí funciona
+      try { localStorage.setItem('valora.helper', norm.url); } catch (_) {} // solo se recuerdan direcciones válidas
       log('Verificando helper y permiso de red local…');
-      await pingHelper(u);
+      await pingHelper(norm.url);
       log('Helper accesible — abriendo canal ADB…');
-      transport = new AdbTransports.WsTransport(u, log);
+      transport = new AdbTransports.WsTransport(norm.url, log);
     }
     log('Conectando al teléfono…');
     adb = new ValoraAdb(transport, log);
@@ -340,10 +376,7 @@ async function streamLoop() {
 }
 
 $('btnUsb').onclick = () => connectPhone('usb');
-$('btnWifi').onclick = () => {
-  try { localStorage.setItem('valora.helper', $('wsUrl').value.trim()); } catch (_) {}
-  connectPhone('wifi');
-};
+$('btnWifi').onclick = () => connectPhone('wifi');
 if (navigator.usb) {
   navigator.usb.addEventListener('connect', () =>
     setTimeout(() => autoConnectUsb('Teléfono enchufado'), 600),
@@ -406,7 +439,11 @@ if (INJECTED) {
     pollHealth();
   };
 }
-try { $('wsUrl').value = localStorage.getItem('valora.helper') || 'ws://127.0.0.1:8790'; } catch (_) { $('wsUrl').value = 'ws://127.0.0.1:8790'; }
+try {
+  const local = ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(location.hostname);
+  // Modo local: el helper ES quien sirve esta página → mismo origen siempre.
+  $('wsUrl').value = localStorage.getItem('valora.helper') || (local ? 'ws://' + location.host : 'ws://127.0.0.1:8790');
+} catch (_) { $('wsUrl').value = 'ws://127.0.0.1:8790'; }
 
 connectServer();
 autoConnectUsb('Página abierta');

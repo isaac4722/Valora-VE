@@ -1,4 +1,4 @@
-# Puente de depuración remota · Valora-VE (v21.6.2)
+# Puente de depuración remota · Valora-VE (v21.6.3)
 
 Depuración y pruebas en tiempo real del teléfono Android del dueño desde la
 máquina del desarrollador — sin USB del desarrollador, sin servicios de pago,
@@ -35,6 +35,7 @@ sin nube intermedia: todo corre en el servidor del preview + tu navegador.
 | `test_relay.js` | Test E2E del relay (sin hardware): `node test_relay.js`. |
 | `test_adb_keys.js` | Test del keygen/firma RSA-2048 de ADB en Node: `node test_adb_keys.js`. |
 | `test_usb_transport.js` | Test del transporte WebUSB con USBDevice simulado (chooser, configs múltiples, claim ocupado): `node test_usb_transport.js`. |
+| `test_helper_url.js` | Test de la normalización/diagnóstico de la dirección del helper (IP del teléfono vs helper, sin navegador): `node test_helper_url.js`. |
 
 ## Del lado de la app (repo `lib/services/dev_bridge*`)
 
@@ -59,7 +60,11 @@ DevTools). Toggle en **Ajustes → Diagnóstico → Servidor de pruebas**
    y abre la **página local** `http://127.0.0.1:8790/` — pega ahí la URL del
    preview y el token (se recuerda; si dejas el token vacío lo busca solo en
    `<relay>/api/token`). No hace falta permiso de red local: la página y el
-   helper viven en tu misma máquina.
+   helper viven en tu misma máquina. **Ojo con las dos direcciones:** el
+   campo del cliente pide el HELPER de tu PC (`ws://127.0.0.1:8790` — acepta
+   `127.0.0.1:8790` y `localhost:8790` sin esquema); la IP del TELÉFONO va en
+   el comando — si la pegas en el campo, el cliente lo detecta y te muestra
+   el comando exacto en el log.
    - Alternativa: el cliente hospedado en el preview con `ws://127.0.0.1:8790`
      — ahí Chrome pedirá «acceso a la red local» UNA vez (acéptalo; si lo
      bloqueaste: ícono de la barra → Permisos → Permitir) y solo funciona
