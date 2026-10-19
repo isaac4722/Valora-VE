@@ -17,6 +17,7 @@ import 'package:valorave/features/converter/converter_screen.dart';
 import 'package:valorave/features/home/home_screen.dart';
 import 'package:valorave/features/insights/insights_screen.dart';
 import 'package:valorave/features/legal/legal_screen.dart';
+import 'package:valorave/features/lista/checkout_modal.dart';
 import 'package:valorave/features/lista/lista_screen.dart';
 import 'package:valorave/features/products/products_screen.dart';
 import 'package:valorave/features/settings/settings_screen.dart';
@@ -1029,6 +1030,142 @@ void main() {
       await tester.tap(find.text('Saltar'));
       await tester.pump();
       expect(await future, isFalse);
+    });
+  });
+
+  group('Checkout de Lista (v21.5 · micro-espaciados con carrito real)', () {
+    // El teclado del CLI no escribe en campos Flutter, así que la pasada
+    // GUI del dueño no pudo ver el checkout CON ítems: estos tests seedean
+    // el carrito por store y miden la geometría real del sheet (390×844,
+    // el viewport del contrato).
+    Future<void> abrirCheckout(
+      WidgetTester tester, {
+      required List<CartItem> items,
+    }) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final store = _pumpedStore(tester, dir: 'wco');
+      await _initServices(store);
+      for (final it in items) {
+        store.addToCart(it);
+      }
+      await tester.pumpWidget(_wrap(const Scaffold(body: SizedBox()), store: store));
+      await tester.pumpWidget(
+        _wrap(
+          Builder(
+            builder: (context) => Center(
+              child: ElevatedButton(
+                onPressed: () => showCheckoutSheet(context),
+                child: const Text('abrir'),
+              ),
+            ),
+          ),
+          store: store,
+        ),
+      );
+      await tester.tap(find.text('abrir'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('recibo por tienda: las filas del desglose respiran', (
+      tester,
+    ) async {
+      // Antes de v21.5 las LedgerRow del desglose iban sin padding: el
+      // hueco entre filas medía 0 px. Ahora el ritmo de recibo es 6 px
+      // (3 arriba + 3 abajo, patrón de home_screen).
+      await abrirCheckout(tester, items: const [
+        CartItem(
+          id: 'a',
+          name: 'Arroz',
+          quantity: 2,
+          price: 2,
+          currency: 'USD',
+        ),
+        CartItem(
+          id: 'b',
+          name: 'Pasta',
+          quantity: 1,
+          price: 3,
+          currency: 'USD',
+        ),
+      ]);
+      expect(find.text('2 ítems · 3 unidades · 1 monedas'), findsOneWidget);
+      final arroz = tester.getRect(find.text('2 × Arroz'));
+      final pasta = tester.getRect(find.text('1 × Pasta'));
+      expect(
+        pasta.top - arroz.bottom,
+        closeTo(6, 0.5),
+        reason: 'ritmo vertical del recibo: 3+3 de padding, no filas pegadas',
+      );
+    });
+
+    testWidgets('héroe del total: rótulo USD en la línea base de la cifra', (
+      tester,
+    ) async {
+      await abrirCheckout(tester, items: const [
+        CartItem(
+          id: 'a',
+          name: 'Arroz',
+          quantity: 1,
+          price: 2,
+          currency: 'USD',
+        ),
+      ]);
+      // El héroe vive en el primer ReadWindow del modal («Total a
+      // guardar»); la fila debe alinear por baseline, no al centro.
+      final heroRow = tester.widget<Row>(
+        find
+            .descendant(
+              of: find.byType(ReadWindow),
+              matching: find.byType(Row),
+            )
+            .first,
+      );
+      expect(heroRow.crossAxisAlignment, CrossAxisAlignment.baseline);
+      expect(heroRow.textBaseline, TextBaseline.alphabetic);
+    });
+
+    testWidgets('multitienda: primer campo de tienda abre con lead-in mayor', (
+      tester,
+    ) async {
+      // Un ítem ya trae tienda → el modal nace multitienda ON, un solo
+      // grupo con dos campos: el primero abre con 10 px (cierra el recibo
+      // el subtotal) y el segundo conserva el ritmo de 6 px.
+      await abrirCheckout(tester, items: const [
+        CartItem(
+          id: 'a',
+          name: 'Arroz',
+          quantity: 1,
+          price: 2,
+          currency: 'USD',
+          store: 'Bicentenario',
+        ),
+        CartItem(
+          id: 'b',
+          name: 'Pasta',
+          quantity: 1,
+          price: 3,
+          currency: 'USD',
+          store: 'Bicentenario',
+        ),
+      ]);
+      expect(find.text('Tienda de Arroz'), findsOneWidget);
+      expect(find.text('Tienda de Pasta'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is Padding && w.padding == const EdgeInsets.only(top: 10),
+        ),
+        findsOneWidget,
+        reason: 'solo el primer campo del grupo abre con 10 px',
+      );
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is Padding && w.padding == const EdgeInsets.only(top: 6),
+        ),
+        findsOneWidget,
+        reason: 'los siguientes campos conservan el ritmo de 6 px',
+      );
     });
   });
 }

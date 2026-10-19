@@ -6,7 +6,7 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v21.4 · arranque: el slide 1 de la bienvenida ya
-/// no muestra «Atrás» — un control muerto a la vista confunde al usuario
-/// nuevo; se desvanece y el hueco se reserva para que los puntos no salten).
-const String kAppVersionVisible = '21.4';
+/// Versión visible (ronda v21.5 · micro-espaciados del checkout de Lista:
+/// recibo por tienda con ritmo vertical, rótulo «Total USD» en la línea
+/// base de la cifra y lead-in del primer campo de tienda en multitienda).
+const String kAppVersionVisible = '21.5';

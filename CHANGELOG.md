@@ -1,6 +1,32 @@
 # Changelog
 
 
+## 1.14.0-beta+39 · v21.5 — Micro-espaciados del checkout de Lista
+
+La candidata pendiente de la auditoría GUI que solo se veía con ítems en
+el carrito — el teclado del CLI no escribe en campos Flutter, así que esta
+ronda se hizo por revisión de código y se blindó con tests de widgets que
+seedean el carrito y miden la geometría real del sheet a 390×844.
+
+- **El recibo por tienda respira**: las filas del desglose (`LedgerRow`)
+  no traen padding propio y en el checkout iban desnudas — se pegaban
+  entre sí y contra el filete doble. Ahora llevan `vertical: 3`, el mismo
+  ritmo de recibo que ya usaba Inicio; el hueco entre filas pasó de 0 px
+  a 6 px y el test lo mide geométricamente.
+- **«Total USD» se sienta en la línea base de la cifra**: junto al número
+  de 34 px el rótulo flotaba centrado verticalmente, como un dato suelto.
+  La fila ahora alinea por `CrossAxisAlignment.baseline` — la cifra manda
+  y el complemento acompaña, igual que en el resto del lenguaje Ve.
+- **Multitienda: el primer campo de tienda abre con 10 px**: antes el
+  lead-in tras el subtotal medía 6 px, igual que el ritmo entre campos,
+  y la zona de edición quedaba pegada al cierre del recibo. El primer
+  campo del grupo abre con 10 px y los siguientes conservan el 6 px. El
+  closure usa el elemento de la vuelta (`identical`), no un índice, para
+  que «Tienda de <ítem>» edite siempre su propio ítem.
+
+analyze 0 · 243/243 tests (3 nuevos del checkout) · gate VERDE · web 3000
+verificada en vivo (390×844).
+
 ## 1.14.0-beta+38 · v21.4 — Arranque sin controles muertos
 
 Última pasada de producción: una pantalla más verificada de primera mano y

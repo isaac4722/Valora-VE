@@ -442,7 +442,12 @@ class CheckoutModalState extends State<CheckoutModal> {
         const SizedBox(height: 10),
         ReadWindow(
           semanticLabel: 'Total a guardar',
+          // v21.5: el rótulo «Total USD» se sienta en la LÍNEA BASE de la
+          // cifra — antes flotaba centrado junto al número de 34px y leía
+          // como un dato suelto. La cifra manda; el complemento acompaña.
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
               Expanded(
                 child: FittedBox(
@@ -494,10 +499,17 @@ class CheckoutModalState extends State<CheckoutModal> {
             ],
           ),
           const SizedBox(height: 4),
+          // v21.5: ritmo vertical del recibo — LedgerRow no trae padding
+          // propio y aquí las filas iban DESNUDAS: se pegaban entre sí y al
+          // filete (escapó a la pasada GUI porque solo se ve con ítems en el
+          // carrito). vertical:3 = ritmo de recibo de home_screen.
           for (final it in entry.value)
-            LedgerRow(
-              label: '${it.quantity} × ${it.name}',
-              value: fmtUSD(_itemUsd(it)),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: LedgerRow(
+                label: '${it.quantity} × ${it.name}',
+                value: fmtUSD(_itemUsd(it)),
+              ),
             ),
           const RuleDouble(),
           const SizedBox(height: 4),
@@ -508,11 +520,17 @@ class CheckoutModalState extends State<CheckoutModal> {
               style: VeText.displayNum(13, color: scheme.onSurface),
             ),
           ),
-          // Multitienda ON: campo de tienda por ítem.
+          // Multitienda ON: campo de tienda por ítem. v21.5: el PRIMER
+          // campo del grupo abre con 10px — el subtotal cierra el recibo y
+          // la zona de edición respira; entre campos se conserva el ritmo 6.
+          // identical() y no índice: el closure de onChanged captura el
+          // elemento de ESTA vuelta, no la variable del contador.
           if (_multiStore)
             for (final it in entry.value)
               Padding(
-                padding: const EdgeInsets.only(top: 6),
+                padding: EdgeInsets.only(
+                  top: identical(entry.value.first, it) ? 10 : 6,
+                ),
                 child: StoreAutocompleteField(
                   stores: _store.stores,
                   initialValue: it.store,
