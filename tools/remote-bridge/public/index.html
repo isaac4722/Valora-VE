@@ -31,7 +31,7 @@
 <body>
 <div class="wrap">
   <h1>Valora<b>VE</b> · Puente de depuración remota</h1>
-  <div class="sub">Tu navegador conecta el teléfono (ADB en tu red local) con la consola del desarrollador. Nada sale de tu equipo salvo este canal de prueba.</div>
+  <div class="sub">Todo dentro de esta preview: tu navegador (USB) o la propia app del teléfono (v21.7, sin PC) conectan con la consola del desarrollador.</div>
 
   <div class="card">
     <div class="row">
@@ -39,44 +39,67 @@
       <span id="stBridge" class="pill off">puente local</span>
       <span style="flex:1"></span>
       <button id="btnUsb">Conectar por USB (WebUSB)</button>
-      <button id="btnWifi" class="sec">Conectar por Wi-Fi (helper)</button>
       <button id="btnDisc" class="ghost" disabled>Desconectar</button>
     </div>
     <div class="row" style="margin-top:10px">
-      <input type="text" id="wsUrl" placeholder="ws://127.0.0.1:8790 (helper en tu PC)">
       <label class="cb"><input type="checkbox" id="autoStream" checked> transmitir pantalla al conectar</label>
       <label class="cb"><input type="checkbox" id="jpeg" checked> comprimir JPEG (stream)</label>
     </div>
     <div class="muted" style="margin-top:8px">
-      USB: activa «Depuración USB» y acepta el diálogo de Chrome — <b>tras la primera autorización,
-      abrir esta página reconecta solo</b>. Si Chrome dice que no puede tomar la interface:
-      <code>adb kill-server</code> en tu PC y vuelve a meter el cable. Wi-Fi: ejecuta
-      <code>node tools/remote-bridge/adb-ws-helper.js &lt;ip-del-teléfono&gt; 5555</code> en tu PC
-      (requiere <code>adb tcpip 5555</code> hecho una vez por cable) y pega la dirección del helper
-      (<code>ws://127.0.0.1:8790</code>).
+      USB es el camino <b>todo-en-la-preview</b>: conecta el cable, activa «Depuración USB» y acepta los diálogos:
+      <b>tras la primera autorización, abrir esta página reconecta solo</b> (enchufar el cable con la página abierta
+      también conecta). Si Chrome dice que no puede tomar la interface:
+      <code>adb kill-server</code> en tu PC, cierra Android Studio/scrcpy/Vysor y vuelve a meter el cable.
     </div>
-    <div class="muted" style="margin-top:6px">El campo pide el <b>helper en tu PC</b> (<code>ws://127.0.0.1:8790</code>); la dirección del
-      teléfono (<code>192.168.x.x:5555</code>) va en el <b>comando</b> del helper. ¿Sin helper? Usa
-      <b>USB</b> — tras autorizar una vez, reconecta solo.</div>
     <div class="muted" style="margin-top:6px" id="tokWrap" hidden>
       token de sesión: <code id="tokVal"></code>
       <button id="btnTok" class="ghost" style="padding:3px 8px;font-size:12px">copiar</button>
-      <span>— pégalo en la página local del helper si la usas.</span>
+      <span>pégalo en la app (Ajustes → Diagnóstico → Puente sin PC) o en la página local del helper.</span>
     </div>
   </div>
 
-  <div class="card" id="cfgCard" hidden>
-    <div class="muted" style="margin-bottom:8px"><b>Modo local</b> — esta página la sirve tu helper (sin permiso de red local). Apúntala al relay del preview:</div>
-    <div class="row">
-      <input type="text" id="cfgRelay" placeholder="https://preview-….space-z.ai" style="width:330px">
-      <input type="text" id="cfgToken" placeholder="token de sesión (autollena si dejas vacío)">
-      <button id="btnCfg" class="sec">Guardar y conectar</button>
+  <div class="card" id="appCard">
+    <div class="row" style="margin-bottom:6px"><b>Sin cable · el puente vive en la app (v21.7)</b></div>
+    <div class="muted">
+      En el teléfono: <b>Ajustes → Diagnóstico → «Puente sin PC»</b> → pega esta URL y el token de sesión y
+      enciende el interruptor. La app abre el canal HACIA el preview: pantalla (≈1 fps), /health, /test, /nav y
+      /erase sin conectar nada a tu PC. El toque real (tap/swipe) sigue pidiendo USB (la app lo dice honesto).
     </div>
-    <div class="muted" style="margin-top:6px">El token se copia desde el cliente abierto en el preview (arriba, «token de sesión»). Se recuerda en este navegador.</div>
+    <div class="row" style="margin-top:8px">
+      <button id="btnCopyUrl" class="sec">copiar URL del preview</button>
+      <span class="muted" id="copyUrlOk" hidden>¡copiada!</span>
+    </div>
   </div>
+
+  <details class="card" id="wifiCard">
+    <summary style="cursor:pointer;font-weight:600">Wi-Fi con helper en la PC (avanzado, opcional)</summary>
+    <div class="muted" style="margin:8px 0">
+      Si prefieres Wi-Fi: corre el helper en tu PC y pega SU dirección aquí.
+      <b><code>ws://…</code> jamás se abre en la barra del navegador</b> (por eso Chrome responde
+      <code>ERR_UNKNOWN_URL_SCHEME</code> si lo intentas): va solo en este campo. La IP del teléfono
+      (<code>192.168.x.x:5555</code>) va en el <b>comando</b> del helper, no aquí.
+    </div>
+    <div class="row">
+      <button id="btnWifi" class="sec">Conectar por Wi-Fi (helper)</button>
+      <input type="text" id="wsUrl" placeholder="ws://127.0.0.1:8790 (helper en tu PC)">
+    </div>
+    <div class="muted" style="margin-top:6px">
+      Requiere <code>node tools/remote-bridge/adb-ws-helper.js &lt;ip-del-teléfono&gt; 5555</code> corriendo en tu PC
+      (una vez por cable: <code>adb tcpip 5555</code>).
+    </div>
+    <div class="card" id="cfgCard" hidden style="margin-top:10px">
+      <div class="muted" style="margin-bottom:8px"><b>Modo local</b>: esta página la sirve tu helper (sin permiso de red local). Apúntala al relay del preview:</div>
+      <div class="row">
+        <input type="text" id="cfgRelay" placeholder="https://preview-….space-z.ai" style="width:330px">
+        <input type="text" id="cfgToken" placeholder="token de sesión (autollena si dejas vacío)">
+        <button id="btnCfg" class="sec">Guardar y conectar</button>
+      </div>
+      <div class="muted" style="margin-top:6px">El token se copia desde el cliente abierto en el preview (arriba, «token de sesión»). Se recuerda en este navegador.</div>
+    </div>
+  </details>
 
   <div class="card">
-    <div class="muted"><b>Permisos que vas a ver (una sola vez):</b> ① Chrome — «acceso a la red local»: acéptalo cuando pregunte al conectar por Wi-Fi; si lo bloqueaste, ícono de la barra de direcciones → Permisos → <i>Acceso a la red local</i> → Permitir. ② Teléfono — «¿Permitir depuración USB?» para la clave <b>valora-bridge</b>: acéptalo en la pantalla del teléfono (marca «Siempre»). ③ USB (opcional) — Chrome pide elegir el dispositivo.</div>
+    <div class="muted"><b>Permisos que vas a ver (una sola vez):</b> ① Chrome: «acceso a la red local»: acéptalo cuando pregunte al conectar por Wi-Fi; si lo bloqueaste, ícono de la barra de direcciones → Permisos → <i>Acceso a la red local</i> → Permitir. ② Teléfono: «¿Permitir depuración USB?» para la clave <b>valora-bridge</b>: acéptalo en la pantalla del teléfono (marca «Siempre»). ③ USB (opcional): Chrome pide elegir el dispositivo.</div>
   </div>
 
   <div class="card">
@@ -85,6 +108,8 @@
       <button id="btnShot" class="sec" disabled>Captura completa (PNG)</button>
       <button id="btnHealth" class="sec" disabled>App /health</button>
       <button id="btnWake" class="sec" disabled>Despertar</button>
+      <button id="btnStreamOn" class="sec" disabled>▶ flujo</button>
+      <button id="btnStreamOff" class="sec" disabled>⏸ flujo</button>
       <span style="flex:1"></span>
       <span class="muted" id="fpsInfo"></span>
     </div>
@@ -121,11 +146,64 @@ function log(msg) {
 
 let ws = null;
 let wsGen = 0;
+let curRole = '';        // rol del socket vivo: 'bridge' | 'pilot' | ''
 let adb = null;           // ValoraAdb conectado
 let streaming = false;
 let streamingBusy = false;
 let deviceInfo = null;
 let lastPilots = 0;
+let pending = new Map();  // id → onResult (modo espectador)
+let cmdSeq = 0;
+
+function desiredRole() {
+  // Con ADB vivo (USB/helper) SOMOS el puente; sin teléfono, la página es
+  // ESPECTADORA: ve el puente de la app (v21.7) y manda sus comandos por el
+  // relay; así abrir la preview jamás le roba el puesto al puente del
+  // teléfono (el relay acepta UN puente: el más nuevo manda).
+  return adb ? 'bridge' : 'pilot';
+}
+
+function reconnectAsBridge() {
+  const want = adb ? 'bridge' : 'pilot';
+  if (curRole === want) return;
+  try { if (ws) { wsGen++; ws.onclose = null; ws.close(); } } catch (_) {}
+  connectServer();
+}
+
+function describeDevice(d) {
+  if (!d) return '(sin info)';
+  const res = d.resolution ? ` ${d.resolution.w}×${d.resolution.h}` : '';
+  const src = d.source === 'app' ? ' · desde la app' : '';
+  return (d.model || 'Android') + res + src;
+}
+
+function setPill(online, device) {
+  $('stBridge').textContent = online ? ('puente: ' + describeDevice(device)) : 'puente local';
+  $('stBridge').className = 'pill ' + (online ? 'on' : 'off');
+}
+
+function helloPayload() {
+  return {
+    model: deviceInfo.model,
+    serial: String(deviceInfo.serial || ''),
+    resolution: deviceInfo.resolution,
+  };
+}
+
+/** Frame binario del puente (JPEG/PNG) → canvas local (modo espectador). */
+function drawFrame(buf) {
+  const blob = new Blob([buf], { type: 'image/jpeg' });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    const cv = $('screen');
+    cv.width = img.width; cv.height = img.height;
+    cv.getContext('2d').drawImage(img, 0, 0);
+    $('fpsInfo').textContent = `${img.width}×${img.height}`;
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
 
 async function connectServer() {
   const gen = ++wsGen;
@@ -135,34 +213,63 @@ async function connectServer() {
     setTimeout(() => { if (gen === wsGen) connectServer(); }, 5000);
     return;
   }
+  const role = desiredRole();
+  curRole = role;
   const proto = base.startsWith('https') ? 'wss:' : 'ws:';
-  const url = `${proto}//${base.replace(/^https?:\/\//, '')}/api/ws?role=bridge&token=${encodeURIComponent(TOKEN)}`;
+  const url = `${proto}//${base.replace(/^https?:\/\//, '')}/api/ws?role=${role}&token=${encodeURIComponent(TOKEN)}`;
   ws = new WebSocket(url);
   ws.binaryType = 'arraybuffer';
   ws.onopen = () => {
-    $('stBridge').textContent = 'servidor: conectado';
+    setPill(false, null);
+    $('stBridge').textContent = role === 'bridge' ? 'servidor: conectado (puente local)' : 'servidor: conectado (espectador)';
     $('stBridge').className = 'pill on';
-    log('Conectado al servidor del puente (rol: bridge)');
+    if (role === 'pilot') {
+      log('Conectado como ESPECTADOR: el puente de la app (v21.7) se ve aquí al encenderlo en Ajustes → Diagnóstico. Con USB conectado, esta página toma el rol de puente sola.');
+    } else {
+      log('Conectado al servidor del puente (rol: bridge)');
+      if (adb && deviceInfo) ws.send(JSON.stringify({ type: 'hello', device: helloPayload() }));
+    }
   };
   ws.onclose = (ev) => {
     if (gen !== wsGen) return; // fue reemplazada por una reconexión manual
     $('stBridge').textContent = 'puente local';
     $('stBridge').className = 'pill off';
     if (ev && ev.code === 4003) {
-      log('Esta pestaña fue REEMPLAZADA por otra del cliente (la más nueva manda). Recarga aquí para retomar el control.');
-      return; // sin reintento: la pestaña nueva es la activa
+      log('Esta pestaña fue REEMPLAZADA por otra conexión puente (la más nueva manda). Recarga aquí para retomar el control.');
+      return; // sin reintento: la conexión nueva es la activa
     }
     if (ev && ev.code === 4001) {
-      log('Token inválido — corrígelo en «Modo local» y guarda.');
+      log('Token inválido: corrígelo en «Modo local» y guarda.');
       return;
     }
-    log('Servidor desconectado — reintentando en 3 s');
+    log('Servidor desconectado, reintentando en 3 s');
     setTimeout(() => { if (gen === wsGen) connectServer(); }, 3000);
   };
-  ws.onmessage = async (ev) => {
-    if (ev.data instanceof ArrayBuffer) return; // no esperamos binarios aquí
+  ws.onmessage = (ev) => {
+    if (ev.data instanceof ArrayBuffer) { drawFrame(ev.data); return; }
     let msg; try { msg = JSON.parse(ev.data); } catch (_) { return; }
-    if (msg.type === 'cmd') await handleCmd(msg);
+    switch (msg.type) {
+      case 'cmd':
+        if (adb) handleCmd(msg); // solo llegan comandos si somos el puente
+        break;
+      case 'hello':
+        if (msg.role === 'pilot') setPill(!!msg.bridge, msg.device);
+        break;
+      case 'bridge-hello':
+        setPill(true, msg.device);
+        log('Puente en línea: ' + describeDevice(msg.device));
+        break;
+      case 'bridge-bye':
+        setPill(false, null);
+        log('El puente se desconectó');
+        break;
+      case 'result': {
+        const r = pending.get(msg.id);
+        if (r) { pending.delete(msg.id); r(msg); }
+        break;
+      }
+      default: break;
+    }
   };
 }
 
@@ -300,13 +407,12 @@ async function connectPhone(kind, opts = {}) {
       serial: String(deviceInfo.serial || ''),
       resolution: deviceInfo.resolution,
     };
-    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type:'hello', device: dev }));
-    $('stBridge').textContent = `puente: ${dev.model}`;
-    $('stBridge').className = 'pill on';
-    ['btnShot','btnHealth','btnWake'].forEach((b) => ($(b).disabled = false));
+    ok = true;
+    ['btnShot','btnHealth','btnWake','btnStreamOn','btnStreamOff'].forEach((b) => ($(b).disabled = false));
     log(`Teléfono conectado: ${dev.model} ${dev.resolution ? dev.resolution.w+'x'+dev.resolution.h : ''}`);
     if ($('autoStream').checked) streaming = true;
     streamLoop();
+    reconnectAsBridge(); // con ADB vivo, el rol correcto es bridge (con hello nuevo)
   } catch (e) {
     log('ERROR de conexión: ' + e.message);
     try { if (typeof transport !== 'undefined' && transport) transport.close(); } catch (_) {}
@@ -334,8 +440,9 @@ function disconnectPhone() {
   deviceInfo = null;
   $('stBridge').textContent = 'puente local';
   $('stBridge').className = 'pill off';
-  ['btnShot','btnHealth','btnWake'].forEach((b) => ($(b).disabled = true));
+  ['btnShot','btnHealth','btnWake','btnStreamOn','btnStreamOff'].forEach((b) => ($(b).disabled = true));
   log('Teléfono desconectado');
+  reconnectAsBridge(); // sin teléfono: espectador de nuevo (deja el puesto al puente de la app)
 }
 
 // ── Flujo de captura: screencap → JPEG (canvas) → binario WS ────────────────
@@ -383,12 +490,35 @@ if (navigator.usb) {
   );
 }
 $('btnDisc').onclick = disconnectPhone;
-$('btnShot').onclick = () => handleCmd({ id: 'ui', action: 'shot' });
-$('btnHealth').onclick = async () => {
-  const r = await adb.appHttp('/health');
-  log('App /health → ' + JSON.stringify(r.json));
+
+/** Comandos de la UI: siendo el puente se ejecutan LOCALES (handleCmd);
+ *  siendo espectadores viajan por el relay al puente de la app. */
+function uiCmd(action, args, onResult) {
+  if (adb) return handleCmd({ id: 'ui' + (++cmdSeq), action, args: args || {} });
+  if (ws && ws.readyState === 1) {
+    const id = 'ui' + (++cmdSeq);
+    if (onResult) pending.set(id, onResult);
+    ws.send(JSON.stringify({ type: 'cmd', id, action, args: args || {} }));
+  } else {
+    log('Sin conexión al servidor del puente.');
+  }
+}
+
+$('btnShot').onclick = () => uiCmd('shot', {}, (m) => { if (!m.ok) log('shot: ' + m.error); });
+$('btnHealth').onclick = () => uiCmd('appcmd', { path: '/health' }, (m) =>
+  log('App /health → ' + (m.ok ? 'HTTP ' + m.data.status + ' ' + JSON.stringify(m.data.json) : 'ERROR ' + m.error)));
+$('btnWake').onclick = () => uiCmd('key', { keycode: 224 }, (m) => { if (!m.ok) log('Despertar: ' + m.error); });
+$('btnStreamOn').onclick = () => uiCmd('stream', { on: true }, (m) => log(m.ok ? 'flujo encendido' : 'flujo: ' + m.error));
+$('btnStreamOff').onclick = () => uiCmd('stream', { on: false }, (m) => log(m.ok ? 'flujo apagado' : 'flujo: ' + m.error));
+$('btnCopyUrl').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(location.origin);
+    $('copyUrlOk').hidden = false;
+    setTimeout(() => ($('copyUrlOk').hidden = true), 1500);
+  } catch (_) {
+    log('No pude copiar automáticamente — la URL es: ' + location.origin);
+  }
 };
-$('btnWake').onclick = () => handleCmd({ id: 'ui', action: 'key', args: { keycode: 224 } });
 
 async function pollHealth() {
   const base = relayOrigin();
@@ -417,6 +547,7 @@ if (INJECTED) {
     } catch (_) {}
   };
 } else {
+  $('wifiCard').open = true; // modo local: el helper es el protagonista aquí
   $('cfgCard').hidden = false;
   $('cfgRelay').value = CFG.relay;
   $('cfgToken').value = CFG.token;

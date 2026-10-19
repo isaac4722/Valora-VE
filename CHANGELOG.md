@@ -1,6 +1,45 @@
 # Changelog
 
 
+## 1.14.0-beta+41 · v21.7 — Puente sin PC («todo dentro de la preview»)
+
+El dueño pegó `ws://127.0.0.1:8790` en la barra del navegador (`ERR_UNKNOWN_URL_SCHEME`)
+y pidió la directriz: **que todo sea dentro de la preview**. Respuesta de
+arquitectura: el TELÉFONO es ahora quien abre el canal — cero programas en
+la PC del dueño.
+
+- **DevRelay (`lib/services/dev_relay*`)**: la app abre un WebSocket SALIENTE
+  hacia el relay del preview con rol `bridge` + token de sesión (mismo
+  protocolo de server.js: hello → cmd → result + frames binarios) — el dueño
+  pega la URL del preview y el token UNA vez en **Ajustes → Diagnóstico →
+  «Puente sin PC»** y enciende el interruptor (auto-reconecta al arrancar).
+  Atiende `appcmd` (HTTP real a su propio servidor de pruebas v21.6),
+  `shot`/`stream` (captura de la UI viva) y niega con motivo claro
+  `tap|swipe|text|key|shell` — inyectar entrada exige ADB (USB/helper).
+  Condicional como dev_bridge: stub no-op en web con la MISMA API.
+- **DevCapture**: RepaintBoundary GLOBAL en el `builder` de MaterialApp.router
+  (frontera de pintura — cero cambios de comportamiento): captura → PNG →
+  JPEG con la MISMA función de compresión de tickets (flutter_image_compress;
+  en plataformas sin canal, PNG honesto). Backoff de reconexión 2/5/10/15/30
+  s; 4001 (token) y 4003 (otro puente tomó el control) quedan con estado
+  claro SIN reintentos — no hay peleas de puentes.
+- **Cliente del preview (`tools/remote-bridge/public/index.html`)**: USB como
+  camino héroe «todo-en-la-preview»; tarjeta nueva «Sin cable — el puente
+  vive en la app» con botón «copiar URL del preview»; Wi-Fi con helper baja a
+  `<details>` colapsado con la lección `ERR_UNKNOWN_URL_SCHEME` escrita.
+  Rol dual: con USB conectado la página es puente; sin teléfono es
+  ESPECTADORA (rol pilot) — ve el puente de la app, dibuja sus frames en el
+  canvas y le manda comandos, sin robarle el puesto (el relay acepta UN
+  puente). Botones ▶/⏸ flujo y resultados de comandos en el log.
+- **Tests**: `dev_relay_test.dart` (URL del relay pura, hello, y handleCmd
+  contra DevBridge REAL en puerto efímero: /health 200, /erase 403 sin
+  token, entrada rechazada con motivo, stream on/off) +
+  `dev_relay_capture_test.dart` (captura de UI renderizada produce bytes;
+  sin boundary → null honesto).
+
+analyze 0 · suite completa verde · gate VERDE · preview con rol dual
+verificada en vivo a 390×844.
+
 ## 1.14.0-beta+40 · v21.6 — Puente de depuración remota
 
 Nueva herramienta para probar la app EN EL TELÉFONO REAL del dueño desde la

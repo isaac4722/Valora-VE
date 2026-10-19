@@ -6,7 +6,7 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v21.6 · puente de depuración remota: servidor de
-/// pruebas local en la app (loopback, /health /test /erase /nav) + tool de
-/// puente WebADB en tools/remote-bridge — la web de la app pasa al 3001).
-const String kAppVersionVisible = '21.6';
+/// Versión visible (ronda v21.7 · puente sin PC: la app conecta al relay del
+/// preview con WebSocket saliente (rol bridge) — «todo dentro de la preview»
+/// sin helper en la PC del dueño; captura de UI viva vía RepaintBoundary).
+const String kAppVersionVisible = '21.7';

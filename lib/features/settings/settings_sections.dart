@@ -977,6 +977,186 @@ class _ServidorPruebasState extends State<_ServidorPruebas> {
   }
 }
 
+/// ─── Puente sin PC (v21.7 · pedido: «todo dentro de la preview») ───────────
+/// El teléfono abre el WebSocket hacia el relay del preview (rol bridge):
+/// el dueño pega la URL del preview + token de sesión UNA vez y enciende el
+/// interruptor — no corre helper ni abre nada en su PC. Pantalla (≈1 fps) y
+/// /health /test /nav /erase viajan por ahí; los toques reales siguen siendo
+/// territorio de USB/helper (ADB) y la UI lo dice honesto. El token que se
+/// pega aquí es el DEL PREVIEW (sesión del relay) — el de /erase es otro y
+/// vive en «Servidor de pruebas».
+class _PuenteApp extends StatefulWidget {
+  const _PuenteApp();
+
+  @override
+  State<_PuenteApp> createState() => _PuenteAppState();
+}
+
+class _PuenteAppState extends State<_PuenteApp> {
+  late final TextEditingController _url;
+  late final TextEditingController _token;
+
+  @override
+  void initState() {
+    super.initState();
+    // Sin watch: los campos se leen una vez — el estado vivo sale de
+    // DevRelay en cada build (toggle re-renderiza con setState).
+    final prefs = context.read<SharedPreferences>();
+    final supported = DevRelay.supported;
+    _url = TextEditingController(
+      text: supported ? (prefs.getString(DevRelay.kPrefUrl) ?? '') : '',
+    );
+    _token = TextEditingController(
+      text: supported ? (prefs.getString(DevRelay.kPrefToken) ?? '') : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _url.dispose();
+    _token.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle(bool on) async {
+    final prefs = context.read<SharedPreferences>();
+    final store = context.read<AppStore>();
+    if (!on) {
+      await DevRelay.setAuto(prefs, on: false);
+      await DevRelay.disconnect();
+      if (mounted) setState(() {});
+      return;
+    }
+    try {
+      // Valida ANTES de tocar preferencias: basura no se recuerda.
+      relayWsUrl(_url.text, _token.text);
+    } on FormatException catch (e) {
+      if (mounted) showToast(context, e.message, kind: ToastKind.warn);
+      return;
+    }
+    await DevRelay.saveConfig(prefs, url: _url.text, token: _token.text);
+    await DevRelay.setAuto(prefs, on: true);
+    final ok = await DevRelay.connect(store: store);
+    if (mounted) {
+      setState(() {});
+      showToast(
+        context,
+        ok ? 'Puente en la app conectado al preview' : 'No conectó: ${DevRelay.status}',
+        kind: ok ? ToastKind.info : ToastKind.warn,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const VeEyebrow(child: Text('PUENTE SIN PC')),
+        _VeSettingsCard(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: !DevRelay.supported
+                ? Text(
+                    'Solo disponible en el teléfono — en web no hay canal.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'La app conecta sola al preview',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Sin cables y sin programas en la PC: el teléfono abre '
+                        'el canal hacia el preview por internet. Sirve pantalla '
+                        '(≈1 fps) y responde /health, /test, /nav y /erase. Los '
+                        'toques reales (tap/swipe) siguen pidiendo USB.',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _url,
+                        keyboardType: TextInputType.url,
+                        autocorrect: false,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: scheme.onSurface,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'URL del preview',
+                          hintText: 'https://preview-….space-z.ai',
+                          isDense: true,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _token,
+                        autocorrect: false,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: scheme.onSurface,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Token de sesión del preview',
+                          hintText: 'botón «copiar» en el panel del puente',
+                          isDense: true,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              DevRelay.connected
+                                  ? 'Conectado al preview — el piloto ya ve este teléfono.'
+                                  : (DevRelay.status == 'off'
+                                        ? 'Apagado.'
+                                        : DevRelay.status),
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          VeToggle(
+                            value: DevRelay.connected,
+                            label: 'Puente sin PC',
+                            onChanged: _toggle,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Nota: este token es el DEL PREVIEW (sesión del relay). '
+                        'El de /erase es otro — vive en «Servidor de pruebas».',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// ─── Registros de la app (v20.4 · observabilidad 100 % local) ──────────────
 /// Visor del buffer talker: errores de red del tablero, reconexiones SSE,
 /// fallos del worker en 2º plano y eventos de la Sala Viva. PRIVACIDAD: el

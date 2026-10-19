@@ -28,6 +28,7 @@ import 'services/biometric.dart';
 import 'services/connectivity.dart';
 import 'services/deep_link.dart';
 import 'services/dev_bridge.dart';
+import 'services/dev_relay.dart';
 import 'services/notifications.dart';
 import 'services/photo_compress.dart';
 import 'services/quick_actions.dart';
@@ -102,6 +103,14 @@ Future<void> main({String? documentsDir}) async {
   } catch (_) {
     // Sin servidor de pruebas la app es 100 % funcional: es una herramienta,
     // nunca un requisito.
+  }
+  // v21.7: puente sin PC — el teléfono MISMO conecta al relay del preview
+  // (WebSocket saliente, rol bridge): el dueño no corre helper en su PC.
+  // Solo despierta si el dueño dejó el interruptor encendido con URL+token.
+  try {
+    await DevRelay.init(store: store, prefs: prefs);
+  } catch (_) {
+    // Ídem: sin puente la app sigue completa — herramienta, no requisito.
   }
 
   runApp(
@@ -276,6 +285,11 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
           appBuilder: (context) => MaterialApp.router(
             title: 'ValoraVE',
             debugShowCheckedModeBanner: false,
+            // v21.7 (puente sin PC): RepaintBoundary GLOBAL alrededor del
+            // Navigator — DevCapture la usa para fotografíar la UI viva y
+            // mandarla por el WebSocket del puente. Frontera de pintura: no
+            // cambia ningún comportamiento visual ni de navegación.
+            builder: (context, child) => DevCapture.wrap(context, child),
             // TASK-33: el árbol Material sigue recibiendo el AppTheme vigente
             // (VeInk + transiciones firma); Material You solo tiñe el par
             // primario, como siempre.
