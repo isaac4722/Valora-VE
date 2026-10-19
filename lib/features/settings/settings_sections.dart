@@ -859,6 +859,123 @@ class _DiagnosticoState extends State<_Diagnostico> {
   }
 }
 
+/// ─── Servidor de pruebas local (v21.6 · puente de depuración remota) ───────
+/// HTTP de LOOPBACK dentro de la app para el cliente del puente
+/// (tools/remote-bridge): ADB `tcp:<puerto>` es el único camino desde fuera,
+/// igual que DevTools — por eso no compromete la red local. En release nace
+/// apagado; el dueño lo enciende aquí cuando vaya a depurar con el puente.
+/// El token se exige solo en /erase (destructivo) y se muestra para pegarlo
+/// una vez en el cliente del navegador del dueño.
+class _ServidorPruebas extends StatefulWidget {
+  const _ServidorPruebas();
+
+  @override
+  State<_ServidorPruebas> createState() => _ServidorPruebasState();
+}
+
+class _ServidorPruebasState extends State<_ServidorPruebas> {
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final store = context.read<AppStore>();
+    final prefs = context.read<SharedPreferences>();
+    final running = DevBridge.running;
+    final token = DevBridge.token ?? prefs.getString(DevBridge.kPrefToken);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const VeEyebrow(child: Text('SERVIDOR DE PRUEBAS')),
+        _VeSettingsCard(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Puente de depuración remota',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            !DevBridge.supported
+                                ? 'Solo disponible en el teléfono (ADB).'
+                                : running
+                                      ? 'Escuchando en 127.0.0.1:${DevBridge.port} — solo ADB puede alcanzarlo.'
+                                      : 'Apagado. Enciéndelo al depurar con el puente.',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    VeToggle(
+                      value: running,
+                      label: 'Servidor de pruebas',
+                      onChanged: (v) async {
+                        if (v) {
+                          DevBridge.ensureToken(prefs);
+                          final ok = await DevBridge.start(store: store);
+                          if (!ok && context.mounted) {
+                            showToast(
+                              context,
+                              'No hay puerto libre (8090-8099)',
+                              kind: ToastKind.warn,
+                            );
+                          }
+                        } else {
+                          await DevBridge.stop();
+                        }
+                        if (mounted) setState(() {});
+                      },
+                    ),
+                  ],
+                ),
+                if (token != null && token.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Token: $token',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      GhostButton(
+                        'Copiar',
+                        icon: Icons.copy_rounded,
+                        onPressed: () => copiarAlPortapapeles(
+                          context,
+                          token,
+                          'Token copiado',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 /// ─── Registros de la app (v20.4 · observabilidad 100 % local) ──────────────
 /// Visor del buffer talker: errores de red del tablero, reconexiones SSE,

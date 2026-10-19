@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valora-VE · Consola del piloto</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:system-ui, -apple-system, 'Segoe UI', sans-serif; background:#0d0f12; color:#e8eaed; }
+  .wrap { max-width: 1100px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:19px; margin:0 0 4px; } h1 b { color:#34d399; }
+  .sub { color:#9aa0a6; font-size:13px; margin-bottom:16px; }
+  .grid { display:grid; grid-template-columns: minmax(300px, 480px) 1fr; gap:14px; align-items:start; }
+  @media (max-width: 860px){ .grid { grid-template-columns: 1fr; } }
+  .card { background:#161a1e; border:1px solid #262b31; border-radius:12px; padding:14px; margin-bottom:12px; }
+  #screen { width:100%; cursor:crosshair; background:#000; border-radius:10px; display:block; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+  button { background:#1f6feb; border:0; color:#fff; padding:9px 14px; border-radius:9px; font-size:13.5px; font-weight:600; cursor:pointer; }
+  button.sec { background:#262b31; } button.warn { background:#b42318; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .pill { padding:3px 10px; border-radius:99px; font-size:12px; font-weight:700; background:#262b31; color:#9aa0a6; }
+  .pill.on { background:#123a29; color:#34d399; } .pill.off { background:#3a1d1d; color:#f87171; }
+  #log { font:12px/1.6 ui-monospace, monospace; background:#0a0c0e; border:1px solid #1c2126; border-radius:8px; padding:10px 12px; height:220px; overflow-y:auto; white-space:pre-wrap; color:#8ab4f8; }
+  .muted { color:#9aa0a6; font-size:12.5px; }
+  .kbd { font-size:11px; color:#6b7280; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Valora<b>VE</b> · Consola del piloto</h1>
+  <div class="sub">Ves la pantalla del teléfono del dueño en vivo; los clics y comandos viajan al dispositivo. Coordenadas = píxeles de la captura.</div>
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="row" style="margin:0 0 8px">
+          <span id="stBridge" class="pill off">sin puente</span>
+          <span id="stDev" class="muted"></span>
+        </div>
+        <canvas id="screen" width="360" height="780"></canvas>
+        <div class="row">
+          <button class="sec" data-cmd='{"action":"shot"}'>Captura</button>
+          <button class="sec" data-key="4">← Atrás</button>
+          <button class="sec" data-key="3">Home</button>
+          <button class="sec" data-key="224">Despertar</button>
+          <button class="sec" id="btnStreamOn">▶ flujo</button>
+          <button class="sec" id="btnStreamOff">⏸ flujo</button>
+        </div>
+        <div class="muted" style="margin-top:6px">Clic = tap · arrastrar = swipe · el desglose de coordenadas sale en el registro.</div>
+      </div>
+      <div class="card">
+        <div class="muted" style="margin-bottom:6px">Comandos a la app (servidor de pruebas local, tcp:8090)</div>
+        <div class="row">
+          <button class="sec" data-app="/health">/health</button>
+          <button class="sec" data-app="/test?scenario=cart">/test cart</button>
+          <button class="sec" data-app="/test?scenario=products">/test products</button>
+          <button class="sec" data-app="/test?scenario=purchase">/test purchase</button>
+          <button class="sec" data-app="/nav?to=/lista">/nav lista</button>
+          <button class="warn" data-app="/erase" data-erase="1">/erase</button>
+        </div>
+        <div class="row">
+          <input id="token" placeholder="token de /erase (Ajustes → Diagnóstico)" style="flex:1; background:#0a0c0e; border:1px solid #262b31; color:#e8eaed; padding:8px 10px; border-radius:8px; font-size:12.5px">
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="muted" style="margin-bottom:6px">Registro</div>
+        <div id="log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const TOKEN = '{{TOKEN}}';
+const $ = (id) => document.getElementById(id);
+const logEl = $('log');
+function log(m) { const t = new Date().toLocaleTimeString('es-VE',{hour12:false}); logEl.textContent += `[${t}] ${m}\n`; logEl.scrollTop = logEl.scrollHeight; }
+
+let ws = null;
+let connected = false;
+let deviceRes = null;
+let streamOn = true;
+let pending = new Map();
+let cmdSeq = 0;
+
+function wsUrl() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${location.host}/api/ws?role=pilot&token=${TOKEN}`;
+}
+function connect() {
+  ws = new WebSocket(wsUrl());
+  ws.binaryType = 'arraybuffer';
+  ws.onopen = () => log('Piloto conectado');
+  ws.onclose = () => { connected = false; updatePills(); log('Conexión cerrada — reintento en 3 s'); setTimeout(connect, 3000); };
+  ws.onmessage = (ev) => {
+    if (ev.data instanceof ArrayBuffer) return drawFrame(ev.data);
+    let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
+    switch (m.type) {
+      case 'hello': connected = m.bridge; if (m.device) deviceRes = m.device.resolution; updatePills(); break;
+      case 'bridge-hello': connected = true; deviceRes = (m.device && m.device.resolution) || null; updatePills(); log('Puente en línea: ' + JSON.stringify(m.device || {})); break;
+      case 'bridge-bye': connected = false; deviceRes = null; updatePills(); log('El puente se desconectó'); break;
+      case 'stream': if (m.device) deviceRes = m.device; break;
+      case 'result': {
+        const r = pending.get(m.id);
+        if (r) { pending.delete(m.id); r(m); }
+        else log('resultado ' + m.id + ': ' + JSON.stringify(m.data || m.error));
+        break;
+      }
+    }
+  };
+}
+function updatePills() {
+  $('stBridge').textContent = connected ? 'puente en línea' : 'sin puente';
+  $('stBridge').className = 'pill ' + (connected ? 'on' : 'off');
+  $('stDev').textContent = deviceRes ? `dispositivo ${deviceRes.w}×${deviceRes.h}` : '';
+}
+function drawFrame(buf) {
+  const blob = new Blob([buf], { type: 'image/jpeg' });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    const cv = $('screen');
+    cv.width = img.width; cv.height = img.height;
+    cv.getContext('2d').drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+function sendCmd(action, args, onResult) {
+  if (!ws || ws.readyState !== 1) return log('sin conexión');
+  const id = 'c' + (++cmdSeq);
+  if (onResult) pending.set(id, onResult);
+  ws.send(JSON.stringify({ type: 'cmd', id, action, args }));
+  log('→ ' + action + ' ' + JSON.stringify(args || {}));
+}
+
+// Clic = tap · arrastre = swipe (coordenadas de imagen = píxeles del dispositivo)
+let down = null;
+$('screen').addEventListener('mousedown', (e) => {
+  const r = $('screen').getBoundingClientRect();
+  down = { x: Math.round((e.clientX - r.left) * $('screen').width / r.width), y: Math.round((e.clientY - r.top) * $('screen').height / r.height) };
+});
+$('screen').addEventListener('mouseup', (e) => {
+  if (!down) return;
+  const r = $('screen').getBoundingClientRect();
+  const up = { x: Math.round((e.clientX - r.left) * $('screen').width / r.width), y: Math.round((e.clientY - r.top) * $('screen').height / r.height) };
+  const dist = Math.hypot(up.x - down.x, up.y - down.y);
+  if (dist < 12) sendCmd('tap', { x: down.x, y: down.y });
+  else sendCmd('swipe', { x1: down.x, y1: down.y, x2: up.x, y2: up.y, ms: 350 });
+  log(`clic: ${down.x},${down.y}${dist >= 12 ? ' → ' + up.x + ',' + up.y + ' (swipe)' : ''}`);
+  down = null;
+});
+
+document.querySelectorAll('[data-key]').forEach((b) => b.onclick = () => sendCmd('key', { keycode: +b.dataset.key }));
+document.querySelectorAll('[data-cmd]').forEach((b) => b.onclick = () => sendCmd(JSON.parse(b.dataset.cmd).action, {}));
+$('btnStreamOn').onclick = () => sendCmd('stream', { on: true });
+$('btnStreamOff').onclick = () => sendCmd('stream', { on: false });
+
+document.querySelectorAll('[data-app]').forEach((b) => b.onclick = () => {
+  const path = b.dataset.app;
+  const token = $('token').value.trim() || undefined;
+  sendCmd('appcmd', { path, token }, (m) => {
+    log(`app ${path} → ${m.ok ? 'HTTP ' + m.data.status + ' ' + JSON.stringify(m.data.json) : 'ERROR ' + m.error}`);
+  });
+});
+
+connect();
+</script>
+</body>
+</html>

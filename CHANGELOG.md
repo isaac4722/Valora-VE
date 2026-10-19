@@ -1,6 +1,44 @@
 # Changelog
 
 
+## 1.14.0-beta+40 · v21.6 — Puente de depuración remota
+
+Nueva herramienta para probar la app EN EL TELÉFONO REAL del dueño desde la
+máquina del desarrollador, sin USB propio, sin servicios de pago y sin nube
+intermedia: el navegador del dueño hace de puente ADB (WebUSB o Wi-Fi con
+helper local) y el relay del preview lleva video y comandos en vivo.
+
+- **Servidor de pruebas local en la app** (`lib/services/dev_bridge*`):
+  HTTP de LOOPBACK en 127.0.0.1:8090 — el único camino desde fuera es el
+  servicio `tcp:8090` de ADB, igual que DevTools, así que no expone nada a
+  la red. Endpoints JSON: `/health` (versión y contadores), `/test` con
+  escenarios `cart` (5 ítems multitienda), `products` y `purchase` (datos
+  venezolanos realistas para probar Analysis/Historial/checkout),
+  `/nav?to=` con lista blanca de rutas y `/erase` (borra datos de usuario
+  conservando ajustes y tablero; exige el token mostrado en Ajustes).
+  Condicional como `ins_server`: stub no-op en web, mismo API en todas
+  las plataformas. Toggle en Ajustes → Diagnóstico (debug auto-arranca;
+  release nace apagado). 6 tests con HTTP real sobre puerto efímero.
+- **Herramienta del puente** (`tools/remote-bridge/`): relay Node con una
+  sola dependencia (`ws`) — roles tokenizados (UN puente, N pilotos),
+  reenvío de frames binarios, roundtrip de comandos y fallback SSE+POST
+  para redes que bloqueen WebSocket. Cliente del dueño con protocolo ADB
+  PROPIO en JavaScript (CNXN/AUTH con RSA-SHA1 de WebCrypto y clave
+  pública en el formato nativo de ADB, OPEN/OKAY/WRTE/CLSE, servicios
+  `exec:`/`shell:`/`tcp:`): captura adaptativa 1-3 fps (screencap → JPEG
+  en canvas), `input tap/swipe/text/keyevent` y HTTP a la app por
+  `tcp:8090`. Consola del piloto (`/pilot`) y CLI (`pilot_cli.js`: shot,
+  tap, swipe, text, key, shell, app, stream). Helper Wi-Fi para la PC del
+  dueño (`adb-ws-helper.js`, WebSocket↔TCP sin dependencias) — un
+  navegador no abre TCP crudo: se documenta honestamente. Test E2E del
+  relay: 12/12 (token, rol único, binarios íntegros, errores honestos).
+- **La web de la app pasa al puerto 3001**: el 3000 queda para el panel
+  del puente (orden del dueño). `scripts/serve3000.py` acepta puerto/raíz
+  por argumento (default 3001) con el mismo SPA fallback + no-store.
+
+analyze 0 · 249/249 tests (6 nuevos del servidor de pruebas) · gate VERDE ·
+web 3001 verificada (390×844) · puente 3000 con E2E 12/12 y páginas en vivo.
+
 ## 1.14.0-beta+39 · v21.5 — Micro-espaciados del checkout de Lista
 
 La candidata pendiente de la auditoría GUI que solo se veía con ítems en

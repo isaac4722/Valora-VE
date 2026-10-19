@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valora-VE · Puente de depuración</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background:#0d0f12; color:#e8eaed; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h1 b { color:#34d399; }
+  .sub { color:#9aa0a6; font-size: 13px; margin-bottom: 20px; }
+  .card { background:#161a1e; border:1px solid #262b31; border-radius:12px; padding:16px; margin-bottom:14px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  button { background:#1f6feb; border:0; color:#fff; padding:10px 16px; border-radius:9px; font-size:14px; font-weight:600; cursor:pointer; }
+  button.sec { background:#262b31; }
+  button.ghost { background:transparent; border:1px solid #3a4046; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .pill { display:inline-block; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:700; background:#262b31; color:#9aa0a6; }
+  .pill.on { background:#123a29; color:#34d399; }
+  .pill.off { background:#3a1d1d; color:#f87171; }
+  canvas { width:100%; background:#000; border-radius:10px; display:block; }
+  #log { font: 12px/1.6 ui-monospace, monospace; background:#0a0c0e; border:1px solid #1c2126; border-radius:8px; padding:10px 12px; height:180px; overflow-y:auto; white-space:pre-wrap; color:#8ab4f8; }
+  label.cb { font-size:13px; color:#9aa0a6; display:flex; gap:6px; align-items:center; }
+  input[type=text]{ background:#0a0c0e; border:1px solid #262b31; color:#e8eaed; padding:8px 10px; border-radius:8px; width:260px; }
+  .muted { color:#9aa0a6; font-size:12.5px; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Valora<b>VE</b> · Puente de depuración remota</h1>
+  <div class="sub">Tu navegador conecta el teléfono (ADB en tu red local) con la consola del desarrollador. Nada sale de tu equipo salvo este canal de prueba.</div>
+
+  <div class="card">
+    <div class="row">
+      <span id="stServer" class="pill">…servidor</span>
+      <span id="stBridge" class="pill off">puente local</span>
+      <span style="flex:1"></span>
+      <button id="btnUsb">Conectar por USB (WebUSB)</button>
+      <button id="btnWifi" class="sec">Conectar por Wi-Fi (helper)</button>
+      <button id="btnDisc" class="ghost" disabled>Desconectar</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="wsUrl" placeholder="ws://127.0.0.1:8790 (helper Wi-Fi)">
+      <label class="cb"><input type="checkbox" id="autoStream" checked> transmitir pantalla al conectar</label>
+      <label class="cb"><input type="checkbox" id="jpeg" checked> comprimir JPEG (stream)</label>
+    </div>
+    <div class="muted" style="margin-top:8px">
+      USB: activa «Depuración USB» y acepta el diálogo de Chrome. Wi-Fi: ejecuta
+      <code>node tools/remote-bridge/adb-ws-helper.js &lt;ip-del-teléfono&gt; 5555</code> en tu PC
+      (requiere <code>adb tcpip 5555</code> hecho una vez por cable) y pega la dirección del helper.
+    </div>
+  </div>
+
+  <div class="card">
+    <canvas id="screen" width="360" height="800"></canvas>
+    <div class="row" style="margin-top:10px">
+      <button id="btnShot" class="sec" disabled>Captura completa (PNG)</button>
+      <button id="btnHealth" class="sec" disabled>App /health</button>
+      <button id="btnWake" class="sec" disabled>Despertar</button>
+      <span style="flex:1"></span>
+      <span class="muted" id="fpsInfo"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="muted" style="margin-bottom:8px">Registro del puente</div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script src="/adb.js"></script>
+<script>
+'use strict';
+const TOKEN = '{{TOKEN}}';
+const $ = (id) => document.getElementById(id);
+const logEl = $('log');
+function log(msg) {
+  const t = new Date().toLocaleTimeString('es-VE', {hour12:false});
+  logEl.textContent += `[${t}] ${msg}\n`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+let ws = null;
+let adb = null;           // ValoraAdb conectado
+let streaming = false;
+let streamingBusy = false;
+let deviceInfo = null;
+let lastPilots = 0;
+
+async function connectServer() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url = `${proto}//${location.host}/api/ws?role=bridge&token=${TOKEN}`;
+  ws = new WebSocket(url);
+  ws.binaryType = 'arraybuffer';
+  ws.onopen = () => {
+    $('stBridge').textContent = 'servidor: conectado';
+    $('stBridge').className = 'pill on';
+    log('Conectado al servidor del puente (rol: bridge)');
+  };
+  ws.onclose = () => {
+    $('stBridge').textContent = 'puente local';
+    $('stBridge').className = 'pill off';
+    log('Servidor desconectado — reintentando en 3 s');
+    setTimeout(connectServer, 3000);
+  };
+  ws.onmessage = async (ev) => {
+    if (ev.data instanceof ArrayBuffer) return; // no esperamos binarios aquí
+    let msg; try { msg = JSON.parse(ev.data); } catch (_) { return; }
+    if (msg.type === 'cmd') await handleCmd(msg);
+  };
+}
+
+async function handleCmd(msg) {
+  const { id, action, args = {} } = msg;
+  if (!adb) return reply(id, false, null, 'sin dispositivo conectado');
+  try {
+    switch (action) {
+      case 'tap':      await adb.tap(args.x, args.y); return reply(id, true, {done:'tap'});
+      case 'swipe':    await adb.swipe(args.x1, args.y1, args.x2, args.y2, args.ms || 300); return reply(id, true, {done:'swipe'});
+      case 'text':     await adb.text(args.text || ''); return reply(id, true, {done:'text'});
+      case 'key':      await adb.key(args.keycode); return reply(id, true, {done:'key'});
+      case 'shell':    { const out = await adb.shell(args.cmd || ''); return reply(id, true, {out: b64(new TextEncoder().encode(out))}); }
+      case 'shot':     { const png = await adb.screenshot(); sendBinary(png); return reply(id, true, {png:true}); }
+      case 'stream':   { streaming = !!args.on; return reply(id, true, {streaming}); }
+      case 'appcmd':   {
+        const r = await adb.appHttp(args.path || '/health', { token: args.token || undefined });
+        return reply(id, true, { status: r.status, json: r.json });
+      }
+      default: return reply(id, false, null, 'acción desconocida: ' + action);
+    }
+  } catch (e) {
+    return reply(id, false, null, e.message);
+  }
+}
+function reply(id, ok, data, error) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type:'result', id, ok, data, error }));
+}
+function b64(bytes) {
+  let s = '';
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s);
+}
+function sendBinary(bytes) {
+  if (ws && ws.readyState === 1) ws.send(bytes);
+}
+
+// ── Conexión al teléfono ─────────────────────────────────────────────────────
+async function connectPhone(kind) {
+  try {
+    let transport;
+    if (kind === 'usb') {
+      transport = new AdbTransports.WebUsbTransport(log);
+    } else {
+      const u = $('wsUrl').value.trim();
+      if (!u) return log('Pega la dirección del helper Wi-Fi (ws://…)');
+      transport = new AdbTransports.WsTransport(u, log);
+    }
+    log('Conectando al teléfono…');
+    adb = new ValoraAdb(transport, log);
+    deviceInfo = await adb.connect();
+    const dev = {
+      model: deviceInfo.model,
+      serial: String(deviceInfo.serial || ''),
+      resolution: deviceInfo.resolution,
+    };
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type:'hello', device: dev }));
+    $('stBridge').textContent = `puente: ${dev.model}`;
+    $('stBridge').className = 'pill on';
+    ['btnShot','btnHealth','btnWake'].forEach((b) => ($(b).disabled = false));
+    log(`Teléfono conectado: ${dev.model} ${dev.resolution ? dev.resolution.w+'x'+dev.resolution.h : ''}`);
+    if ($('autoStream').checked) streaming = true;
+    streamLoop();
+  } catch (e) {
+    log('ERROR de conexión: ' + e.message);
+  }
+}
+
+function disconnectPhone() {
+  streaming = false;
+  try { if (adb) adb.t.close(); } catch (_) {}
+  adb = null;
+  deviceInfo = null;
+  $('stBridge').textContent = 'puente local';
+  $('stBridge').className = 'pill off';
+  ['btnShot','btnHealth','btnWake'].forEach((b) => ($(b).disabled = true));
+  log('Teléfono desconectado');
+}
+
+// ── Flujo de captura: screencap → JPEG (canvas) → binario WS ────────────────
+async function streamLoop() {
+  if (streamingBusy) return;
+  streamingBusy = true;
+  while (adb && streaming) {
+    const t0 = performance.now();
+    try {
+      const png = await adb.screenshot();
+      const blobUrl = URL.createObjectURL(new Blob([png], {type:'image/png'}));
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = blobUrl; });
+      const cv = $('screen');
+      const scale = Math.min(1, 720 / img.width);
+      cv.width = Math.round(img.width * scale);
+      cv.height = Math.round(img.height * scale);
+      const ctx = cv.getContext('2d');
+      ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(blobUrl);
+      if (ws && ws.readyState === 1) {
+        if ($('jpeg').checked) {
+          const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.55));
+          sendBinary(await blob.arrayBuffer());
+        } else {
+          sendBinary(png);
+        }
+        if (Math.random() < 0.2) ws.send(JSON.stringify({ type:'stream', w: cv.width, h: cv.height, device: deviceInfo.resolution }));
+      }
+      const dt = performance.now() - t0;
+      $('fpsInfo').textContent = `${(1000/dt).toFixed(1)} fps · ${cv.width}×${cv.height}`;
+    } catch (e) {
+      log('stream: ' + e.message);
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
+  streamingBusy = false;
+}
+
+$('btnUsb').onclick = () => connectPhone('usb');
+$('btnWifi').onclick = () => connectPhone('wifi');
+$('btnDisc').onclick = disconnectPhone;
+$('btnShot').onclick = () => handleCmd({ id: 'ui', action: 'shot' });
+$('btnHealth').onclick = async () => {
+  const r = await adb.appHttp('/health');
+  log('App /health → ' + JSON.stringify(r.json));
+};
+$('btnWake').onclick = () => handleCmd({ id: 'ui', action: 'key', args: { keycode: 224 } });
+
+async function pollHealth() {
+  try {
+    const r = await fetch('/api/health');
+    const j = await r.json();
+    $('stServer').textContent = `servidor: ${j.bridge}`;
+    $('stServer').className = 'pill ' + (j.bridge === 'conectado' ? 'on' : 'off');
+    lastPilots = j.pilots;
+  } catch (_) { $('stServer').textContent = 'servidor: no responde'; }
+}
+pollHealth();
+setInterval(pollHealth, 5000);
+connectServer();
+</script>
+</body>
+</html>

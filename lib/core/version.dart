@@ -6,7 +6,7 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v21.5 · micro-espaciados del checkout de Lista:
-/// recibo por tienda con ritmo vertical, rótulo «Total USD» en la línea
-/// base de la cifra y lead-in del primer campo de tienda en multitienda).
-const String kAppVersionVisible = '21.5';
+/// Versión visible (ronda v21.6 · puente de depuración remota: servidor de
+/// pruebas local en la app (loopback, /health /test /erase /nav) + tool de
+/// puente WebADB en tools/remote-bridge — la web de la app pasa al 3001).
+const String kAppVersionVisible = '21.6';

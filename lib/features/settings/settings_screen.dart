@@ -25,6 +25,7 @@ import '../../data/board.dart';
 import '../../data/store.dart';
 import '../../services/alerts.dart';
 import '../../services/biometric.dart';
+import '../../services/dev_bridge.dart';
 import '../../services/notifications.dart';
 import '../../services/sharing.dart';
 import '../../services/ticket_files.dart';
@@ -69,6 +70,7 @@ class SettingsScreen extends StatelessWidget {
             _Personalizacion(store: store),
             _Monedas(store: store),
             _Diagnostico(),
+            _ServidorPruebas(),
             _Registros(),
             _Apariencia(),
             _Alertas(store: store),
