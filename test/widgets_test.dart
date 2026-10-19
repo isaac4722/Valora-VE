@@ -289,6 +289,23 @@ void main() {
       // Slide 1: marca (RichText «Valora»+«VE») y su subtítulo.
       expect(find.text('Precios y divisas de Venezuela'), findsOneWidget);
       expect(find.text('Siguiente'), findsOneWidget);
+      // v21.4: en el slide 1 «Atrás» está en el árbol pero DESVANECIDO e
+      // inerte (control muerto fuera de la vista; el hueco se reserva).
+      final atrasSlide1 = find.text('Atrás');
+      expect(atrasSlide1, findsOneWidget);
+      expect(
+        tester
+            .widget<AnimatedOpacity>(
+              find
+                  .ancestor(
+                    of: atrasSlide1,
+                    matching: find.byType(AnimatedOpacity),
+                  )
+                  .first,
+            )
+            .opacity,
+        0,
+      );
       // Avanzar slide por slide hasta el país.
       for (var i = 0; i < 3; i++) {
         await tester.tap(find.text('Siguiente'));

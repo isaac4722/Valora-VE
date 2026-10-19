@@ -92,11 +92,27 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   Flexible(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 96),
-                      child: VeBtn(
-                        variant: VeBtnVariant.ghost,
-                        enabled: _index > 0,
-                        onPressed: () => _go(_index - 1),
-                        child: const Text('Atrás'),
+                      // v21.4: en el slide 1 «Atrás» no lleva a nada — un
+                      // botón muerto a la vista confunde al usuario nuevo.
+                      // Se desvanece (opacity 0 + sin puntero + sin voz) y
+                      // el hueco se reserva igual para que los puntos no
+                      // salten de posición entre páginas.
+                      child: AnimatedOpacity(
+                        opacity: _index > 0 ? 1 : 0,
+                        duration: const Duration(milliseconds: 220),
+                        curve: kEaseVe,
+                        child: IgnorePointer(
+                          ignoring: _index == 0,
+                          child: ExcludeSemantics(
+                            excluding: _index == 0,
+                            child: VeBtn(
+                              variant: VeBtnVariant.ghost,
+                              enabled: _index > 0,
+                              onPressed: () => _go(_index - 1),
+                              child: const Text('Atrás'),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

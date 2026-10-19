@@ -1,6 +1,33 @@
 # Changelog
 
 
+## 1.14.0-beta+38 · v21.4 — Arranque sin controles muertos
+
+Última pasada de producción: una pantalla más verificada de primera mano y
+la integración DolarVZLA re-auditada contra su spec oficial en vivo.
+
+- **El slide 1 de la bienvenida ya no muestra «Atrás»**: el botón estaba
+  deshabilitado en la primera página, pero seguir visible como un control
+  que no lleva a ninguna parte confunde al usuario nuevo. Ahora se
+  desvanece (`AnimatedOpacity` + `IgnorePointer` + `ExcludeSemantics`) y
+  el hueco se reserva igual — los puntos de progreso no saltan de
+  posición al navegar. En los slides 2-4 vuelve con fade, como siempre.
+  Aserción del contrato en `widgets_test.dart`.
+- **Integración DolarVZLA re-verificada contra el openapi.json en vivo**:
+  el CDN `rates.dolarvzla.com/bcv/current.json` responde 200 y su payload
+  (`current.usd`/`current.eur`/`current.date`) casa 1:1 con
+  `parseDolarVzlaBcv`. El monitor USDT/paralelo de
+  `api.dolarvzla.com/public/usdt/exchange-rate` exige la cabecera
+  `x-dolarvzla-key` (401 sin ella, claves temporales por usuario) — queda
+  descartado como respaldo anónimo con motivo documentado; el paralelo
+  sigue en DolarAPI, su única fuente pública estable. Salud del tablero:
+  8/9 endpoints vivos (AwesomeAPI respondió 429 de cuota; es solo
+  respaldo y la app lo degrada honestamente).
+
+analyze 0 · 240/240 tests · gate VERDE · web 3000 verificada en vivo
+(390×844: onboarding 4 slides, tutorial, Inicio, Conversor, Lista,
+Análisis con scrub, Historial y Tickets por deep link, Sala, Ajustes).
+
 ## 1.14.0-beta+37 · v21.3 — Respaldo BCV vivo (auditoría externa)
 
 Un test tipo pentest sobre el build web encontró la fuente de respaldo
