@@ -180,26 +180,96 @@ class WebUsbTransport {
     this.onDisconnect = null;
   }
 
-  async connect() {
-    const device = await navigator.usb.requestDevice({
-      filters: [
-        { classCode: 0xff, subclassCode: 0x42, protocolCode: 1 },
-        { classCode: 0xff, subclassCode: 0x42, protocolCode: 2 },
-      ],
-    });
+  /** Interfaces ADB (class 0xFF · subclass 0x42 · protocol 1|2) de un USBDevice.
+   *  Devuelve { config, iface, alt } o null. Algunos teléfonos (MTK/TECNO)
+   *  exponen varias configuraciones y ADB no siempre está en la primera. */
+  static findAdb(device) {
+    const isAdb = (a) =>
+      a.interfaceClass === 0xff &&
+      a.interfaceSubclass === 0x42 &&
+      (a.interfaceProtocol === 1 || a.interfaceProtocol === 2);
+    const configs = device.configurations && device.configurations.length
+      ? device.configurations
+      : (device.configuration ? [device.configuration] : []);
+    for (const c of configs) {
+      for (const i of c.interfaces) {
+        const a = i.alternates.find(isAdb);
+        if (a) return { config: c, iface: i, alt: a };
+      }
+    }
+    return null;
+  }
+
+  /** Dispositivos USB YA autorizados en este origen — sirve para reconectar
+   *  sin el chooser (abrir la página y que conecte solo). */
+  static async authorized() {
+    if (typeof navigator === 'undefined' || !navigator.usb) return [];
+    const devs = await navigator.usb.getDevices();
+    const out = [];
+    for (const d of devs) {
+      try { if (WebUsbTransport.findAdb(d)) out.push(d); } catch (_) {}
+    }
+    return out;
+  }
+
+  static _claimHelp(e) {
+    return (
+      'Chrome no pudo tomar la interface ADB del teléfono (' + (e.message || e) + '). ' +
+      'Casi siempre OTRO programa de tu PC ya la tiene tomada: ' +
+      '① corre «adb kill-server» en tu PC (el adb de consola sigue vivo) y cierra Android Studio/scrcpy/Vysor; ' +
+      '② desconecta y vuelve a meter el cable; ' +
+      '③ cambia el modo USB del teléfono (Transferir archivos ⇄ Solo carga) para re-enumerar; ' +
+      '④ (Windows, solo la primera vez) instala el driver WinUSB — Google USB driver. ' +
+      'Luego pulsa «Conectar por USB» otra vez.'
+    );
+  }
+
+  /** Conecta. `hint` = USBDevice ya autorizado (sin chooser) — opcional. */
+  async connect(hint) {
+    let device = hint || null;
+    if (!device) {
+      if (typeof navigator === 'undefined' || !navigator.usb) {
+        throw new Error('WebUSB no disponible — usa Chrome o Edge de escritorio para el modo USB');
+      }
+      device = await navigator.usb.requestDevice({
+        filters: [
+          { classCode: 0xff, subclassCode: 0x42, protocolCode: 1 },
+          { classCode: 0xff, subclassCode: 0x42, protocolCode: 2 },
+        ],
+      });
+    }
     this.device = device;
+    this.log(
+      'USB: ' + (device.productName || device.manufacturerName || 'Android') +
+      (device.serialNumber ? ' · serie ' + device.serialNumber : ''),
+    );
     await device.open();
-    if (device.configuration === null) await device.selectConfiguration(1);
-    const iface = device.configuration.interfaces.find((i) =>
-      i.alternates.some(
-        (a) => a.interfaceClass === 0xff && a.interfaceSubclass === 0x42,
-      ),
-    );
-    if (!iface) throw new Error('Interface ADB no encontrada (¿depuración USB activa?)');
-    const alt = iface.alternates.find(
-      (a) => a.interfaceClass === 0xff && a.interfaceSubclass === 0x42,
-    );
-    await device.claimInterface(iface.interfaceNumber);
+
+    // Elige la configuración que CONTENGA la interface ADB (no siempre la 1).
+    const found = WebUsbTransport.findAdb(device);
+    if (!found) {
+      try { await device.close(); } catch (_) {}
+      throw new Error('Interface ADB no encontrada — activa «Depuración USB» en el teléfono y reconecta el cable');
+    }
+    if (device.configurationValue !== found.config.configurationValue) {
+      this.log('Config USB ' + device.configurationValue + ' → ' + found.config.configurationValue + ' (donde vive ADB)');
+      await device.selectConfiguration(found.config.configurationValue);
+    }
+    const { iface, alt } = found;
+
+    // claimInterface: reintento corto — adbd a veces libera la interface
+    // a mitad de la re-enumeración del cable.
+    try {
+      await device.claimInterface(iface.interfaceNumber);
+    } catch (e1) {
+      await new Promise((r) => setTimeout(r, 500));
+      try {
+        await device.claimInterface(iface.interfaceNumber);
+      } catch (_) {
+        try { await device.close(); } catch (_) {}
+        throw new Error(WebUsbTransport._claimHelp(e1));
+      }
+    }
     await device.selectAlternateInterface(iface.interfaceNumber, alt.alternateSetting);
     for (const ep of alt.endpoints) {
       if (ep.type !== 'bulk') continue;
@@ -209,6 +279,7 @@ class WebUsbTransport {
     if (this.endpointIn === null || this.endpointOut === null) {
       throw new Error('Endpoints bulk ADB no encontrados');
     }
+    this.log('Interface ADB tomada (endpoints ' + this.endpointIn + '/' + this.endpointOut + ') — handshake…');
     navigator.usb.addEventListener('disconnect', () => {
       if (this.onDisconnect) this.onDisconnect();
     });
@@ -304,9 +375,10 @@ class AdbConnection {
     this.t.onMessage = (b) => this._feed(b);
   }
 
-  /** Handshake completo (CNXN + AUTH). Devuelve info del dispositivo. */
-  async connect() {
-    const info = await this.t.connect();
+  /** Handshake completo (CNXN + AUTH). Devuelve info del dispositivo.
+   *  `hint` = USBDevice ya autorizado (transporte WebUSB, sin chooser). */
+  async connect(hint) {
+    const info = await this.t.connect(hint);
     this.key = await AdbKeys.load();
     this.t.onDisconnect = () => this._dropAll(new Error('transporte desconectado'));
 
@@ -540,8 +612,8 @@ class ValoraAdb {
     this.conn = new AdbConnection(transport, log);
   }
 
-  async connect() {
-    const info = await this.conn.connect();
+  async connect(hint) {
+    const info = await this.conn.connect(hint);
     try {
       const size = await this.conn.exec('wm size', 10000);
       const m = new TextDecoder().decode(size).match(/(\d+)x(\d+)/);

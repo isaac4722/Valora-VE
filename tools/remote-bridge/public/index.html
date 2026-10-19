@@ -48,7 +48,9 @@
       <label class="cb"><input type="checkbox" id="jpeg" checked> comprimir JPEG (stream)</label>
     </div>
     <div class="muted" style="margin-top:8px">
-      USB: activa «Depuración USB» y acepta el diálogo de Chrome. Wi-Fi: ejecuta
+      USB: activa «Depuración USB» y acepta el diálogo de Chrome — <b>tras la primera autorización,
+      abrir esta página reconecta solo</b>. Si Chrome dice que no puede tomar la interface:
+      <code>adb kill-server</code> en tu PC y vuelve a meter el cable. Wi-Fi: ejecuta
       <code>node tools/remote-bridge/adb-ws-helper.js &lt;ip-del-teléfono&gt; 5555</code> en tu PC
       (requiere <code>adb tcpip 5555</code> hecho una vez por cable) y pega la dirección del helper
       (<code>ws://127.0.0.1:8790</code>).
@@ -230,10 +232,20 @@ async function pingHelper(wsUrl) {
   if (!res.ok) throw new Error('El helper respondió ' + res.status + ' en /ping — ¿es adb-ws-helper.js?');
 }
 
-async function connectPhone(kind) {
+async function connectPhone(kind, opts = {}) {
+  let ok = false;
   try {
     let transport;
     if (kind === 'usb') {
+      if (!navigator.usb) {
+        log('Este navegador no tiene WebUSB — para USB usa Chrome o Edge de escritorio; Wi-Fi funciona con el helper.');
+        return;
+      }
+      // Sin chooser si ya autorizamos este teléfono antes: un clic menos.
+      if (!opts.deviceHint) {
+        const devs = await AdbTransports.WebUsbTransport.authorized();
+        if (devs.length) opts.deviceHint = devs[0];
+      }
       transport = new AdbTransports.WebUsbTransport(log);
     } else {
       const u = $('wsUrl').value.trim();
@@ -245,7 +257,8 @@ async function connectPhone(kind) {
     }
     log('Conectando al teléfono…');
     adb = new ValoraAdb(transport, log);
-    deviceInfo = await adb.connect();
+    deviceInfo = await adb.connect(opts.deviceHint);
+    ok = true;
     const dev = {
       model: deviceInfo.model,
       serial: String(deviceInfo.serial || ''),
@@ -261,8 +274,21 @@ async function connectPhone(kind) {
   } catch (e) {
     log('ERROR de conexión: ' + e.message);
     try { if (typeof transport !== 'undefined' && transport) transport.close(); } catch (_) {}
-    if (!deviceInfo) adb = null;
+    if (!ok) { adb = null; deviceInfo = null; }
   }
+}
+
+/** Abrir la página ES conectar: si el teléfono ya fue autorizado por USB en
+ *  este navegador, reconecta sin chooser ni clics (pedido del dueño).
+ *  También atiende hot-plug: enchufar el teléfono con la página abierta. */
+async function autoConnectUsb(reason) {
+  if (adb || deviceInfo) return;
+  try {
+    const devs = await AdbTransports.WebUsbTransport.authorized();
+    if (!devs.length) return;
+    log(reason + ' — USB ya autorizado (' + (devs[0].productName || 'Android') + '), conectando solo…');
+    await connectPhone('usb', { deviceHint: devs[0] });
+  } catch (_) { /* sin dispositivo: silencio honesto */ }
 }
 
 function disconnectPhone() {
@@ -318,6 +344,11 @@ $('btnWifi').onclick = () => {
   try { localStorage.setItem('valora.helper', $('wsUrl').value.trim()); } catch (_) {}
   connectPhone('wifi');
 };
+if (navigator.usb) {
+  navigator.usb.addEventListener('connect', () =>
+    setTimeout(() => autoConnectUsb('Teléfono enchufado'), 600),
+  );
+}
 $('btnDisc').onclick = disconnectPhone;
 $('btnShot').onclick = () => handleCmd({ id: 'ui', action: 'shot' });
 $('btnHealth').onclick = async () => {
@@ -378,6 +409,7 @@ if (INJECTED) {
 try { $('wsUrl').value = localStorage.getItem('valora.helper') || 'ws://127.0.0.1:8790'; } catch (_) { $('wsUrl').value = 'ws://127.0.0.1:8790'; }
 
 connectServer();
+autoConnectUsb('Página abierta');
 </script>
 </body>
 </html>

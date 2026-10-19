@@ -1,4 +1,4 @@
-# Puente de depuración remota · Valora-VE (v21.6.1)
+# Puente de depuración remota · Valora-VE (v21.6.2)
 
 Depuración y pruebas en tiempo real del teléfono Android del dueño desde la
 máquina del desarrollador — sin USB del desarrollador, sin servicios de pago,
@@ -34,6 +34,7 @@ sin nube intermedia: todo corre en el servidor del preview + tu navegador.
 | `adb-ws-helper.js` | Helper de la PC del dueño para ADB por Wi-Fi. También SIRVE el cliente en `http://127.0.0.1:8790/` (modo local, sin permiso de red local). |
 | `test_relay.js` | Test E2E del relay (sin hardware): `node test_relay.js`. |
 | `test_adb_keys.js` | Test del keygen/firma RSA-2048 de ADB en Node: `node test_adb_keys.js`. |
+| `test_usb_transport.js` | Test del transporte WebUSB con USBDevice simulado (chooser, configs múltiples, claim ocupado): `node test_usb_transport.js`. |
 
 ## Del lado de la app (repo `lib/services/dev_bridge*`)
 
@@ -65,6 +66,15 @@ DevTools). Toggle en **Ajustes → Diagnóstico → Servidor de pruebas**
      hacia `127.0.0.1` (mixed content: nada de `ws://192.168.x.x` desde https).
 2. **USB:** activa «Depuración USB» → cliente (`/` del preview) → «Conectar
    por USB» → diálogos de WebUSB + «Permitir depuración USB».
+   - **Reconexión automática:** tras la primera autorización, abrir la página
+     reconecta SOLO (sin chooser ni clics) y enchufar el cable con la página
+     abierta también dispara la conexión (hot-plug).
+   - **Si Chrome dice «Unable to claim interface»:** otro programa de tu PC
+     tiene tomada la interface ADB — casi siempre el `adb` de consola:
+     `adb kill-server`, cierra Android Studio/scrcpy/Vysor, desconecta y
+     vuelve a meter el cable. En Windows la primera vez hace falta el driver
+     WinUSB (Google USB driver). El cliente ahora también cambia solo a la
+     configuración USB donde vive ADB (algunos MTK lo exponen fuera de la 1).
 3. **Autorización del teléfono (ambos modos):** al conectar verás en el log
    «Clave publicada — MIRA EL TELÉFONO»: acepta «¿Permitir depuración USB?»
    de la clave **valora-bridge** (marca «Siempre» y no vuelve a preguntar).
