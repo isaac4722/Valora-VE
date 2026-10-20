@@ -1,6 +1,49 @@
 # Changelog
 
 
+## 1.14.0-beta+42 · v21.9 — espejo estilo Vysor DESDE el navegador: screenrecord H.264 por la sesión ADB del cliente (el navegador es el servidor)
+
+«Vysor sí puede incluso desde web» — y ahora nosotros también, con la MISMA
+pila y la ruta A del informe (ADB puro, **sin scrcpy**): todas las piezas de
+v21.8 (feeder NAL Annex-B, assembler SPS+PPS+IDR, WebCodecs) existían para la
+ruta del servidor; faltaba enchufar `screenrecord` a la SESIÓN ADB DEL
+NAVEGADOR (USB WebUSB o /adb-ws) en vez de al adb del server.
+
+- **`public/index.html` — ruta «adb» del espejo (v21.9):**
+  - `h264Route(hasAdb, injected)` (pura, testeable): con sesión ADB viva el
+    NAVEGADOR manda (`adb`); sin sesión, el server con adb (`server`, v21.8
+    intacta); sin nada, `null` con mensaje honesto.
+  - `startH264Adb()`: `conn.open('exec:screenrecord --output-format=h264
+    --size 1280x720 --bit-rate 4000000 --time-limit 170 -', { onData,
+    onClose })` — el H.264 llega por `onData` de la MISMA pila adb.js
+    (WebUSB o /adb-ws); el control de flujo ADB (OKAY por cada WRTE) es la
+    contrapresión natural. Al CLSE por límite de 170 s → reinicio en 0.5 s;
+    fallo de arranque → reintento en 2 s; stop (⏸) → `closeStream` (A_CLSE)
+    MATA el screenrecord en el teléfono. Pipeline compartido
+    `h264MakePipeline()` para ambas rutas; si la sesión muere o es
+    reemplazada, el espejo se apaga solo (vía onDead/guard conn0).
+  - Nueva tarjeta SIEMPRE visible «Pantalla en vivo H.264 — espejo estilo
+    Vysor, sin scrcpy» (antes vivía dentro de la tarjeta del servidor y en
+    modo helper no existía; ahora funciona también por USB en modo local).
+- **`test_server_wifi.js` 14→17:** el adbd mock aprende `exec:screenrecord`
+  (stream continuo hasta A_CLSE del cliente, igual que adbd); E2E de la ruta
+  nueva: ValoraAdb real por /adb-ws → open con onData → SPS/PPS/IDR + deltas
+  EN VIVO → closeStream detiene el flujo de verdad (mock limpio, sin onClose
+  fantasma); y `h264Route`: adb > server > null.
+- **Verificado en vivo** (server :3001 + adbd mock en proceso aparte,
+  agent-browser 390×844): conectar Wi-Fi del servidor → ▶ Pantalla H.264 →
+  log «H.264 por tu sesión ADB (sin scrcpy)» + «WebCodecs configurado:
+  avc1.640028» (codec DERIVADO del SPS real que llegó por la sesión del
+  navegador) + error de decodificación esperable (el mock no manda slices
+  H.264 reales — contra el teléfono real son frames verdaderos) → ⏸ apagado
+  limpio → matar el adbd → CERO errores de página y desconexión honesta.
+- Límites honestos (sin cambios de fondo): sin audio · reinicio cada 170 s
+  (límite interno de screenrecord, Android <14) · un dedo (adb shell input) ·
+  FLAG_SECURE negro.
+- Gates: suites del puente 13 + 13 + 4 + 6 + 17 + 5 · analyze 0 · 265/265 ·
+  auditoría lib/ limpia · Impeccable 4.5.2 detect [].
+
+
 ## 1.14.0-beta+42 · v21.8.1 — muerte del transporte sin «Uncaught (in promise)»
 
 La consola real del dueño mostró la falla mientras usaba el puente:

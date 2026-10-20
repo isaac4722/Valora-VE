@@ -86,11 +86,6 @@
       <span id="stAdb" class="pill">adb: ?</span>
     </div>
     <div class="row" style="margin-top:8px">
-      <button id="btnH264" class="sec">▶ Pantalla H.264 (en vivo)</button>
-      <button id="btnH264Stop" class="sec" disabled>⏸ H.264</button>
-      <span class="muted" id="h264Info"></span>
-    </div>
-    <div class="row" style="margin-top:8px">
       <button class="sec keybtn" data-key="4">Atrás</button>
       <button class="sec keybtn" data-key="3">Home</button>
       <button class="sec keybtn" data-key="187">Recientes</button>
@@ -101,7 +96,20 @@
     <div class="muted" style="margin-top:6px">El toque directo sobre la pantalla de arriba usa el mapeo canvas→display (wm size + rotación). Un dedo: tap; arrastrar: swipe. Sin multi-touch (límite de <code>adb shell input</code>, documentado).</div>
   </details>
 
-  <details class="card" id="wifiCard">
+  <details class="card" id="h264Card" open>
+    <summary style="cursor:pointer;font-weight:600">Pantalla en vivo H.264 — espejo estilo Vysor, sin scrcpy (v21.9)</summary>
+    <div class="muted" style="margin:8px 0">
+      Con el teléfono conectado AQUÍ (USB WebUSB o Wi-Fi del servidor), el NAVEGADOR mismo hace
+      <code>screenrecord</code> H.264 por su sesión ADB y lo decodifica con WebCodecs (~15-30 fps, 1280×720 @ 4 Mbps).
+      Sin sesión ADB, usa <code>/ws/video</code> si este servidor tiene adb. Ruta A del informe (ADB puro),
+      ejecutada por el navegador. Límites honestos: sin audio · reinicio cada 170 s (límite interno de screenrecord) · un dedo.
+    </div>
+    <div class="row">
+      <button id="btnH264" class="sec">▶ Pantalla H.264 (en vivo)</button>
+      <button id="btnH264Stop" class="sec" disabled>⏸ H.264</button>
+      <span class="muted" id="h264Info"></span>
+    </div>
+  </details>
     <summary style="cursor:pointer;font-weight:600">Wi-Fi con helper en la PC (LEGADO — hoy el servidor de arriba lo reemplaza)</summary>
     <div class="muted" style="margin:8px 0">
       Si prefieres Wi-Fi: corre el helper en tu PC y pega SU dirección aquí.
@@ -489,6 +497,15 @@ function mapToDevice(px, py, cvW, cvH, devW, devH) {
   if (!cvW || !cvH || !devW || !devH) return null;
   return { x: Math.round((px * devW) / cvW), y: Math.round((py * devH) / cvH) };
 }
+/** Ruta del espejo H.264 (v21.9): con sesión ADB viva (USB WebUSB o /adb-ws)
+ *  el NAVEGADOR hace screenrecord por su PROPIA conexión (estilo Vysor, sin
+ *  scrcpy); sin sesión, el server con adb (/ws/video); sin nada, null. Pura
+ *  para el test. */
+function h264Route(hasAdb, injected) {
+  if (hasAdb) return 'adb';
+  if (injected) return 'server';
+  return null;
+}
 // ── fin utilidades puras H.264 ──
 
 async function connectPhone(kind, opts = {}) {
@@ -532,6 +549,7 @@ async function connectPhone(kind, opts = {}) {
     const thisAdb = adb;
     adb.onDead = (err) => {
       if (adb !== thisAdb) return; // ya la reemplazó una conexión más nueva
+      if (h264 && h264.mode === 'adb') stopH264(true); // el espejo vivía en ESTA sesión
       log('Conexión perdida: ' + (err && err.message ? err.message : 'transporte muerto'));
       disconnectPhone();
     };
@@ -770,26 +788,21 @@ function stopH264(silent) {
   const h = h264;
   h264 = null;
   clearTimeout(h.retry);
-  try { h.ws.close(); } catch (_) {}
+  // v21.9: en la ruta «adb» el screenrecord vive en un stream de nuestra
+  // sesión ADB — cerrarlo (A_CLSE) mata el proceso en el teléfono.
+  if (h.mode === 'adb' && h.localId && adb) {
+    try { adb.conn.closeStream(h.localId); } catch (_) {}
+  }
+  try { if (h.ws) h.ws.close(); } catch (_) {}
   try { if (h.decoder && h.decoder.state !== 'closed') h.decoder.close(); } catch (_) {}
   $('btnH264').disabled = false;
   $('btnH264Stop').disabled = true;
   if (!silent) log('Pantalla H.264 apagada.');
 }
 
-function startH264() {
-  if (!INJECTED) return log('El modo H.264 vive en el servidor — abre esta página servida por server.js (no el helper).');
-  if (!window.VideoDecoder) return log('Este navegador no soporta WebCodecs (VideoDecoder) — usa Chrome/Edge recientes.');
-  if (h264) return;
-  h264Wanted = true;
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsV = new WebSocket(`${proto}//${location.host}/ws/video?token=${encodeURIComponent(TOKEN)}`);
-  wsV.binaryType = 'arraybuffer';
-  const h = { ws: wsV, decoder: null, codec: '', ts: 0, frames: 0, lastW: 0, lastH: 0, retry: null };
-  h264 = h;
-  streaming = false; // una sola fuente manda al canvas
-  $('btnH264').disabled = true;
-  $('btnH264Stop').disabled = false;
+/** v21.9: pipeline compartido (feeder → assembler → decoder) para ambas rutas
+ *  — idéntico al de v21.8, probado con NALUs partidas en test_server_wifi. */
+function h264MakePipeline(h) {
   h.feeder = makeNalFeeder((type, full) => {
     if (h264 === h) h.assembler.nal(type, full);
   });
@@ -824,6 +837,29 @@ function startH264() {
       log('H.264: ' + e.message);
     }
   });
+}
+
+function startH264() {
+  const route = h264Route(!!(adb && deviceInfo), INJECTED);
+  if (route === 'adb') return startH264Adb();
+  if (route === 'server') return startH264Server();
+  log('Pantalla H.264 necesita una de dos: el teléfono conectado AQUÍ (USB o Wi-Fi del servidor) o un servidor con adb. No hay ninguna de las dos todavía.');
+}
+
+/** Ruta «server» (v21.8): screenrecord corre en el SERVIDOR y llega por /ws/video. */
+function startH264Server() {
+  if (!window.VideoDecoder) return log('Este navegador no soporta WebCodecs (VideoDecoder) — usa Chrome/Edge recientes.');
+  if (h264) return;
+  h264Wanted = true;
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsV = new WebSocket(`${proto}//${location.host}/ws/video?token=${encodeURIComponent(TOKEN)}`);
+  wsV.binaryType = 'arraybuffer';
+  const h = { mode: 'server', ws: wsV, decoder: null, codec: '', ts: 0, frames: 0, lastW: 0, lastH: 0, retry: null, localId: 0 };
+  h264 = h;
+  streaming = false; // una sola fuente manda al canvas
+  $('btnH264').disabled = true;
+  $('btnH264Stop').disabled = false;
+  h264MakePipeline(h);
   wsV.onmessage = (ev) => {
     if (typeof ev.data === 'string') {
       let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
@@ -839,10 +875,57 @@ function startH264() {
       h264 = null;
       if (h264Wanted) {
         log('stream H.264 cerrado — reintentando en 1 s');
-        h.retry = setTimeout(() => { if (h264Wanted) startH264(); }, 1000);
+        h.retry = setTimeout(() => { if (h264Wanted) startH264Server(); }, 1000);
       }
     }
   };
+}
+
+/** v21.9 · ruta «adb» — EL NAVEGADOR ES EL SERVIDOR: screenrecord H.264 por la
+ *  propia sesión ADB (USB WebUSB o /adb-ws), la misma pila que Vysor web usa
+ *  para el espejo, pero con la ruta A del informe (ADB puro, SIN scrcpy).
+ *  El control de flujo ADB (OKAY por cada WRTE) es la contrapresión natural:
+ *  si el navegador decodifica lento, el teléfono deja de mandar. */
+function startH264Adb() {
+  if (!window.VideoDecoder) return log('Este navegador no soporta WebCodecs (VideoDecoder) — usa Chrome/Edge recientes.');
+  if (h264) return;
+  const conn0 = adb && adb.conn;
+  if (!conn0 || conn0.dead) return log('La sesión ADB está muerta — reconecta el teléfono.');
+  h264Wanted = true;
+  const h = { mode: 'adb', ws: null, decoder: null, codec: '', ts: 0, frames: 0, lastW: 0, lastH: 0, retry: null, localId: 0 };
+  h264 = h;
+  streaming = false; // una sola fuente manda al canvas
+  $('btnH264').disabled = true;
+  $('btnH264Stop').disabled = false;
+  h264MakePipeline(h);
+  const SVC = 'exec:screenrecord --output-format=h264 --size 1280x720 --bit-rate 4000000 --time-limit 170 -';
+  h.startStream = () => {
+    if (!h264Wanted || h264 !== h) return;
+    if (!adb || adb.conn !== conn0) { stopH264(true); return; } // la sesión fue reemplazada
+    adb.conn.open(SVC, {
+      onData: (b) => { if (h264 === h) h.feeder.feed(b); },
+      onClose: (err) => {
+        if (h264 !== h) return;
+        h.localId = 0;
+        if (!h264Wanted) return;
+        if (err) log('screenrecord terminó: ' + err.message);
+        log('reinicio de screenrecord en 0.5 s (límite interno de 170 s)');
+        clearTimeout(h.retry);
+        h.retry = setTimeout(() => h.startStream(), 500);
+      },
+    }).then((s) => {
+      if (h264 !== h) { try { conn0.closeStream(s.localId); } catch (_) {} return; }
+      h.localId = s.localId;
+      log('H.264 por tu sesión ADB (sin scrcpy): screenrecord 1280×720 @ 4 Mbps · reinicio cada 170 s');
+    }).catch((e) => {
+      if (h264 === h && h264Wanted) {
+        log('screenrecord no arrancó: ' + e.message + ' — reintento en 2 s');
+        clearTimeout(h.retry);
+        h.retry = setTimeout(() => h.startStream(), 2000);
+      }
+    });
+  };
+  h.startStream();
 }
 
 setInterval(() => {

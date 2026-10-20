@@ -132,14 +132,37 @@ function startMockAdbd() {
           const remote = ++nextRemote;
           streams.set(arg0, remote);
           send(adbFrame(ADB.OKAY, remote, arg0));
-          let out = Buffer.from('mock: ' + svc + '\n');
-          if (/wm size$/.test(svc)) out = Buffer.from('Physical size: 720x1600\n');
-          else if (/dumpsys input/.test(svc)) out = Buffer.from('  SurfaceOrientation: 0\n');
-          else if (/^shell:input /.test(svc)) out = Buffer.alloc(0);
-          else if (/screencap/.test(svc)) out = fakePng;
-          if (out.length) send(adbFrame(ADB.WRTE, remote, arg0, out));
-          setTimeout(() => send(adbFrame(ADB.CLSE, remote, arg0)), 15);
-        } else if (cmd === ADB.OKAY || cmd === ADB.CLSE || cmd === ADB.WRTE) {
+          if (/^exec:screenrecord/.test(svc)) {
+            // v21.9: el CLIENTE hace screenrecord por su propia sesión ADB —
+            // stream continuo hasta que el cliente cierre (A_CLSE → matamos el
+            // «proceso», igual que adbd mata screenrecord).
+            const nal = (b) => Buffer.concat([Buffer.from([0, 0, 0, 1]), Buffer.from(b)]);
+            send(adbFrame(ADB.WRTE, remote, arg0, Buffer.concat([
+              nal([0x67, 0x64, 0x00, 0x28, 0xac, 0xd9, 0x40, 0x50]), // SPS → avc1.640028
+              nal([0x68, 0xeb, 0xec, 0xb2, 0x2c]),                   // PPS
+              nal([0x65, 0x88, 0x84, 0x21, 0xa0]),                   // IDR
+            ])));
+            let tick = 0;
+            const iv = setInterval(() => {
+              try { send(adbFrame(ADB.WRTE, remote, arg0, nal([0x41, 0x9a, (tick++) & 0xff]))); }
+              catch (_) { clearInterval(iv); }
+            }, 15);
+            streams.set('iv:' + arg0, iv);
+          } else {
+            let out = Buffer.from('mock: ' + svc + '\n');
+            if (/wm size$/.test(svc)) out = Buffer.from('Physical size: 720x1600\n');
+            else if (/dumpsys input/.test(svc)) out = Buffer.from('  SurfaceOrientation: 0\n');
+            else if (/^shell:input /.test(svc)) out = Buffer.alloc(0);
+            else if (/screencap/.test(svc)) out = fakePng;
+            if (out.length) send(adbFrame(ADB.WRTE, remote, arg0, out));
+            setTimeout(() => send(adbFrame(ADB.CLSE, remote, arg0)), 15);
+          }
+        } else if (cmd === ADB.CLSE) {
+          // v21.9: CLSE del CLIENTE (arg0 = localId del cliente) — mata el
+          // screenrecord que le estaba sirviendo ese stream.
+          const iv = streams.get('iv:' + arg0);
+          if (iv) { clearInterval(iv); streams.delete('iv:' + arg0); }
+        } else if (cmd === ADB.OKAY || cmd === ADB.WRTE) {
           // el cliente acusa recibo; el mock no mantiene más estado
         }
       }
@@ -204,7 +227,7 @@ function extractClientFns() {
   const end = html.indexOf('// ── fin utilidades puras H.264 ──');
   assert(beg > 0 && end > beg, 'sección de utilidades puras encontrada en index.html');
   const src = html.slice(beg, end);
-  return new Function(src + '\nreturn { startCodeLenAt, makeNalFeeder, makeChunkAssembler, avcCodecFromSps, mapToDevice };')();
+  return new Function(src + '\nreturn { startCodeLenAt, makeNalFeeder, makeChunkAssembler, avcCodecFromSps, mapToDevice, h264Route };')();
 }
 
 // ── Suite ─────────────────────────────────────────────────────────────────────
@@ -307,6 +330,31 @@ function extractClientFns() {
   ok('/ws/video: video-start JSON + H.264 annex-b binario (SPS+PPS+IDR+delta)');
   wsV.close();
 
+  // 4b. v21.9 · ruta «adb»: EL CLIENTE hace screenrecord por SU sesión ADB
+  // (la pila de Vysor web, con la ruta A del informe — sin scrcpy).
+  {
+    const t2 = makeClientTransport(`ws://127.0.0.1:${PORT_HTTP}/adb-ws?token=${TOKEN}`);
+    const adb2 = new ValoraAdb(t2, () => {});
+    await adb2.connect();
+    const video = [];
+    let ghostCloses = 0;
+    const sRec = await adb2.conn.open(
+      'exec:screenrecord --output-format=h264 --size 1280x720 --bit-rate 4000000 --time-limit 170 -',
+      { onData: (b) => video.push(Buffer.from(b)), onClose: () => ghostCloses++ },
+    );
+    await until(() => video.some((c) => c.includes(Buffer.from([0, 0, 0, 1, 0x67]))));
+    await until(() => video.length >= 5); // SPS+PPS+IDR + deltas en vivo
+    assert(video.some((c) => c.includes(Buffer.from([0, 0, 0, 1, 0x65]))), 'IDR por la sesión del cliente');
+    ok('ruta adb: screenrecord por la SESIÓN del cliente — SPS/PPS/IDR + deltas en vivo');
+    adb2.conn.closeStream(sRec.localId);
+    const antes = video.length;
+    await sleep(250);
+    assert(video.length - antes <= 1, 'closeStream (A_CLSE) mata el screenrecord del teléfono');
+    assert.strictEqual(ghostCloses, 0, 'sin onClose fantasma tras el stop propio');
+    ok('ruta adb: ⏸ detiene el flujo de verdad (A_CLSE limpia el stream)');
+    await t2.close();
+  }
+
   // 5. token inválido → 4001 (el socket abre y el servidor lo cierra enseguida)
   const wsBad = new WebSocket(`ws://127.0.0.1:${PORT_HTTP}/adb-ws?token=equivocado`);
   const closeCode = await new Promise((res) => {
@@ -367,9 +415,16 @@ function extractClientFns() {
   assert.deepStrictEqual(F.mapToDevice(1, 1, 100, 100, 0, 0), null);
   ok('mapToDevice: escala exacta y guards sin dimensiones');
 
+  // 6e. v21.9: selección de ruta del espejo H.264 (pura)
+  assert.strictEqual(F.h264Route(true, true), 'adb');  // con sesión ADB, el navegador manda
+  assert.strictEqual(F.h264Route(true, false), 'adb'); // USB/helper: solo existe la ruta adb
+  assert.strictEqual(F.h264Route(false, true), 'server');
+  assert.strictEqual(F.h264Route(false, false), null);
+  ok('h264Route: adb > server > null (el navegador ES el servidor si hay sesión)');
+
   srv.kill('SIGKILL');
   adbd.close();
-  console.log(`\n${n} comprobaciones — server v21.8 OK`);
+  console.log(`\n${n} comprobaciones — server v21.9 OK`);
   process.exit(0);
   } catch (e) {
     console.error('FALLO:', e.message);

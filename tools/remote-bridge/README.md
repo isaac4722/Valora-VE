@@ -1,4 +1,4 @@
-# Puente de depuración remota · Valora-VE (v21.8.1)
+# Puente de depuración remota · Valora-VE (v21.9)
 
 Depuración y pruebas en tiempo real del teléfono Android del dueño desde la
 máquina del desarrollador — sin USB del desarrollador, sin servicios de pago,
@@ -64,7 +64,7 @@ a la LAN: `/api/adb` lo dice honesto y la UI degrada a USB / puente de app).
 | `test_adb_keys.js` | Test del keygen/firma RSA-2048 de ADB en Node: `node test_adb_keys.js`. |
 | `test_usb_transport.js` | Test del transporte WebUSB con USBDevice simulado (chooser, configs múltiples, claim ocupado): `node test_usb_transport.js`. |
 | `test_helper_url.js` | Test de la normalización/diagnóstico de la dirección del helper (IP del teléfono vs helper, sin navegador): `node test_helper_url.js`. |
-| `test_server_wifi.js` | Test del servidor v21.8 SIN hardware — adbd MOCK (protocolo ADB real) + adb FALSO: `/api/adb*`, puente `/adb-ws` con el CLIENTE REAL (ValoraAdb: handshake + shell + screencap + tap), `/ws/input` (redondeo/escape/keycode), `/ws/video` (annex-b SPS+PPS+IDR), funciones puras del cliente (feeder/assembler/codec/mapeo): `node test_server_wifi.js`. |
+| `test_server_wifi.js` | Test del servidor v21.8/21.9 SIN hardware — adbd MOCK (protocolo ADB real, con `exec:screenrecord` continuo hasta A_CLSE) + adb FALSO: `/api/adb*`, puente `/adb-ws` con el CLIENTE REAL (ValoraAdb: handshake + shell + screencap + tap), `/ws/input` (redondeo/escape/keycode), `/ws/video` (annex-b SPS+PPS+IDR), RUTA «adb» del espejo (screenrecord por la sesión del cliente, en vivo y con stop real), funciones puras del cliente (feeder/assembler/codec/mapeo/h264Route): `node test_server_wifi.js`. |
 | `test_adb_dead.js` | Test de muerte del transporte (v21.8.1, sin hardware): writes sobre USB/WS muertos dan errores limpios (no TypeError de null), `connect()`/`exec()` rechazan RÁPIDO con el error real, `onDead` dispara UNA vez, y CENTINELA de `unhandledRejection` = 0 en todo el proceso (regresión de los «Uncaught (in promise)» vistos en consola del dueño): `node test_adb_dead.js`. |
 ## Del lado de la app (repo `lib/services/*`)
 
@@ -127,18 +127,28 @@ token de sesión + interruptor con auto-reconexión al arrancar).
    `FLAG_SECURE` salen negras (límites del método, no del puente).
    Env del servidor: `ADB_BIN`, `ADB_SERIAL`, `ADB_WIFI_HOST`, `ADB_WIFI_PORT`,
    `VIDEO_BIT_RATE` (4 Mbps), `VIDEO_SIZE` (vacío = nativa), `VIDEO_TIME_LIMIT` (170).
-3. **Wi-Fi con helper (LEGADO v21.6):** `node tools/remote-bridge/adb-ws-helper.js
+3. **Pantalla H.264 por TU sesión — el navegador es el servidor (v21.9, la
+   respuesta a «Vysor puede desde web»):** con el teléfono conectado aquí
+   (USB WebUSB o Wi-Fi del servidor), el botón «▶ Pantalla H.264» NO usa el
+   adb del servidor: el propio navegador hace `exec:screenrecord` por su
+   sesión ADB (la misma pila de adb.js), decodifica con WebCodecs y el
+   control de flujo ADB hace de contrapresión. Funciona por USB aunque esta
+   página la sirva el helper o un server SIN adb; ⏸ mata el screenrecord en
+   el teléfono (A_CLSE); si la sesión muere, el espejo se apaga solo.
+   Requiere WebCodecs (Chrome/Edge recientes).
+4. **Wi-Fi con helper (LEGADO v21.6):** `node tools/remote-bridge/adb-ws-helper.js
    <ip-del-teléfono> 5555` + página local `http://127.0.0.1:8790/`. Hoy el modo
    2 lo reemplaza (sin helper). **`ws://…` NUNCA se abre en la barra del
    navegador** (Chrome: `ERR_UNKNOWN_URL_SCHEME`) — la lección del dueño que
    motivó los modos A/B/C todo-en-la-preview.
-4. **Autorización del teléfono (USB/Wi-Fi):** al conectar verás en el log
+5. **Autorización del teléfono (USB/Wi-Fi):** al conectar verás en el log
    «Clave publicada — MIRA EL TELÉFONO»: acepta «¿Permitir depuración USB?»
    de la clave **valora-bridge** (marca «Siempre» y no vuelve a preguntar).
-5. Activa el servidor de pruebas en Ajustes (y pega el token de la app en el
+6. Activa el servidor de pruebas en Ajustes (y pega el token de la app en el
    piloto para `/erase`).
-6. La pantalla empieza a transmitir (1–3 fps por USB; ≈1 fps por el puente
-   de la app; 15–30 fps por H.264 del servidor).
+7. La pantalla empieza a transmitir (1–3 fps por USB; ≈1 fps por el puente
+   de la app; 15–30 fps por H.264 — del servidor (v21.8) o POR TU SESIÓN con
+   el navegador como servidor (v21.9)).
 
 Notas: si abres DOS pestañas del cliente, la más nueva TOMA EL CONTROL (la
 vieja se cierra con aviso — cero puentes zombis). La página abierta SIN
