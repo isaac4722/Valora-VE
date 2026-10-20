@@ -309,6 +309,12 @@ class WebUsbTransport {
   }
 
   async write(bytes) {
+    // v21.8.1: device null/cerrado daba «TypeError: Cannot read properties of
+    // null (reading 'transferOut')» — ahora un error que el puente entiende y
+    // muestra (y streamLoop sabe cortar).
+    if (!this.device || !this.device.opened) {
+      throw new Error('Transporte USB cerrado — reconecta el teléfono');
+    }
     await this.device.transferOut(this.endpointOut, bytes);
   }
 
@@ -347,7 +353,11 @@ class WsTransport {
   }
 
   async write(bytes) {
-    if (this.ws.readyState !== 1) throw new Error('Helper WebSocket cerrado');
+    // v21.8.1: ws null (aún conectando tras un re-intento) daba TypeError de
+    // null — mismo error limpio que con el socket cerrado.
+    if (!this.ws || this.ws.readyState !== 1) {
+      throw new Error('Helper WebSocket cerrado');
+    }
     this.ws.send(bytes);
   }
 
@@ -373,6 +383,13 @@ class AdbConnection {
     this.streams = new Map();
     this._buf = new Uint8Array(0);
     this.t.onMessage = (b) => this._feed(b);
+    // v21.8.1: muerte del transporte — UN solo disparo con el error real.
+    // Antes un write fallido dentro del executor de open() quedaba como
+    // «Uncaught (in promise)» y streamLoop martillaba el cable muerto cada
+    // 1.5 s para siempre (transferOut sobre device null, helper WS cerrado).
+    this.dead = false;
+    this.deadErr = null;
+    this.onDead = null; // la página (ValoraAdb) se suscribe aquí
   }
 
   /** Handshake completo (CNXN + AUTH). Devuelve info del dispositivo.
@@ -380,7 +397,7 @@ class AdbConnection {
   async connect(hint) {
     const info = await this.t.connect(hint);
     this.key = await AdbKeys.load();
-    this.t.onDisconnect = () => this._dropAll(new Error('transporte desconectado'));
+    this.t.onDisconnect = () => this._fail(new Error('transporte desconectado'));
 
     this._send(A_CNXN, A_VERSION, A_MAXDATA, enc('host::features=shell_v2,cmd,stat_v2,ls_v2'));
 
@@ -423,6 +440,11 @@ class AdbConnection {
   open(service, { onData, onClose } = {}) {
     const KNOWN = /^(shell:|exec:|tcp:|localabstract:|localfilesystem:|localreserved:|sync:|jdwp:|framebuffer:|track-|reverse:|host:|root:|usb:|abb:|abb_exec:|features:|reconnect:|banner:|mdns:|pair:|tls:)/;
     const svc = KNOWN.test(service) ? service : 'shell:' + service;
+    if (this.dead) {
+      // v21.8.1: sin esto, open() sobre una conexión muerta esperaba el
+      // timeout de 15 s — ahora falla al instante con el error de la muerte.
+      return Promise.reject(this.deadErr || new Error('conexión ADB muerta'));
+    }
     return new Promise((resolve, reject) => {
       const localId = this.nextLocalId++;
       const s = {
@@ -499,8 +521,15 @@ class AdbConnection {
   // ── Framing ────────────────────────────────────────────────────────────────
   _send(cmd, arg0, arg1, data) {
     const d = data || new Uint8Array(0);
-    this.t.write(header(cmd, arg0, arg1, d.length, checksum(d)));
-    if (d.length) this.t.write(d);
+    const writes = [this.t.write(header(cmd, arg0, arg1, d.length, checksum(d)))];
+    if (d.length) writes.push(this.t.write(d));
+    // v21.8.1: el executor de open() no puede esperar promesas — sin catch
+    // aquí CADA write fallido era «Uncaught (in promise)». Un write que
+    // falla ES el transporte muerto: muere la conexión una sola vez y
+    // _dropAll rechaza a todos los que esperaban (open/exec/waiters) con
+    // el error real en vez de dejar colgados timeouts de 15/60 s.
+    Promise.all(writes).catch((e) =>
+      this._fail(e instanceof Error ? e : new Error(String(e))));
   }
 
   _feed(bytes) {
@@ -535,6 +564,11 @@ class AdbConnection {
   _waiters = [];
 
   _waitMessage(pred, timeoutMs) {
+    if (this.dead) {
+      // v21.8.1: la muerte llegó ANTES de registrar la espera (p. ej. el
+      // write de CNXN falló) — rechazar ya, no colgar los 60 s del handshake.
+      return Promise.reject(this.deadErr || new Error('conexión ADB muerta'));
+    }
     return new Promise((resolve, reject) => {
       const w = {
         pred,
@@ -596,19 +630,35 @@ class AdbConnection {
     }
   }
 
+  /** v21.8.1: marca la conexión MUERTA una sola vez y despierta a todos con
+   *  el error real. Todo write fallido y toda desconexión del transporte
+   *  terminan aquí; la página se entera vía onDead (una sola llamada). */
+  _fail(err) {
+    if (this.dead) return;
+    this.dead = true;
+    this.deadErr = err;
+    this._dropAll(err);
+  }
+
   _dropAll(err) {
+    const e = err instanceof Error ? err : new Error(String(err));
     // También despierta a las esperas globales (CNXN/AUTH/OKAY): si el
     // transporte muere a mitad del handshake no debe colgar 60 s.
     const waiters = this._waiters.splice(0);
     for (const w of waiters) {
       clearTimeout(w.timer);
-      w.reject(err);
+      w.reject(e);
     }
     for (const id of [...this.streams.keys()]) {
       const s = this.streams.get(id);
       this.streams.delete(id);
-      if (s.onClose) s.onClose(err);
-      if (s.reject) s.reject(err);
+      if (s.onClose) s.onClose(e);
+      if (s.reject) s.reject(e);
+    }
+    if (this.onDead) {
+      const f = this.onDead;
+      this.onDead = null; // un solo disparo: la página ya limpió (disconnectPhone)
+      try { f(e); } catch (_) { /* el callback de la página jamás tumba el puente */ }
     }
   }
 }
@@ -622,6 +672,10 @@ class ValoraAdb {
   constructor(transport, log) {
     this.log = log;
     this.conn = new AdbConnection(transport, log);
+    this.onDead = null;
+    // v21.8.1: la página pone adb.onDead = … ANTES de connect() para enterarse
+    // de la muerte del transporte (cable, helper, /adb-ws) y limpiar la UI.
+    this.conn.onDead = (err) => { if (this.onDead) this.onDead(err); };
   }
 
   async connect(hint) {

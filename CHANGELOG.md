@@ -1,6 +1,48 @@
 # Changelog
 
 
+## 1.14.0-beta+42 · v21.8.1 — muerte del transporte sin «Uncaught (in promise)»
+
+La consola real del dueño mostró la falla mientras usaba el puente:
+`Uncaught (in promise) TypeError: Cannot read properties of null (reading
+'transferOut')` y `Uncaught (in promise) Error: Helper WebSocket cerrado`,
+repetidos cada 1.5 s por `streamLoop` con la conexión zombi. Tres causas
+raíz, tres curas:
+
+- **`public/adb.js` — la muerte del transporte es un EVENTO, no ruido:**
+  - `WebUsbTransport.write()` con device null/cerrado y `WsTransport.write()`
+    con socket null/cerrado dan ahora errores LIMPIOS que el puente entiende
+    («Transporte USB cerrado — reconecta el teléfono»), no TypeError de null.
+  - `AdbConnection._send()` adjunta catch a sus writes: un write que falla ES
+    el transporte muerto → nueva `_fail()` marca la conexión MUERTA una sola
+    vez, desperta a todos (open/exec/waiters) con el error REAL y dispara
+    `onDead` UNA vez. Adiós al «Uncaught (in promise)»: el executor de
+    `open()` ya no deja rechazos huérfanos.
+  - Fail-fast: `open()` y `_waitMessage()` sobre conexión muerta rechazan AL
+    INSTANTE con el error de la muerte (antes colgaban 15/60 s).
+  - `ValoraAdb` reenvía `onDead` a la página (suscribible ANTES de connect()).
+- **`public/index.html` — la página se entera y limpia sola:** `adb.onDead`
+  → log «Conexión perdida: …» + `disconnectPhone()` (UI, rol espectador y
+  hot-plug desbloqueado: `autoConnectUsb` ya no ve el adb zombi). `streamLoop`
+  exige conexión completa (`deviceInfo`) y se corta tras 5 errores seguidos
+  («flujo detenido por errores») en vez de martillar para siempre. Favicon
+  SVG inline (adiós al 404 de /favicon.ico) y `img.onerror` del stream ahora
+  dice la verdad («captura PNG inválida», no «stream: undefined»).
+- **`test_adb_dead.js` (nuevo, 5/5):** writes muertos → errores limpios;
+  muerte en handshake → `connect()` rechaza rápido con el error real; muerte
+  en OPEN → `exec()` rechaza + `onDead` ×1 pese a martillar; `open()` muerto
+  no espera 15 s; desconexión con exec en vuelo despierta y reenvía `onDead`;
+  CENTINELA `unhandledRejection === 0` en todo el proceso (la regresión
+  exacta de la consola del dueño, si vuelve, el test muere).
+- **Verificado en vivo** (server.js :3000 + adbd mock en proceso separado,
+  agent-browser 390×844): conectar por Wi-Fi del servidor → «Teléfono
+  conectado»; matar el adbd → CERO errores de página, log honesto («Conexión
+  perdida: transporte desconectado» → «Teléfono desconectado» → espectador,
+  pill off). Captura: capturas/p3000_v2181_muerte_telefono.png.
+- Gates: suites del puente 13 + 13 + 4 + 6 + 14 + 5 · analyze 0 · 265/265 ·
+  auditoría lib/ limpia · Impeccable 4.5.2 detect [].
+
+
 ## 1.14.0-beta+42 · v21.8 — Wi-Fi del servidor, sin helper (informe «sin scrcpy»)
 
 El dueño entregó el informe técnico completo (ruta A: ADB puro, sin scrcpy —

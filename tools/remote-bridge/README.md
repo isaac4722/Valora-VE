@@ -1,4 +1,4 @@
-# Puente de depuración remota · Valora-VE (v21.8)
+# Puente de depuración remota · Valora-VE (v21.8.1)
 
 Depuración y pruebas en tiempo real del teléfono Android del dueño desde la
 máquina del desarrollador — sin USB del desarrollador, sin servicios de pago,
@@ -65,6 +65,7 @@ a la LAN: `/api/adb` lo dice honesto y la UI degrada a USB / puente de app).
 | `test_usb_transport.js` | Test del transporte WebUSB con USBDevice simulado (chooser, configs múltiples, claim ocupado): `node test_usb_transport.js`. |
 | `test_helper_url.js` | Test de la normalización/diagnóstico de la dirección del helper (IP del teléfono vs helper, sin navegador): `node test_helper_url.js`. |
 | `test_server_wifi.js` | Test del servidor v21.8 SIN hardware — adbd MOCK (protocolo ADB real) + adb FALSO: `/api/adb*`, puente `/adb-ws` con el CLIENTE REAL (ValoraAdb: handshake + shell + screencap + tap), `/ws/input` (redondeo/escape/keycode), `/ws/video` (annex-b SPS+PPS+IDR), funciones puras del cliente (feeder/assembler/codec/mapeo): `node test_server_wifi.js`. |
+| `test_adb_dead.js` | Test de muerte del transporte (v21.8.1, sin hardware): writes sobre USB/WS muertos dan errores limpios (no TypeError de null), `connect()`/`exec()` rechazan RÁPIDO con el error real, `onDead` dispara UNA vez, y CENTINELA de `unhandledRejection` = 0 en todo el proceso (regresión de los «Uncaught (in promise)» vistos en consola del dueño): `node test_adb_dead.js`. |
 ## Del lado de la app (repo `lib/services/*`)
 
 **Servidor de pruebas local (v21.6)** — escucha SOLO en `127.0.0.1:8090` del
@@ -173,5 +174,12 @@ node tools/remote-bridge/pilot_cli.js stream 8 dir/   # grabar frames
 - Los clics del navegador llegan como `input tap/swipe` en coordenadas de
   dispositivo; el teclado CLI del navegador NO escribe en campos Flutter —
   para eso está `pilot_cli.js text` o los endpoints `/test`.
+- Si el teléfono se va a mitad de sesión (cable desconectado, Wi-Fi caído,
+  adbd reiniciado), la página se entera SOLA vía `onDead` (v21.8.1): log
+  «Conexión perdida», limpieza de la UI, regreso a espectador y — con el
+  cable vuelto a meter — reconexión automática sin chooser. El flujo de
+  screencap se corta tras 5 errores seguidos en vez de martillar para
+  siempre, y ningún write sobre transporte muerto produce «Uncaught (in
+  promise)» en la consola.
 - El build web de la app (ahora en puerto **3001**) no incluye el servidor
   de pruebas ni el puente sin PC (stub no-op con la misma API).
