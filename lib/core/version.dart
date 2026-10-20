@@ -9,4 +9,4 @@ library;
 /// Versión visible (ronda v21.7 · puente sin PC: la app conecta al relay del
 /// preview con WebSocket saliente (rol bridge) — «todo dentro de la preview»
 /// sin helper en la PC del dueño; captura de UI viva vía RepaintBoundary).
-const String kAppVersionVisible = '21.7';
+const String kAppVersionVisible = '21.8';

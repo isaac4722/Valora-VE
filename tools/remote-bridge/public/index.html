@@ -21,7 +21,7 @@
   .pill { display:inline-block; padding:3px 10px; border-radius:99px; font-size:12px; font-weight:700; background:#262b31; color:#9aa0a6; }
   .pill.on { background:#123a29; color:#34d399; }
   .pill.off { background:#3a1d1d; color:#f87171; }
-  canvas { width:100%; background:#000; border-radius:10px; display:block; }
+  canvas { width:100%; background:#000; border-radius:10px; display:block; touch-action:none; cursor:crosshair; }
   #log { font: 12px/1.6 ui-monospace, monospace; background:#0a0c0e; border:1px solid #1c2126; border-radius:8px; padding:10px 12px; height:180px; overflow-y:auto; white-space:pre-wrap; color:#8ab4f8; }
   label.cb { font-size:13px; color:#9aa0a6; display:flex; gap:6px; align-items:center; }
   input[type=text]{ background:#0a0c0e; border:1px solid #262b31; color:#e8eaed; padding:8px 10px; border-radius:8px; width:260px; }
@@ -31,7 +31,7 @@
 <body>
 <div class="wrap">
   <h1>Valora<b>VE</b> · Puente de depuración remota</h1>
-  <div class="sub">Todo dentro de esta preview: tu navegador (USB) o la propia app del teléfono (v21.7, sin PC) conectan con la consola del desarrollador.</div>
+  <div class="sub">Todo dentro de esta preview: tu navegador (USB o Wi-Fi del servidor v21.8) o la propia app del teléfono (v21.7, sin PC) conectan con la consola del desarrollador.</div>
 
   <div class="card">
     <div class="row">
@@ -71,8 +71,37 @@
     </div>
   </div>
 
+  <details class="card" id="srvCard" open>
+    <summary style="cursor:pointer;font-weight:600">Wi-Fi por el servidor — sin helper (v21.8 · informe «sin scrcpy»)</summary>
+    <div class="muted" style="margin:8px 0">
+      Cuando ESTE servidor puede alcanzar el teléfono (tu PC o un equipo de tu red con platform-tools:
+      <code>node server.js</code>), la preview sirve Wi-Fi completo: ADB real por <code>/adb-ws</code> (la misma pila que USB),
+      pantalla H.264 por <code>/ws/video</code> (<code>screenrecord</code> + WebCodecs, ~15-30 fps, sin scrcpy) y toque/teclas por
+      <code>/ws/input</code>. El preview en la nube NO llega a tu LAN: si el indicador queda rojo, usa USB o el puente de la app.
+    </div>
+    <div class="row">
+      <button id="btnWifiSrv">Conectar por Wi-Fi (servidor)</button>
+      <input type="text" id="wifiHost" placeholder="192.168.0.229:5555 (tu teléfono)">
+      <span id="stAdb" class="pill">adb: ?</span>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="btnH264" class="sec">▶ Pantalla H.264 (en vivo)</button>
+      <button id="btnH264Stop" class="sec" disabled>⏸ H.264</button>
+      <span class="muted" id="h264Info"></span>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="sec keybtn" data-key="4">Atrás</button>
+      <button class="sec keybtn" data-key="3">Home</button>
+      <button class="sec keybtn" data-key="187">Recientes</button>
+      <button class="sec keybtn" data-key="26">Power</button>
+      <input type="text" id="txtIn" placeholder="texto al teléfono" style="width:200px">
+      <button id="btnTxt" class="sec">enviar</button>
+    </div>
+    <div class="muted" style="margin-top:6px">El toque directo sobre la pantalla de arriba usa el mapeo canvas→display (wm size + rotación). Un dedo: tap; arrastrar: swipe. Sin multi-touch (límite de <code>adb shell input</code>, documentado).</div>
+  </details>
+
   <details class="card" id="wifiCard">
-    <summary style="cursor:pointer;font-weight:600">Wi-Fi con helper en la PC (avanzado, opcional)</summary>
+    <summary style="cursor:pointer;font-weight:600">Wi-Fi con helper en la PC (LEGADO — hoy el servidor de arriba lo reemplaza)</summary>
     <div class="muted" style="margin:8px 0">
       Si prefieres Wi-Fi: corre el helper en tu PC y pega SU dirección aquí.
       <b><code>ws://…</code> jamás se abre en la barra del navegador</b> (por eso Chrome responde
@@ -373,13 +402,101 @@ async function pingHelper(wsUrl) {
   if (!res.ok) throw new Error('El helper respondió ' + res.status + ' en /ping — ¿es adb-ws-helper.js?');
 }
 
+// ── H.264 · utilidades puras (testeables sin navegador — test_server_wifi.js) ──
+/** ¿Hay start code Annex-B (00 00 01 | 00 00 00 01) en u8[i]? Devuelve su largo o 0. */
+function startCodeLenAt(u8, i) {
+  if (u8[i] === 0 && u8[i + 1] === 0) {
+    if (u8[i + 2] === 1) return 3;
+    if (u8[i + 2] === 0 && u8[i + 3] === 1) return 4;
+  }
+  return 0;
+}
+
+/** Alimentador incremental de NALUs Annex-B: junta los trozos del WebSocket
+ *  (los start codes pueden partirse ENTRE mensajes) y entrega cada NALU
+ *  completa — incluido su start code — a onNal(type, full), con
+ *  type = nal_unit_type (7=SPS, 8=PPS, 5=IDR, 1=no-IDR, 6=SEI, 9=AUD). */
+function makeNalFeeder(onNal) {
+  let buf = new Uint8Array(0);
+  const cat = (a, b) => { const r = new Uint8Array(a.length + b.length); r.set(a); r.set(b, a.length); return r; };
+  return {
+    feed(u8) {
+      buf = cat(buf, u8);
+      const cuts = [];
+      for (let i = 0; i < buf.length; ) {
+        const len = startCodeLenAt(buf, i);
+        if (len) { cuts.push({ idx: i, len }); i += len; } else i++;
+      }
+      if (cuts.length < 2) {
+        if (buf.length > (1 << 21)) buf = new Uint8Array(0); // sin start codes: no crecer para siempre
+        return;
+      }
+      const last = cuts[cuts.length - 1];
+      for (let k = 0; k + 1 < cuts.length; k++) {
+        const a = cuts[k];
+        onNal(buf[a.idx + a.len] & 0x1f, buf.subarray(a.idx, cuts[k + 1].idx));
+      }
+      buf = buf.subarray(last.idx); // el último NAL sigue creciendo
+    },
+    reset() { buf = new Uint8Array(0); },
+  };
+}
+
+/** Ensamblador de chunks para VideoDecoder: acumula SPS+PPS y los PREPENDE al
+ *  primer IDR (chunk 'key' — un decodificador no puede arrancar a mitad de
+ *  GOP); los no-IDR van como 'delta'. Nada se emite antes del primer
+ *  SPS+PPS+IDR completo. */
+function makeChunkAssembler(push) {
+  let sps = null;
+  let spsPayload = null;
+  let pps = null;
+  let started = false;
+  const cat = (a, b) => { const r = new Uint8Array(a.length + b.length); r.set(a); r.set(b, a.length); return r; };
+  return {
+    nal(type, full) {
+      if (type === 7) {
+        sps = full;
+        spsPayload = full.subarray(startCodeLenAt(full, 0));
+        return;
+      }
+      if (type === 8) { pps = full; return; }
+      if (type === 5) {
+        let key = full;
+        if (pps) key = cat(pps, key);
+        if (sps) key = cat(sps, key);
+        push({ type: 'key', bytes: key, spsPayload });
+        sps = pps = spsPayload = null;
+        started = true;
+        return;
+      }
+      if (!started) return; // a mitad de GOP: descartar hasta el primer IDR
+      if (type === 1 || type === 6 || type === 9) push({ type: 'delta', bytes: full, spsPayload: null });
+    },
+  };
+}
+
+/** «avc1.PPCCLL» desde el payload del SPS (sin start code): profile_idc,
+ *  constraint flags y level_idc en hex (W3C AVC registration). */
+function avcCodecFromSps(spsPayload) {
+  const h = (b) => b.toString(16).padStart(2, '0');
+  if (!spsPayload || spsPayload.length < 4) return 'avc1.640028';
+  return 'avc1.' + h(spsPayload[1]) + h(spsPayload[2]) + h(spsPayload[3]);
+}
+
+/** Canvas (px internos) → display ACTUAL del teléfono. Pura para el test. */
+function mapToDevice(px, py, cvW, cvH, devW, devH) {
+  if (!cvW || !cvH || !devW || !devH) return null;
+  return { x: Math.round((px * devW) / cvW), y: Math.round((py * devH) / cvH) };
+}
+// ── fin utilidades puras H.264 ──
+
 async function connectPhone(kind, opts = {}) {
   let ok = false;
   try {
     let transport;
     if (kind === 'usb') {
       if (!navigator.usb) {
-        log('Este navegador no tiene WebUSB — para USB usa Chrome o Edge de escritorio; Wi-Fi funciona con el helper.');
+        log('Este navegador no tiene WebUSB — para USB usa Chrome o Edge de escritorio; para Wi-Fi usa el modo «Wi-Fi por el servidor» (v21.8).');
         return;
       }
       // Sin chooser si ya autorizamos este teléfono antes: un clic menos.
@@ -388,6 +505,13 @@ async function connectPhone(kind, opts = {}) {
         if (devs.length) opts.deviceHint = devs[0];
       }
       transport = new AdbTransports.WebUsbTransport(log);
+    } else if (kind === 'server') {
+      // v21.8: ADB real por /adb-ws del PROPIO servidor (sin helper). El
+      // `adb connect` ya lo hizo btnWifiSrv; aquí solo hablamos ADB.
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${proto}//${location.host}/adb-ws?token=${encodeURIComponent(TOKEN)}`;
+      log('Hablando ADB real por /adb-ws (sin helper, todo en la preview)…');
+      transport = new AdbTransports.WsTransport(wsUrl, log);
     } else {
       const norm = normalizeHelperUrl($('wsUrl').value);
       if (norm.error) return log('ERROR: ' + norm.error);
@@ -402,22 +526,24 @@ async function connectPhone(kind, opts = {}) {
     adb = new ValoraAdb(transport, log);
     deviceInfo = await adb.connect(opts.deviceHint);
     ok = true;
-    const dev = {
-      model: deviceInfo.model,
-      serial: String(deviceInfo.serial || ''),
-      resolution: deviceInfo.resolution,
-    };
-    ok = true;
-    ['btnShot','btnHealth','btnWake','btnStreamOn','btnStreamOff'].forEach((b) => ($(b).disabled = false));
-    log(`Teléfono conectado: ${dev.model} ${dev.resolution ? dev.resolution.w+'x'+dev.resolution.h : ''}`);
-    if ($('autoStream').checked) streaming = true;
-    streamLoop();
-    reconnectAsBridge(); // con ADB vivo, el rol correcto es bridge (con hello nuevo)
+    onPhoneConnected();
   } catch (e) {
     log('ERROR de conexión: ' + e.message);
     try { if (typeof transport !== 'undefined' && transport) transport.close(); } catch (_) {}
     if (!ok) { adb = null; deviceInfo = null; }
   }
+}
+
+/** Cola común tras conectarse (USB o Wi-Fi servidor): habilita botones,
+ *  arranca el flujo screencap, toma el rol de puente y trae el meta del
+ *  display para el mapeo táctil. */
+function onPhoneConnected() {
+  ['btnShot','btnHealth','btnWake','btnStreamOn','btnStreamOff'].forEach((b) => ($(b).disabled = false));
+  log(`Teléfono conectado: ${deviceInfo.model} ${deviceInfo.resolution ? deviceInfo.resolution.w+'x'+deviceInfo.resolution.h : ''}`);
+  if ($('autoStream').checked) streaming = true;
+  streamLoop();
+  reconnectAsBridge(); // con ADB vivo, el rol correcto es bridge (con hello nuevo)
+  fetchMeta(); // tamaño + rotación para el mapeo canvas→display
 }
 
 /** Abrir la página ES conectar: si el teléfono ya fue autorizado por USB en
@@ -520,6 +646,254 @@ $('btnCopyUrl').onclick = async () => {
   }
 };
 
+// ── v21.8 · Wi-Fi del servidor + pantalla H.264 + toque ───────────────────────
+let srvMeta = null; // /api/adb/meta: {size:{w,h}, rotation, model, serial}
+let wsInput = null;
+let h264 = null; // {ws, feeder, assembler, decoder, codec, ts, frames, lastW, lastH, retry}
+let h264Wanted = false;
+
+/** Display ACTUAL (px): wm size + rotación (1|3 → ejes intercambiados). */
+function currentDeviceDims() {
+  const size = (srvMeta && srvMeta.size) || (deviceInfo && deviceInfo.resolution);
+  if (!size) return null;
+  const rot = srvMeta ? srvMeta.rotation : 0;
+  return rot === 1 || rot === 3 ? { w: size.h, h: size.w } : { w: size.w, h: size.h };
+}
+
+async function fetchMeta() {
+  if (!INJECTED) return;
+  try {
+    const j = await (await fetch('/api/adb/meta')).json();
+    if (j.ok) {
+      srvMeta = j;
+      log(`display: ${j.size.w}×${j.size.h} · rot ${j.rotation} · ${j.model || j.serial}`);
+    }
+  } catch (_) { /* sin meta: el mapeo cae a deviceInfo.resolution */ }
+}
+
+/** Canal de entrada por servidor (fallback cuando no hay sesión ADB viva). */
+function ensureInputWs() {
+  if (!INJECTED) return null;
+  if (wsInput && wsInput.readyState === 1) return wsInput;
+  if (wsInput && wsInput.readyState === 0) return wsInput;
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  wsInput = new WebSocket(`${proto}//${location.host}/ws/input?token=${encodeURIComponent(TOKEN)}`);
+  wsInput.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
+    if (m.type === 'input-result' && !m.ok) log('input: ' + m.error);
+  };
+  return wsInput;
+}
+
+/** Táctil/teclas/texto: por la sesión ADB viva (USB o /adb-ws) y, si no hay,
+ *  por /ws/input del servidor. Única puerta para la UI. */
+function sendTouch(kind, args) {
+  if (adb) {
+    if (kind === 'tap') return adb.tap(args.x, args.y).catch((e) => log('tap: ' + e.message));
+    if (kind === 'swipe') return adb.swipe(args.x1, args.y1, args.x2, args.y2, args.ms || 300).catch((e) => log('swipe: ' + e.message));
+    if (kind === 'key') return adb.key(args.keycode).catch((e) => log('key: ' + e.message));
+    if (kind === 'text') return adb.text(args.value).catch((e) => log('text: ' + e.message));
+  }
+  const wsi = ensureInputWs();
+  if (wsi && wsi.readyState === 1) {
+    wsi.send(JSON.stringify({ id: 'in' + (++cmdSeq), kind, args }));
+  } else if (wsi && wsi.readyState === 0) {
+    wsi.addEventListener('open', () => wsi.send(JSON.stringify({ id: 'in' + (++cmdSeq), kind, args })), { once: true });
+  } else {
+    log('Sin canal de entrada: conecta el teléfono (USB o Wi-Fi del servidor).');
+  }
+}
+
+// Toque directo sobre el canvas: tap si es un clic corto, swipe si arrastra.
+let ptrDown = null;
+$('screen').addEventListener('pointerdown', (e) => {
+  const cv = $('screen');
+  ptrDown = {
+    x: (e.offsetX * cv.width) / cv.clientWidth,
+    y: (e.offsetY * cv.height) / cv.clientHeight,
+    t: performance.now(),
+  };
+});
+$('screen').addEventListener('pointerup', (e) => {
+  if (!ptrDown) return;
+  const cv = $('screen');
+  const p = { x: (e.offsetX * cv.width) / cv.clientWidth, y: (e.offsetY * cv.height) / cv.clientHeight };
+  const dev = currentDeviceDims();
+  const a = mapToDevice(ptrDown.x, ptrDown.y, cv.width, cv.height, dev ? dev.w : 0, dev ? dev.h : 0);
+  const b = mapToDevice(p.x, p.y, cv.width, cv.height, dev ? dev.w : 0, dev ? dev.h : 0);
+  const dt = performance.now() - ptrDown.t;
+  ptrDown = null;
+  if (!a || !b) return log('Toque: aún no sé el tamaño del display (conecta o revisa /api/adb/meta).');
+  const dist = Math.hypot(a.x - b.x, a.y - b.y);
+  if (dist < 12) sendTouch('tap', { x: a.x, y: a.y });
+  else sendTouch('swipe', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, ms: Math.max(120, Math.round(dt)) });
+});
+
+document.querySelectorAll('.keybtn').forEach((b) => {
+  b.onclick = () => sendTouch('key', { keycode: +b.dataset.key });
+});
+$('btnTxt').onclick = () => {
+  const v = $('txtIn').value;
+  if (!v) return;
+  $('txtIn').value = '';
+  sendTouch('text', { value: v });
+};
+$('txtIn').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $('btnTxt').onclick();
+});
+
+function stopH264(silent) {
+  h264Wanted = false;
+  if (!h264) return;
+  const h = h264;
+  h264 = null;
+  clearTimeout(h.retry);
+  try { h.ws.close(); } catch (_) {}
+  try { if (h.decoder && h.decoder.state !== 'closed') h.decoder.close(); } catch (_) {}
+  $('btnH264').disabled = false;
+  $('btnH264Stop').disabled = true;
+  if (!silent) log('Pantalla H.264 apagada.');
+}
+
+function startH264() {
+  if (!INJECTED) return log('El modo H.264 vive en el servidor — abre esta página servida por server.js (no el helper).');
+  if (!window.VideoDecoder) return log('Este navegador no soporta WebCodecs (VideoDecoder) — usa Chrome/Edge recientes.');
+  if (h264) return;
+  h264Wanted = true;
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsV = new WebSocket(`${proto}//${location.host}/ws/video?token=${encodeURIComponent(TOKEN)}`);
+  wsV.binaryType = 'arraybuffer';
+  const h = { ws: wsV, decoder: null, codec: '', ts: 0, frames: 0, lastW: 0, lastH: 0, retry: null };
+  h264 = h;
+  streaming = false; // una sola fuente manda al canvas
+  $('btnH264').disabled = true;
+  $('btnH264Stop').disabled = false;
+  h.feeder = makeNalFeeder((type, full) => {
+    if (h264 === h) h.assembler.nal(type, full);
+  });
+  h.assembler = makeChunkAssembler((chunk) => {
+    try {
+      if (chunk.type === 'key') {
+        const codec = avcCodecFromSps(chunk.spsPayload);
+        if (codec !== h.codec) {
+          if (h.decoder && h.decoder.state !== 'closed') { try { h.decoder.close(); } catch (_) {} }
+          h.codec = codec;
+          h.decoder = new VideoDecoder({
+            output: (frame) => {
+              if (!h264) { frame.close(); return; }
+              const cv = $('screen');
+              cv.width = frame.displayWidth;
+              cv.height = frame.displayHeight;
+              cv.getContext('2d').drawImage(frame, 0, 0);
+              h.lastW = frame.displayWidth;
+              h.lastH = frame.displayHeight;
+              h.frames++;
+              frame.close();
+            },
+            error: (e) => log('decoder H.264: ' + e.message),
+          });
+          h.decoder.configure({ codec, optimizeForLatency: true }); // sin buffering (informe §6)
+          log('WebCodecs configurado: ' + codec);
+        }
+      }
+      if (!h.decoder || h.decoder.state !== 'configured') return;
+      h.decoder.decode(new EncodedVideoChunk({ type: chunk.type, timestamp: (h.ts += 33333), data: chunk.bytes }));
+    } catch (e) {
+      log('H.264: ' + e.message);
+    }
+  });
+  wsV.onmessage = (ev) => {
+    if (typeof ev.data === 'string') {
+      let m; try { m = JSON.parse(ev.data); } catch (_) { return; }
+      if (m.type === 'video-error') { log('video: ' + m.message); stopH264(true); }
+      else if (m.type === 'video-note') log('video (servidor): exit ' + m.code + ' ' + (m.stderr || ''));
+      else if (m.type === 'video-start') log(`H.264: ${m.size} @ ${(m.bitRate / 1e6).toFixed(1)} Mbps · reinicio cada ${m.timeLimitSec}s (límite de screenrecord)`);
+      return;
+    }
+    if (h264 === h) h.feeder.feed(new Uint8Array(ev.data));
+  };
+  wsV.onclose = () => {
+    if (h264 === h) {
+      h264 = null;
+      if (h264Wanted) {
+        log('stream H.264 cerrado — reintentando en 1 s');
+        h.retry = setTimeout(() => { if (h264Wanted) startH264(); }, 1000);
+      }
+    }
+  };
+}
+
+setInterval(() => {
+  if (h264) {
+    $('h264Info').textContent = `H.264 ${h264.frames} fps · ${h264.lastW || 0}×${h264.lastH || 0}`;
+    h264.frames = 0;
+  }
+}, 1000);
+
+$('btnH264').onclick = () => startH264();
+$('btnH264Stop').onclick = () => stopH264();
+
+/** Wi-Fi del servidor: `adb connect` primero (el adb del SERVIDOR debe conocer
+ *  el teléfono para screenrecord/input) y ADB del navegador por /adb-ws. */
+$('btnWifiSrv').onclick = async () => {
+  if (!INJECTED) return log('Este modo requiere la página servida por server.js (no el helper local).');
+  let host = '';
+  let port = '';
+  const raw = ($('wifiHost').value || '').trim();
+  const m = raw.match(/^([\w.\-]+)(?::(\d+))?$/);
+  if (m) {
+    host = m[1];
+    port = m[2] || '5555';
+  } else {
+    // Sin dato del dueño: el servidor dice su teléfono por defecto (la verdad
+    // de su LAN) — cero direcciones que teclear, todo dentro de la preview.
+    try {
+      const j = await (await fetch('/api/adb')).json();
+      host = j.wifi && j.wifi.host;
+      port = j.wifi && j.wifi.port;
+    } catch (_) {}
+    if (!host) return log('Escribe la IP del teléfono — ejemplo: 192.168.0.229:5555');
+    log(`Sin IP escrita — uso la que conoce este servidor: ${host}:${port}`);
+  }
+  try {
+    log(`Wi-Fi servidor: adb connect ${host}:${port}…`);
+    const r = await fetch('/api/adb/connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host, port: +port }),
+    });
+    const j = await r.json();
+    log('adb connect → ' + (j.output || j.error || ('HTTP ' + r.status)));
+    if (!j.ok) return log('El servidor no alcanzó el teléfono: ¿misma red? ¿«adb tcpip 5555» se pasó una vez por cable?');
+    try { localStorage.setItem('valora.phone', `${host}:${port}`); } catch (_) {}
+    await connectPhone('server');
+  } catch (e) {
+    log('ERROR Wi-Fi servidor: ' + e.message);
+  }
+};
+
+async function pollAdb() {
+  if (!INJECTED) return;
+  const el = $('stAdb');
+  try {
+    const j = await (await fetch('/api/adb')).json();
+    const n = (j.devices || []).filter((d) => d.state === 'device').length;
+    if (!j.adb) {
+      el.textContent = 'adb: ausente en el servidor';
+      el.className = 'pill off';
+    } else if (n) {
+      el.textContent = `adb: ${n} dispositivo(s)`;
+      el.className = 'pill on';
+    } else {
+      el.textContent = 'adb: sin dispositivos';
+      el.className = 'pill off';
+    }
+  } catch (_) {
+    el.textContent = 'adb: ?';
+    el.className = 'pill';
+  }
+}
+
 async function pollHealth() {
   const base = relayOrigin();
   if (!base) { $('stServer').textContent = 'servidor: sin configurar'; return; }
@@ -575,6 +949,17 @@ try {
   // Modo local: el helper ES quien sirve esta página → mismo origen siempre.
   $('wsUrl').value = localStorage.getItem('valora.helper') || (local ? 'ws://' + location.host : 'ws://127.0.0.1:8790');
 } catch (_) { $('wsUrl').value = 'ws://127.0.0.1:8790'; }
+
+// v21.8: la tarjeta del servidor solo tiene sentido servida por server.js;
+// en modo helper (8790) no existen /api/adb* — ocultarla es la honestidad.
+if (!INJECTED) {
+  $('srvCard').hidden = true;
+  $('srvCard').open = false;
+} else {
+  try { $('wifiHost').value = localStorage.getItem('valora.phone') || ''; } catch (_) {}
+  pollAdb();
+  setInterval(pollAdb, 8000);
+}
 
 connectServer();
 autoConnectUsb('Página abierta');

@@ -1,9 +1,12 @@
-# Puente de depuración remota · Valora-VE (v21.7)
+# Puente de depuración remota · Valora-VE (v21.8)
 
 Depuración y pruebas en tiempo real del teléfono Android del dueño desde la
 máquina del desarrollador — sin USB del desarrollador, sin servicios de pago,
-sin nube intermedia. **v21.7 — «todo dentro de la preview»**: el modo sin
-PC ya no necesita helper — la PROPIA app abre el canal hacia el relay.
+sin nube intermedia, **sin scrcpy**. **v21.8 — «Wi-Fi del servidor, sin
+helper»**: cuando este servidor alcanza el teléfono (LAN), la preview sirve
+Wi-Fi completo — ADB real (`/adb-ws`), pantalla H.264 (~15-30 fps,
+`screenrecord` + WebCodecs) y toque/teclas (`/ws/input`) — todo dentro de la
+preview, cero programas en la PC.
 
 ```
 Modo A (USB · todo en la preview del navegador)
@@ -14,33 +17,54 @@ Modo A (USB · todo en la preview del navegador)
 │   127.0.0.1:8090   │                        WebSocket │ (rol bridge)
 └────────────────────┘                            ┌──────▼───────────┐
                                                   │ server.js (relay)│
-Modo B (SIN PC · v21.7)                           │ / · /pilot · ws  │
-┌────────────────────┐   WebSocket SALIENTE       └──────┬───────────┘
-│ Teléfono Android   │──────────────────────────────────►│ (rol bridge)
-│ · la APP es el     │   (sin helper, sin cable,         │
-│   puente (DevRelay)│    sin programas en la PC)        │
-└────────────────────┘                                   │
-                                                  WebSocket / SSE
+                                                  │ / · /pilot · ws  │
+                                                  └──────────────────┘
+
+Modo B (SIN PC · v21.7)
+┌────────────────────┐   WebSocket SALIENTE   ┌──────────────────────┐
+│ Teléfono Android   │───────────────────────►│ server.js (relay)    │
+│ · la APP es el     │  (sin helper, sin      │ (rol bridge)         │
+│   puente (DevRelay)│   cable, sin programas │                      │
+└────────────────────┘   en la PC)            └──────────┬───────────┘
+                                                 WebSocket / SSE
                                             ┌──────▼───────────────┐
                                             │ Piloto (desarrollador)│
                                             │ /pilot · pilot_cli.js │
                                             └───────────────────────┘
+
+Modo C (Wi-Fi del SERVIDOR · v21.8, sin helper ni cable del dev)
+┌────────────────────┐   ADB/TCP :5555    ┌───────────────────────────┐
+│ Teléfono Android   │◄──────────────────►│ server.js (relay, :3000)  │
+│ · adbd en Wi-Fi    │  /adb-ws (bytes)   │ · puente WS↔TCP /adb-ws   │
+│ · 192.168.0.229    │  screenrecord H.264→│ · /ws/video (binario)    │
+│                    │  `adb shell input` │ · /ws/input (JSON)        │
+└────────────────────┘                    └──────────┬────────────────┘
+                                          WebSocket │ token de sesión
+                                          ┌─────────▼───────────┐
+                                          │ Navegador del dueño  │
+                                          │ · ADB real (adb.js)  │
+                                          │ · WebCodecs H.264    │
+                                          └──────────────────────┘
+Requiere platform-tools en la máquina del servidor (`ADB_BIN`) y que el
+servidor esté en la MISMA red que el teléfono (el preview en la nube no llega
+a la LAN: `/api/adb` lo dice honesto y la UI degrada a USB / puente de app).
 ```
 
 ## Piezas
 
 | Archivo | Qué es |
 |---|---|
-| `server.js` | Relay WebSocket + páginas. Puerto 3000. Token en `.token`. |
+| `server.js` | Relay WebSocket + páginas + ADB del servidor: `/adb-ws` (WS↔TCP), `/ws/video` (screenrecord H.264 con reinicio/backpressure), `/ws/input` (tap/swipe/key/text), `/api/adb[+/connect|/meta]`. Puerto 3000. Token en `.token`. |
 | `public/index.html` | Cliente del DUEÑO: USB (puente) o espectador del puente de la app; transmite y comanda. |
 | `public/adb.js` | Protocolo ADB propio (CNXN/AUTH/OPEN/WRTE) sobre WebUSB o WS. |
 | `public/pilot.html` | Consola visual: ver la pantalla, tocar, comandos de app. |
 | `pilot_cli.js` | Consola del desarrollador por CLI (automatización). |
-| `adb-ws-helper.js` | Helper de la PC del dueño para ADB por Wi-Fi. También SIRVE el cliente en `http://127.0.0.1:8790/` (modo local, sin permiso de red local). |
+| `adb-ws-helper.js` | LEGADO (v21.6): helper de la PC para ADB por Wi-Fi — hoy lo reemplaza el modo «Wi-Fi por el servidor» (v21.8). Se conserva por compatibilidad. |
 | `test_relay.js` | Test E2E del relay (sin hardware): `node test_relay.js`. |
 | `test_adb_keys.js` | Test del keygen/firma RSA-2048 de ADB en Node: `node test_adb_keys.js`. |
 | `test_usb_transport.js` | Test del transporte WebUSB con USBDevice simulado (chooser, configs múltiples, claim ocupado): `node test_usb_transport.js`. |
 | `test_helper_url.js` | Test de la normalización/diagnóstico de la dirección del helper (IP del teléfono vs helper, sin navegador): `node test_helper_url.js`. |
+| `test_server_wifi.js` | Test del servidor v21.8 SIN hardware — adbd MOCK (protocolo ADB real) + adb FALSO: `/api/adb*`, puente `/adb-ws` con el CLIENTE REAL (ValoraAdb: handshake + shell + screencap + tap), `/ws/input` (redondeo/escape/keycode), `/ws/video` (annex-b SPS+PPS+IDR), funciones puras del cliente (feeder/assembler/codec/mapeo): `node test_server_wifi.js`. |
 ## Del lado de la app (repo `lib/services/*`)
 
 **Servidor de pruebas local (v21.6)** — escucha SOLO en `127.0.0.1:8090` del
@@ -86,22 +110,34 @@ token de sesión + interruptor con auto-reconexión al arrancar).
      vuelve a meter el cable. En Windows la primera vez hace falta el driver
      WinUSB (Google USB driver). El cliente también cambia solo a la
      configuración USB donde vive ADB (algunos MTK lo exponen fuera de la 1).
-2. **Wi-Fi con helper (avanzado, opcional):** una vez por cable:
-   `adb tcpip 5555`; luego en la PC:
-   `node tools/remote-bridge/adb-ws-helper.js <ip-del-teléfono> 5555` y usa la
-   **página local** `http://127.0.0.1:8790/` (sin permiso de red local; token
-   autollenable vía `<relay>/api/token`). Ojo con las dos direcciones: el
-   campo del cliente pide el HELPER (`ws://127.0.0.1:8790` — acepta
-   `127.0.0.1:8790` y `localhost:8790` sin esquema); la IP del TELÉFONO va en
-   el comando. **`ws://…` NUNCA se abre en la barra del navegador** (Chrome:
-   `ERR_UNKNOWN_URL_SCHEME`) — va solo en el campo del cliente.
-3. **Autorización del teléfono (USB/Wi-Fi):** al conectar verás en el log
+2. **Wi-Fi por el servidor (v21.8 — Wi-Fi completo dentro de la preview):** en
+   la máquina que corre `server.js` instala platform-tools (o `ADB_BIN=<ruta>`)
+   y está en la misma red que el teléfono. Una vez por cable: `adb tcpip 5555`.
+   En el cliente: **«Wi-Fi por el servidor» → «Conectar por Wi-Fi»** — sin
+   escribir NADA (el servidor usa el teléfono por defecto de su config) el
+   cliente hace `adb connect`, habla ADB REAL por `/adb-ws` (misma pila que
+   USB: shell, screencap, appcmd) y tecla/toque van por la sesión ADB.
+   **Pantalla H.264 (~15-30 fps):** botón «▶ Pantalla H.264» —
+   `screenrecord --output-format=h264` + WebCodecs (Annex-B, sin scrcpy);
+   reinicio transparente cada 170 s (tope de screenrecord en Android <14) y
+   backpressure (> 2 MB acumulados → se reinicia el stream). Mapeo de toque
+   canvas→display con `wm size` + rotación (`/api/adb/meta`). Sin multi-touch
+   (límite de `adb shell input`, documentado). Sin audio y pantallas
+   `FLAG_SECURE` salen negras (límites del método, no del puente).
+   Env del servidor: `ADB_BIN`, `ADB_SERIAL`, `ADB_WIFI_HOST`, `ADB_WIFI_PORT`,
+   `VIDEO_BIT_RATE` (4 Mbps), `VIDEO_SIZE` (vacío = nativa), `VIDEO_TIME_LIMIT` (170).
+3. **Wi-Fi con helper (LEGADO v21.6):** `node tools/remote-bridge/adb-ws-helper.js
+   <ip-del-teléfono> 5555` + página local `http://127.0.0.1:8790/`. Hoy el modo
+   2 lo reemplaza (sin helper). **`ws://…` NUNCA se abre en la barra del
+   navegador** (Chrome: `ERR_UNKNOWN_URL_SCHEME`) — la lección del dueño que
+   motivó los modos A/B/C todo-en-la-preview.
+4. **Autorización del teléfono (USB/Wi-Fi):** al conectar verás en el log
    «Clave publicada — MIRA EL TELÉFONO»: acepta «¿Permitir depuración USB?»
    de la clave **valora-bridge** (marca «Siempre» y no vuelve a preguntar).
-4. Activa el servidor de pruebas en Ajustes (y pega el token de la app en el
+5. Activa el servidor de pruebas en Ajustes (y pega el token de la app en el
    piloto para `/erase`).
-5. La pantalla empieza a transmitir (1–3 fps por USB; ≈1 fps por el puente
-   de la app).
+6. La pantalla empieza a transmitir (1–3 fps por USB; ≈1 fps por el puente
+   de la app; 15–30 fps por H.264 del servidor).
 
 Notas: si abres DOS pestañas del cliente, la más nueva TOMA EL CONTROL (la
 vieja se cierra con aviso — cero puentes zombis). La página abierta SIN

@@ -6,7 +6,7 @@ publish_to: 'none'
 # relay del preview (rol bridge) y sirve pantalla + /health /test /nav /erase
 # sin helper en la PC del dueño («todo dentro de la preview»); captura de UI
 # viva con RepaintBoundary global (JPEG vía flutter_image_compress).
-version: 1.14.0-beta+41
+version: 1.14.0-beta+42
 
 environment:
   sdk: ^3.9.2

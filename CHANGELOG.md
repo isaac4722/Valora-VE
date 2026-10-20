@@ -1,6 +1,73 @@
 # Changelog
 
 
+## 1.14.0-beta+42 · v21.8 — Wi-Fi del servidor, sin helper (informe «sin scrcpy»)
+
+El dueño entregó el informe técnico completo (ruta A: ADB puro, sin scrcpy —
+`screenrecord` H.264 + `adb shell input`, WebCodecs en el cliente) y su
+directriz viva: **todo dentro de la preview**. Este release implementa las
+fases 0-2 del informe sobre el puente existente, más el puente WS↔TCP que
+quedaba pendiente de la ronda anterior.
+
+- **`server.js` — Wi-Fi del servidor (fases 0-2 del informe):**
+  - `WS /adb-ws` (token): puente WS↔TCP al adbd del teléfono
+    (`ADB_WIFI_HOST:ADB_WIFI_PORT`, por defecto 192.168.0.229:5555) — el
+    navegador habla ADB REAL con la MISMA pila de adb.js que USB (patrón
+    «server-client transport» de Tango ADB); timeout TCP de 8 s con
+    diagnóstico. El helper de la PC (adb-ws-helper.js) queda LEGADO.
+  - `WS /ws/video`: `adb -s SERIAL exec-out screenrecord
+    --output-format=h264 --bit-rate 4000000 --time-limit 170 -` en bruto —
+    sin scrcpy, sin instalación en el teléfono. Un proceso por cliente;
+    reinicio transparente en el MISMO WebSocket (nuevo IDR, backoff
+    exponencial 0.5→8 s), tope 170 s < límite 180 s de screenrecord
+    (Android <14) y backpressure: si el navegador acumula > 2 MB
+    (bufferedAmount) se mata el proceso antes de agotar memoria (informe §5).
+  - `WS /ws/input`: tap|swipe|key|text vía `adb shell input` con cola serial;
+    keycodes nombrados (back/home/recents/power/wake…); texto con espacios
+    como `%s` y metacaracteres del shell escapados (informe §7); coords en
+    PÍXELES DEL DISPLAY ACTUAL (el cliente mapea).
+  - `GET /api/adb` (¿hay adb? devices parseados + wifi + video config),
+    `POST /api/adb/connect` (adb connect, refresca cache), `GET /api/adb/meta`
+    (wm size con Override > Physical + SurfaceOrientation de dumpsys input).
+    El preview en la nube no llega a la LAN: `/api/adb` lo dice honesto.
+- **`public/index.html` — cliente:** tarjeta «Wi-Fi por el servidor — sin
+  helper (v21.8)»: un clic hace `adb connect` + ADB real por `/adb-ws`
+  (sin escribir NADA: usa el teléfono por defecto del servidor) y muestra
+  `adb: N dispositivo(s)` honesto. Pantalla H.264: decodificador WebCodecs
+  Annex-B (bufferiza hasta SPS+PPS+IDR — no puede arrancar a mitad de GOP;
+  string de codec DERIVADO del SPS real, no hardcodeado; timestamps
+  sintéticos 30 fps; optimizeForLatency). Toque directo en el canvas:
+  tap (clic corto) y swipe (arrastre) con mapeo canvas→display
+  (wm size + rotación, ejes intercambiados a 90°/270°), por la sesión ADB
+  viva y, si no la hay, por `/ws/input`; botones Atrás/Home/Recientes/Power
+  + campo de texto. El helper baja a tarjeta LEGADO (se conserva el test).
+- **`public/adb.js` — DOS bugs de protocolo reales destapados por el adbd
+  MOCK del test (nunca se había completado un handshake con frames reales):
+  ① el magic del frame se comparaba SIN `>>> 0` — el XOR int32 da negativo y
+  CADA frame se leía como corrupto (resync byte a byte, handshake imposible);
+  ② los servicios pelados (`wm size`, `input tap…`) viajaban SIN el prefijo
+  `shell:` que adbd exige, y `exec()` NO acumulaba la WRTE de respuesta
+  (`else if (s.collect)` con `collect` nunca asignado) — devolvía vacío.
+  Corregidos: prefijo `shell:` automático para servicios sin prefijo
+  conocido (exec:/tcp:/sync:/… intactos) y acumulación por defecto.
+- **`test_server_wifi.js` (nuevo, 14 comprobaciones, SIN hardware):** adbd
+  MOCK que habla el protocolo ADB real (CNXN/AUTH/OPEN/OKAY/WRTE/CLSE con
+  checksum y magic) + adb FALSO por argv. Cubre `/api/adb*`, el puente
+  `/adb-ws` con el CLIENTE REAL (ValoraAdb desde Node: handshake, shell,
+  screencap PNG binario-seguro, tap → shell:input), `/ws/input` (redondeo,
+  escape, keycode), `/ws/video` (video-start + annex-b con SPS+PPS+IDR),
+  close 4001 sin token y las funciones puras del cliente extraídas de
+  index.html (feeder con NALUs partidas entre mensajes, assembler,
+  avcCodecFromSps → avc1.640028, mapToDevice). Suites previas intactas:
+  relay 13/13 · helper_url 13/13 · USB 6/6 · RSA 4/4.
+- Env del servidor: `ADB_BIN`, `ADB_SERIAL`, `ADB_WIFI_HOST`, `ADB_WIFI_PORT`,
+  `VIDEO_BIT_RATE`, `VIDEO_SIZE` (vacío = nativa), `VIDEO_TIME_LIMIT`.
+- Gates: analyze 0 · 265/265 · suites del puente 14+13+13+6+4 · lib/ limpia ·
+  Impeccable 4.5.2 detect [] · agent-browser 390×844: conexión Wi-Fi real
+  dentro de la preview contra adbd mock (p3000_v218_wifi_servidor.png:
+  adb connect → handshake → «Teléfono conectado: Android (Wi-Fi) 720x1600» →
+  display meta → keyevent → H.264 con codec derivado avc1.640028).
+
 ## 1.14.0-beta+41 · v21.7 — Puente sin PC («todo dentro de la preview»)
 
 El dueño pegó `ws://127.0.0.1:8790` en la barra del navegador (`ERR_UNKNOWN_URL_SCHEME`)

@@ -416,16 +416,24 @@ class AdbConnection {
   }
 
   /** Abre un stream de servicio. Resuelve (OKAY del dispositivo) con el
-   *  PROPIO registro del stream — s.localId, s.remoteId, s.write/stream. */
+   *  PROPIO registro del stream — s.localId, s.remoteId, s.write/stream.
+   *  v21.8: los comandos pelados («wm size», «input tap …») viajan como
+   *  `shell:<cmd>` — adbd rechaza servicios desconocidos; los prefijos
+   *  conocidos (exec:/tcp:/sync:/…) pasan intactos. */
   open(service, { onData, onClose } = {}) {
+    const KNOWN = /^(shell:|exec:|tcp:|localabstract:|localfilesystem:|localreserved:|sync:|jdwp:|framebuffer:|track-|reverse:|host:|root:|usb:|abb:|abb_exec:|features:|reconnect:|banner:|mdns:|pair:|tls:)/;
+    const svc = KNOWN.test(service) ? service : 'shell:' + service;
     return new Promise((resolve, reject) => {
       const localId = this.nextLocalId++;
       const s = {
         localId,
-        service,
+        service: svc,
         remoteId: 0,
         closed: false,
         chunks: [],
+        // v21.8: sin onData la WRTE entrante debe ACUMULARSE (exec lo espera);
+        // antes se caía en `else if (s.collect)` y exec devolvía vacío.
+        collect: !onData,
         onData,
         onClose,
         resolve,
@@ -436,7 +444,7 @@ class AdbConnection {
         }, 15000),
       };
       this.streams.set(localId, s);
-      this._send(A_OPEN, localId, 0, enc(service));
+      this._send(A_OPEN, localId, 0, enc(svc));
     });
   }
 
@@ -505,7 +513,11 @@ class AdbConnection {
       const dv = new DataView(this._buf.buffer, this._buf.byteOffset);
       const cmd = dv.getUint32(0, true);
       const magic = dv.getUint32(20, true);
-      if ((cmd ^ 0xffffffff) !== magic) {
+      // v21.8: el XOR hay que traerlo a SIN SIGNO (>>> 0) — getUint32 devuelve
+      // sin signo y el XOR int32 puede ser negativo; sin el >>> 0 CADA frame
+      // se leía como corrupto y el handshake nunca completaba (lo destapó el
+      // adbd mock del test v21.8; contra el teléfono real no se había llegado).
+      if (((cmd ^ 0xffffffff) >>> 0) !== magic) {
         // Frame corrupto: descarta un byte y reintenta (resincroniza).
         this._buf = this._buf.subarray(1);
         continue;
