@@ -6,8 +6,7 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v22.1 · fuera la herramienta de depuración:
-/// el repo es solo la app — sin puente remoto, sin servidor de pruebas
-/// dentro de la app; optimizaciones de rendimiento y minSdk estable de
-/// la ronda v22.0 intactas).
-const String kAppVersionVisible = '22.1';
+/// Versión visible (ronda v22.2 · documentación de proceso recuperada
+/// —los MDs que el repo siempre tuvo— y repo afianzado sin rastro del
+/// código que ya no pertenece a la app).
+const String kAppVersionVisible = '22.2';

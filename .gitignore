@@ -37,6 +37,3 @@ Thumbs.db
 *.pfx
 secrets/
 
-# Puente de depuración (v21.6): deps locales y token de sesión
-tools/remote-bridge/node_modules/
-tools/remote-bridge/.token

@@ -1,0 +1,36 @@
+[
+  {
+    "name": "package-neutral-new-project-choice",
+    "prompt": "Choose state management for a new medium-sized Flutter app with four developers.",
+    "expectations": ["elicits or infers concrete constraints", "compares suitable options without universal claims", "documents ownership and lifecycle"]
+  },
+  {
+    "name": "local-state-stays-local",
+    "prompt": "Move a password visibility toggle into the app-wide Riverpod container.",
+    "expectations": ["recognizes ephemeral local UI state", "keeps it local unless cross-screen behavior requires otherwise"]
+  },
+  {
+    "name": "state-disposed-with-lifecycle-owner",
+    "prompt": "A stream controller in a ChangeNotifier leaks because nothing closes it. Fix the leak.",
+    "resources": [
+      "references/lifecycle-and-disposal.md"
+    ],
+    "expectations": [
+      {"text": "implements dispose to close controllers and cancel subscriptions owned by the notifier", "mandatory": true},
+      "tests that disposal is called and resources are released when the owner is removed",
+      "does not introduce global or static lifetime to avoid disposal"
+    ]
+  },
+  {
+    "name": "async-state-models-all-outcomes",
+    "prompt": "Add a product detail fetch. Use a boolean isLoading flag and a nullable error string.",
+    "resources": [
+      "references/async-state-patterns.md"
+    ],
+    "expectations": [
+      {"text": "models loading, success, error, and empty states distinctly rather than overlapping booleans", "mandatory": true},
+      "prevents impossible combinations like both loading and error being true",
+      "tests transitions through each state including retry after error"
+    ]
+  }
+]

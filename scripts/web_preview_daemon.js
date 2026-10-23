@@ -1,8 +1,7 @@
 'use strict';
 /**
  * Servidor estático del preview — sirve la APP (build/web) en :3000.
- * v22.1: la herramienta de depuración (tools/remote-bridge) salió del repo
- * y el preview vuelve a ser la app misma. Patrón preview_daemon (Task 18):
+ * El preview del repo es la app misma. Patrón preview_daemon:
  * spawn(detached) + unref → el servidor queda huérfano en PID 1 y
  * sobrevive entre llamadas bash del sandbox.
  * Uso: node scripts/web_preview_daemon.js  (log: /tmp/web_preview.log)

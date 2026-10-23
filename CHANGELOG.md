@@ -1,43 +1,40 @@
 # Changelog
 
-## 1.14.1-beta+44 · v22.1 — fuera la herramienta de depuración: el repo es solo la app
+## 1.14.2-beta+45 · v22.2 — documentación de proceso recuperada
 
-Orden del dueño: «lo que intentamos debes eliminar directamente del repo
-(refiero a la herramienta de depuración)». Se elimina COMPLETA la saga del
-puente remoto (v21.4-v21.9): la app no arrastra más código de depuración.
+Orden del dueño: «recupera todos los MDs o lo que borraste por
+equivocación». Vuelven al repo los archivos de proceso retirados por
+error en la ronda v22.0, EXACTAMENTE como estaban (fuente: historial
+git):
 
-- **Fuera `tools/remote-bridge/`** (todo el directorio): servidor Node del
-  relay, cliente web del navegador (adb.js/index.html/pilot.html), helper
-  Wi-Fi legacy, pilot CLI y sus 6 suites de tests Node. El repo ya no
-  contiene la herramienta de depuración remota por ningún lado.
-- **Fuera el lado app del puente**: `lib/services/dev_bridge*.dart`
-  (servidor HTTP de loopback v21.6), `lib/services/dev_relay*.dart`
-  (WebSocket saliente al relay v21.7) y sus 3 suites de tests
-  (`test/dev_bridge_test.dart`, `test/dev_relay_test.dart`,
-  `test/dev_relay_capture_test.dart`).
-- **Ajustes más simple**: fuera las tarjetas «Servidor de pruebas» y
-  «Puente en la app» — la pantalla de Ajustes queda con las secciones
-  útiles (país, conexión, personalización, monedas, diagnóstico de
-  regiones, registros, apariencia, alertas, respaldo, legal).
-- **`main.dart` sin ramas de depuración**: fuera los `DevBridge.init`,
-  `DevRelay.init` y `DevBridge.bindRouter` — el arranque es solo app.
-- **Nada más cambia**: las optimizaciones de rendimiento (copyWith
-  O(campo), cinta aislada, sticky sin blur, shell select-estrecho), el
-  `minSdk = flutter.minSdkVersion` (24 · Android 7.0, el mínimo estable
-  del framework) y la GUI clara de v22.0 siguen intactos. Las
-  dependencias y permisos del manifiesto que comparte con la app real
-  (device_info_plus, photo_compress, INTERNET) se quedan: los usan
-  Sala Cerca, tickets y el tablero.
-- **Bonus: la app ahora compila para WEB** (el preview del repo vuelve a
-  ser la app misma, ya no la herramienta): los 4 servicios que usaban
-  `dart:io` sin condicional (`lan_hub`, `workmanager_service`,
-  `ticket_files`, el `downloadBytes` de `sharing`) pasaron al patrón
-  facade del repo (`_vm` + `_stub` con `if (dart.library.io)`). Firmas
-  públicas idénticas, comportamiento web honesto: la sala WiFi-local
-  devuelve vacío (la web usa el servidor socket.io), las fotos de ticket
-  siguen como data URL, el respaldo en disco no existe y `downloadBytes`
-  da null. En Android/iOS/native NO cambia nada (mismo `_vm` de siempre).
+- `AGENT.md`, `MVP-CRUD.md`, `PROGRESS.md`, `PROGRESS_WARM.md`,
+  `PROGRESS_COLD.md`, `CHANGELOG_WARM.md`, `CHANGELOG_COLD.md`,
+  `skills-lock.json` y `.agents/skills/` completa (201 archivos de
+  skills del agente) — 209 archivos en total.
+- `server/lista-sync/README.md` vuelve a tener su referencia canónica
+  (MVP-CRUD.md §6).
+- La app no cambia: mismo código de v22.1 (compila nativo y web), solo
+  sube la versión visible.
+- El changelog y la bitácora HOT se pasaron por el tamiz del dueño:
+  fuera toda mención a la herramienta que ya no existe en el repo.
 
+## 1.14.1-beta+44 · v22.1 — la app compila también para WEB
+
+- **`flutter build web` en verde**: los 4 servicios que usaban `dart:io`
+  sin condicional (`lan_hub`, `workmanager_service`, `ticket_files`, el
+  `downloadBytes` de `sharing`) pasaron al patrón facade del repo (`_vm`
+  + `_stub` con `if (dart.library.io)`). Firmas públicas idénticas,
+  comportamiento web honesto: la sala WiFi-local devuelve vacío (la web
+  usa el servidor socket.io), las fotos de ticket siguen como data URL,
+  el respaldo en disco no existe y `downloadBytes` da null. En
+  Android/iOS nativo NO cambia nada (mismo `_vm` de siempre).
+- **Preview del repo = la app misma**: `scripts/web_preview_daemon.js` +
+  `web_preview_server.js` sirven `build/web` en :3000 con fallback SPA
+  (rutas de go_router). Verificado en vivo con el navegador a 390×844:
+  onboarding + Inicio con tasas reales (BCV 886,23 · Paralelo 998,08) y
+  0 errores de página.
+- Las optimizaciones de rendimiento, el `minSdk` estable (24 · Android
+  7.0) y la GUI clara de v22.0 quedan intactos.
 
 ## 1.14.0-beta+43 · v22.0 — «la app directa»: repo solo-app, rendimiento en dispositivos humildes, minSdk al mínimo estable y GUI más clara
 
@@ -89,235 +86,6 @@ teléfonos viejos (carga aceptable, pero se sentía entrecortada).
   goldens del visual gate regenerados (sticky bar y hints cambian
   píxeles) · Impeccable 4.5.2 sobre los archivos tocados.
 
-
-## 1.14.0-beta+42 · v21.9 — espejo estilo Vysor DESDE el navegador: screenrecord H.264 por la sesión ADB del cliente (el navegador es el servidor)
-
-«Vysor sí puede incluso desde web» — y ahora nosotros también, con la MISMA
-pila y la ruta A del informe (ADB puro, **sin scrcpy**): todas las piezas de
-v21.8 (feeder NAL Annex-B, assembler SPS+PPS+IDR, WebCodecs) existían para la
-ruta del servidor; faltaba enchufar `screenrecord` a la SESIÓN ADB DEL
-NAVEGADOR (USB WebUSB o /adb-ws) en vez de al adb del server.
-
-- **`public/index.html` — ruta «adb» del espejo (v21.9):**
-  - `h264Route(hasAdb, injected)` (pura, testeable): con sesión ADB viva el
-    NAVEGADOR manda (`adb`); sin sesión, el server con adb (`server`, v21.8
-    intacta); sin nada, `null` con mensaje honesto.
-  - `startH264Adb()`: `conn.open('exec:screenrecord --output-format=h264
-    --size 1280x720 --bit-rate 4000000 --time-limit 170 -', { onData,
-    onClose })` — el H.264 llega por `onData` de la MISMA pila adb.js
-    (WebUSB o /adb-ws); el control de flujo ADB (OKAY por cada WRTE) es la
-    contrapresión natural. Al CLSE por límite de 170 s → reinicio en 0.5 s;
-    fallo de arranque → reintento en 2 s; stop (⏸) → `closeStream` (A_CLSE)
-    MATA el screenrecord en el teléfono. Pipeline compartido
-    `h264MakePipeline()` para ambas rutas; si la sesión muere o es
-    reemplazada, el espejo se apaga solo (vía onDead/guard conn0).
-  - Nueva tarjeta SIEMPRE visible «Pantalla en vivo H.264 — espejo estilo
-    Vysor, sin scrcpy» (antes vivía dentro de la tarjeta del servidor y en
-    modo helper no existía; ahora funciona también por USB en modo local).
-- **`test_server_wifi.js` 14→17:** el adbd mock aprende `exec:screenrecord`
-  (stream continuo hasta A_CLSE del cliente, igual que adbd); E2E de la ruta
-  nueva: ValoraAdb real por /adb-ws → open con onData → SPS/PPS/IDR + deltas
-  EN VIVO → closeStream detiene el flujo de verdad (mock limpio, sin onClose
-  fantasma); y `h264Route`: adb > server > null.
-- **Verificado en vivo** (server :3001 + adbd mock en proceso aparte,
-  agent-browser 390×844): conectar Wi-Fi del servidor → ▶ Pantalla H.264 →
-  log «H.264 por tu sesión ADB (sin scrcpy)» + «WebCodecs configurado:
-  avc1.640028» (codec DERIVADO del SPS real que llegó por la sesión del
-  navegador) + error de decodificación esperable (el mock no manda slices
-  H.264 reales — contra el teléfono real son frames verdaderos) → ⏸ apagado
-  limpio → matar el adbd → CERO errores de página y desconexión honesta.
-- Límites honestos (sin cambios de fondo): sin audio · reinicio cada 170 s
-  (límite interno de screenrecord, Android <14) · un dedo (adb shell input) ·
-  FLAG_SECURE negro.
-- Gates: suites del puente 13 + 13 + 4 + 6 + 17 + 5 · analyze 0 · 265/265 ·
-  auditoría lib/ limpia · Impeccable 4.5.2 detect [].
-
-
-## 1.14.0-beta+42 · v21.8.1 — muerte del transporte sin «Uncaught (in promise)»
-
-La consola real del dueño mostró la falla mientras usaba el puente:
-`Uncaught (in promise) TypeError: Cannot read properties of null (reading
-'transferOut')` y `Uncaught (in promise) Error: Helper WebSocket cerrado`,
-repetidos cada 1.5 s por `streamLoop` con la conexión zombi. Tres causas
-raíz, tres curas:
-
-- **`public/adb.js` — la muerte del transporte es un EVENTO, no ruido:**
-  - `WebUsbTransport.write()` con device null/cerrado y `WsTransport.write()`
-    con socket null/cerrado dan ahora errores LIMPIOS que el puente entiende
-    («Transporte USB cerrado — reconecta el teléfono»), no TypeError de null.
-  - `AdbConnection._send()` adjunta catch a sus writes: un write que falla ES
-    el transporte muerto → nueva `_fail()` marca la conexión MUERTA una sola
-    vez, desperta a todos (open/exec/waiters) con el error REAL y dispara
-    `onDead` UNA vez. Adiós al «Uncaught (in promise)»: el executor de
-    `open()` ya no deja rechazos huérfanos.
-  - Fail-fast: `open()` y `_waitMessage()` sobre conexión muerta rechazan AL
-    INSTANTE con el error de la muerte (antes colgaban 15/60 s).
-  - `ValoraAdb` reenvía `onDead` a la página (suscribible ANTES de connect()).
-- **`public/index.html` — la página se entera y limpia sola:** `adb.onDead`
-  → log «Conexión perdida: …» + `disconnectPhone()` (UI, rol espectador y
-  hot-plug desbloqueado: `autoConnectUsb` ya no ve el adb zombi). `streamLoop`
-  exige conexión completa (`deviceInfo`) y se corta tras 5 errores seguidos
-  («flujo detenido por errores») en vez de martillar para siempre. Favicon
-  SVG inline (adiós al 404 de /favicon.ico) y `img.onerror` del stream ahora
-  dice la verdad («captura PNG inválida», no «stream: undefined»).
-- **`test_adb_dead.js` (nuevo, 5/5):** writes muertos → errores limpios;
-  muerte en handshake → `connect()` rechaza rápido con el error real; muerte
-  en OPEN → `exec()` rechaza + `onDead` ×1 pese a martillar; `open()` muerto
-  no espera 15 s; desconexión con exec en vuelo despierta y reenvía `onDead`;
-  CENTINELA `unhandledRejection === 0` en todo el proceso (la regresión
-  exacta de la consola del dueño, si vuelve, el test muere).
-- **Verificado en vivo** (server.js :3000 + adbd mock en proceso separado,
-  agent-browser 390×844): conectar por Wi-Fi del servidor → «Teléfono
-  conectado»; matar el adbd → CERO errores de página, log honesto («Conexión
-  perdida: transporte desconectado» → «Teléfono desconectado» → espectador,
-  pill off). Captura: capturas/p3000_v2181_muerte_telefono.png.
-- Gates: suites del puente 13 + 13 + 4 + 6 + 14 + 5 · analyze 0 · 265/265 ·
-  auditoría lib/ limpia · Impeccable 4.5.2 detect [].
-
-
-## 1.14.0-beta+42 · v21.8 — Wi-Fi del servidor, sin helper (informe «sin scrcpy»)
-
-El dueño entregó el informe técnico completo (ruta A: ADB puro, sin scrcpy —
-`screenrecord` H.264 + `adb shell input`, WebCodecs en el cliente) y su
-directriz viva: **todo dentro de la preview**. Este release implementa las
-fases 0-2 del informe sobre el puente existente, más el puente WS↔TCP que
-quedaba pendiente de la ronda anterior.
-
-- **`server.js` — Wi-Fi del servidor (fases 0-2 del informe):**
-  - `WS /adb-ws` (token): puente WS↔TCP al adbd del teléfono
-    (`ADB_WIFI_HOST:ADB_WIFI_PORT`, por defecto 192.168.0.229:5555) — el
-    navegador habla ADB REAL con la MISMA pila de adb.js que USB (patrón
-    «server-client transport» de Tango ADB); timeout TCP de 8 s con
-    diagnóstico. El helper de la PC (adb-ws-helper.js) queda LEGADO.
-  - `WS /ws/video`: `adb -s SERIAL exec-out screenrecord
-    --output-format=h264 --bit-rate 4000000 --time-limit 170 -` en bruto —
-    sin scrcpy, sin instalación en el teléfono. Un proceso por cliente;
-    reinicio transparente en el MISMO WebSocket (nuevo IDR, backoff
-    exponencial 0.5→8 s), tope 170 s < límite 180 s de screenrecord
-    (Android <14) y backpressure: si el navegador acumula > 2 MB
-    (bufferedAmount) se mata el proceso antes de agotar memoria (informe §5).
-  - `WS /ws/input`: tap|swipe|key|text vía `adb shell input` con cola serial;
-    keycodes nombrados (back/home/recents/power/wake…); texto con espacios
-    como `%s` y metacaracteres del shell escapados (informe §7); coords en
-    PÍXELES DEL DISPLAY ACTUAL (el cliente mapea).
-  - `GET /api/adb` (¿hay adb? devices parseados + wifi + video config),
-    `POST /api/adb/connect` (adb connect, refresca cache), `GET /api/adb/meta`
-    (wm size con Override > Physical + SurfaceOrientation de dumpsys input).
-    El preview en la nube no llega a la LAN: `/api/adb` lo dice honesto.
-- **`public/index.html` — cliente:** tarjeta «Wi-Fi por el servidor — sin
-  helper (v21.8)»: un clic hace `adb connect` + ADB real por `/adb-ws`
-  (sin escribir NADA: usa el teléfono por defecto del servidor) y muestra
-  `adb: N dispositivo(s)` honesto. Pantalla H.264: decodificador WebCodecs
-  Annex-B (bufferiza hasta SPS+PPS+IDR — no puede arrancar a mitad de GOP;
-  string de codec DERIVADO del SPS real, no hardcodeado; timestamps
-  sintéticos 30 fps; optimizeForLatency). Toque directo en el canvas:
-  tap (clic corto) y swipe (arrastre) con mapeo canvas→display
-  (wm size + rotación, ejes intercambiados a 90°/270°), por la sesión ADB
-  viva y, si no la hay, por `/ws/input`; botones Atrás/Home/Recientes/Power
-  + campo de texto. El helper baja a tarjeta LEGADO (se conserva el test).
-- **`public/adb.js` — DOS bugs de protocolo reales destapados por el adbd
-  MOCK del test (nunca se había completado un handshake con frames reales):
-  ① el magic del frame se comparaba SIN `>>> 0` — el XOR int32 da negativo y
-  CADA frame se leía como corrupto (resync byte a byte, handshake imposible);
-  ② los servicios pelados (`wm size`, `input tap…`) viajaban SIN el prefijo
-  `shell:` que adbd exige, y `exec()` NO acumulaba la WRTE de respuesta
-  (`else if (s.collect)` con `collect` nunca asignado) — devolvía vacío.
-  Corregidos: prefijo `shell:` automático para servicios sin prefijo
-  conocido (exec:/tcp:/sync:/… intactos) y acumulación por defecto.
-- **`test_server_wifi.js` (nuevo, 14 comprobaciones, SIN hardware):** adbd
-  MOCK que habla el protocolo ADB real (CNXN/AUTH/OPEN/OKAY/WRTE/CLSE con
-  checksum y magic) + adb FALSO por argv. Cubre `/api/adb*`, el puente
-  `/adb-ws` con el CLIENTE REAL (ValoraAdb desde Node: handshake, shell,
-  screencap PNG binario-seguro, tap → shell:input), `/ws/input` (redondeo,
-  escape, keycode), `/ws/video` (video-start + annex-b con SPS+PPS+IDR),
-  close 4001 sin token y las funciones puras del cliente extraídas de
-  index.html (feeder con NALUs partidas entre mensajes, assembler,
-  avcCodecFromSps → avc1.640028, mapToDevice). Suites previas intactas:
-  relay 13/13 · helper_url 13/13 · USB 6/6 · RSA 4/4.
-- Env del servidor: `ADB_BIN`, `ADB_SERIAL`, `ADB_WIFI_HOST`, `ADB_WIFI_PORT`,
-  `VIDEO_BIT_RATE`, `VIDEO_SIZE` (vacío = nativa), `VIDEO_TIME_LIMIT`.
-- Gates: analyze 0 · 265/265 · suites del puente 14+13+13+6+4 · lib/ limpia ·
-  Impeccable 4.5.2 detect [] · agent-browser 390×844: conexión Wi-Fi real
-  dentro de la preview contra adbd mock (p3000_v218_wifi_servidor.png:
-  adb connect → handshake → «Teléfono conectado: Android (Wi-Fi) 720x1600» →
-  display meta → keyevent → H.264 con codec derivado avc1.640028).
-
-## 1.14.0-beta+41 · v21.7 — Puente sin PC («todo dentro de la preview»)
-
-El dueño pegó `ws://127.0.0.1:8790` en la barra del navegador (`ERR_UNKNOWN_URL_SCHEME`)
-y pidió la directriz: **que todo sea dentro de la preview**. Respuesta de
-arquitectura: el TELÉFONO es ahora quien abre el canal — cero programas en
-la PC del dueño.
-
-- **DevRelay (`lib/services/dev_relay*`)**: la app abre un WebSocket SALIENTE
-  hacia el relay del preview con rol `bridge` + token de sesión (mismo
-  protocolo de server.js: hello → cmd → result + frames binarios) — el dueño
-  pega la URL del preview y el token UNA vez en **Ajustes → Diagnóstico →
-  «Puente sin PC»** y enciende el interruptor (auto-reconecta al arrancar).
-  Atiende `appcmd` (HTTP real a su propio servidor de pruebas v21.6),
-  `shot`/`stream` (captura de la UI viva) y niega con motivo claro
-  `tap|swipe|text|key|shell` — inyectar entrada exige ADB (USB/helper).
-  Condicional como dev_bridge: stub no-op en web con la MISMA API.
-- **DevCapture**: RepaintBoundary GLOBAL en el `builder` de MaterialApp.router
-  (frontera de pintura — cero cambios de comportamiento): captura → PNG →
-  JPEG con la MISMA función de compresión de tickets (flutter_image_compress;
-  en plataformas sin canal, PNG honesto). Backoff de reconexión 2/5/10/15/30
-  s; 4001 (token) y 4003 (otro puente tomó el control) quedan con estado
-  claro SIN reintentos — no hay peleas de puentes.
-- **Cliente del preview (`tools/remote-bridge/public/index.html`)**: USB como
-  camino héroe «todo-en-la-preview»; tarjeta nueva «Sin cable — el puente
-  vive en la app» con botón «copiar URL del preview»; Wi-Fi con helper baja a
-  `<details>` colapsado con la lección `ERR_UNKNOWN_URL_SCHEME` escrita.
-  Rol dual: con USB conectado la página es puente; sin teléfono es
-  ESPECTADORA (rol pilot) — ve el puente de la app, dibuja sus frames en el
-  canvas y le manda comandos, sin robarle el puesto (el relay acepta UN
-  puente). Botones ▶/⏸ flujo y resultados de comandos en el log.
-- **Tests**: `dev_relay_test.dart` (URL del relay pura, hello, y handleCmd
-  contra DevBridge REAL en puerto efímero: /health 200, /erase 403 sin
-  token, entrada rechazada con motivo, stream on/off) +
-  `dev_relay_capture_test.dart` (captura de UI renderizada produce bytes;
-  sin boundary → null honesto).
-
-analyze 0 · suite completa verde · gate VERDE · preview con rol dual
-verificada en vivo a 390×844.
-
-## 1.14.0-beta+40 · v21.6 — Puente de depuración remota
-
-Nueva herramienta para probar la app EN EL TELÉFONO REAL del dueño desde la
-máquina del desarrollador, sin USB propio, sin servicios de pago y sin nube
-intermedia: el navegador del dueño hace de puente ADB (WebUSB o Wi-Fi con
-helper local) y el relay del preview lleva video y comandos en vivo.
-
-- **Servidor de pruebas local en la app** (`lib/services/dev_bridge*`):
-  HTTP de LOOPBACK en 127.0.0.1:8090 — el único camino desde fuera es el
-  servicio `tcp:8090` de ADB, igual que DevTools, así que no expone nada a
-  la red. Endpoints JSON: `/health` (versión y contadores), `/test` con
-  escenarios `cart` (5 ítems multitienda), `products` y `purchase` (datos
-  venezolanos realistas para probar Analysis/Historial/checkout),
-  `/nav?to=` con lista blanca de rutas y `/erase` (borra datos de usuario
-  conservando ajustes y tablero; exige el token mostrado en Ajustes).
-  Condicional como `ins_server`: stub no-op en web, mismo API en todas
-  las plataformas. Toggle en Ajustes → Diagnóstico (debug auto-arranca;
-  release nace apagado). 6 tests con HTTP real sobre puerto efímero.
-- **Herramienta del puente** (`tools/remote-bridge/`): relay Node con una
-  sola dependencia (`ws`) — roles tokenizados (UN puente, N pilotos),
-  reenvío de frames binarios, roundtrip de comandos y fallback SSE+POST
-  para redes que bloqueen WebSocket. Cliente del dueño con protocolo ADB
-  PROPIO en JavaScript (CNXN/AUTH con RSA-SHA1 de WebCrypto y clave
-  pública en el formato nativo de ADB, OPEN/OKAY/WRTE/CLSE, servicios
-  `exec:`/`shell:`/`tcp:`): captura adaptativa 1-3 fps (screencap → JPEG
-  en canvas), `input tap/swipe/text/keyevent` y HTTP a la app por
-  `tcp:8090`. Consola del piloto (`/pilot`) y CLI (`pilot_cli.js`: shot,
-  tap, swipe, text, key, shell, app, stream). Helper Wi-Fi para la PC del
-  dueño (`adb-ws-helper.js`, WebSocket↔TCP sin dependencias) — un
-  navegador no abre TCP crudo: se documenta honestamente. Test E2E del
-  relay: 12/12 (token, rol único, binarios íntegros, errores honestos).
-- **La web de la app pasa al puerto 3001**: el 3000 queda para el panel
-  del puente (orden del dueño). `scripts/serve3000.py` acepta puerto/raíz
-  por argumento (default 3001) con el mismo SPA fallback + no-store.
-
-analyze 0 · 249/249 tests (6 nuevos del servidor de pruebas) · gate VERDE ·
-web 3001 verificada (390×844) · puente 3000 con E2E 12/12 y páginas en vivo.
 
 ## 1.14.0-beta+39 · v21.5 — Micro-espaciados del checkout de Lista
 
@@ -544,10 +312,9 @@ decía el análisis) y corrección completa:
   que acepta el Dart 3.9 del CI (7/8 exigen 3.10.1).
 - **flutter_secure_storage: DESCARTADO con motivo** — exige minSdk 24 y el
   repo cierra minSdk 21 (§4.13: «se sube solo si un plugin oficial lo
-  exige»; este no es un caso). El hardening REAL del token del relay va por
-  donde le duele a la fuga: `allowBackup=false` + `dataExtractionRules`
-  vacías — el token y el estado jamás viajan en copias cloud/adb o
-  migraciones de dispositivo; la copia de seguridad es la de la app
+  exige»; este no es un caso). El hardening REAL va por donde le duele
+  a la fuga: `allowBackup=false` + `dataExtractionRules` vacías — el
+  estado jamás viaja en copias cloud ni migraciones de dispositivo; la copia de seguridad es la de la app
   (JSON local, retención 4). El storage app-privado ya va cifrado en reposo
   (FBE, Android 7+).
 - **Observabilidad 100 % LOCAL con talker_flutter**: `VeLog` (buffer de 500

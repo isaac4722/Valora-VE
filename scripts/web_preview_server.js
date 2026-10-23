@@ -40,7 +40,7 @@ const server = HTTP.createServer((req, res) => {
     let urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
     if (urlPath === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ app: 'ValoraVE', version: 'web v22.1', ok: true }));
+      res.end(JSON.stringify({ app: 'ValoraVE', ok: true }));
       return;
     }
     let file = PATH.normalize(PATH.join(ROOT, urlPath));

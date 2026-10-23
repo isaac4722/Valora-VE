@@ -11,7 +11,7 @@ publish_to: 'none'
 # reconstruye con lo que pinta); minSdk = flutter.minSdkVersion (24,
 # Android 7.0, el mínimo estable del framework sin hardcodes); GUI más
 # clara (hints por sección en Inicio, pestaña «Conversor» unificada).
-version: 1.14.1-beta+44
+version: 1.14.2-beta+45
 
 environment:
   sdk: ^3.9.2
