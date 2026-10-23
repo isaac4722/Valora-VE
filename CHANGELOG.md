@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.14.1-beta+44 · v22.1 — fuera la herramienta de depuración: el repo es solo la app
+
+Orden del dueño: «lo que intentamos debes eliminar directamente del repo
+(refiero a la herramienta de depuración)». Se elimina COMPLETA la saga del
+puente remoto (v21.4-v21.9): la app no arrastra más código de depuración.
+
+- **Fuera `tools/remote-bridge/`** (todo el directorio): servidor Node del
+  relay, cliente web del navegador (adb.js/index.html/pilot.html), helper
+  Wi-Fi legacy, pilot CLI y sus 6 suites de tests Node. El repo ya no
+  contiene la herramienta de depuración remota por ningún lado.
+- **Fuera el lado app del puente**: `lib/services/dev_bridge*.dart`
+  (servidor HTTP de loopback v21.6), `lib/services/dev_relay*.dart`
+  (WebSocket saliente al relay v21.7) y sus 3 suites de tests
+  (`test/dev_bridge_test.dart`, `test/dev_relay_test.dart`,
+  `test/dev_relay_capture_test.dart`).
+- **Ajustes más simple**: fuera las tarjetas «Servidor de pruebas» y
+  «Puente en la app» — la pantalla de Ajustes queda con las secciones
+  útiles (país, conexión, personalización, monedas, diagnóstico de
+  regiones, registros, apariencia, alertas, respaldo, legal).
+- **`main.dart` sin ramas de depuración**: fuera los `DevBridge.init`,
+  `DevRelay.init` y `DevBridge.bindRouter` — el arranque es solo app.
+- **Nada más cambia**: las optimizaciones de rendimiento (copyWith
+  O(campo), cinta aislada, sticky sin blur, shell select-estrecho), el
+  `minSdk = flutter.minSdkVersion` (24 · Android 7.0, el mínimo estable
+  del framework) y la GUI clara de v22.0 siguen intactos. Las
+  dependencias y permisos del manifiesto que comparte con la app real
+  (device_info_plus, photo_compress, INTERNET) se quedan: los usan
+  Sala Cerca, tickets y el tablero.
+- **Bonus: la app ahora compila para WEB** (el preview del repo vuelve a
+  ser la app misma, ya no la herramienta): los 4 servicios que usaban
+  `dart:io` sin condicional (`lan_hub`, `workmanager_service`,
+  `ticket_files`, el `downloadBytes` de `sharing`) pasaron al patrón
+  facade del repo (`_vm` + `_stub` con `if (dart.library.io)`). Firmas
+  públicas idénticas, comportamiento web honesto: la sala WiFi-local
+  devuelve vacío (la web usa el servidor socket.io), las fotos de ticket
+  siguen como data URL, el respaldo en disco no existe y `downloadBytes`
+  da null. En Android/iOS/native NO cambia nada (mismo `_vm` de siempre).
+
 
 ## 1.14.0-beta+43 · v22.0 — «la app directa»: repo solo-app, rendimiento en dispositivos humildes, minSdk al mínimo estable y GUI más clara
 

@@ -6,8 +6,8 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v22.0 · «la app directa»: repo limpio de
-/// documentación de proceso, rendimiento en dispositivos humildes
-/// (copyWith O(campo), cinta aislada, sticky sin blur), minSdk al mínimo
-/// estable del framework (24 · Android 7.0) y GUI más clara).
-const String kAppVersionVisible = '22.0';
+/// Versión visible (ronda v22.1 · fuera la herramienta de depuración:
+/// el repo es solo la app — sin puente remoto, sin servidor de pruebas
+/// dentro de la app; optimizaciones de rendimiento y minSdk estable de
+/// la ronda v22.0 intactas).
+const String kAppVersionVisible = '22.1';

@@ -9,7 +9,7 @@
 library;
 
 import 'package:dynamic_color/dynamic_color.dart';
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -27,8 +27,6 @@ import 'data/store.dart';
 import 'services/biometric.dart';
 import 'services/connectivity.dart';
 import 'services/deep_link.dart';
-import 'services/dev_bridge.dart';
-import 'services/dev_relay.dart';
 import 'services/notifications.dart';
 import 'services/photo_compress.dart';
 import 'services/quick_actions.dart';
@@ -94,25 +92,6 @@ Future<void> main({String? documentsDir}) async {
   } catch (_) {
     // workmanager puede fallar en tests/emuladores sin servicios de Google.
   }
-  // v21.6: servidor de pruebas local (contrato del dueño) — HTTP de loopback
-  // para el puente de depuración remota (tools/remote-bridge). En debug
-  // arranca siempre; en release solo si el dueño lo activó en Ajustes →
-  // Diagnóstico. Tolerante: si no puede escuchar, la app sigue normal.
-  try {
-    await DevBridge.init(store: store, prefs: prefs, debug: kDebugMode);
-  } catch (_) {
-    // Sin servidor de pruebas la app es 100 % funcional: es una herramienta,
-    // nunca un requisito.
-  }
-  // v21.7: puente sin PC — el teléfono MISMO conecta al relay del preview
-  // (WebSocket saliente, rol bridge): el dueño no corre helper en su PC.
-  // Solo despierta si el dueño dejó el interruptor encendido con URL+token.
-  try {
-    await DevRelay.init(store: store, prefs: prefs);
-  } catch (_) {
-    // Ídem: sin puente la app sigue completa — herramienta, no requisito.
-  }
-
   runApp(
     MultiProvider(
       providers: appProviders(
@@ -161,9 +140,6 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
       // Deep link de la Sala (v19.8): QR externo → lobby de unirse.
       DeepLinkService.bind(_router);
       DeepLinkService.init();
-      // Puente de depuración (v21.6): /nav del servidor de pruebas usa el
-      // mismo router único (patrón QuickActions/DeepLink).
-      DevBridge.bindRouter(_router);
     });
     // Primer refresco tras el primer frame (no bloquea LCP).
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -285,11 +261,6 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
           appBuilder: (context) => MaterialApp.router(
             title: 'ValoraVE',
             debugShowCheckedModeBanner: false,
-            // v21.7 (puente sin PC): RepaintBoundary GLOBAL alrededor del
-            // Navigator — DevCapture la usa para fotografíar la UI viva y
-            // mandarla por el WebSocket del puente. Frontera de pintura: no
-            // cambia ningún comportamiento visual ni de navegación.
-            builder: (context, child) => DevCapture.wrap(context, child),
             // TASK-33: el árbol Material sigue recibiendo el AppTheme vigente
             // (VeInk + transiciones firma); Material You solo tiñe el par
             // primario, como siempre.
