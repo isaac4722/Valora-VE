@@ -9,12 +9,8 @@
 
 > 📦 **Descarga actual:** [Release v1.0.2-beta](https://github.com/isaac4722/Valora-VE/releases/latest) — APK firmados por ABI (armeabi-v7a · arm64-v8a · x86_64) + AAB, ofuscados (`--obfuscate --split-debug-info`). Desde v17.9 cada build produce **APK para cualquier dispositivo**: androids viejos (v7a), nuevos (arm64-v8a), **emuladores (x86_64, ya en cada push)** y un **APK universal todo-en-uno** (~45 MB) que instala sin saber la arquitectura.
 >
-> **v1.0.2-beta** cierra la ronda de paridad contra `MVP-CRUD.md` (bug
-> crítico de `addPurchase`, histórico real del conversor, flujos §9) y
-> **v1.0.1-beta** arregló el bug que dejaba la app clavada en la pantalla
-> de bienvenida (router recreado en cada rebuild) y el icono transparente
-> del lanzador; añade escáner de códigos, sueldo variable, recordatorio
-> diario, StoreSheet, compartir PNG del conversor y barras 6/12.
+> El historial completo de rondas vive en [CHANGELOG.md](CHANGELOG.md).
+> El repo ya no arrastra documentación de proceso: solo la app.
 
 **ValoraVE** es una app Android nativa (Flutter/Dart puro) para saber
 cuánto vale tu dinero en Venezuela: tasas BCV y paralelo, conversor
@@ -45,7 +41,7 @@ los cambios quedan en outbox y salen al reconectar.
 ```bash
 flutter pub get
 flutter run                 # debug
-flutter test                # unit + widget (140 tests)
+flutter test                # unit + widget (265 tests)
 
 # release (requiere android/keystore.properties — ver example):
 flutter build apk --release --split-per-abi \
@@ -78,10 +74,7 @@ Nada más. Sin FCM: las notificaciones son locales (canales
 `rate_alerts`, `price_targets`, `reminders`, `room_activity`, `default`).
 
 ## Documentación
-- [AGENT.md](AGENT.md) — contrato de trabajo para agentes: método en 9 pasos
-- [PROGRESS.md](PROGRESS.md) — bitácora hot (3 niveles: PROGRESS · PROGRESS_WARM · PROGRESS_COLD)
-- [MVP-CRUD.md](MVP-CRUD.md) — verdad funcional del MVP
-- [CHANGELOG.md](CHANGELOG.md) — historial de versiones (3 niveles: CHANGELOG · CHANGELOG_WARM · CHANGELOG_COLD)
+- [CHANGELOG.md](CHANGELOG.md) — historial de versiones
 
 ## Privacidad
 Sin cuentas, sin telemetría, sin nube: todo vive en tu teléfono. Los
