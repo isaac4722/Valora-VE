@@ -7,18 +7,18 @@
 library;
 
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../core/currencies.dart';
 import '../core/fmt.dart';
 import '../data/store.dart';
+import 'sharing_io.dart'
+    if (dart.library.html) 'sharing_io_stub.dart' as io_impl;
 
 /// Comparte el texto de totales de la Lista (shareTotals del web).
 Future<void> shareTotalsText(
@@ -177,24 +177,12 @@ Future<String?> downloadText(String text, {required String fileName}) {
   );
 }
 
-/// Descarga (guarda) bytes SIN abrir el share nativo: escribe en la carpeta
-/// externa de la app (Android/data/…/files/ValoraVE) y devuelve la ruta.
-/// El usuario la encuentra con la app «Archivos» del teléfono; compartir
-/// sigue disponible por separado (regla del dueño v17.2: nunca directo).
+/// Descarga (guarda) bytes SIN abrir el share nativo: en nativo escribe en
+/// la carpeta externa de la app (Android/data/…/files/ValoraVE) y devuelve
+/// la ruta — el usuario la encuentra con la app «Archivos» del teléfono;
+/// compartir sigue disponible por separado (regla del dueño v17.2: nunca
+/// directo). En web no hay filesystem: null honesto (sharing_io_stub).
 Future<String?> downloadBytes(
   Uint8List bytes, {
   required String fileName,
-}) async {
-  try {
-    final dirs = await getExternalStorageDirectories();
-    final base = dirs?.whereType<Directory>().firstOrNull?.path;
-    if (base == null) return null;
-    final dir = Directory('$base/ValoraVE');
-    if (!await dir.exists()) await dir.create(recursive: true);
-    final file = File('${dir.path}/$fileName');
-    await file.writeAsBytes(bytes, flush: true);
-    return file.path;
-  } catch (_) {
-    return null;
-  }
-}
+}) => io_impl.downloadBytes(bytes, fileName: fileName);
