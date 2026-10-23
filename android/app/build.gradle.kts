@@ -38,8 +38,13 @@ android {
     defaultConfig {
         // applicationId cerrado por el dueño (§4.2): ve.valorave.app
         applicationId = "ve.valorave.app"
-        // minSdk cerrado (§4.13): 21 — se sube solo si un plugin oficial lo exige.
-        minSdk = maxOf(21, flutter.minSdkVersion)
+        // minSdk (v22.0 · orden del dueño «el mínimo posible o los estables»):
+        // se toma DIRECTO del framework — flutter.minSdkVersion es el mínimo
+        // ESTABLE que el motor Flutter soporta (24 · Android 7.0 en 3.47.4).
+        // Sin hardcodes que lo suban ni lo bajen: API 9 (Android 2.3, 2010)
+        // es técnicamente imposible para Flutter y cualquier valor forzado
+        // rompería el build o ocultaría el mínimo real del framework.
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

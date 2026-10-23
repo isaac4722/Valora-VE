@@ -1345,6 +1345,46 @@ class AppData {
     this.settings = const Settings(),
   });
 
+  /// Copia tipada (v22.0 · rendimiento): sustituye al round-trip
+  /// `AppData.fromJson(toJson())` que serializaba TODO el estado (todos los
+  /// productos con sus registros, compras, notificaciones…) en CADA
+  /// mutación — cada tap del carrito y cada tecla del conversor pagaban
+  /// serializar miles de objetos. Con copyWith la mutación es O(campo):
+  /// solo cambia la lista/campo tocado y el resto viaja por referencia.
+  /// Misma semántica: los argumentos ya llegan tipados y válidos, así que
+  /// la normalización del fromJson no aportaba nada aquí.
+  AppData copyWith({
+    int? version,
+    RateBoard? board,
+    Map<String, String>? rateSource,
+    Map<String, double>? manualRates,
+    ConverterState? converter,
+    List<Product>? products,
+    List<Transaction>? transactions,
+    List<CartItem>? cart,
+    List<Purchase>? purchases,
+    Budget? budget,
+    List<BasketItem>? basket,
+    List<String>? stores,
+    List<ShoppingTemplate>? templates,
+    Settings? settings,
+  }) => AppData(
+    version: version ?? this.version,
+    board: board ?? this.board,
+    rateSource: rateSource ?? this.rateSource,
+    manualRates: manualRates ?? this.manualRates,
+    converter: converter ?? this.converter,
+    products: products ?? this.products,
+    transactions: transactions ?? this.transactions,
+    cart: cart ?? this.cart,
+    purchases: purchases ?? this.purchases,
+    budget: budget ?? this.budget,
+    basket: basket ?? this.basket,
+    stores: stores ?? this.stores,
+    templates: templates ?? this.templates,
+    settings: settings ?? this.settings,
+  );
+
   Map<String, dynamic> toJson() => {
     'version': version,
     'board': board.toJson(),

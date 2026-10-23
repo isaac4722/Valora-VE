@@ -11,7 +11,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
-import 'package:path_provider/path_provider.dart' show getApplicationDocumentsDirectory;
+import 'package:path_provider/path_provider.dart'
+    show getApplicationDocumentsDirectory;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -127,7 +128,7 @@ class AppStore extends ChangeNotifier {
       lastUpdate: b.lastUpdate ?? DateTime.now(),
       fetchedAt: DateTime.now(),
     );
-    _data = AppData.fromJson(_data.toJson()..['board'] = clean.toJson());
+    _data = _data.copyWith(board: clean);
     _persist();
   }
 
@@ -135,7 +136,7 @@ class AppStore extends ChangeNotifier {
   void setRateSource(Currency currency, String sourceId) {
     final valid = RateSource.validSourceId(currency, sourceId);
     final rs = {..._data.rateSource, currency.code: valid};
-    _data = AppData.fromJson(_data.toJson()..['rateSource'] = rs);
+    _data = _data.copyWith(rateSource: rs);
     _persist();
   }
 
@@ -168,7 +169,7 @@ class AppStore extends ChangeNotifier {
     } else {
       map.remove(sourceId);
     }
-    _data = AppData.fromJson(_data.toJson()..['manualRates'] = map);
+    _data = _data.copyWith(manualRates: map);
     _persist();
   }
 
@@ -182,8 +183,8 @@ class AppStore extends ChangeNotifier {
     if (f == t) {
       t = f == Currency.usd.code ? Currency.ves.code : Currency.usd.code;
     }
-    _data = AppData.fromJson(
-      _data.toJson()..['converter'] = ConverterState(from: f, to: t).toJson(),
+    _data = _data.copyWith(
+      converter: ConverterState(from: f, to: t),
     );
     _persist();
   }
@@ -196,13 +197,9 @@ class AppStore extends ChangeNotifier {
     final String to = code.currency == Currency.usd
         ? Currency.ves.code
         : code.currency.code;
-    _data = AppData.fromJson(
-      _data.toJson()
-        ..['rateSource'] = {..._data.rateSource, 'EUR': code.eurSource}
-        ..['converter'] = ConverterState(
-          from: Currency.usd.code,
-          to: to,
-        ).toJson(),
+    _data = _data.copyWith(
+      rateSource: {..._data.rateSource, 'EUR': code.eurSource},
+      converter: ConverterState(from: Currency.usd.code, to: to),
     );
     _persist();
   }
@@ -229,7 +226,7 @@ class AppStore extends ChangeNotifier {
       biometricLock: biometricLock,
       sseUrl: sseUrl,
     );
-    _data = AppData.fromJson(_data.toJson()..['settings'] = patched.toJson());
+    _data = _data.copyWith(settings: patched);
     _persist();
   }
 
@@ -328,7 +325,7 @@ class AppStore extends ChangeNotifier {
       default:
         return;
     }
-    _data = AppData.fromJson(_data.toJson()..['settings'] = patched.toJson());
+    _data = _data.copyWith(settings: patched);
     _persist();
   }
 
@@ -362,9 +359,7 @@ class AppStore extends ChangeNotifier {
           : [],
     );
     final list = [product, ..._data.products];
-    _data = AppData.fromJson(
-      _data.toJson()..['products'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(products: list);
     final storeName = firstRecord?.store;
     if (storeName != null && storeName.trim().isNotEmpty) addStore(storeName);
     _persist();
@@ -393,9 +388,7 @@ class AppStore extends ChangeNotifier {
               : p,
         )
         .toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['products'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(products: list);
     _persist();
   }
 
@@ -403,11 +396,7 @@ class AppStore extends ChangeNotifier {
   void deleteProduct(String id) {
     final list = _data.products.where((p) => p.id != id).toList();
     final basket = _data.basket.where((b) => b.productId != id).toList();
-    _data = AppData.fromJson(
-      _data.toJson()
-        ..['products'] = list.map((e) => e.toJson()).toList()
-        ..['basket'] = basket.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(products: list, basket: basket);
     _persist();
   }
 
@@ -444,9 +433,7 @@ class AppStore extends ChangeNotifier {
         clearMetSince: metSince == null,
       );
     }).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['products'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(products: list);
     _persist();
   }
 
@@ -472,9 +459,7 @@ class AppStore extends ChangeNotifier {
       }).toList()..sort((a, b) => a.date.compareTo(b.date));
       return p.copyWith(records: records);
     }).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['products'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(products: list);
     _persist();
   }
 
@@ -485,9 +470,7 @@ class AppStore extends ChangeNotifier {
         records: p.records.where((r) => r.id != recordId).toList(),
       );
     }).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['products'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(products: list);
     _persist();
   }
 
@@ -500,9 +483,7 @@ class AppStore extends ChangeNotifier {
         clearUnavailable: !unavailable,
       );
     }).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['products'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(products: list);
     _persist();
   }
 
@@ -523,9 +504,7 @@ class AppStore extends ChangeNotifier {
         clearMetSince: true,
       );
     }).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['products'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(products: list);
     _persist();
   }
 
@@ -536,9 +515,7 @@ class AppStore extends ChangeNotifier {
       if (p.id != productId) return p;
       return p.copyWith(metSince: at);
     }).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['products'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(products: list);
     _persist();
   }
 
@@ -548,9 +525,7 @@ class AppStore extends ChangeNotifier {
       if (p.id != productId) return p;
       return p.copyWith(clearMetSince: true);
     }).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['products'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(products: list);
     _persist();
   }
 
@@ -588,9 +563,7 @@ class AppStore extends ChangeNotifier {
       );
       added++;
     }
-    _data = AppData.fromJson(
-      _data.toJson()..['products'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(products: list);
     _persist();
     return added;
   }
@@ -613,9 +586,7 @@ class AppStore extends ChangeNotifier {
     } else {
       list.add(item.id.isEmpty ? item.copyWith(id: newId()) : item);
     }
-    _data = AppData.fromJson(
-      _data.toJson()..['cart'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(cart: list);
     _persist();
   }
 
@@ -645,22 +616,18 @@ class AppStore extends ChangeNotifier {
         clearSizeUnit: patch.sizeUnit == null,
       );
     }).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['cart'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(cart: list);
     _persist();
   }
 
   void removeFromCart(String id) {
     final list = _data.cart.where((c) => c.id != id).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['cart'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(cart: list);
     _persist();
   }
 
   void clearCart() {
-    _data = AppData.fromJson(_data.toJson()..['cart'] = <dynamic>[]);
+    _data = _data.copyWith(cart: const <CartItem>[]);
     _persist();
   }
 
@@ -673,7 +640,7 @@ class AppStore extends ChangeNotifier {
       amount: amount > 0 ? amount : 0,
       currency: CurrencyX.from(currency).code,
     );
-    _data = AppData.fromJson(_data.toJson()..['budget'] = b.toJson());
+    _data = _data.copyWith(budget: b);
     _persist();
   }
 
@@ -683,9 +650,7 @@ class AppStore extends ChangeNotifier {
     // no lo trae, se genera aquí (newId) vía copyWith(id: …).
     final purchase = p.id.isEmpty ? p.copyWith(id: newId()) : p;
     final list = [purchase, ..._data.purchases]; // unshift
-    _data = AppData.fromJson(
-      _data.toJson()..['purchases'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(purchases: list);
     if ((p.store ?? '').trim().isNotEmpty) addStore(p.store!);
     _persist();
   }
@@ -708,17 +673,13 @@ class AppStore extends ChangeNotifier {
         notes: patch.notes,
       );
     }).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['purchases'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(purchases: list);
     _persist();
   }
 
   void deletePurchase(String id) {
     final list = _data.purchases.where((p) => p.id != id).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['purchases'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(purchases: list);
     _persist();
   }
 
@@ -794,9 +755,7 @@ class AppStore extends ChangeNotifier {
     } else {
       list.add(BasketItem(productId: productId, quantity: qty));
     }
-    _data = AppData.fromJson(
-      _data.toJson()..['basket'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(basket: list);
     _persist();
   }
 
@@ -813,17 +772,13 @@ class AppStore extends ChangeNotifier {
         list.add(BasketItem(productId: productId, quantity: qty));
       }
     }
-    _data = AppData.fromJson(
-      _data.toJson()..['basket'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(basket: list);
     _persist();
   }
 
   void removeFromBasket(String productId) {
     final list = _data.basket.where((b) => b.productId != productId).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['basket'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(basket: list);
     _persist();
   }
 
@@ -851,18 +806,14 @@ class AppStore extends ChangeNotifier {
           .toList(),
     );
     final list = [t, ..._data.templates].take(kMaxTemplates).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['templates'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(templates: list);
     _persist();
     return t.id;
   }
 
   void deleteTemplate(String id) {
     final list = _data.templates.where((t) => t.id != id).toList();
-    _data = AppData.fromJson(
-      _data.toJson()..['templates'] = list.map((e) => e.toJson()).toList(),
-    );
+    _data = _data.copyWith(templates: list);
     _persist();
   }
 
@@ -896,7 +847,7 @@ class AppStore extends ChangeNotifier {
     if (clean.isEmpty) return;
     if (_data.stores.any((s) => s.toLowerCase() == clean.toLowerCase())) return;
     final list = [clean, ..._data.stores];
-    _data = AppData.fromJson(_data.toJson()..['stores'] = list);
+    _data = _data.copyWith(stores: list);
     _persist();
   }
 
@@ -1066,13 +1017,22 @@ class AppStore extends ChangeNotifier {
     final isolated = testDir == null && !kIsWeb;
     if (isolated) {
       final dir = await getApplicationDocumentsDirectory();
-      await IsolatedHive.init(dir.path, isolateNameServer: const SystemIsolateNameServer());
-      _boxData = _BoxRef.fromIsolated(await IsolatedHive.openBox<String>(kBoxData));
+      await IsolatedHive.init(
+        dir.path,
+        isolateNameServer: const SystemIsolateNameServer(),
+      );
+      _boxData = _BoxRef.fromIsolated(
+        await IsolatedHive.openBox<String>(kBoxData),
+      );
       _boxSnapshots = _BoxRef.fromIsolated(
         await IsolatedHive.openBox<String>(kBoxSnapshots),
       );
-      _boxNotifs = _BoxRef.fromIsolated(await IsolatedHive.openBox<String>(kBoxNotifs));
-      _boxOutbox = _BoxRef.fromIsolated(await IsolatedHive.openBox<String>(kBoxOutbox));
+      _boxNotifs = _BoxRef.fromIsolated(
+        await IsolatedHive.openBox<String>(kBoxNotifs),
+      );
+      _boxOutbox = _BoxRef.fromIsolated(
+        await IsolatedHive.openBox<String>(kBoxOutbox),
+      );
     } else {
       if (testDir != null) {
         Hive.init(testDir);
@@ -1080,7 +1040,9 @@ class AppStore extends ChangeNotifier {
         await Hive.initFlutter();
       }
       _boxData = _BoxRef.fromBox(await Hive.openBox<String>(kBoxData));
-      _boxSnapshots = _BoxRef.fromBox(await Hive.openBox<String>(kBoxSnapshots));
+      _boxSnapshots = _BoxRef.fromBox(
+        await Hive.openBox<String>(kBoxSnapshots),
+      );
       _boxNotifs = _BoxRef.fromBox(await Hive.openBox<String>(kBoxNotifs));
       _boxOutbox = _BoxRef.fromBox(await Hive.openBox<String>(kBoxOutbox));
     }
@@ -1167,7 +1129,8 @@ class AppStore extends ChangeNotifier {
     final box = _boxNotifs;
     if (box != null) {
       unawaited(
-        box.put('ring', jsonEncode(notifs.map((e) => e.toJson()).toList()))
+        box
+            .put('ring', jsonEncode(notifs.map((e) => e.toJson()).toList()))
             .catchError((_) {}),
       );
     }
@@ -1189,7 +1152,11 @@ class AppStore extends ChangeNotifier {
     final box = _boxSnapshots;
     if (box != null) {
       unawaited(
-        box.put('points', jsonEncode(snapshots.map((e) => e.toJson()).toList()))
+        box
+            .put(
+              'points',
+              jsonEncode(snapshots.map((e) => e.toJson()).toList()),
+            )
             .catchError((_) {}),
       );
     }
@@ -1216,9 +1183,7 @@ class AppStore extends ChangeNotifier {
           final parsed = CartItem.fromJson(m);
           if (existing >= 0) {
             final list = [..._data.cart]..[existing] = parsed;
-            _data = AppData.fromJson(
-              _data.toJson()..['cart'] = list.map((e) => e.toJson()).toList(),
-            );
+            _data = _data.copyWith(cart: list);
           } else {
             addToCart(parsed);
             return; // addToCart ya notifica
@@ -1255,9 +1220,7 @@ class AppStore extends ChangeNotifier {
             }
             return next;
           }).toList();
-          _data = AppData.fromJson(
-            _data.toJson()..['cart'] = list.map((e) => e.toJson()).toList(),
-          );
+          _data = _data.copyWith(cart: list);
         }
       case 'item_remove':
         if (payload['id'] is String) removeFromCart(payload['id'] as String);
@@ -1270,9 +1233,7 @@ class AppStore extends ChangeNotifier {
               .whereType<Map>()
               .map((e) => CartItem.fromJson(Map<String, dynamic>.from(e)))
               .toList();
-          _data = AppData.fromJson(
-            _data.toJson()..['cart'] = list.map((e) => e.toJson()).toList(),
-          );
+          _data = _data.copyWith(cart: list);
         }
     }
     _persist();
@@ -1287,13 +1248,9 @@ class AppStore extends ChangeNotifier {
 /// diferencia: get/put/flush funcionan igual con Box (sync) e IsolatedBox
 /// (async por canal de isolate) — el store no sabe ni le importa cuál vive.
 class _BoxRef {
-  _BoxRef.fromBox(Box<String> b)
-      : _box = b,
-        _iso = null;
+  _BoxRef.fromBox(Box<String> b) : _box = b, _iso = null;
 
-  _BoxRef.fromIsolated(IsolatedBox<String> b)
-      : _box = null,
-        _iso = b;
+  _BoxRef.fromIsolated(IsolatedBox<String> b) : _box = null, _iso = b;
 
   final Box<String>? _box;
   final IsolatedBox<String>? _iso;

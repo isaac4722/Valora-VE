@@ -1996,6 +1996,15 @@ class _RateTickerState extends State<RateTicker>
   Widget build(BuildContext context) {
     // Modo off = preferencia del usuario → no se monta (shrink). Sin datos →
     // placeholder anti-CLS con la misma altura (delega en RateTicker).
+    // v22.0 (rendimiento): sin filas o en off la animación SE DETIENE —
+    // antes el controlador seguía marcando 60 fps en vacío (CPU/GPU
+    // encendidas sin nada que mover, caro en teléfonos humildes).
+    final bool debeGirar = widget.mode != 'off' && widget.items.isNotEmpty;
+    if (debeGirar) {
+      if (!_ctrl.isAnimating) _ctrl.repeat();
+    } else if (_ctrl.isAnimating) {
+      _ctrl.stop();
+    }
     if (widget.mode == 'off') return const SizedBox.shrink();
     if (widget.items.isEmpty) {
       final double height = switch (widget.size) {
@@ -2080,6 +2089,14 @@ class _RateTickerState extends State<RateTicker>
               .withValues(alpha: 0.4),
       child: AnimatedBuilder(
         animation: _ctrl,
+        // v22.0 (rendimiento): RepaintBoundary alrededor de la fila móvil —
+        // cada frame solo recoloca la CAPA ya rasterizada (la cinta se
+        // repinta una vez, no en cada tick). Antes la traslación marcaba
+        // needsPaint hasta la frontera más cercana (el shell entero) 60
+        // veces por segundo: el martilleo nº1 del Inicio en devices viejos.
+        child: RepaintBoundary(
+          child: Row(mainAxisSize: MainAxisSize.min, children: [row, row]),
+        ),
         builder: (context, child) => ClipRect(
           child: FractionalTranslation(
             translation: Offset(-_ctrl.value * 0.5, 0),
@@ -2090,7 +2107,6 @@ class _RateTickerState extends State<RateTicker>
             ),
           ),
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [row, row]),
       ),
     );
   }

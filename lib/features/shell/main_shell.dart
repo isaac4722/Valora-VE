@@ -123,7 +123,10 @@ class MainShell extends StatelessWidget {
     _TabSpec(
       location: '/conversor',
       icon: LucideIcons.arrowLeftRight,
-      label: 'Divisas',
+      // v22.0 (GUI clara · orden del dueño): la pestaña móvil decía
+      // «Divisas» pero la ruta, el sidebar y la paleta dicen «Conversor»
+      // — un solo nombre para la misma pantalla.
+      label: 'Conversor',
     ),
     _TabSpec(
       location: '/lista',
@@ -149,16 +152,31 @@ class MainShell extends StatelessWidget {
     // Rate-health (§5): el banner se monta SIEMPRE encima del body y decide
     // solo su visibilidad (rateStale = se vio tablero OK hace >15 min).
     final RatesPoller poller = context.watch<RatesPoller>();
-    final AppStore store = context.watch<AppStore>();
+    // v22.0 (rendimiento): el shell solo observa los CAMBIOS que pinta —
+    // antes watch<AppStore>() reconstruía TODO el shell (Scaffold, fondo
+    // ambiental, tabs) en cada mutación del store: cada tap del carrito,
+    // cada tecla del conversor, cada tick del poller. Ahora solo se
+    // reconstruye cuando cambia el país, el modo offline o el CONTADOR del
+    // carrito (los pantallazos se suscriben por su cuenta).
+    final String country = context.select<AppStore, String>(
+      (s) => s.settings.country,
+    );
+    final bool chosenOffline = context.select<AppStore, bool>(
+      (s) => s.settings.offlineMode,
+    );
+    final int cartCount = context.select<AppStore, int>(
+      (s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity),
+    );
 
     // v19 (orden del dueño): la tasa MANUAL es una tasa personalizada, NO un
     // estado «sin conexión». Si la fuente activa del país es manual — o el
     // usuario eligió no consultar APIs — el banner de salud no aparece.
-    final countryCur = CountryX.from(store.settings.country).currency;
+    final countryCur = CountryX.from(country).currency;
+    final sourceId = context.select<AppStore, String>(
+      (s) => s.sourceFor(countryCur),
+    );
     final manualActive =
-        RateSource.of(store.sourceFor(countryCur))?.category ==
-        SourceCategory.manual;
-    final chosenOffline = store.settings.offlineMode;
+        RateSource.of(sourceId)?.category == SourceCategory.manual;
     final showHealth = !manualActive && !chosenOffline;
 
     final bool wide = MediaQuery.sizeOf(context).width >= kWideShell;
@@ -249,7 +267,7 @@ class MainShell extends StatelessWidget {
               ? null
               : _MobileTabs(
                   current: current,
-                  cartCount: _cartCount(context),
+                  cartCount: cartCount,
                   onTab: (i) {
                     // v21.2: confirmación táctil del cambio de pestaña —
                     // vibración sutil (no-op en web). El layout del shell
@@ -264,11 +282,6 @@ class MainShell extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  int _cartCount(BuildContext context) {
-    final store = context.watch<AppStore>();
-    return store.cart.fold<int>(0, (acc, c) => acc + c.quantity);
   }
 }
 
@@ -434,8 +447,11 @@ class _VeSidebar extends StatelessWidget {
   }
 
   int _cartCount(BuildContext context) {
-    final store = context.watch<AppStore>();
-    return store.cart.fold<int>(0, (acc, c) => acc + c.quantity);
+    // v22.0: select del CONTADOR — el sidebar no se reconstruye con el
+    // store entero, solo cuando cambia la cantidad visible del badge.
+    return context.select<AppStore, int>(
+      (s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity),
+    );
   }
 
   /// Tickets vive fuera del shell: se compara la ruta actual.

@@ -243,31 +243,60 @@ class _VeRowState extends State<VeRow> {
 /// Rótulo de sección en mayúsculas (eyebrow): 10.5 px w600 tracking .08em,
 /// con slot `right` para acciones de encabezado.
 class VeEyebrow extends StatelessWidget {
-  const VeEyebrow({super.key, required this.child, this.right});
+  const VeEyebrow({
+    super.key,
+    required this.child,
+    this.right,
+    // v22.0 (GUI clara · orden del dueño): línea de explicación bajo el
+    // eyebrow — cada sección de Inicio dice en una frase qué ofrece, sin
+    // adivinar. Muda (12 px, muted): jerarquía sin ruido.
+    this.hint,
+  });
 
   final Widget child;
   final Widget? right;
+
+  /// Explicación de una línea para la sección (opcional).
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
     final scheme = ShadTheme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(top: 24, bottom: 8),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: DefaultTextStyle(
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.84,
-                color: scheme.mutedForeground,
+          Row(
+            children: [
+              Expanded(
+                child: DefaultTextStyle(
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.84,
+                    color: scheme.mutedForeground,
+                  ),
+                  child: child,
+                ),
               ),
-              child: child,
-            ),
+              ?right,
+            ],
           ),
-          ?right,
+          if (hint != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(
+                hint!,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  height: 1.35,
+                  color: scheme.mutedForeground,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -760,8 +789,14 @@ class _VeSheetChrome extends StatelessWidget {
 // ─────────────────────────────────────────────────────────── StickyBar ─────
 
 /// Barra pegada al fondo del viewport (StickyBar del prototipo): fondo
-/// bg/85 + blur real del contenido que pasa por debajo + borde superior.
-/// Colocar como último hijo de un Stack sobre el contenido scrollable.
+/// casi opaco + borde superior. Colocar como último hijo de un Stack
+/// sobre el contenido scrollable.
+///
+/// v22.0 (rendimiento): SIN BackdropFilter. El blur real (sigma 12) fuerza
+/// un saveLayer + gaussiana del CONTENIDO ENTERO que pasa por debajo en
+/// cada frame de scroll — el jank nº1 de Lista/Productos/Historial en
+/// teléfonos humildes. Con alpha 0.96 la lectura es la misma (la capa se
+/// percibe sólida) y el costo baja a un rectángulo plano.
 class VeStickyBar extends StatelessWidget {
   const VeStickyBar({super.key, required this.children});
 
@@ -773,28 +808,23 @@ class VeStickyBar extends StatelessWidget {
     final scheme = shad.colorScheme;
     final bool dark = shad.brightness == Brightness.dark;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: scheme.background.withValues(alpha: dark ? 0.88 : 0.85),
-            border: Border(top: BorderSide(color: scheme.border)),
-          ),
-          child: SafeArea(
-            top: false,
-            minimum: const EdgeInsets.only(bottom: 8),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              child: Row(
-                children: [
-                  for (var i = 0; i < children.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 8),
-                    Expanded(child: children[i]),
-                  ],
-                ],
-              ),
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.background.withValues(alpha: dark ? 0.97 : 0.96),
+        border: Border(top: BorderSide(color: scheme.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.only(bottom: 8),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              for (var i = 0; i < children.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(child: children[i]),
+              ],
+            ],
           ),
         ),
       ),
