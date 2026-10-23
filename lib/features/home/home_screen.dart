@@ -111,15 +111,23 @@ class _HomeSections extends StatelessWidget {
 /// [SectionTitle] en las pantallas evolucionadas conservando el texto en
 /// MAYÚSCULAS que los tests y el tour esperan ver.
 class _SectionEyebrow extends StatelessWidget {
-  const _SectionEyebrow(this.title, {this.actionLabel, this.onAction});
+  const _SectionEyebrow(
+    this.title, {
+    this.actionLabel,
+    this.onAction,
+    // v22.0 (GUI clara): una línea que explica qué ofrece la sección.
+    this.hint,
+  });
 
   final String title;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
     return VeEyebrow(
+      hint: hint,
       right: (actionLabel == null || onAction == null)
           ? null
           : VeBtn(
@@ -736,7 +744,10 @@ class _CotizacionPrincipal extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionEyebrow('Cotización principal'),
+        _SectionEyebrow(
+          'Cotización principal',
+          hint: 'Tasas de hoy y qué tasa usan tus cálculos',
+        ),
         if (!hasAny)
           if (poller.offlineActive)
             // Desconexión ELEGIDA (modo offline): cloud_off + guía local.
@@ -891,6 +902,7 @@ class _DivisasFoco extends StatelessWidget {
       children: [
         _SectionEyebrow(
           'Divisas del foco',
+          hint: 'Cuánto vale cada divisa de tu foco con la tasa del día',
           actionLabel: 'Ir al conversor',
           onAction: () => context.go('/conversor'),
         ),
@@ -998,6 +1010,7 @@ class _AlertasPrecios extends StatelessWidget {
       children: [
         _SectionEyebrow(
           'Alertas de precios',
+          hint: 'Te avisamos cuando un producto baja a tu precio meta',
           actionLabel: 'Ver productos',
           onAction: () => context.go('/productos'),
         ),
@@ -1097,6 +1110,7 @@ class _ResumenMes extends StatelessWidget {
       children: [
         _SectionEyebrow(
           'Resumen del mes',
+          hint: 'Cuánto llevas gastado este mes y en qué categorías',
           actionLabel: 'Ver en Análisis',
           onAction: () => context.go('/analisis'),
         ),
@@ -1208,6 +1222,7 @@ class _TusTiendas extends StatelessWidget {
       children: [
         _SectionEyebrow(
           'Tus tiendas',
+          hint: 'Dónde compras y cuánto has pagado en cada una',
           actionLabel: 'Ver historial',
           onAction: () => context.go('/historial'),
         ),
@@ -1370,6 +1385,7 @@ class _RegistrosRecientes extends StatelessWidget {
       children: [
         _SectionEyebrow(
           'Registros recientes',
+          hint: 'Los últimos precios que guardaste en tu libro',
           actionLabel: 'Ver historial',
           onAction: () => context.go('/historial'),
         ),
@@ -1392,7 +1408,10 @@ class _Herramientas extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionEyebrow('Herramientas'),
+        _SectionEyebrow(
+          'Herramientas',
+          hint: 'Atajos a las pantallas más usadas',
+        ),
         Row(
           children: [
             Expanded(

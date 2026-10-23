@@ -134,6 +134,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    // v22.0: el hint de la sección Cotización baja el contenido y el lápiz
+    // de la fila Manual quedó al borde del viewport — ensureVisible lo trae
+    // a la vista antes del tap (misma conducta: el lápiz abre el editor).
+    await tester.ensureVisible(find.byIcon(Icons.edit_outlined).first);
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
     // Lápiz de la fila Manual → editor inline con MoneyField.
     await tester.tap(find.byIcon(Icons.edit_outlined).first);
     await tester.pumpAndSettle(const Duration(milliseconds: 100));

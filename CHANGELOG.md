@@ -1,6 +1,57 @@
 # Changelog
 
 
+## 1.14.0-beta+43 · v22.0 — «la app directa»: repo solo-app, rendimiento en dispositivos humildes, minSdk al mínimo estable y GUI más clara
+
+Orden del dueño: «pasemos a desarrollar la app directamente». El repo deja
+de arrastrar la burocracia de proceso y el código se afinó para los
+teléfonos viejos (carga aceptable, pero se sentía entrecortada).
+
+- **Repo limpio (solo la app):** fuera `.agents/` (201 archivos de skills
+  del agente), `AGENT.md`, `MVP-CRUD.md`, `PROGRESS.md`,
+  `PROGRESS_WARM.md`, `PROGRESS_COLD.md`, `CHANGELOG_WARM.md`,
+  `CHANGELOG_COLD.md` y `skills-lock.json`. Queda el proyecto real:
+  `lib/`, `test/`, `android/`, `ios/`, `web/`, `tools/`, `server/` +
+  README/CHANGELOG/LICENSE. Los archivos siguen en el historial git si
+  alguna vez hiciera falta consultarlos. README actualizado (sin enlaces
+  muertos, contador de tests al día).
+- **Rendimiento (la causa real del «se siente entrecortada»):**
+  - `AppData.copyWith` (nuevo) + las 36 mutaciones del store convertidas:
+    antes CADA mutación (cada tap del carrito, cada tecla del conversor,
+    cada aviso) hacía `AppData.fromJson(_data.toJson())` — serializar y
+    re-parsear TODO el estado (todos los productos con sus registros,
+    compras, notificaciones). Ahora la mutación es O(campo): solo cambia
+    la lista tocada y el resto viaja por referencia.
+  - `RateTicker` (cinta de tasas del Inicio): RepaintBoundary alrededor de
+    la fila móvil — cada frame solo recoloca la capa ya rasterizada en vez
+    de re-pintar el shell entero a 60 fps; y la animación SE DETIENE
+    cuando no hay filas o el modo es off (antes seguía marcando 60 fps
+    en vacío).
+  - `VeStickyBar` SIN BackdropFilter: el blur (sigma 12) re-blurreaba el
+    contenido completo por debajo en cada frame de scroll de
+    Lista/Productos/Historial — el jank nº1 de scroll en teléfonos
+    humildes. Fondo casi opaco (alpha 0.96/0.97): misma lectura, costo de
+    un rectángulo plano.
+  - `MainShell` solo se reconstruye con lo que pinta: `context.select`
+    para país / modo offline / fuente activa del país / contador del
+    carrito (antes `watch<AppStore>()` reconstruía Scaffold + fondo
+    ambiental + tabs en cada mutación del store).
+- **minSdk al mínimo estable (orden del dueño):** `minSdk =
+  flutter.minSdkVersion` directo del framework — **24 · Android 7.0** en
+  Flutter 3.47.4, sin hardcodes. Nota honesta: API 9 (Android 2.3, 2010)
+  es técnicamente imposible para Flutter (el motor no arranca por debajo
+  de su mínimo declarado); 24 es el mínimo real y estable soportado.
+- **GUI más clara:**
+  - Cada sección de Inicio explica en una línea qué ofrece (hint bajo el
+    eyebrow): Cotización principal, Divisas del foco, Alertas, Resumen del
+    mes, Tus tiendas, Registros recientes, Herramientas.
+  - La pestaña móvil se unifica con el resto: «Conversor» (decía
+    «Divisas» mientras la ruta, el sidebar y la paleta decían Conversor).
+- **Gates:** analyze 0 · suite completa verde · auditoría lib/ limpia ·
+  goldens del visual gate regenerados (sticky bar y hints cambian
+  píxeles) · Impeccable 4.5.2 sobre los archivos tocados.
+
+
 ## 1.14.0-beta+42 · v21.9 — espejo estilo Vysor DESDE el navegador: screenrecord H.264 por la sesión ADB del cliente (el navegador es el servidor)
 
 «Vysor sí puede incluso desde web» — y ahora nosotros también, con la MISMA

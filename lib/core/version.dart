@@ -6,7 +6,8 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v21.7 · puente sin PC: la app conecta al relay del
-/// preview con WebSocket saliente (rol bridge) — «todo dentro de la preview»
-/// sin helper en la PC del dueño; captura de UI viva vía RepaintBoundary).
-const String kAppVersionVisible = '21.8';
+/// Versión visible (ronda v22.0 · «la app directa»: repo limpio de
+/// documentación de proceso, rendimiento en dispositivos humildes
+/// (copyWith O(campo), cinta aislada, sticky sin blur), minSdk al mínimo
+/// estable del framework (24 · Android 7.0) y GUI más clara).
+const String kAppVersionVisible = '22.0';

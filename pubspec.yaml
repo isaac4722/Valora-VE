@@ -2,11 +2,16 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y salas con su propia tecnología. Offline-first."
 publish_to: 'none'
 
-# 1.14.0-beta+41 · v21.7 — puente sin PC: la app abre WebSocket saliente al
-# relay del preview (rol bridge) y sirve pantalla + /health /test /nav /erase
-# sin helper en la PC del dueño («todo dentro de la preview»); captura de UI
-# viva con RepaintBoundary global (JPEG vía flutter_image_compress).
-version: 1.14.0-beta+42
+# 1.14.0-beta+43 · v22.0 — «la app directa»: repo sin documentación de
+# proceso (.agents/201 archivos, AGENT.md, MVP-CRUD, PROGRESS×3,
+# CHANGELOG_WARM/COLD fuera del repo); rendimiento en dispositivos
+# humildes (mutaciones O(campo) con copyWith — adiós al round-trip JSON
+# completo en cada tap/tecla —, cinta con RepaintBoundary y animación
+# detenida en vacío, sticky bars sin BackdropFilter, shell que solo se
+# reconstruye con lo que pinta); minSdk = flutter.minSdkVersion (24,
+# Android 7.0, el mínimo estable del framework sin hardcodes); GUI más
+# clara (hints por sección en Inicio, pestaña «Conversor» unificada).
+version: 1.14.0-beta+43
 
 environment:
   sdk: ^3.9.2
