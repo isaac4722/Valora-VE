@@ -312,6 +312,25 @@ class _TutorialLegal extends StatelessWidget {
                   context.go('/bienvenida');
                 },
               ),
+              // Canal dev (v22.3): la app se entera de las Releases de
+              // GitHub del repo — comprueba si hay APK más nuevo que el
+              // build instalado y deja descargarlo desde el navegador.
+              ListTile(
+                leading: Icon(
+                  Icons.system_update_outlined,
+                  color: scheme.primary,
+                ),
+                title: const Text(
+                  'Buscar actualizaciones',
+                  style: TextStyle(fontSize: 13.5),
+                ),
+                subtitle: const Text(
+                  'Canal de desarrollo: APK de cada ronda en GitHub Releases',
+                  style: TextStyle(fontSize: 11.5),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                onTap: () => context.push('/actualizaciones'),
+              ),
               FutureBuilder<PackageInfo>(
                 future: PackageInfo.fromPlatform(),
                 builder: (context, snap) => ListTile(

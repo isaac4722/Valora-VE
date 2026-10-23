@@ -11,7 +11,7 @@ publish_to: 'none'
 # reconstruye con lo que pinta); minSdk = flutter.minSdkVersion (24,
 # Android 7.0, el mínimo estable del framework sin hardcodes); GUI más
 # clara (hints por sección en Inicio, pestaña «Conversor» unificada).
-version: 1.14.2-beta+45
+version: 1.14.3-beta+46
 
 environment:
   sdk: ^3.9.2
@@ -39,6 +39,13 @@ dependencies:
 
   # ── Red ──────────────────────────────────────────────────────────────────
   dio: ^5.7.0                       # tablero de tasas + SSE propio (§trap 1)
+  url_launcher: ^6.3.0               # abre el APK de la Release y su página
+                                    # en GitHub en el navegador (canal dev
+                                    # v22.3). First-party (flutter.dev); su
+                                    # familia linux/web/windows ya viajaba en
+                                    # el lock. El plugin tercero de updater
+                                    # se descartó: FileProvider + permiso de
+                                    # instalación que la app no necesita.
   connectivity_plus: ^7.3.1         # offline REAL (v17.8): saber cuándo NO hay red
   socket_io_client: 2.0.3+1         # sala modo Servidor (relay del usuario · orden del dueño v19)
 

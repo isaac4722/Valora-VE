@@ -1,7 +1,7 @@
 /// ─── Router declarativo (GUI dp4: shell 5 pestañas móvil + 7 rutas) ─────────
 /// home:/ · conversor:/conversor · lista:/lista · productos:/productos ·
 /// análisis:/analisis · historial:/historial · ajustes:/ajustes
-/// (+ push: sala, constancia, escáner, legal, ticket).
+/// (+ push: sala, constancia, escáner, legal, ticket, actualizaciones).
 /// v17.8: la pestaña Finanzas se retiró (orden del dueño) — los gastos
 /// viven en Análisis → «Gastos», alimentados por las compras de Lista.
 ///
@@ -20,6 +20,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/theme.dart';
 import '../data/store.dart';
+import '../features/actualizaciones/actualizaciones_screen.dart';
 import '../features/converter/converter_screen.dart';
 import '../features/history/history_screen.dart';
 import '../features/home/home_screen.dart';
@@ -121,6 +122,13 @@ GoRouter buildRouter({required AppStore store}) {
       GoRoute(
         path: '/legal',
         pageBuilder: (context, s) => vePage(context, s, const LegalScreen()),
+      ),
+      // Actualizaciones del canal dev (v22.3): la app lee las Releases de
+      // GitHub del propio repo y ofrece descargar el APK de cada ronda.
+      GoRoute(
+        path: '/actualizaciones',
+        pageBuilder: (context, s) =>
+            vePage(context, s, const ActualizacionesScreen()),
       ),
       // Tickets (dp6): galería de fotos de recibos de las compras.
       GoRoute(

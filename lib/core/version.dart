@@ -6,7 +6,7 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v22.2 · documentación de proceso recuperada
-/// —los MDs que el repo siempre tuvo— y repo afianzado sin rastro del
-/// código que ya no pertenece a la app).
-const String kAppVersionVisible = '22.2';
+/// Versión visible (ronda v22.3 · actualizador del canal dev: la app se
+/// entera de las Releases de GitHub del propio repo y descarga el APK de
+/// cada ronda desde el navegador).
+const String kAppVersionVisible = '22.3';

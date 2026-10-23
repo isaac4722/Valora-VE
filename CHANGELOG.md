@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.14.3-beta+46 · v22.3 — actualizador del canal dev: la app se entera de las Releases de GitHub
+
+Orden del dueño: crear el actualizador «adecuado para todo el desarrollo
+de la App (no para producción)». CI ya publicaba cada tag «v*» como
+Release (v17.9/v19.2: los 4 APK + AAB + ZIP); faltaba el lado de la app.
+
+- **Nueva pantalla `/actualizaciones` (Ajustes → «Buscar actualizaciones»)**:
+  consulta anónima a api.github.com, compara el build instalado
+  (PackageInfo) con el tag más reciente y anuncia si hay algo nuevo — con
+  las notas de la Release (el markdown de GitHub aplana a texto), la
+  fecha y las 4 filas de descarga por ABI con su tamaño (arm64,
+  universal, v7a, x64). Con el kit Ve de siempre: PushScreen con
+  «Volver», VeCard, toasts, safe-areas.
+- **Comparador propio de versiones** (`lib/data/github_releases.dart`):
+  lee los DOS formatos que ha tenido el repo (`v1.0.2-beta` histórico y
+  `1.14.3-beta+46` de pubspec), estable > pre-release, build number de
+  desempate. Un tag raro no rompe la comparación — se muestra y ya.
+- **Sin permisos nuevos, sin código nativo, sin tokens**: la descarga va
+  por el navegador del sistema (`url_launcher`, first-party — su familia
+  ya viajaba transitiva en el lock) y la instalación por el instalador
+  de Android: el mismo gesto de siempre, solo que la app ahora avisa
+  cuándo hay algo nuevo. El repo es público: la lectura de Releases no
+  lleva credenciales y jamás va un PAT dentro del APK.
+- **Plugin tercero descartado** (`github_release_apk_updater`, 1.0.11):
+  exige FileProvider con external-path y REQUEST_INSTALL_PACKAGES en el
+  manifest anfitrión, y su propio registro arregla conflictos de fusión
+  de manifest hasta 1.0.11. Lastre para un canal de desarrollo; esta vía
+  no toca el manifest de producción.
+- **Fallos en cristiano**: rate-limit de GitHub (60/h anónimas por IP),
+  sin conexión, 404 y respuestas raras tienen mensaje propio y
+  «Reintentar». La nota al pie declara la consulta anónima, en el mismo
+  lenguaje de la pantalla Legal.
+- 18 tests nuevos (261 en total): comparador, parser del payload real con
+  ambos estilos de nombre de APK, cliente vía adaptador de dio sin
+  red, y la pantalla completa (novedad / al día / sin Releases /
+  reintento / aviso cuando el navegador no puede abrir).
+
 ## 1.14.2-beta+45 · v22.2 — documentación de proceso recuperada
 
 Orden del dueño: «recupera todos los MDs o lo que borraste por
