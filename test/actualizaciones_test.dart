@@ -1,12 +1,16 @@
-/// Tests del actualizador del canal dev (v22.3): comparador de versiones,
-/// parser del payload real de la API de Releases (el formato del repo, con
-/// sus DOS estilos de nombre de APK), traducción de fallos (rate-limit de
-/// GitHub incluido) y la pantalla completa — novedad, al día, sin releases
-/// y reintento tras fallo. El cliente real se ejercita a través de un
-/// adaptador de dio que devuelve el cuerpo crudo, sin tocar la red.
+/// Tests del actualizador del canal dev (v22.3 + v22.4): comparador de
+/// versiones, parser del payload real de la API de Releases (el formato del
+/// repo, con sus DOS estilos de nombre de APK), traducción de fallos
+/// (rate-limit de GitHub incluido) y la pantalla completa — novedad, al
+/// día, sin releases y reintento tras fallo. v22.4 añade el ciclo IN-APP:
+/// la descarga real del APK (adaptador de dio sin red → archivo en disco
+/// temporal) y la pantalla con instalador fabricado (progreso, permiso,
+/// fallo y reintento). El cliente real se ejercita a través de adaptadores
+/// de dio que devuelven el cuerpo crudo, sin tocar la red.
 library;
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +22,7 @@ import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/github_releases.dart';
 import 'package:valorave/features/actualizaciones/actualizaciones_screen.dart';
+import 'package:valorave/services/instalador_apk.dart';
 
 void main() {
   group('VersionTriple (v22.3): parse de tags y pubspec', () {
@@ -195,7 +200,7 @@ void main() {
       await _pump(tester, cliente: falso);
       expect(find.text('Hay una actualización'), findsOneWidget);
       expect(find.textContaining('v1.14.3-beta+46'), findsOneWidget);
-      expect(find.text('ValoraVE 22.3'), findsOneWidget);
+      expect(find.text('ValoraVE 22.4'), findsOneWidget);
       expect(find.textContaining('revisa GitHub Releases'), findsOneWidget);
       // Las 4 filas de descarga (la primera, arm64, orden preferente).
       await _arrastrarHasta(
@@ -253,9 +258,11 @@ void main() {
     testWidgets('tocar un APK avisa cuando el sistema no puede abrir', (
       tester,
     ) async {
-      // En el entorno de test nadie atiende el canal de url_launcher: el
-      // falso contesta «no pude abrir», que es justo el camino que esta
-      // pieza promete (fallo de plataforma → aviso, nunca silencio).
+      // En el entorno de test (host Linux, instalador real disponible
+      // = false) las filas conservan la vía navegador de v22.3. Nadie
+      // atiende el canal de url_launcher: el falso contesta «no pude
+      // abrir», que es justo el camino prometido (fallo de plataforma →
+      // aviso, nunca silencio).
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
             const MethodChannel('plugins.flutter.io/url_launcher'),
@@ -269,15 +276,126 @@ void main() {
       );
       await tester.tap(find.text('Teléfonos modernos · arm64-v8a'));
       await tester.pumpAndSettle(const Duration(milliseconds: 200));
-      // En el entorno de test no hay navegador que atienda el canal de
-      // url_launcher: el servicio de la app convierte eso en aviso, no
-      // en silencio ni en excepción.
       expect(find.textContaining('No se pudo abrir el enlace'), findsOneWidget);
     });
   });
-}
 
-// ── Fixtures ────────────────────────────────────────────────────────────────
+  group('InstaladorApk · descarga in-app (v22.4)', () {
+    test('disponible: gate honesto — el host de tests no es Android', () {
+      // En Android real el VM impl responde true; en web el stub responde
+      // false y en este host (Linux) también — es la regla que devuelve
+      // las filas a la vía navegador fuera del teléfono.
+      expect(InstaladorApk().disponible, isFalse);
+    });
+
+    test(
+      'descarga: escribe el APK en <carpeta>/valora_update y avisa el progreso',
+      () async {
+        final temp = await Directory.systemTemp.createTemp('valora_test_apk');
+        addTearDown(() => temp.delete(recursive: true));
+        final dio = Dio()..httpClientAdapter = _AdaptadorApk();
+        final progreso = <int>[];
+        final ruta = await InstaladorApk(dio: dio).descargar(
+          url: 'https://github.com/x/arm64-v8a.apk',
+          nombre: 'valorave-arm64.apk',
+          carpetaBase: temp.path,
+          progreso: (recibidos, total) => progreso.add(recibidos),
+        );
+        final archivo = File(ruta);
+        expect(await archivo.exists(), isTrue);
+        expect(await archivo.length(), _AdaptadorApk.tamano);
+        // La ruta cuelga de la carpeta que el FileProvider del manifest
+        // declara (valora_update/ bajo el cache) y conserva el nombre
+        // original del asset — el instalador debe encontrarlo ahí.
+        expect(ruta, contains('valora_update'));
+        expect(ruta, endsWith('valorave-arm64.apk'));
+        expect(progreso.isNotEmpty, isTrue);
+        expect(progreso.last, _AdaptadorApk.tamano);
+      },
+    );
+  });
+
+  group('Instalación in-app en la pantalla (v22.4)', () {
+    testWidgets(
+      'Android: tocar el APK descarga in-app y lanza el instalador',
+      (tester) async {
+        final falso = _InstaladorFalso();
+        final cliente = _ClienteFalso()
+          ..respuesta = [ReleaseInfo.fromJson(_mapaNovedad())];
+        await _pump(tester, cliente: cliente, instalador: falso);
+        // La pantalla sabe que está en Android: cambia la etiqueta y el
+        // hint cuenta la verdad del ciclo in-app (case-insensitive: el
+        // hint usa «DENTRO», el pie del ListView usa «dentro» y queda
+        // fuera del viewport perezoso).
+        expect(find.text('DESCARGAR E INSTALAR'), findsOneWidget);
+        expect(
+          find.textContaining(RegExp('dentro de la app', caseSensitive: false)),
+          findsWidgets,
+        );
+        await _arrastrarHasta(
+          tester,
+          find.text('Teléfonos modernos · arm64-v8a'),
+        );
+        await tester.tap(find.text('Teléfonos modernos · arm64-v8a'));
+        await tester.pumpAndSettle(const Duration(milliseconds: 200));
+        expect(falso.descargas, 1);
+        expect(falso.instalaciones, 1);
+        expect(
+          find.text('Descargado · instalador de Android en camino'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'sin permiso de orígenes desconocidos: diálogo con Abrir ajustes',
+      (tester) async {
+        final falso = _InstaladorFalso()..permiso = false;
+        final cliente = _ClienteFalso()
+          ..respuesta = [ReleaseInfo.fromJson(_mapaNovedad())];
+        await _pump(tester, cliente: cliente, instalador: falso);
+        await _arrastrarHasta(
+          tester,
+          find.text('Teléfonos modernos · arm64-v8a'),
+        );
+        await tester.tap(find.text('Teléfonos modernos · arm64-v8a'));
+        await tester.pumpAndSettle(const Duration(milliseconds: 200));
+        // Preguntado ANTES de gastar la descarga:
+        expect(falso.descargas, 0);
+        expect(find.text('Un permiso, una sola vez'), findsOneWidget);
+        await tester.tap(find.text('Abrir ajustes'));
+        await tester.pumpAndSettle(const Duration(milliseconds: 200));
+        expect(falso.ajustesAbiertos, 1);
+      },
+    );
+
+    testWidgets(
+      'descarga interrumpida: estado de fallo y reintento limpio',
+      (tester) async {
+        final falso = _InstaladorFalso()..errorDescarga = true;
+        final cliente = _ClienteFalso()
+          ..respuesta = [ReleaseInfo.fromJson(_mapaNovedad())];
+        await _pump(tester, cliente: cliente, instalador: falso);
+        await _arrastrarHasta(
+          tester,
+          find.text('Teléfonos modernos · arm64-v8a'),
+        );
+        await tester.tap(find.text('Teléfonos modernos · arm64-v8a'));
+        await tester.pumpAndSettle(const Duration(milliseconds: 200));
+        expect(
+          find.text('La descarga se interrumpió. Toca para reintentar.'),
+          findsOneWidget,
+        );
+        expect(falso.instalaciones, 0);
+        falso.errorDescarga = false;
+        await tester.tap(find.text('Teléfonos modernos · arm64-v8a'));
+        await tester.pumpAndSettle(const Duration(milliseconds: 200));
+        expect(falso.descargas, 2);
+        expect(falso.instalaciones, 1);
+      },
+    );
+  });
+}
 
 /// La Release que CI publicaría para esta ronda: 4 APK + AAB + ZIP con los
 /// nombres semánticos de build.yml (v18.0) y notas autogeneradas.
@@ -412,6 +530,7 @@ class _ClienteFalso extends GithubReleasesClient {
 Future<void> _pump(
   WidgetTester tester, {
   required GithubReleasesClient cliente,
+  InstaladorApk? instalador,
   String instalada = '1.14.2-beta+45',
 }) async {
   await tester.pumpWidget(
@@ -422,6 +541,7 @@ Future<void> _pump(
         theme: AppTheme.light(),
         home: ActualizacionesScreen(
           cliente: cliente,
+          instalador: instalador,
           versionInstalada: instalada,
         ),
       ),
@@ -438,4 +558,76 @@ Future<void> _arrastrarHasta(WidgetTester tester, Finder objetivo) async {
     duration: const Duration(milliseconds: 40),
   );
   await tester.pumpAndSettle(const Duration(milliseconds: 60));
+}
+
+/// Adaptador de dio que sirve UN APK de 12 KB en 3 chunks con su
+/// content-length: ejercita la descarga real del VM impl (archivo en
+/// disco, progreso por chunk, carpeta valora_update) sin tocar la red.
+class _AdaptadorApk implements HttpClientAdapter {
+  static const int tamano = 4096 * 3;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelReceiveProgress,
+  ) async {
+    return ResponseBody(
+      Stream<Uint8List>.fromIterable([
+        Uint8List(4096)..fillRange(0, 4096, 65),
+        Uint8List(4096)..fillRange(0, 4096, 65),
+        Uint8List(4096)..fillRange(0, 4096, 65),
+      ]),
+      200,
+      headers: {
+        Headers.contentTypeHeader: ['application/octet-stream'],
+        Headers.contentLengthHeader: ['$tamano'],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+/// Instalador falso con el contrato del real (seam v22.4 de la pantalla):
+/// cuenta descargas/instalaciones/ajustes y se rompe a voluntad para
+/// ejercitar fallo de red, permiso negado y reinstalación.
+class _InstaladorFalso implements InstaladorApk {
+  bool permiso = true;
+  bool errorDescarga = false;
+  int descargas = 0;
+  int instalaciones = 0;
+  int ajustesAbiertos = 0;
+
+  @override
+  bool get disponible => true; // «Android» en estos tests
+
+  @override
+  Future<bool> get puedeInstalar async => permiso;
+
+  @override
+  Future<String> descargar({
+    required String url,
+    required String nombre,
+    String? carpetaBase,
+    void Function(int recibidos, int total)? progreso,
+  }) async {
+    descargas++;
+    if (errorDescarga) throw const SocketException('red rota');
+    progreso?.call(1200, 1200); // completo de una (100 %)
+    return '/cache/valora_update/$nombre';
+  }
+
+  @override
+  Future<bool> instalar(String ruta) async {
+    instalaciones++;
+    return true;
+  }
+
+  @override
+  Future<bool> abrirAjustesOrigen() async {
+    ajustesAbiertos++;
+    return true;
+  }
 }

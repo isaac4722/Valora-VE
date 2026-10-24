@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Canal dev v22.4: lo único que el FileProvider comparte hacia fuera —
+     la carpeta del cache donde la app deja el APK de la Release antes de
+     lanzar el instalador (kCarpetaApk en instalador_apk_vm.dart). Nada
+     más del filesystem de la app es alcanzable por este provider. -->
+<paths>
+    <cache-path
+        name="apk_update"
+        path="valora_update/" />
+</paths>

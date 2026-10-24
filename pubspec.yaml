@@ -2,16 +2,14 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y salas con su propia tecnología. Offline-first."
 publish_to: 'none'
 
-# 1.14.0-beta+43 · v22.0 — «la app directa»: repo sin documentación de
-# proceso (.agents/201 archivos, AGENT.md, MVP-CRUD, PROGRESS×3,
-# CHANGELOG_WARM/COLD fuera del repo); rendimiento en dispositivos
-# humildes (mutaciones O(campo) con copyWith — adiós al round-trip JSON
-# completo en cada tap/tecla —, cinta con RepaintBoundary y animación
-# detenida en vacío, sticky bars sin BackdropFilter, shell que solo se
-# reconstruye con lo que pinta); minSdk = flutter.minSdkVersion (24,
-# Android 7.0, el mínimo estable del framework sin hardcodes); GUI más
-# clara (hints por sección en Inicio, pestaña «Conversor» unificada).
-version: 1.14.3-beta+46
+# 1.14.4-beta+47 · v22.4 — «instalación in-app»: la app descarga el APK de
+# la Release a su carpeta temporal (dio → cache/valora_update, con progreso
+# visible) y lanza el instalador de Android sobre él vía canal first-party
+# valorave/instalador (FileProvider de autoridad propia +
+# REQUEST_INSTALL_PACKAGES en el manifest del repo). El navegador queda
+# como respaldo en web. Orden del dueño: «quiero que la app se descargue
+# el APK de la release temporalmente e instale, no un atajo».
+version: 1.14.4-beta+47
 
 environment:
   sdk: ^3.9.2
@@ -39,13 +37,14 @@ dependencies:
 
   # ── Red ──────────────────────────────────────────────────────────────────
   dio: ^5.7.0                       # tablero de tasas + SSE propio (§trap 1)
-  url_launcher: ^6.3.0               # abre el APK de la Release y su página
-                                    # en GitHub en el navegador (canal dev
-                                    # v22.3). First-party (flutter.dev); su
-                                    # familia linux/web/windows ya viajaba en
-                                    # el lock. El plugin tercero de updater
-                                    # se descartó: FileProvider + permiso de
-                                    # instalación que la app no necesita.
+  url_launcher: ^6.3.0               # RESPALDO de descarga del canal dev
+                                    # (v22.4): en Android el APK baja in-app
+                                    # (instalador_apk_vm.dart) y aquí queda
+                                    # la vía navegador para web y para ver
+                                    # la página de Releases. First-party
+                                    # (flutter.dev). El plugin tercero de
+                                    # updater siguió descartado: FileProvider
+                                    # + conflictos de manifest.
   connectivity_plus: ^7.3.1         # offline REAL (v17.8): saber cuándo NO hay red
   socket_io_client: 2.0.3+1         # sala modo Servidor (relay del usuario · orden del dueño v19)
 

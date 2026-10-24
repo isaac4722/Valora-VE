@@ -28,6 +28,13 @@
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
         android:usesPermissionFlags="neverForLocation"/>
 
+    <!-- Canal dev v22.4: instalar el APK de la Release que la app misma
+         descarga a su cache. Solo AUTORIZA mostrar la ventana de
+         instalación; en Android 8+ el dueño concede «Instalar apps
+         desconocidas» para ValoraVE una sola vez (la app detecta el
+         estado y ofrece abrir ese ajuste exacto). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+
     <!-- v20.4 · Sin respaldo de plataforma (allowBackup=false): el token del
          relay socket.io (Sala modo Servidor) y todo el resto de datos viven
          SOLO en este teléfono — la copia de seguridad es la de la propia app
@@ -110,6 +117,22 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_gap_info" />
         </receiver>
+
+        <!-- Canal dev v22.4: FileProvider con autoridad PROPIA
+             (${applicationId}.instalador — sufijo que ningún plugin usa,
+             cero conflictos de fusión de manifest; aquí estuvo el motivo
+             del descarte del updater tercero en v22.3). Sirve el APK
+             descargado al instalador de Android como content://. Solo
+             expone la carpeta cache/valora_update de file_paths.xml. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.instalador"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

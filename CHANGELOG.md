@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.14.4-beta+47 · v22.4 — instalación in-app: la app descarga el APK y lanza el instalador de Android
+
+Orden del dueño: «No quiero eso, quiero que la app se descargue el APK de
+la release (temporalmente) instale no un atajo y descargar e instalar
+manual». v22.3 avisaba y mandaba al navegador; esta ronda cierra el ciclo
+COMPLETO dentro de la app.
+
+- **Descarga in-app con progreso** (`lib/services/instalador_apk_vm.dart`):
+  dio baja el APK de la Release a `<cache>/valora_update/<nombre>.apk`
+  (carpeta declarada al FileProvider) con porcentaje en vivo por fila —
+  el tamaño esperado ya viaja en la Release, así el % marcha aunque el
+  servidor no mande content-length. El cache del sistema es el hogar del
+  archivo: Android puede reciclarlo sin pedir nada al dueño y si eso
+  pasa la fila vuelve a «pendiente» con un aviso honesto.
+- **Instalador de Android first-party** (canal `valorave/instalador` en
+  MainActivity.kt): el APK descargado se sirve como `content://` vía
+  FileProvider de autoridad PROPIA (`${applicationId}.instalador` —
+  sufijo que ningún plugin usa; las del lock son `.flutter.*`) y el
+  intent ACTION_INSTALL_PACKAGE abre la ventana de instalación del
+  sistema sobre él. Sin plugins terceros: el manifest lo escribe el
+  propio repo, que era justamente el riesgo del updater de pub.dev
+  descartado en v22.3.
+- **El permiso de Android 8+ se pide bien**: «Instalar apps
+  desconocidas» se consulta ANTES de gastar la descarga
+  (`puedeInstalar`) y el diálogo ofrece abrir el ajuste exacto de
+  ValoraVE (`abrirAjustesOrigen`), no el menú general. Una sola vez y de
+  ahí en adelante las rondas se instalan directo. REQUEST_INSTALL_
+  PACKAGES declarado en el manifest con su porqué al lado.
+- **Sin tokens ni credenciales**: la descarga sale de la URL pública de
+  la Release (repo público) y la consulta sigue anónima (60/h por IP,
+  con su mensaje propio si GitHub limita). Nada sale del teléfono.
+- **Web conserva la vía navegador** (v22.3): el stub del facade
+  responde «no disponible» y las filas vuelven a abrir el navegador —
+  en web no hay filesystem compartible ni instalador de sistema. El pie
+  de la pantalla cuenta la verdad de cada plataforma.
+- androidx.core declarado EXPLÍCITO en build.gradle.kts (el manifest ya
+  referencia androidx.core.content.FileProvider; la versión no depende
+  de la transividad de terceros).
+- 5 tests nuevos (266 en total): descarga real con adaptador de dio sin
+  red (archivo en disco temporal + progreso por chunk), gate honesto de
+  disponibilidad fuera de Android, y la pantalla con instalador
+  fabricado — ciclo completo, permiso con diálogo, fallo de descarga y
+  reintento limpio.
+
 ## 1.14.3-beta+46 · v22.3 — actualizador del canal dev: la app se entera de las Releases de GitHub
 
 Orden del dueño: crear el actualizador «adecuado para todo el desarrollo

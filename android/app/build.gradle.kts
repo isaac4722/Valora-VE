@@ -88,6 +88,12 @@ kotlin {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Canal dev v22.4: FileProvider vive en androidx.core. Llega
+    // transitivo por el embedding de Flutter, pero el canal de
+    // instalación lo declara EXPLÍCITO — el manifest del propio repo ya
+    // referencia androidx.core.content.FileProvider y así la versión no
+    // depende de la transividad de terceros.
+    implementation("androidx.core:core:1.13.1")
 }
 
 flutter {

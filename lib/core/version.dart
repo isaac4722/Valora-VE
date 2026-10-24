@@ -6,7 +6,7 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v22.3 · actualizador del canal dev: la app se
-/// entera de las Releases de GitHub del propio repo y descarga el APK de
-/// cada ronda desde el navegador).
-const String kAppVersionVisible = '22.3';
+/// Versión visible (ronda v22.4 · instalación in-app: la app descarga el
+/// APK de la Release a su cache y lanza el instalador de Android; adiós al
+/// navegador de la v22.3).
+const String kAppVersionVisible = '22.4';

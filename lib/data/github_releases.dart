@@ -10,9 +10,12 @@
 /// - Plugin tercero (`github_release_apk_updater`) descartado: exige
 ///   FileProvider con external-path, REQUEST_INSTALL_PACKAGES en el manifest
 ///   y su historial registra conflictos de fusión de manifest hasta 1.0.11.
-/// - La descarga va por el NAVEGADOR del sistema y la instalación por el
-///   instalador de Android: el mismo gesto manual de siempre, solo que la
-///   app ahora AVISA cuándo hay algo nuevo.
+/// - v22.3: la descarga iba por el NAVEGADOR. v22.4 (orden del dueño: la
+///   app descarga e instala sin gestos manuales): la descarga es IN-APP
+///   (dio → cache/valora_update, en services/instalador_apk_vm.dart) y la
+///   instalación la lanza el canal first-party `valorave/instalador`
+///   (FileProvider escrito por el propio repo). El navegador queda como
+///   vía de respaldo en web.
 /// - Sin tokens dentro del APK: el repo es público y la lectura de Releases
 ///   no lleva credenciales (AGENT.md: jamás commitear secretos).
 library;

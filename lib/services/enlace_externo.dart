@@ -1,8 +1,10 @@
 /// ─── Enlaces fuera de la app (v22.3) ────────────────────────────────────────
-/// Abre una URL en el navegador del sistema (pestaña nueva en web). Es el
-/// transporte de descarga del canal dev: el APK de la Release baja por el
-/// navegador y lo instala el instalador de Android — el mismo gesto manual
-/// de siempre, sin permisos nuevos ni código nativo propio.
+/// Abre una URL en el navegador del sistema (pestaña nueva en web). Fue el
+/// transporte de descarga del canal dev en v22.3; desde v22.4 es el
+/// RESPALDO (web y escritorio de desarrollo): en Android el APK baja
+/// dentro de la app y la instalación la lanza el canal
+/// `valorave/instalador` — el navegador queda para las Releases viejas y
+/// para ver la página del repo.
 ///
 /// `url_launcher` es first-party (flutter.dev) y su familia linux/web/windows
 /// ya viajaba en el lock como transitiva; aquí pasa a dependencia directa
