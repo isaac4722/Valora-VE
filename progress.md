@@ -303,3 +303,70 @@ con la plantilla de `AGENT.md`.
 - Siguiente: decidir con el dueño el destino de MVP-CRUD.md (restaurar
   en main desde el linaje antiguo vs. mantenerlo externo) y plan de
   fusiones para el linaje dp4 (saneado previo obligatorio).
+
+---
+
+## [TASK-17] v1.0.3-beta · GUI simple «resumen sin recortes» con EGM y comparativa contra CalculaYa · 2026-11-20 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Hecho:
+  - AGENT.md y progress.md leídos COMPLETOS antes del turno (Regla 1).
+  - Base rota detectada y reparada: los 4 commits posteriores a TASK-16
+    (4505826..4252b1b) dejaron 1.926 issues de analyze (comillas escapadas
+    `\'`, imports de paquetes no declarados shadcn_ui/lucide_icons_flutter,
+    rutas inexistentes). Revertidos en la rama de trabajo antes de tocar
+    nada; base verde restaurada (analyze 0 · 107/107).
+  - Ingeniería inversa de CalculaYa 1.1.0 (APK .apks de 49,4 MB) con REA
+    (npx rea-agents@6.9.0 + jadx-headless-mcp 0.7.1): package
+    com.juanalvarez.calculadorabcv, Flutter/Dart 3.13.5, 9 pantallas
+    (home/calculator/arithmetic/history/utilities/payment/scan/settings/
+    piracy_block), 6 widgets de inicio (USD/EUR/Dual + forecast), pago
+    móvil con share sheet, tasas custom (Zelle/Binance/Remesas) con brecha
+    BCV, OCR de precios ML Kit (~6,7 MB/ABI), anuncios+compras+FCM
+    (rechazados por privacidad). Evidencia local: strings del snapshot
+    Dart + manifiesto decodificado.
+  - Design doc EGM modo elefante (docs/designs/2026-11-20-gui-simple.md):
+    overview/problem/goals/non-goals/CUJs/plan/al alternatives/implementation,
+    redactado con el método google/elephant-goldfish-model y revisado por
+    2 goldfish SIN contexto (personas egm-comprehension y egm-design).
+    Hallazgos resueltos en el doc: blocker de privacidad del dato bancario
+    (allowBackup=false + biométrico opt-in + texto legal + aviso en sheet),
+    mapeo tab↔rama explícito, merge por id, métrica G1 (9 secciones
+    top-level), validaciones suaves de cuenta, cita corregida (paso 3 del
+    método), /legal fuera del shell, glosario.
+  - Implementación (una pieza por commit, gates en cada una):
+    1. shell 6→5 pestañas + hub «Más» (/mas como rama índice 4,
+       tabForBranch explícito) + cabecera 3 acciones + nombre «Divisas».
+    2. Inicio 9 secciones → 4 bloques con despliegue progresivo
+       («Ver todo»: alertas, tiendas, registros, herramientas).
+    3. VeKeypad (52 px, tabulares, háptica, Semantics) + fichas
+       1/5/10/20/50/100 + ajustes relativos bajo el teclado + toggle
+       Decimales/Redondear (settings.numMode) + plegado del teclado.
+    4. CustomRate {id, name, bsPerUsd} máx 8 + editor en Ajustes + fila
+       con GapChip «+x,x % vs BCV» en Divisas (par USD→VES) que al tocar
+       aplica la tasa como fuente manual VES (motor intacto).
+    5. PayAccount + catálogo SUDEBAN (25 bancos, texto+codigo) + sección
+       «Cuentas y Pago Móvil» (máx 4, validación suave, biométrico
+       opt-in) + botón «Pago Móvil» en Divisas (VES) con sheet (monto
+       es-VE + datos + selector de cuenta + copiar/compartir) +
+       allowBackup=false + texto legal actualizado.
+    6. Onboarding 7→3 láminas concisas (país y done intactos).
+    7. Docs: README (tabla de módulos con hub), CHANGELOG 1.0.3-beta+4,
+       DESIGN-SYSTEM (firmas VeKeypad/GapChip), pubspec 1.0.3-beta+4.
+- Decisiones:
+  - «Resumir sin quitar»: todo lo que salió de la vista raíz quedó a un
+    toque (hub Más, «Ver todo», ajustes relativos bajo el teclado).
+  - Las tasas propias usan el mecanismo manual EXISTENTE del motor al
+    seleccionarse (ves-manual): cero cambios en el core de conversión.
+  - Merge de customRates/accounts por id (unión, empate=local), distinto
+    del criterio local-only de manualRates (hallazgo goldfish #4).
+  - Sin logos de bancos (Q1: texto + código SUDEBAN, dato público).
+  - Anuncios/compras/FCM/OCR de CalculaYa NO adoptados (privacidad y
+    peso); widgets 1x1 USD/EUR quedan en el backlog de Fase D.
+  - Toggle de tema fuera de la cabecera (vive en Ajustes→Apariencia).
+- Gates: analyze=0 issues · test=123/123 (107+16 nuevos) en cada commit.
+- Bloqueos: el entorno de ejecución no mantiene procesos en background
+  (descargas/npx relanzados en primer plano). Sin Android SDK local:
+  la build firmada la valida el runner de Actions (paso 8).
+- Siguiente: push de feat/gui-simple-egm → CI → PR a main → tag
+  v1.0.3-beta → Release; pendiente del backlog: widgets 1x1 USD/EUR
+  (Fase D), quick_actions, heatmap de Análisis.

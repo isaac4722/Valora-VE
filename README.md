@@ -20,17 +20,21 @@ multi-divisa (USD · VES · EUR · COP · BRL · MXN), lista de compras
 compartida en vivo, libro de precios por producto, finanzas personales
 y análisis de devaluación — todo **offline-first**, en tu teléfono.
 
+> **v1.0.3-beta · GUI simple «resumen sin recortes»**: navegación de 5
+> pestañas con hub «Más», Inicio en 4 bloques con despliegue progresivo,
+> teclado VeKeypad + fichas rápidas + redondeo en Divisas, tasas propias
+> con nombre y brecha BCV, y Pago Móvil compartible con candado
+> biométrico. Diseño guiado por EGM (elephant-goldfish) tras comparar
+> (con ingeniería inversa) contra CalculaYa 1.1.0.
+
 ## Módulos
-| Módulo | Qué hace |
-|---|---|
-| **Inicio** | tablero del país, sueldo pactado con derivadas LOTTT, resumen del mes, tiendas, recientes |
-| **Conversor** | puente USD + EUR visible, fecha histórica honesta, ruta del cálculo, notas y recientes |
-| **Lista** | presupuesto, plantillas, vuelto, dividir la cuenta, checkout con foto de ticket, **sala en vivo** |
-| **Productos** | libro de precios con tiendas, sparklines, metas con aviso, CSV ⇄, escáner |
-| **Historial** | asientos por compra, filtros, CSV de compras y movimientos, constancias |
-| **Finanzas** | ingresos/gastos normalizados a USD, donut y barras 6/12 m |
-| **Análisis** | brecha BCV↔paralelo, devaluación, inflación personal, rankings, canasta |
-| **Ajustes** | país, cinta, fuentes por módulo, alertas, respaldos JSON, tema |
+| Módulo | Dónde | Qué hace |
+|---|---|---|
+| **Inicio** | tab 1 | 4 bloques: héroe de tasas, acciones rápidas, tu mes y actividad desplegable |
+| **Divisas** | tab 2 | teclado propio, fichas 1-100, redondeo, fecha histórica honesta, ruta del cálculo, tasas propias con brecha, Pago Móvil |
+| **Lista** | tab 3 | presupuesto, plantillas, vuelto, dividir la cuenta, checkout con foto, **sala en vivo** |
+| **Productos** | tab 4 | libro de precios con tiendas, sparklines, metas con aviso, CSV ⇄, escáner |
+| **Más** | tab 5 | hub: Finanzas, Análisis (brecha/devaluación/inflación), Historial, Ajustes, Tutorial y legal |
 
 La sala en vivo tiene **tres transportes** con el mismo protocolo
 (`lista-sync`): un **servidor socket.io** que tú decides (viene en
@@ -74,6 +78,7 @@ Nada más. Sin FCM: las notificaciones son locales (canales
 ## Documentación
 - [AGENT.md](AGENT.md) — contrato de trabajo para agentes: método en 9 pasos
 - [progress.md](progress.md) — bitácora append-only de turnos
+- [docs/designs/2026-11-20-gui-simple.md](docs/designs/2026-11-20-gui-simple.md) — design doc EGM de la GUI simple
 - [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) — tokens «El Instrumento»
 - [docs/DEPENDENCIAS.md](docs/DEPENDENCIAS.md) — plugins oficiales y trampas
 - [docs/PARIDAD.md](docs/PARIDAD.md) — paridad 1:1 contra el spec §14
