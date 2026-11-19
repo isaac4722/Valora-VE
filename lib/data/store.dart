@@ -251,6 +251,8 @@ class AppStore extends ChangeNotifier {
         patched = s.copyWith(tickerSpeed: (value as num).toInt());
       case 'currencyOrder':
         patched = s.copyWith(currencyOrder: (value as List).cast<String>());
+      case 'numMode':
+        patched = s.copyWith(numMode: value == 'redondeo' ? 'redondeo' : 'decimales');
       default:
         return;
     }

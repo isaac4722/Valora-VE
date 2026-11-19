@@ -45,6 +45,14 @@ String fmtCurrency(double v, Currency c, {bool withCode = false}) {
   return '$sym $n';
 }
 
+/// Decimales del conversor según el modo del usuario: en «redondeo» las
+/// cifras grandes (>=100, típicamente Bs) se muestran sin decimales; las
+/// pequeñas conservan sus decimales inteligentes (patrón CalculaYa).
+int convDecimals(double v, Currency c, {bool rounding = false}) {
+  if (rounding && v.abs() >= 100) return 0;
+  return smartDecimals(v, c);
+}
+
 /// Alias del web: fmtMoney formatea tal cual sin símbolo.
 String fmtMoney(double v, Currency c) => fmtNum(v, decimals: smartDecimals(v, c));
 

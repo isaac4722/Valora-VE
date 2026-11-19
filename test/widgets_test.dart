@@ -205,7 +205,7 @@ void main() {
       expect(find.text('ACTIVIDAD RECIENTE'), findsOneWidget);
     });
 
-    testWidgets('Conversor: dual + swap + ruta + notas', (tester) async {
+    testWidgets('Divisas: dual + swap + ruta + teclado + redondeo', (tester) async {
       final store = _pumpedStore(tester, dir: 'w3');
       await _initServices(store);
       store.setRateBoard(RateBoard(sources: {
@@ -214,13 +214,36 @@ void main() {
       }));
       await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
       await tester.pumpAndSettle();
-      expect(find.text('Conversor'), findsOneWidget);
+      expect(find.text('Divisas'), findsOneWidget);
       expect(find.text('RUTA DEL CÁLCULO'), findsOneWidget);
       // swap invierte el par
       final fromBefore = store.data.converter.from;
       await tester.tap(find.byIcon(Icons.swap_vert));
       await tester.pumpAndSettle();
       expect(store.data.converter.from, isNot(fromBefore));
+      // teclado VeKeypad: C limpia y 5,0 escribe 50
+      final keypad = find.byType(VeKeypad);
+      expect(keypad, findsOneWidget);
+      await tester.tap(find.descendant(of: keypad, matching: find.text('C')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.descendant(of: keypad, matching: find.text('5')));
+      await tester.tap(find.descendant(of: keypad, matching: find.text('0')));
+      await tester.pumpAndSettle();
+      expect(find.text('50'), findsWidgets); // monto en el campo + ficha 50
+      // ficha rápida de monto absoluto
+      await tester.tap(find.text('100'));
+      await tester.pumpAndSettle();
+      // toggle redondeo persiste en settings
+      await tester.tap(find.text('Redondear'));
+      await tester.pumpAndSettle();
+      expect(store.settings.numMode, 'redondeo');
+      await tester.tap(find.text('Decimales'));
+      await tester.pumpAndSettle();
+      expect(store.settings.numMode, 'decimales');
+      // plegar teclado
+      await tester.tap(find.text('Ocultar teclado'));
+      await tester.pumpAndSettle();
+      expect(find.byType(VeKeypad), findsNothing);
     });
 
     testWidgets('Lista: agregar producto, plantilla, vuelto, dividir', (tester) async {

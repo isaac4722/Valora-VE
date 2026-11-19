@@ -825,6 +825,7 @@ class Settings {
   final String tickerSize; // v13 'compact' | 'normal' | 'large'
   final int tickerSpeed; // v13 90 | 120 | 180 (segundos por vuelta)
   final List<String> currencyOrder; // v13 (vacío = canónico, se purga)
+  final String numMode; // 'decimales' | 'redondeo' (conversor, patrón CalculaYa)
 
   const Settings({
     this.country = 'VE',
@@ -848,6 +849,7 @@ class Settings {
     this.tickerSize = 'normal',
     this.tickerSpeed = 120,
     this.currencyOrder = const [],
+    this.numMode = 'decimales',
   });
 
   const Settings.defaults() : this._defaultC();
@@ -873,7 +875,8 @@ class Settings {
         salaryMax = null,
         tickerSize = 'normal',
         tickerSpeed = 120,
-        currencyOrder = const [];
+        currencyOrder = const [],
+        numMode = 'decimales';
 
   Settings copyWith({
     String? country,
@@ -904,6 +907,7 @@ class Settings {
     String? tickerSize,
     int? tickerSpeed,
     List<String>? currencyOrder,
+    String? numMode,
   }) =>
       Settings(
         country: country ?? this.country,
@@ -929,6 +933,7 @@ class Settings {
         tickerSize: tickerSize ?? this.tickerSize,
         tickerSpeed: tickerSpeed ?? this.tickerSpeed,
         currencyOrder: currencyOrder ?? this.currencyOrder,
+        numMode: numMode ?? this.numMode,
       );
 
   Map<String, dynamic> toJson() => {
@@ -948,6 +953,7 @@ class Settings {
         'tickerSize': tickerSize,
         'tickerSpeed': tickerSpeed,
         'currencyOrder': currencyOrder,
+        'numMode': numMode,
       };
 
   /// Mapa de sueldo tolerante: el modo fijo usa amount; los modos variables
@@ -1028,6 +1034,7 @@ class Settings {
       },
       tickerSpeed: switch (iOf(j['tickerSpeed'], 120)) { 90 => 90, 180 => 180, _ => 120 },
       currencyOrder: sListOf(j['currencyOrder']),
+      numMode: sOf(j['numMode'], 'decimales') == 'redondeo' ? 'redondeo' : 'decimales',
     );
   }
 }

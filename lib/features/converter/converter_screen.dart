@@ -30,6 +30,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
   final _amountCtrl = TextEditingController(text: '1');
   final _shareKey = GlobalKey(); // RepaintBoundary del cálculo → PNG
   double _amount = 1;
+  bool _keypadVisible = true; // GUI simple: teclado plegable (patrón CalculaYa)
   String _dateMode = 'today'; // today | yesterday | week | custom
   DateTime? _customDate;
   Map<String, double>? _historicRates; // tasas históricas (sourceId → rate)
@@ -108,6 +109,23 @@ class _ConverterScreenState extends State<ConverterScreen> {
     }
   }
 
+  /// Tecla del VeKeypad: dígitos y coma es-VE escriben; ⌫ borra; C limpia.
+  void _onKeypadKey(String k) {
+    setState(() {
+      switch (k) {
+        case '⌫':
+          if (_amountCtrl.text.isNotEmpty) _amountCtrl.text = _amountCtrl.text.substring(0, _amountCtrl.text.length - 1);
+        case 'C':
+          _amountCtrl.text = '';
+        default:
+          // evita dobles comas y múltiple ceros a la izquierda
+          if (k == ',' && _amountCtrl.text.contains(',')) return;
+          _amountCtrl.text = '${_amountCtrl.text}$k';
+      }
+      _amount = parseLocaleNum(_amountCtrl.text) ?? 0;
+    });
+  }
+
   /// Contexto efectivo: vivo (hoy) o histórico (fecha seleccionada).
   RateContext _context(AppStore store) {
     final base = store.contextOf(module: RateModule.converter);
@@ -138,6 +156,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
     final plan = ctx.plan(from, to);
+    final bool rounding = store.settings.numMode == 'redondeo';
 
     double result = 0;
     if (plan != null && _amount > 0) result = _amount * plan.rate;
@@ -147,7 +166,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          const PageHeader('Conversor', hint: 'Puente USD · EUR visible · ruta honesta'),
+          const PageHeader('Divisas', hint: 'Puente USD · EUR visible · ruta honesta'),
           RepaintBoundary(
             key: _shareKey,
             child: Container(
@@ -159,6 +178,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
                   to: to,
                   result: result,
                   plan: plan,
+                  rounding: rounding,
                   onAmount: (v) => setState(() => _amount = v),
                   onSwap: () => store.setConverterPair(to.code, from.code),
                   onFrom: (c) => store.setConverterPair(c.code, to.code),
@@ -212,9 +232,14 @@ class _ConverterScreenState extends State<ConverterScreen> {
               ),
             ]),
           ),
-          _QuickAdjustments(
+          _KeypadCard(
+            visible: _keypadVisible,
+            rounding: rounding,
             amount: _amount,
-            onAdjust: (v) {
+            onToggle: () => setState(() => _keypadVisible = !_keypadVisible),
+            onRounding: (v) => store.setSetting('numMode', v),
+            onKey: _onKeypadKey,
+            onAmount: (v) {
               setState(() {
                 _amount = v <= 0 ? 0 : v;
                 _amountCtrl.text = fmtPlain(_amount, 2);
@@ -257,6 +282,7 @@ class _DualInput extends StatelessWidget {
     required this.to,
     required this.result,
     required this.plan,
+    required this.rounding,
     required this.onAmount,
     required this.onSwap,
     required this.onFrom,
@@ -267,6 +293,7 @@ class _DualInput extends StatelessWidget {
   final Currency from, to;
   final double result;
   final ({double rate, List<Currency> path, List<String> sourceIds})? plan;
+  final bool rounding;
   final ValueChanged<double> onAmount;
   final VoidCallback onSwap;
   final ValueChanged<Currency> onFrom, onTo;
@@ -325,9 +352,9 @@ class _DualInput extends StatelessWidget {
                     result,
                     // Héroe del par: cifra grande tabular (firma de la app).
                     style: VeText.displayNum(56, color: scheme.onSurface),
-                    decimals: smartDecimals(result, to),
+                    decimals: convDecimals(result, to, rounding: rounding),
                   ),
-                  Text(fmtCurrency(result, to),
+                  Text(fmtNum(result, decimals: convDecimals(result, to, rounding: rounding)),
                       style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
                 ]),
               ),
@@ -339,23 +366,106 @@ class _DualInput extends StatelessWidget {
   }
 }
 
-class _QuickAdjustments extends StatelessWidget {
-  const _QuickAdjustments({required this.amount, required this.onAdjust});
+class _KeypadCard extends StatelessWidget {
+  const _KeypadCard({
+    required this.visible,
+    required this.rounding,
+    required this.amount,
+    required this.onToggle,
+    required this.onRounding,
+    required this.onKey,
+    required this.onAmount,
+  });
 
+  final bool visible;
+  final bool rounding;
   final double amount;
-  final ValueChanged<double> onAdjust;
+  final VoidCallback onToggle;
+  final ValueChanged<String> onRounding;
+  final ValueChanged<String> onKey;
+  final ValueChanged<double> onAmount;
+
+  static const _amounts = [1.0, 5.0, 10.0, 20.0, 50.0, 100.0];
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(top: 10),
-      child: Row(children: [
-        for (final adj in quickAdjustments)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChipTag(adj.label, onTap: () => onAdjust(adj.apply(amount))),
-          ),
-      ]),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+          child: Column(children: [
+            // Fila de control: plegar teclado · decimales/redondeo.
+            Row(children: [
+              TapScale(
+                onTap: onToggle,
+                child: Semantics(
+                  button: true,
+                  label: visible ? 'Ocultar teclado' : 'Mostrar teclado',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: scheme.outlineVariant),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.keyboard_hide_outlined,
+                          size: 15, color: scheme.onSurfaceVariant),
+                      const SizedBox(width: 6),
+                      Text(visible ? 'Ocultar teclado' : 'Teclado',
+                          style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurfaceVariant)),
+                    ]),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'decimales', label: Text('Decimales')),
+                  ButtonSegment(value: 'redondeo', label: Text('Redondear')),
+                ],
+                selected: {rounding ? 'redondeo' : 'decimales'},
+                showSelectedIcon: false,
+                onSelectionChanged: (s) => onRounding(s.first),
+                style: ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  textStyle: WidgetStatePropertyAll(
+                      const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ]),
+            if (visible) ...[
+              const SizedBox(height: 10),
+              VeKeypad(onKey: onKey),
+            ],
+            const SizedBox(height: 10),
+            // Fichas de monto absoluto (patrón CalculaYa).
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final v in _amounts)
+                  ChipTag(fmtPlain(v, v == v.truncateToDouble() ? 0 : 2),
+                      onTap: () => onAmount(v)),
+              ],
+            ),
+            const SizedBox(height: 6),
+ // Ajustes relativos del monto (no tecleables directamente: ±100 / ±10 %).
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final adj in quickAdjustments)
+                  ChipTag(adj.label, onTap: () => onAmount(adj.apply(amount))),
+              ],
+            ),
+          ]),
+        ),
+      ),
     );
   }
 }
