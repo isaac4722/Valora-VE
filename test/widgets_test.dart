@@ -18,7 +18,6 @@ import 'package:valorave/features/insights/insights_screen.dart';
 import 'package:valorave/features/legal/legal_screen.dart';
 import 'package:valorave/features/lista/lista_screen.dart';
 import 'package:valorave/features/products/products_screen.dart';
-import 'package:valorave/features/shell/main_shell.dart';
 import 'package:valorave/features/shell/notifs_center.dart';
 import 'package:valorave/widgets/app_router.dart';
 import 'package:valorave/features/welcome/welcome_screen.dart';
@@ -283,26 +282,12 @@ void main() {
   });
 
   group('Shell', () {
-    testWidgets('navega 6 pestañas y badge de carrito', (tester) async {
+    testWidgets('5 pestañas, badge de carrito y hub Más navega', (tester) async {
       final store = _pumpedStore(tester, dir: 'w9');
       await _initServices(store);
+      store.finishOnboarding(); // sin redirect a /bienvenida
       store.addToCart(const CartItem(id: 'k', name: 'X', quantity: 3, price: 1, currency: 'USD'));
-      final router = GoRouter(
-        initialLocation: '/',
-        routes: [
-          StatefulShellRoute.indexedStack(
-            builder: (_, _, shell) => MainShell(navigationShell: shell),
-            branches: [
-              StatefulShellBranch(routes: [GoRoute(path: '/', builder: (_, _) => const HomeScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: '/conversor', builder: (_, _) => const ConverterScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: '/lista', builder: (_, _) => const ListaScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: '/productos', builder: (_, _) => const ProductsScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: '/finanzas', builder: (_, _) => const FinanceScreen())]),
-              StatefulShellBranch(routes: [GoRoute(path: '/analisis', builder: (_, _) => const InsightsScreen())]),
-            ],
-          ),
-        ],
-      );
+      final router = buildRouter(store: store);
       await tester.pumpWidget(MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: store),
@@ -317,10 +302,27 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(kNavBarKey), findsOneWidget);
       expect(find.text('3'), findsOneWidget); // badge carrito
-      // navega a Lista
+      // 5 pestañas: Inicio · Divisas · Lista · Productos · Más
+      expect(find.text('Inicio'), findsOneWidget);
+      expect(find.text('Divisas'), findsOneWidget);
+      expect(find.text('Lista'), findsOneWidget);
+      expect(find.text('Productos'), findsOneWidget);
+      expect(find.text('Más'), findsOneWidget);
+      // navega a Lista (tab 2)
       await tester.tap(find.text('Lista'));
       await tester.pumpAndSettle();
       expect(find.text('Lista de compras'), findsOneWidget);
+      // navega al hub Más (tab 4)
+      await tester.tap(find.text('Más'));
+      await tester.pumpAndSettle();
+      expect(find.text('Todo lo demás, a un toque'), findsOneWidget);
+      expect(find.text('Finanzas'), findsOneWidget);
+      expect(find.text('Historial'), findsOneWidget);
+      // el hub lleva a Finanzas y el tab «Más» sigue resaltado
+      await tester.tap(find.text('Finanzas'));
+      await tester.pumpAndSettle();
+      expect(find.text('RESUMEN'), findsOneWidget);
+      expect(find.byIcon(Icons.grid_view), findsOneWidget); // tab Más activa
     });
   });
 }
