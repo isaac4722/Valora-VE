@@ -1167,3 +1167,117 @@ double clamp01(double v) => math.min(1, math.max(0, v));
 
 /// Fecha corta local (intl para robustez en meses raros).
 String fmtMesAno(DateTime d) => DateFormat.MMMM('es').format(d).substring(0, 3);
+
+// ─── VeKeypad (GUI simple · patrón CalculaYa, tokens El Instrumento) ────────
+
+/// Teclado numérico del conversor: dígitos tabulares en Space Grotesk,
+/// coma decimal es-VE, ⌫ y C. Blancos ≥ 48 px, `Semantics` por tecla y
+/// háptica ligera. El estado del monto lo maneja la pantalla (onKey).
+class VeKeypad extends StatelessWidget {
+  const VeKeypad({super.key, required this.onKey, this.enabled = true});
+
+  /// Recibe la tecla: '0'..'9', ',', '⌫' o 'C'.
+  final ValueChanged<String> onKey;
+  final bool enabled;
+
+  static const _rows = [
+    ['1', '2', '3', '⌫'],
+    ['4', '5', '6', 'C'],
+    ['7', '8', '9', ','],
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label: 'Teclado numérico del monto',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final row in _rows)
+            Row(children: [
+              for (final k in row)
+                Expanded(child: _key(context, scheme, k)),
+            ]),
+          Row(children: [
+            Expanded(flex: 3, child: _key(context, scheme, '0')),
+            Expanded(child: SizedBox(height: 52)),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  Widget _key(BuildContext context, ColorScheme scheme, String k) {
+    final bool isAction = k == '⌫' || k == 'C';
+    return Padding(
+      padding: const EdgeInsets.all(3),
+      child: TapScale(
+        onTap: enabled
+            ? () {
+                HapticFeedback.selectionClick();
+                onKey(k);
+              }
+            : null,
+        child: Semantics(
+          button: true,
+          label: k == '⌫' ? 'Borrar último dígito' : (k == 'C' ? 'Limpiar monto' : 'Tecla $k'),
+          child: Container(
+            height: 52,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: isAction ? scheme.primary.withValues(alpha: 0.06) : scheme.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+            child: Text(
+              k,
+              style: TextStyle(
+                fontFamily: 'SpaceGrotesk',
+                fontSize: 19,
+                fontWeight: FontWeight.w700,
+                color: isAction ? scheme.primary : scheme.onSurface,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── GapChip (GUI simple · brecha de una tasa propia vs BCV) ────────────────
+
+/// Chip «+12,4 % vs BCV» para tasas personalizadas (patrón CalculaYa).
+/// Semántica de «El Instrumento»: warn si la prima es alta (> 5 %),
+/// neutral si es baja. Se oculta si no hay BCV disponible (nunca «NaN»).
+class GapChip extends StatelessWidget {
+  const GapChip({super.key, required this.bsPerUsd, required this.bcv});
+
+  final double bsPerUsd;
+  final double? bcv;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    if (bcv == null || bcv! <= 0) return const SizedBox.shrink();
+    final gap = (bsPerUsd / bcv! - 1) * 100;
+    final high = gap.abs() > 5;
+    final c = high ? scheme.tertiary : scheme.onSurfaceVariant;
+    final sign = gap >= 0 ? '+' : '−';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: high ? c.withValues(alpha: 0.10) : Colors.transparent,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: high ? c.withValues(alpha: 0.35) : scheme.outlineVariant),
+      ),
+      child: Text(
+        '$sign${fmtNum(gap.abs(), decimals: 1)} % vs BCV',
+        style: TextStyle(
+            fontSize: 10, fontWeight: FontWeight.w700, color: c, letterSpacing: 0.1),
+      ),
+    );
+  }
+}

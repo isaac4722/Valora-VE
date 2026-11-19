@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/banks_ve.dart';
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
@@ -21,6 +22,7 @@ import '../../core/theme.dart';
 import '../../data/backup.dart';
 import '../../data/store.dart';
 import '../../services/alerts.dart';
+import '../../services/biometric.dart';
 import '../../services/notifications.dart';
 import '../../services/sharing.dart';
 import '../../state/app_state.dart';
@@ -47,6 +49,7 @@ class SettingsScreen extends StatelessWidget {
           _Pais(store: store),
           _Personalizacion(store: store),
           _Monedas(store: store),
+          _CuentasPagoMovil(store: store),
           _Apariencia(),
           _Alertas(store: store),
           _Respaldo(store: store),
@@ -262,9 +265,104 @@ class _Monedas extends StatelessWidget {
             Text('Tasas manuales (offline)', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
             const SizedBox(height: 4),
             const _ManualRates(),
+            const SizedBox(height: 12),
+            // Tasas propias con nombre (GUI simple, patrón CalculaYa):
+            // viven junto a BCV/paralelo con su brecha; tocarlas en Divisas
+            // las aplica como fuente de conversión.
+            Text('Tus tasas con nombre', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 4),
+            const _CustomRatesEditor(),
           ]),
         ),
       ),
+    ]);
+  }
+}
+
+/// Editor de tasas personalizadas nombradas (máx 8, CRUD completo).
+class _CustomRatesEditor extends StatefulWidget {
+  const _CustomRatesEditor();
+
+  @override
+  State<_CustomRatesEditor> createState() => _CustomRatesEditorState();
+}
+
+class _CustomRatesEditorState extends State<_CustomRatesEditor> {
+  final _nameCtrl = TextEditingController();
+  final _valueCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _valueCtrl.dispose();
+    super.dispose();
+  }
+
+  void _add() {
+    final store = context.read<AppStore>();
+    final ok = store.addCustomRate(_nameCtrl.text, parseLocaleNum(_valueCtrl.text) ?? 0);
+    if (ok) {
+      _nameCtrl.clear();
+      _valueCtrl.clear();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(store.customRates.length >= AppStore.kMaxCustomRates
+              ? 'Máximo ${AppStore.kMaxCustomRates} tasas propias'
+              : 'Revisa el nombre y el valor en Bs por USD'),
+          behavior: SnackBarBehavior.floating));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final scheme = Theme.of(context).colorScheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      for (final cr in store.customRates)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(children: [
+            Expanded(
+                child: Text(cr.name,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+            GapChip(bsPerUsd: cr.bsPerUsd, bcv: store.bcvRate),
+            const SizedBox(width: 8),
+            Text(fmtRate(cr.bsPerUsd),
+                style: VeText.displayNum(13, color: scheme.onSurface)),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: Icon(Icons.delete_outline, size: 18, color: scheme.error),
+              tooltip: 'Eliminar ${cr.name}',
+              onPressed: () => store.removeCustomRate(cr.id),
+            ),
+          ]),
+        ),
+      Row(children: [
+        Expanded(
+          flex: 2,
+          child: TextField(
+            controller: _nameCtrl,
+            decoration: const InputDecoration(
+                hintText: 'Zelle, Binance, Efectivo…', isDense: true),
+            style: const TextStyle(fontSize: 13),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: TextField(
+            controller: _valueCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(hintText: 'Bs/USD', isDense: true),
+            style: const TextStyle(fontSize: 13),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          tooltip: 'Agregar tasa',
+          onPressed: _add,
+          icon: Icon(Icons.add_circle, color: scheme.primary),
+        ),
+      ]),
     ]);
   }
 }
@@ -375,7 +473,7 @@ class _Apariencia extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeController>();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Apariencia', index: 4),
+      SectionTitle('Apariencia', index: 5),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -422,7 +520,7 @@ class _AlertasState extends State<_Alertas> {
     final notifs = context.read<NotificationsService>();
     final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Alertas', index: 5),
+      SectionTitle('Alertas', index: 6),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -592,7 +690,7 @@ class _Respaldo extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Respaldo', index: 6),
+      SectionTitle('Respaldo', index: 7),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -731,7 +829,7 @@ class _TutorialLegal extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      SectionTitle('Tutorial y legal', index: 7),
+      SectionTitle('Tutorial y legal', index: 8),
       Card(
         child: Column(children: [
           ListTile(
@@ -759,6 +857,253 @@ class _TutorialLegal extends StatelessWidget {
           ),
         ]),
       ),
+    ]);
+  }
+}
+
+// ─── Cuentas y Pago Móvil (G5 · patrón CalculaYa con candado biométrico) ────
+
+/// Sección 4: cuentas propias para cobrar por Pago Móvil. Dato sensible:
+/// guarda SOLO local, puede bloquearse con huella (opt-in, design doc G5) y
+/// el texto legal del manifest declara qué guarda y qué comparte.
+class _CuentasPagoMovil extends StatefulWidget {
+  const _CuentasPagoMovil({required this.store});
+  final AppStore store;
+
+  @override
+  State<_CuentasPagoMovil> createState() => _CuentasPagoMovilState();
+}
+
+class _CuentasPagoMovilState extends State<_CuentasPagoMovil> {
+  final BiometricService _bio = BiometricService();
+  bool _unlocked = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final locked = store.settings.accountsLocked;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SectionTitle('Cuentas y Pago Móvil', index: 4),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+                'Guarda tus datos de cobro para compartirlos desde Divisas con '
+                'un toque. Todo queda en tu teléfono: sin nube, sin cuentas.',
+                style: TextStyle(
+                    fontSize: 11.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Bloquear cuentas con huella',
+                  style: TextStyle(fontSize: 13)),
+              subtitle: const Text(
+                  'Pide tu huella o PIN del teléfono para ver esta sección',
+                  style: TextStyle(fontSize: 11)),
+              value: locked,
+              onChanged: (v) async {
+                if (v) {
+                  // Al activar: confirma que el dispositivo puede autenticar.
+                  final ok = await _bio.canCheck;
+                  if (ok) store.setSetting('accountsLocked', true);
+                } else {
+                  store.setSetting('accountsLocked', false);
+                }
+              },
+            ),
+            const SizedBox(height: 4),
+            if (locked && !_unlocked)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Column(children: [
+                  Icon(Icons.lock_outline,
+                      size: 26, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  const SizedBox(height: 8),
+                  Text('Tus cuentas están protegidas con huella.',
+                      style: TextStyle(
+                          fontSize: 12.5,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: 10),
+                  FilledButton.tonalIcon(
+                    onPressed: () async {
+                      final ok = await _bio.authenticate(
+                          reason: 'Desbloquea tus cuentas de Pago Móvil');
+                      if (ok) setState(() => _unlocked = true);
+                    },
+                    icon: const Icon(Icons.fingerprint, size: 18),
+                    label: const Text('Desbloquear'),
+                  ),
+                ]),
+              )
+            else
+              const _AccountsEditor(),
+          ]),
+        ),
+      ),
+    ]);
+  }
+}
+
+/// Editor multi-cuenta (máx 4): banco (catálogo SUDEBAN), tipo, número,
+/// cédula, teléfono y titular. Validación SUAVE: avisa, nunca bloquea.
+class _AccountsEditor extends StatefulWidget {
+  const _AccountsEditor();
+
+  @override
+  State<_AccountsEditor> createState() => _AccountsEditorState();
+}
+
+class _AccountsEditorState extends State<_AccountsEditor> {
+  String _bankCode = kVeBanks.first.code;
+  String _type = 'corriente';
+  final _numberCtrl = TextEditingController();
+  final _docCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _holderCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _numberCtrl.dispose();
+    _docCtrl.dispose();
+    _phoneCtrl.dispose();
+    _holderCtrl.dispose();
+    super.dispose();
+  }
+
+  void _add() {
+    final store = context.read<AppStore>();
+    final bank = kVeBanks.firstWhere((b) => b.code == _bankCode);
+    final ok = store.addAccount(PayAccount(
+      id: '',
+      bankCode: bank.code,
+      bankName: bank.name,
+      type: _type,
+      number: _numberCtrl.text.trim(),
+      docId: _docCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim(),
+      holder: _holderCtrl.text.trim(),
+    ));
+    if (ok) {
+      _numberCtrl.clear();
+      _docCtrl.clear();
+      _phoneCtrl.clear();
+      _holderCtrl.clear();
+    } else if (store.accounts.length >= AppStore.kMaxAccounts) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Máximo ${AppStore.kMaxAccounts} cuentas'),
+          behavior: SnackBarBehavior.floating));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final scheme = Theme.of(context).colorScheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      for (final a in store.accounts)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${a.bankName} (${a.bankCode})',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 1),
+                Text(
+                    '${a.type == 'ahorro' ? 'Ahorro' : 'Corriente'} · ${a.maskedNumber}'
+                    '${a.docId.isNotEmpty ? ' · ${a.docId}' : ''}',
+                    style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant)),
+                if (a.numberLooksOdd || a.docIdLooksOdd)
+                  Text(
+                      '⚠ ${a.numberLooksOdd ? 'Cuenta no tiene 20 dígitos' : ''}'
+                      '${a.numberLooksOdd && a.docIdLooksOdd ? ' · ' : ''}'
+                      '${a.docIdLooksOdd ? 'CI fuera de 5-9 dígitos' : ''} — revisa antes de compartir',
+                      style: TextStyle(fontSize: 10, color: scheme.error)),
+              ]),
+            ),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: Icon(Icons.delete_outline, size: 18, color: scheme.error),
+              tooltip: 'Eliminar cuenta',
+              onPressed: () => store.removeAccount(a.id),
+            ),
+          ]),
+        ),
+      if (store.accounts.length < AppStore.kMaxAccounts) ...[
+        DropdownButtonFormField<String>(
+          initialValue: _bankCode,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Banco', isDense: true),
+          items: [
+            for (final b in kVeBanks)
+              DropdownMenuItem(value: b.code, child: Text('${b.name} (${b.code})', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5))),
+          ],
+          onChanged: (v) => setState(() => _bankCode = v ?? _bankCode),
+        ),
+        const SizedBox(height: 6),
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'corriente', label: Text('Corriente')),
+            ButtonSegment(value: 'ahorro', label: Text('Ahorro')),
+          ],
+          selected: {_type},
+          showSelectedIcon: false,
+          onSelectionChanged: (s) => setState(() => _type = s.first),
+          style: const ButtonStyle(visualDensity: VisualDensity.compact),
+        ),
+        const SizedBox(height: 6),
+        Row(children: [
+          Expanded(
+            flex: 3,
+            child: TextField(
+              controller: _numberCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                  labelText: 'Número (20 dígitos)', isDense: true),
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: TextField(
+              controller: _docCtrl,
+              decoration: const InputDecoration(labelText: 'Cédula', isDense: true),
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 6),
+        Row(children: [
+          Expanded(
+            child: TextField(
+              controller: _phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Teléfono', isDense: true),
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _holderCtrl,
+              decoration: const InputDecoration(labelText: 'Titular (opcional)', isDense: true),
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+        ]),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: _add,
+            icon: const Icon(Icons.add_circle, size: 17),
+            label: const Text('Agregar cuenta'),
+          ),
+        ),
+      ],
     ]);
   }
 }

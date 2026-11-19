@@ -161,6 +161,88 @@ class AppStore extends ChangeNotifier {
     _persist();
   }
 
+  // ─── Tasas personalizadas nombradas (GUI simple, patrón CalculaYa) ──────
+
+  static const int kMaxCustomRates = 8;
+
+  List<CustomRate> get customRates => _data.customRates;
+
+  /// Agrega una tasa con nombre propio (máx 8). Ignora si esta llena o el
+  /// valor no es positivo. Devuelve true si la agregó.
+  bool addCustomRate(String name, double bsPerUsd) {
+    final n = name.trim();
+    if (_data.customRates.length >= kMaxCustomRates) return false;
+    if (n.isEmpty || bsPerUsd <= 0) return false;
+    _data = AppData.fromJson(_data.toJson()
+      ..['customRates'] = [
+        ..._data.customRates.map((e) => e.toJson()),
+        CustomRate(id: newId(), name: n, bsPerUsd: bsPerUsd).toJson(),
+      ]);
+    _persist();
+    return true;
+  }
+
+  /// Actualiza nombre/valor de una tasa existente por id.
+  void updateCustomRate(String id, {String? name, double? bsPerUsd}) {
+    _data = AppData.fromJson(_data.toJson()
+      ..['customRates'] = _data.customRates
+          .map((e) => e.id == id
+              ? e.copyWith(
+                  name: name?.trim().isEmpty == true ? null : name,
+                  bsPerUsd: (bsPerUsd ?? e.bsPerUsd) <= 0 ? e.bsPerUsd : bsPerUsd)
+              : e)
+          .map((e) => e.toJson())
+          .toList());
+    _persist();
+  }
+
+  /// Elimina una tasa personalizada por id.
+  void removeCustomRate(String id) {
+    _data = AppData.fromJson(_data.toJson()
+      ..['customRates'] =
+          _data.customRates.where((e) => e.id != id).map((e) => e.toJson()).toList());
+    _persist();
+  }
+
+  /// Tasa BCV vigente del tablero (para la brecha de las tasas propias).
+  double? get bcvRate => _data.board.sources['ves-bcv']?.rate;
+
+  // ─── Cuentas para cobrar Pago Móvil (G5, patrón CalculaYa) ────────────
+
+  static const int kMaxAccounts = 4;
+
+  List<PayAccount> get accounts => _data.accounts;
+
+  /// Agrega una cuenta (máx 4, banco obligatorio). Devuelve true si la agregó.
+  bool addAccount(PayAccount acc) {
+    if (_data.accounts.length >= kMaxAccounts) return false;
+    if (acc.bankCode.isEmpty || acc.bankName.isEmpty) return false;
+    _data = AppData.fromJson(_data.toJson()
+      ..['accounts'] = [
+        ..._data.accounts.map((e) => e.toJson()),
+        PayAccount(
+          id: acc.id.isEmpty ? newId() : acc.id,
+          bankCode: acc.bankCode,
+          bankName: acc.bankName,
+          type: acc.type,
+          number: acc.number,
+          docId: acc.docId,
+          phone: acc.phone,
+          holder: acc.holder,
+        ).toJson(),
+      ]);
+    _persist();
+    return true;
+  }
+
+  /// Elimina una cuenta por id.
+  void removeAccount(String id) {
+    _data = AppData.fromJson(_data.toJson()
+      ..['accounts'] =
+          _data.accounts.where((e) => e.id != id).map((e) => e.toJson()).toList());
+    _persist();
+  }
+
   /// setConverterPair: par directo del conversor.
   void setConverterPair(String from, String to) {
     _data = AppData.fromJson(_data.toJson()..['converter'] = ConverterState(from: from, to: to).toJson());
@@ -251,6 +333,10 @@ class AppStore extends ChangeNotifier {
         patched = s.copyWith(tickerSpeed: (value as num).toInt());
       case 'currencyOrder':
         patched = s.copyWith(currencyOrder: (value as List).cast<String>());
+      case 'numMode':
+        patched = s.copyWith(numMode: value == 'redondeo' ? 'redondeo' : 'decimales');
+      case 'accountsLocked':
+        patched = s.copyWith(accountsLocked: value == true);
       default:
         return;
     }

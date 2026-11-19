@@ -160,12 +160,39 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
   }
   final addedStores = (stores.length - local.stores.length).clamp(0, stores.length);
 
+  // ── Tasas propias con nombre: unión por id (empate=local) — NO el criterio
+  // local-only de manualRates: en una instalación limpia + merge, las tasas
+  // del respaldo SÍ se conservan (hallazgo goldfish del design doc).
+  final customRates = <String, CustomRate>{};
+  for (final cr in local.customRates) {
+    customRates[cr.id] = cr;
+  }
+  for (final cr in incoming.customRates) {
+    if (cr.id.isNotEmpty && !customRates.containsKey(cr.id)) {
+      customRates[cr.id] = cr;
+    }
+  }
+
+  // ── Cuentas de Pago Móvil: unión por id (empate=local), mismo criterio
+  // que tasas propias — el respaldo de un teléfono nuevo NO pierde cuentas.
+  final accounts = <String, PayAccount>{};
+  for (final a in local.accounts) {
+    accounts[a.id] = a;
+  }
+  for (final a in incoming.accounts) {
+    if (a.id.isNotEmpty && !accounts.containsKey(a.id)) {
+      accounts[a.id] = a;
+    }
+  }
+
   final merged = AppData(
     version: kDataVersion,
     // merge NO toca board/rateSource/manualRates/converter/settings.
     board: local.board,
     rateSource: local.rateSource,
     manualRates: local.manualRates,
+    customRates: customRates.values.toList(),
+    accounts: accounts.values.toList(),
     converter: local.converter,
     settings: local.settings,
     products: products.values.toList(),
@@ -239,6 +266,8 @@ BackupResult importBackup(
     board: local.board, // tablero vivo NUNCA del backup
     rateSource: rateSource,
     manualRates: incoming.manualRates,
+    customRates: incoming.customRates,
+    accounts: incoming.accounts,
     converter: incoming.converter,
     products: incoming.products,
     transactions: incoming.transactions,

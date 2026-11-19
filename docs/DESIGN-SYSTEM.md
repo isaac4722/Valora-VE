@@ -52,6 +52,8 @@ mandatoria). Archivo canónico: `lib/core/theme.dart` + `lib/widgets/ui.dart`.
 | `.skeleton-paper` | `SkeletonPaper` — altura exacta anti-CLS |
 | `shadow-card/lift` | tema Material (elevación 0 + bordes) |
 | AnimatedNumber | odómetro con curva EASE, sin setState por frame |
+| `VeKeypad` (GUI simple v1.0.3) | teclado del conversor: dígitos tabulares Space Grotesk 19/700, teclas 52 px con borde 100 %, acciones ⌫/C en tinta 8 %, háptica `selectionClick`, `Semantics` por tecla |
+| `GapChip` (GUI simple v1.0.3) | «+12,4 % vs BCV» de las tasas propias: 10 px w700, warn (tertiary) si brecha > 5 %, neutral si menor; se OCULTA sin BCV |
 
 ## Reglas duras
 - Sin `backdrop-filter` en scroll · sin gradientes · sin tricolor (el logo es

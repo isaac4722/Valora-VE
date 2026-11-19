@@ -1,5 +1,56 @@
 # Changelog
 
+## 1.0.3-beta+4 (2026-11-20) · v1.0.3-beta
+
+GUI simple «resumen sin recortes», diseñada con EGM (elephant-goldfish:
+design doc revisado por goldfish sin contexto) tras comparar la app
+(con ingeniería inversa REA/JADX) contra CalculaYa 1.1.0. Todo lo que
+existía sigue existiendo: se resume, no se quita.
+
+### Añadido (lo mejor del comparativo con CalculaYa)
+- **Teclado VeKeypad** en Divisas: dígitos tabulares, coma es-VE, ⌫/C,
+  blancos 52 px, `Semantics` por tecla y háptica ligera; plegable.
+- **Fichas de monto** 1/5/10/20/50/100 + los ajustes relativos ±100/±10 %
+  bajo el teclado (antes fila suelta).
+- **Toggle Decimales/Redondear** persistido (`settings.numMode`,
+  tolerante; protege cifras <100).
+- **Tasas propias con nombre** (Zelle, Binance, Efectivo… máx 8): fila
+  junto a BCV/paralelo con `GapChip` «+12,4 % vs BCV» (warn >5 %; se
+  oculta sin BCV) y al tocarlas se aplican como fuente manual VES.
+- **Cuentas y Pago Móvil**: cuentas propias (catálogo SUDEBAN de 25
+  bancos, máx 4), validación suave, candado biométrico opt-in
+  (local_auth) y «Pago Móvil» en Divisas cuando el destino es VES:
+  sheet con monto es-VE + datos de cobro + código de banco, copiar y
+  compartir texto plano.
+
+### Cambiado (GUI más simple)
+- **Shell 6→5 pestañas** (Inicio · Divisas · Lista · Productos · Más) con
+  hub «Más» (rama `/mas`, estado por rama conservado); mapeo rama→tab
+  explícito `tabForBranch` (las hijas del hub resaltan «Más»).
+- **Inicio de 9 secciones → 4 bloques** con despliegue progresivo
+  («Ver todo» revela alertas, tiendas, registros y herramientas).
+- Cabecera 4→3 acciones (el toggle de tema vive en Ajustes → Apariencia).
+- Nombre unificado del módulo: «Divisas» (antes Conversor/Divisas según
+  la pantalla).
+- **Onboarding 7→3 láminas** concisas; tutorial rejugable intacto.
+
+### Seguridad/privacidad (hallazgo blocker de la revisión goldfish)
+- `allowBackup=false` + `fullBackupContent=false`: el dato bancario NUNCA
+  sube al Auto Backup de Google; la app conserva su respaldo JSON propio.
+- Texto legal actualizado: declara qué guarda Cuentas, dónde vive y qué
+  comparte el botón de Pago Móvil.
+
+### Corregido
+- Merge de respaldo para tasas propias y cuentas: **unión por id** (no el
+  criterio local-only de manualRates) — una instalación limpia + merge ya
+  NO pierde las cuentas del respaldo (con tests).
+- Base rota por 4 commits posteriores a TASK-16 (1.926 errores de
+  análisis: comillas escapadas, paquetes no declarados): revertidos.
+
+### Tests
+- Suite 107 → **123** (+16: shell/hub, despliegue de Inicio, teclado,
+  redondeo, tasas propias ×7, Pago Móvil ×8, legal).
+
 ## 1.0.2-beta+3 (2026-09-11) · v1.0.2-beta
 
 Ronda de paridad contra el spec cerrado `MVP-CRUD.md` (auditoría de 4

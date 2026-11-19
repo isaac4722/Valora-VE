@@ -1,12 +1,14 @@
-/// ─── Shell · cabecera + cinta (solo Inicio) + barra inferior 6 pestañas ────
-/// Port del GUI dp4 con estado real: ticker del tablero vivo, campana del
-/// centro de notificaciones persistido, badge carrito, banner de salud.
+/// ─── Shell · cabecera + cinta (solo Inicio) + barra inferior 5 pestañas ────
+/// GUI simple (design doc 2026-11-20): Inicio · Divisas · Lista · Productos ·
+/// Más. El mapeo rama→tab es EXPLÍCITO (tabForBranch): ramas 0-3 → tabs 0-3;
+/// rama 4 (/mas) y sus hijas 5-8 (finanzas/analisis/historial/ajustes) →
+/// tab 4 «Más». El toggle de tema sale de la cabecera (vive en Ajustes →
+/// Apariencia) para reducir la densidad de acciones.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
@@ -76,14 +78,18 @@ class MainShell extends StatelessWidget {
     _TabSpec(location: '/conversor', icon: Icons.swap_horiz, activeIcon: Icons.swap_horiz, label: 'Divisas'),
     _TabSpec(location: '/lista', icon: Icons.shopping_cart_outlined, activeIcon: Icons.shopping_cart, label: 'Lista'),
     _TabSpec(location: '/productos', icon: Icons.inventory_2_outlined, activeIcon: Icons.inventory_2, label: 'Productos'),
-    _TabSpec(location: '/finanzas', icon: Icons.account_balance_wallet_outlined, activeIcon: Icons.account_balance_wallet, label: 'Finanzas'),
-    _TabSpec(location: '/analisis', icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart, label: 'Análisis'),
+    _TabSpec(location: '/mas', icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view, label: 'Más'),
   ];
+
+  /// Mapeo rama→tab explícito (design doc §Navegación): ramas 0-3 → su tab;
+  /// ramas 4-8 (/mas + finanzas/analisis/historial/ajustes) → tab «Más».
+  static int tabForBranch(int branch) => branch < 4 ? branch : 4;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final int current = navigationShell.currentIndex;
+    final int activeTab = tabForBranch(current);
     // Rate-health (§5): el banner se monta SIEMPRE encima del body y decide
     // solo su visibilidad (rateStale = se vio tablero OK hace >15 min).
     final RatesPoller poller = context.watch<RatesPoller>();
@@ -111,7 +117,7 @@ class MainShell extends StatelessWidget {
                 Expanded(
                   child: _TabButton(
                     spec: _tabs[i],
-                    active: i == current,
+                    active: i == activeTab,
                     badge: i == 2 ? _cartCount(context) : 0,
                     onTap: () => navigationShell.goBranch(i, initialLocation: i == current),
                   ),
@@ -231,7 +237,6 @@ class _Header extends StatelessWidget {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final store = context.watch<AppStore>();
     final RatesPoller poller = context.watch<RatesPoller>();
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
     final unread = store.notifs.where((n) => !n.read).length;
 
     // Píldora live (§8): live = última fetch OK hace <2 min; si no, apagada
@@ -287,13 +292,6 @@ class _Header extends StatelessWidget {
                     icon: Icons.search,
                     tooltip: 'Buscar en la app',
                     onTap: () => showGlobalSearch(context),
-                  ),
-                  _HeaderIcon(
-                    icon: dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                    tooltip: 'Cambiar tema',
-                    onTap: () => context.read<ThemeController>().setMode(
-                        dark ? ThemeMode.light : ThemeMode.dark,
-                        context.read<SharedPreferences>()),
                   ),
                   _HeaderIcon(
                     icon: Icons.notifications_outlined,
@@ -379,7 +377,7 @@ class _GlobalSearchSheetState extends State<_GlobalSearchSheet> {
 
   static const List<(String, String, IconData)> _modules = [
     ('Inicio', '/', Icons.home_outlined),
-    ('Conversor', '/conversor', Icons.swap_horiz),
+    ('Divisas', '/conversor', Icons.swap_horiz),
     ('Lista', '/lista', Icons.shopping_cart_outlined),
     ('Productos', '/productos', Icons.inventory_2_outlined),
     ('Historial', '/historial', Icons.receipt_long_outlined),

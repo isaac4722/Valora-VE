@@ -1,7 +1,10 @@
-/// ─── Router declarativo (GUI dp4: shell 6 pestañas móvil + 8 rutas) ─────────
+/// ─── Router declarativo (GUI simple: shell 5 pestañas + 9 ramas) ────────
 /// home:/ · conversor:/conversor · lista:/lista · productos:/productos ·
-/// historial:/historial · finanzas:/finanzas · análisis:/analisis ·
-/// ajustes:/ajustes (+ push: sala, constancia, escáner, legal, ticket).
+/// mas:/mas (hub) · finanzas:/finanzas · análisis:/analisis ·
+/// historial:/historial · ajustes:/ajustes (+ push: sala, constancia,
+/// escáner, legal, ticket).
+/// Design doc: docs/designs/2026-11-20-gui-simple.md — /mas se inserta como
+/// rama índice 4 para que el mapeo tab↔rama sea 1:1 en las pestañas 0-3.
 ///
 /// ⚠️ CONTRATO DE CICLO DE VIDA: el GoRouter se crea UNA SOLA VEZ por sesión
 /// (desde ValoraApp, nunca dentro de build()) — recrearlo en cada rebuild
@@ -24,6 +27,7 @@ import '../features/home/home_screen.dart';
 import '../features/insights/insights_screen.dart';
 import '../features/legal/legal_screen.dart';
 import '../features/lista/lista_screen.dart';
+import '../features/more/more_screen.dart';
 import '../features/products/products_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/shell/main_shell.dart';
@@ -66,6 +70,11 @@ GoRouter buildRouter({required AppStore store}) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/productos', builder: (_, _) => const ProductsScreen()),
+          ]),
+          // Hub «Más» (índice 4): Finanzas/Análisis/Historial/Ajustes salen del
+          // navbar y viven aquí; el tab «Más» se resalta también en sus ramas.
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/mas', builder: (_, _) => const MoreScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/finanzas', builder: (_, _) => const FinanceScreen()),
