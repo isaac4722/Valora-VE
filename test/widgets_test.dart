@@ -159,8 +159,8 @@ void main() {
       await tester.tap(find.text('Elegir Venezuela'));
       await tester.pump(const Duration(milliseconds: 300));
       expect(store.settings.country, 'VE');
-      // 7 slides + done
-      for (int i = 0; i < 6; i++) {
+      // 3 láminas (GUI simple G7) + done
+      for (int i = 0; i < 2; i++) {
         await tester.tap(find.text('Siguiente'));
         await tester.pump(const Duration(milliseconds: 300));
       }

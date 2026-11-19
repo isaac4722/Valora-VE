@@ -23,21 +23,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   int _step = 0;
   Country _country = Country.VE;
 
+  /// GUI simple (design doc G7): 3 láminas concisas en lugar de 7 largas.
+  /// El detalle de cada módulo se descubre en uso y el tutorial completo
+  /// sigue disponible en Ajustes → Tutorial y legal («resumir sin quitar»).
   static const List<(IconData, String, String)> _slides = [
     (Icons.currency_exchange, 'Las tasas que importan',
-        'BCV, paralelo, promedio y las aristas del euro, con TRM de Colombia, Banxico y el real brasileño. El promedio se calcula aquí mismo: (BCV + paralelo) / 2, sin intermediarios.'),
-    (Icons.calendar_month, 'Conversor con fecha',
-        '¿Cuánto valía tu plata ayer o hace una semana? El conversor acepta fecha histórica y te muestra la ruta del cálculo con las fuentes que usó.'),
-    (Icons.shopping_cart_outlined, 'Lista que comparte en vivo',
-        'Arma tu lista, ponle presupuesto, calcula el vuelto y divide la cuenta. Comparte la sala con un código de 6 letras: los cambios llegan al instante, con o sin internet.'),
-    (Icons.inventory_2_outlined, 'Libro de precios',
-        'Registra los precios que pagas, por tienda y por producto. Fija metas y la app te avisa cuando algo queda por debajo.'),
-    (Icons.analytics_outlined, 'Brecha y devaluación',
-        'Dos curvas para la brecha BCV↔paralelo, calendario de devaluación, inflación personal y proyección con memoria (amortiguada, sin ciencia ficción).'),
-    (Icons.notifications_outlined, 'Avisos con cabeza',
-        'Picos de tasa, metas alcanzadas, brecha grande o cambio diario: tú eliges los umbrales. Nada de ruido.'),
-    (Icons.phone_android, 'Todo en tu teléfono',
-        'Los datos viven en tu equipo, sin cuentas ni nube. Respaldo a JSON con fusión, widgets de tasa y todo funciona sin conexión desde el primer arranque.'),
+        'BCV, paralelo, promedio y fecha histórica. Convierte con teclado propio, fichas rápidas y la ruta del cálculo a la vista.'),
+    (Icons.shopping_cart_outlined, 'Herramientas del día a día',
+        'Lista compartida en vivo, libro de precios con metas, finanzas y análisis de la brecha. Todo llega desde el hub «Más».'),
+    (Icons.phone_android, 'Tus datos contigo',
+        'Sin cuentas ni nube: todo vive en tu teléfono, respaldo JSON y modo offline desde el primer arranque.'),
   ];
 
   @override
