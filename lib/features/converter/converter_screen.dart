@@ -585,9 +585,14 @@ class _TablaFuentes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final store = context.watch<AppStore>();
     final p = ctx.plan(from, to);
     final sources = p == null ? const <String>[] : p.sourceIds;
-    if (sources.isEmpty) return const SizedBox.shrink();
+    // Tasas personalizadas nombradas (patrón CalculaYa): fila propia con
+    // brecha vs BCV; también comparan en el par USD→VES.
+    final customs = store.customRates;
+    final showCustoms = customs.isNotEmpty && from == Currency.usd && to == Currency.ves;
+    if (sources.isEmpty && !showCustoms) return const SizedBox.shrink();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       SectionTitle('Comparación de fuentes'),
@@ -607,6 +612,37 @@ class _TablaFuentes extends StatelessWidget {
                     Text(ctx.rate(id) > 0 ? fmtRate(ctx.rate(id)) : '—',
                         style: VeText.displayNum(13.5, color: scheme.onSurface)),
                   ]),
+                ),
+            if (showCustoms)
+              for (final cr in customs)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  child: TapScale(
+                    // Seleccionable: aplica la tasa propia como fuente manual
+                    // de VES (mecanismo existente del motor, sin cambios core).
+                    onTap: () {
+                      store.setManualRate('ves-manual', cr.bsPerUsd);
+                      store.setRateSource(Currency.ves, 'ves-manual');
+                    },
+                    child: Row(children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: scheme.primary.withValues(alpha: 0.55)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                          child: Text(cr.name,
+                              style: const TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w600))),
+                      GapChip(bsPerUsd: cr.bsPerUsd, bcv: store.bcvRate),
+                      const SizedBox(width: 6),
+                      Text(fmtRate(cr.bsPerUsd),
+                          style: VeText.displayNum(13.5, color: scheme.onSurface)),
+                    ]),
+                  ),
                 ),
           ]),
         ),

@@ -262,9 +262,104 @@ class _Monedas extends StatelessWidget {
             Text('Tasas manuales (offline)', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
             const SizedBox(height: 4),
             const _ManualRates(),
+            const SizedBox(height: 12),
+            // Tasas propias con nombre (GUI simple, patrón CalculaYa):
+            // viven junto a BCV/paralelo con su brecha; tocarlas en Divisas
+            // las aplica como fuente de conversión.
+            Text('Tus tasas con nombre', style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 4),
+            const _CustomRatesEditor(),
           ]),
         ),
       ),
+    ]);
+  }
+}
+
+/// Editor de tasas personalizadas nombradas (máx 8, CRUD completo).
+class _CustomRatesEditor extends StatefulWidget {
+  const _CustomRatesEditor();
+
+  @override
+  State<_CustomRatesEditor> createState() => _CustomRatesEditorState();
+}
+
+class _CustomRatesEditorState extends State<_CustomRatesEditor> {
+  final _nameCtrl = TextEditingController();
+  final _valueCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _valueCtrl.dispose();
+    super.dispose();
+  }
+
+  void _add() {
+    final store = context.read<AppStore>();
+    final ok = store.addCustomRate(_nameCtrl.text, parseLocaleNum(_valueCtrl.text) ?? 0);
+    if (ok) {
+      _nameCtrl.clear();
+      _valueCtrl.clear();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(store.customRates.length >= AppStore.kMaxCustomRates
+              ? 'Máximo ${AppStore.kMaxCustomRates} tasas propias'
+              : 'Revisa el nombre y el valor en Bs por USD'),
+          behavior: SnackBarBehavior.floating));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final scheme = Theme.of(context).colorScheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      for (final cr in store.customRates)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(children: [
+            Expanded(
+                child: Text(cr.name,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+            GapChip(bsPerUsd: cr.bsPerUsd, bcv: store.bcvRate),
+            const SizedBox(width: 8),
+            Text(fmtRate(cr.bsPerUsd),
+                style: VeText.displayNum(13, color: scheme.onSurface)),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: Icon(Icons.delete_outline, size: 18, color: scheme.error),
+              tooltip: 'Eliminar ${cr.name}',
+              onPressed: () => store.removeCustomRate(cr.id),
+            ),
+          ]),
+        ),
+      Row(children: [
+        Expanded(
+          flex: 2,
+          child: TextField(
+            controller: _nameCtrl,
+            decoration: const InputDecoration(
+                hintText: 'Zelle, Binance, Efectivo…', isDense: true),
+            style: const TextStyle(fontSize: 13),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: TextField(
+            controller: _valueCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(hintText: 'Bs/USD', isDense: true),
+            style: const TextStyle(fontSize: 13),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          tooltip: 'Agregar tasa',
+          onPressed: _add,
+          icon: Icon(Icons.add_circle, color: scheme.primary),
+        ),
+      ]),
     ]);
   }
 }

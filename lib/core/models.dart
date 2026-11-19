@@ -1169,12 +1169,35 @@ class SnapshotPoint {
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }
 
+/// Tasa personalizada del usuario con nombre propio (GUI simple, patrón
+/// CalculaYa): p. ej. «Zelle» 42,5 Bs/USD. Se muestra junto a BCV/paralelo
+/// con su brecha porcentual y sirve como fuente seleccionable.
+class CustomRate {
+  final String id;
+  final String name;
+  final double bsPerUsd;
+
+  const CustomRate({required this.id, required this.name, required this.bsPerUsd});
+
+  CustomRate copyWith({String? name, double? bsPerUsd}) =>
+      CustomRate(id: id, name: name ?? this.name, bsPerUsd: bsPerUsd ?? this.bsPerUsd);
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'bsPerUsd': bsPerUsd};
+
+  static CustomRate fromJson(Map<String, dynamic> j) => CustomRate(
+        id: sOf(j['id']),
+        name: sOf(j['name'], 'Mi tasa'),
+        bsPerUsd: dOf(j['bsPerUsd']),
+      );
+}
+
 /// Estado completo persistido (§1.9 AppData, 13 claves).
 class AppData {
   final int version;
   final RateBoard board;
   final Map<String, String> rateSource; // CurrencyCode → sourceId
   final Map<String, double> manualRates; // sourceId → valor
+  final List<CustomRate> customRates; // tasas propias con nombre (máx 8)
   final ConverterState converter;
   final List<Product> products;
   final List<Transaction> transactions;
@@ -1198,6 +1221,7 @@ class AppData {
       'MXN': 'mxn-banxico',
     },
     this.manualRates = const {},
+    this.customRates = const [],
     this.converter = const ConverterState(),
     this.products = const [],
     this.transactions = const [],
@@ -1215,6 +1239,7 @@ class AppData {
         'board': board.toJson(),
         'rateSource': rateSource,
         'manualRates': manualRates,
+        'customRates': customRates.map((e) => e.toJson()).toList(),
         'converter': converter.toJson(),
         'products': products.map((e) => e.toJson()).toList(),
         'transactions': transactions.map((e) => e.toJson()).toList(),
@@ -1236,6 +1261,12 @@ class AppData {
             .map((k, v) => MapEntry(sOf(k).toUpperCase(), sOf(v))),
         manualRates: ((j['manualRates'] as Map?) ?? const {})
             .map((k, v) => MapEntry(sOf(k), dOf(v))),
+        customRates: (j['customRates'] is List
+            ? (j['customRates'] as List)
+                .whereType<Map>()
+                .map((e) => CustomRate.fromJson(Map<String, dynamic>.from(e)))
+                .toList()
+            : const <CustomRate>[]),
         converter: j['converter'] is Map
             ? ConverterState.fromJson(Map<String, dynamic>.from(j['converter'] as Map))
             : const ConverterState(),

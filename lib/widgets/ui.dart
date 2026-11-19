@@ -1246,3 +1246,38 @@ class VeKeypad extends StatelessWidget {
     );
   }
 }
+
+// ─── GapChip (GUI simple · brecha de una tasa propia vs BCV) ────────────────
+
+/// Chip «+12,4 % vs BCV» para tasas personalizadas (patrón CalculaYa).
+/// Semántica de «El Instrumento»: warn si la prima es alta (> 5 %),
+/// neutral si es baja. Se oculta si no hay BCV disponible (nunca «NaN»).
+class GapChip extends StatelessWidget {
+  const GapChip({super.key, required this.bsPerUsd, required this.bcv});
+
+  final double bsPerUsd;
+  final double? bcv;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    if (bcv == null || bcv! <= 0) return const SizedBox.shrink();
+    final gap = (bsPerUsd / bcv! - 1) * 100;
+    final high = gap.abs() > 5;
+    final c = high ? scheme.tertiary : scheme.onSurfaceVariant;
+    final sign = gap >= 0 ? '+' : '−';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: high ? c.withValues(alpha: 0.10) : Colors.transparent,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: high ? c.withValues(alpha: 0.35) : scheme.outlineVariant),
+      ),
+      child: Text(
+        '$sign${fmtNum(gap.abs(), decimals: 1)} % vs BCV',
+        style: TextStyle(
+            fontSize: 10, fontWeight: FontWeight.w700, color: c, letterSpacing: 0.1),
+      ),
+    );
+  }
+}
