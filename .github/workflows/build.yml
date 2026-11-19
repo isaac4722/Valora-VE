@@ -27,6 +27,10 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Fijado a 3.47.5 (entorno documentado TASK-16, pubspec sdk ^3.9.2):
+          # 3.50 deprecó material.dart y rompería TODO import (23 archivos).
+          # Migrar a material_ui es tarea propia cuando se actualice el SDK.
+          flutter-version: 3.47.5
 
       - name: pub get
         run: flutter pub get
