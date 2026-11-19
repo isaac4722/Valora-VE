@@ -370,3 +370,31 @@ con la plantilla de `AGENT.md`.
 - Siguiente: push de feat/gui-simple-egm → CI → PR a main → tag
   v1.0.3-beta → Release; pendiente del backlog: widgets 1x1 USD/EUR
   (Fase D), quick_actions, heatmap de Análisis.
+
+---
+
+## [TASK-17b] Cierre de release v1.0.3-beta · 2026-11-20 UTC
+- Agente: Super Z (GLM) · ingeniero Flutter/Dart senior
+- Hecho:
+  - Push de feat/gui-simple-egm → PR #3 → CI VERDE (analyze 0 · test 123/123
+    en el runner con Flutter 3.47.5) → merge a main (26a19e9).
+  - Fix de CI necesario: el runner resolvía 'channel: stable' a Flutter
+    3.50.0, que DEPRECA package:flutter/material.dart → 23 infos en TODA
+    la app (gate analyze != 0, fallaba cualquier PR). Fijados ci.yml y
+    build.yml a flutter-version 3.47.5 (entorno documentado TASK-16;
+    material_ui no existe en 3.47.5, verificado localmente — migrar es
+    tarea propia del día que se suba el SDK). Commit 510385d.
+  - Build de main SUCCESS → tag v1.0.3-beta → Build del tag SUCCESS →
+    **Release v1.0.3-beta publicada y marcada latest**: 3 APK firmados
+    (arm64 27,9 MB · armeabi-v7a 24,1 MB · x86_64 30,5 MB) + AAB 64,9 MB.
+  - Verificación del APK publicado con REA: package ve.valorave.app,
+    versionName 1.0.3-beta (versionCode 2004), firma con esquemas
+    consistentes (schemes_agree_on_signer=true, digests coinciden) y
+    permiso USE_BIOMETRIC presente para el candado de Cuentas.
+- Gates: analyze=0 · test=123/123 (runner + local) · build=SUCCESS (main
+  26a19e9 y tag v1.0.3-beta) · release=publicada, latest y verificada.
+- Bloqueos: ninguno.
+- Siguiente: instalar v1.0.3-beta en dispositivo y validar el flujo
+  dorado (onboarding 3 láminas → Inicio 4 bloques → Divisas con teclado →
+  Pago Móvil). Backlog: widgets 1x1 USD/EUR (Fase D), quick_actions,
+  heatmap de Análisis, migración a material_ui cuando toque subir el SDK.
