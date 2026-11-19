@@ -18,6 +18,7 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
+import '../../features/scanner/scanner_screen.dart';
 import '../../state/app_state.dart';
 import '../../widgets/ui.dart';
 
@@ -29,6 +30,10 @@ class HomeScreen extends StatelessWidget {
     final poller = context.watch<RatesPoller>();
     final scheme = Theme.of(context).colorScheme;
 
+    // GUI simple (design doc 2026-11-20): 4 bloques con despliegue progresivo.
+    // B1 héroe · B2 acciones+divisas · B3 tu mes · B4 actividad plegable.
+    // Todo lo que estaba antes sigue aquí: lo poco frecuente vive tras
+    // «Ver todo» (resumir sin quitar).
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
       body: RefreshIndicator(
@@ -36,19 +41,125 @@ class HomeScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           children: [
+            // B1 · Héroe: la cifra que importa primero.
             _Hero(poller: poller),
             _CotizacionPrincipal(),
-            _SueldoSection(),
+            // B2 · Acciones rápidas + divisas del foco.
+            _QuickActions(),
             _DivisasFoco(),
+            // B3 · Tu mes: sueldo (LOTTT) y resumen de gastos.
+            _SueldoSection(),
             _ResumenMes(),
-            _AlertasPrecios(),
-            _TusTiendas(),
-            _RegistrosRecientes(),
-            _Herramientas(),
+            // B4 · Actividad: vista previa plegable; «Ver todo» despliega
+            // alertas de precios, tiendas, registros y herramientas.
+            const _ActividadBloque(),
           ],
         ),
       ),
     );
+  }
+}
+
+/// B2 — acciones rápidas de un toque (sustituye la fila Herramientas como
+/// acceso primario; las herramientas completas siguen en B4 desplegado).
+class _QuickActions extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 4),
+      child: Row(children: [
+        Expanded(
+          child: _Tool(
+              icon: Icons.swap_horiz,
+              label: 'Convertir',
+              onTap: () => context.go('/conversor')),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Tool(
+              icon: Icons.center_focus_strong_outlined,
+              label: 'Escanear',
+              onTap: () => ScannerScreen.scan(context)),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Tool(
+              icon: Icons.point_of_sale_outlined,
+              label: 'Nueva compra',
+              onTap: () => context.go('/lista')),
+        ),
+      ]),
+    );
+  }
+}
+
+/// B4 — bloque de actividad con despliegue progresivo: plegado muestra una
+/// vista previa (últimos registros); desplegado revela las secciones
+/// completas que antes vivían sueltas (alertas, tiendas, registros,
+/// herramientas). Nada se elimina: se resume.
+class _ActividadBloque extends StatefulWidget {
+  const _ActividadBloque();
+
+  @override
+  State<_ActividadBloque> createState() => _ActividadBloqueState();
+}
+
+class _ActividadBloqueState extends State<_ActividadBloque> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final store = context.watch<AppStore>();
+    final previews = <String>[
+      for (final p in store.purchases.take(3))
+        'Compra · ${p.store ?? 'Sin tienda'} · ${fmtDate(p.date)}',
+      for (final t in store.transactions.take(3))
+        '${t.isIncome ? 'Ingreso' : 'Gasto'} · ${t.category.label} · ${fmtDate(t.date)}',
+    ].take(3).toList();
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SectionTitle(_expanded ? 'Actividad' : 'Actividad reciente',
+          actionLabel: _expanded ? 'Ver menos' : 'Ver todo',
+          onAction: () => setState(() => _expanded = !_expanded)),
+      if (!_expanded)
+        Card(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+                horizontal: 14, vertical: previews.isEmpty ? 14 : 8),
+            child: previews.isEmpty
+                ? Row(children: [
+                    Icon(Icons.emoji_events_outlined,
+                        size: 16, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: Text('Sin registros aún: tus compras y movimientos aparecerán aquí.',
+                            style: TextStyle(
+                                fontSize: 12.5, color: scheme.onSurfaceVariant))),
+                  ])
+                : Column(children: [
+                    for (final r in previews)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(children: [
+                          Icon(Icons.history,
+                              size: 14, color: scheme.onSurfaceVariant),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: Text(r,
+                                  style: const TextStyle(fontSize: 12.5))),
+                        ]),
+                      ),
+                  ]),
+          ),
+        ),
+      if (_expanded) ...[
+        _AlertasPrecios(),
+        _TusTiendas(),
+        _RegistrosRecientes(),
+        _Herramientas(),
+      ],
+    ]);
   }
 }
 

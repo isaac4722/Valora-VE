@@ -182,6 +182,29 @@ void main() {
       expect(find.text('COTIZACIÓN PRINCIPAL'), findsOneWidget);
     });
 
+    testWidgets('Inicio: despliegue progresivo de Actividad (resumir sin quitar)', (tester) async {
+      final store = _pumpedStore(tester, dir: 'w2b');
+      await _initServices(store);
+      await tester.pumpWidget(_wrap(const HomeScreen(), store: store));
+      await tester.pumpAndSettle();
+      // plegado: bloques esenciales + vista previa; sin secciones profundas
+      await tester.scrollUntilVisible(find.text('ACTIVIDAD RECIENTE'), 300,
+          scrollable: find.byType(Scrollable).first);
+      await tester.pumpAndSettle();
+      expect(find.text('ACTIVIDAD RECIENTE'), findsOneWidget);
+      expect(find.text('Ver todo'), findsOneWidget);
+      expect(find.text('HERRAMIENTAS'), findsNothing);
+      expect(find.text('ALERTAS DE PRECIOS'), findsNothing);
+      // despliegue: todo vuelve a estar (sin quitar)
+      await tester.tap(find.text('Ver todo'));
+      await tester.pumpAndSettle();
+      expect(find.text('HERRAMIENTAS'), findsOneWidget);
+      expect(find.text('Ver menos'), findsOneWidget);
+      await tester.tap(find.text('Ver menos'));
+      await tester.pumpAndSettle();
+      expect(find.text('ACTIVIDAD RECIENTE'), findsOneWidget);
+    });
+
     testWidgets('Conversor: dual + swap + ruta + notas', (tester) async {
       final store = _pumpedStore(tester, dir: 'w3');
       await _initServices(store);
