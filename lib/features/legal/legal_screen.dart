@@ -25,11 +25,17 @@ class LegalScreen extends StatelessWidget {
                 Text('Privacidad', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: scheme.onSurface)),
                 const SizedBox(height: 8),
                 Text(
-                  'ValoraVE no tiene cuentas, no te pide datos personales y no '
-                  'envía nada a servidores propios. Todo lo que registras —productos, '
-                  'compras, movimientos, fotos de tickets— vive en tu teléfono. '
-                  'Los respaldos son archivos JSON tuyos: los exportas y los '
-                  'importas donde quieras.\n\n'
+                  'ValoraVE no tiene cuentas ni telemetría y no envía nada a '
+                  'servidores propios. Todo lo que registras —productos, compras, '
+                  'movimientos, fotos de tickets— vive en tu teléfono. Los '
+                  'respaldos son archivos JSON tuyos: los exportas y los importas '
+                  'donde quieras.\n\n'
+                  'Si usas «Cuentas y Pago Móvil», guardas TÚ los datos de cobro '
+                  '(banco, cuenta, cédula, teléfono) solo en este teléfono, sin '
+                  'copia en la nube (el respaldo automático de Android está '
+                  'desactivado para la app) y puedes bloquearlos con tu huella. '
+                  'Al tocar «Pago Móvil» en Divisas compartes ese texto plano con '
+                  'quien TÚ elijas: la app no lo envía a nadie por su cuenta.\n\n'
                   'Para las tasas, la app consulta en directo fuentes públicas '
                   '(ve.dolarapi.com, pydolarve.org, co.dolarapi.com, mx.dolarapi.com, '
                   'br.dolarapi.com y respaldos de datos.gov.co y AwesomeAPI). '

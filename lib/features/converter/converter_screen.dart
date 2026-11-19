@@ -8,6 +8,8 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/currencies.dart';
@@ -225,6 +227,14 @@ class _ConverterScreenState extends State<ConverterScreen> {
                 icon: const Icon(Icons.ios_share, size: 16),
                 label: const Text('Compartir cálculo'),
               ),
+              const SizedBox(width: 8),
+              // Pago Móvil (G5): solo cuando el destino es VES y hay cuenta.
+              if (to == Currency.ves)
+                FilledButton.tonalIcon(
+                  onPressed: result <= 0 ? null : () => showPagoMovilSheet(context, result),
+                  icon: const Icon(Icons.account_balance, size: 16),
+                  label: const Text('Pago Móvil'),
+                ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text('Imagen 1080 px con ruta y fuentes.',
@@ -773,5 +783,148 @@ class _Notas extends StatelessWidget {
         ),
       ),
     ]);
+  }
+}
+
+// ─── Compartir Pago Móvil (G5 · patrón CalculaYa con candado y aviso) ───────
+
+/// Sheet con el monto convertido + datos de cobro de la cuenta elegida.
+/// Aviso de sensibilidad visible; copiar y compartir en texto plano.
+void showPagoMovilSheet(BuildContext context, double amountVes) {
+  final store = context.read<AppStore>();
+  if (store.accounts.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Agrega una cuenta en Ajustes → Cuentas y Pago Móvil'),
+        behavior: SnackBarBehavior.floating));
+    return;
+  }
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => _PagoMovilSheet(amountVes: amountVes),
+  );
+}
+
+class _PagoMovilSheet extends StatefulWidget {
+  const _PagoMovilSheet({required this.amountVes});
+  final double amountVes;
+
+  @override
+  State<_PagoMovilSheet> createState() => _PagoMovilSheetState();
+}
+
+class _PagoMovilSheetState extends State<_PagoMovilSheet> {
+  int _sel = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final scheme = Theme.of(context).colorScheme;
+    final accounts = store.accounts;
+    if (_sel >= accounts.length) _sel = 0;
+    final acc = accounts.isEmpty ? null : accounts[_sel];
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.55,
+        maxChildSize: 0.85,
+        builder: (context, scroll) => SingleChildScrollView(
+          controller: scroll,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(
+              child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(
+                      color: scheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(999))),
+            ),
+            const SizedBox(height: 14),
+            Text('Compartir Pago Móvil',
+                style: const TextStyle(
+                    fontFamily: 'SpaceGrotesk',
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700)),
+            const SizedBox(height: 10),
+            ReadWindow(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              semanticLabel: 'Monto a cobrar',
+              child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                AnimatedNumber(widget.amountVes,
+                    style: VeText.displayNum(34, color: scheme.onSurface),
+                    decimals: convDecimals(widget.amountVes, Currency.ves)),
+                Text('Monto a cobrar',
+                    style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
+              ]),
+            ),
+            const SizedBox(height: 12),
+            if (accounts.length > 1)
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (int i = 0; i < accounts.length; i++)
+                    ChipTag('${accounts[i].bankName} (${accounts[i].bankCode})',
+                        selected: i == _sel,
+                        onTap: () => setState(() => _sel = i)),
+                ],
+              ),
+            const SizedBox(height: 10),
+            if (acc != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Text(acc.shareText(widget.amountVes),
+                    style: const TextStyle(
+                        fontSize: 13, height: 1.6)),
+              ),
+            const SizedBox(height: 8),
+            Row(children: [
+              Icon(Icons.info_outline, size: 13, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text('Compartes tus datos de cobro con quien reciba el mensaje.',
+                    style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant)),
+              ),
+            ]),
+            const SizedBox(height: 14),
+            if (acc != null)
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: acc.shareText(widget.amountVes)));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Copiado'),
+                          behavior: SnackBarBehavior.floating));
+                    },
+                    icon: const Icon(Icons.copy, size: 16),
+                    label: const Text('Copiar'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () async {
+                      await SharePlus.instance.share(
+                          ShareParams(text: '${acc.shareText(widget.amountVes)}\n\n— ValoraVE'));
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.ios_share, size: 16),
+                    label: const Text('Compartir'),
+                  ),
+                ),
+              ]),
+          ]),
+        ),
+      ),
+    );
   }
 }

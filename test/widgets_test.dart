@@ -323,7 +323,11 @@ void main() {
       ));
       await tester.pumpAndSettle();
       expect(find.text('Privacidad'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Licencias'), 300,
+          scrollable: find.byType(Scrollable).first);
       expect(find.text('Licencias'), findsOneWidget);
+      // la privacidad declara qué guarda Cuentas (hallazgo goldfish #1)
+      expect(find.textContaining('Cuentas y Pago Móvil'), findsOneWidget);
     });
   });
 

@@ -826,6 +826,7 @@ class Settings {
   final int tickerSpeed; // v13 90 | 120 | 180 (segundos por vuelta)
   final List<String> currencyOrder; // v13 (vacío = canónico, se purga)
   final String numMode; // 'decimales' | 'redondeo' (conversor, patrón CalculaYa)
+  final bool accountsLocked; // G5: bloquear Cuentas con huella (opt-in)
 
   const Settings({
     this.country = 'VE',
@@ -850,6 +851,7 @@ class Settings {
     this.tickerSpeed = 120,
     this.currencyOrder = const [],
     this.numMode = 'decimales',
+    this.accountsLocked = false,
   });
 
   const Settings.defaults() : this._defaultC();
@@ -876,7 +878,8 @@ class Settings {
         tickerSize = 'normal',
         tickerSpeed = 120,
         currencyOrder = const [],
-        numMode = 'decimales';
+        numMode = 'decimales',
+        accountsLocked = false;
 
   Settings copyWith({
     String? country,
@@ -908,6 +911,7 @@ class Settings {
     int? tickerSpeed,
     List<String>? currencyOrder,
     String? numMode,
+    bool? accountsLocked,
   }) =>
       Settings(
         country: country ?? this.country,
@@ -934,6 +938,7 @@ class Settings {
         tickerSpeed: tickerSpeed ?? this.tickerSpeed,
         currencyOrder: currencyOrder ?? this.currencyOrder,
         numMode: numMode ?? this.numMode,
+        accountsLocked: accountsLocked ?? this.accountsLocked,
       );
 
   Map<String, dynamic> toJson() => {
@@ -954,6 +959,7 @@ class Settings {
         'tickerSpeed': tickerSpeed,
         'currencyOrder': currencyOrder,
         'numMode': numMode,
+        'accountsLocked': accountsLocked,
       };
 
   /// Mapa de sueldo tolerante: el modo fijo usa amount; los modos variables
@@ -1035,6 +1041,7 @@ class Settings {
       tickerSpeed: switch (iOf(j['tickerSpeed'], 120)) { 90 => 90, 180 => 180, _ => 120 },
       currencyOrder: sListOf(j['currencyOrder']),
       numMode: sOf(j['numMode'], 'decimales') == 'redondeo' ? 'redondeo' : 'decimales',
+      accountsLocked: j['accountsLocked'] == true,
     );
   }
 }
@@ -1191,6 +1198,103 @@ class CustomRate {
       );
 }
 
+/// Cuenta propia para cobrar por Pago Móvil (GUI simple, patrón CalculaYa).
+/// Dato sensible: se guarda SOLO local (Hive) con allowBackup=false en el
+/// manifest y la sección puede bloquearse con huella (design doc G5).
+class PayAccount {
+  final String id;
+  final String bankCode; // 4 dígitos SUDEBAN
+  final String bankName;
+  final String type; // 'corriente' | 'ahorro'
+  final String number; // 20 dígitos (validación suave)
+  final String docId; // cédula (V/E + dígitos, validación suave)
+  final String phone; // teléfono del pago móvil
+  final String holder; // nombre del titular ('' = sin nombre)
+
+  const PayAccount({
+    required this.id,
+    required this.bankCode,
+    required this.bankName,
+    this.type = 'corriente',
+    this.number = '',
+    this.docId = '',
+    this.phone = '',
+    this.holder = '',
+  });
+
+  PayAccount copyWith({
+    String? bankCode,
+    String? bankName,
+    String? type,
+    String? number,
+    String? docId,
+    String? phone,
+    String? holder,
+  }) =>
+      PayAccount(
+        id: id,
+        bankCode: bankCode ?? this.bankCode,
+        bankName: bankName ?? this.bankName,
+        type: type ?? this.type,
+        number: number ?? this.number,
+        docId: docId ?? this.docId,
+        phone: phone ?? this.phone,
+        holder: holder ?? this.holder,
+      );
+
+  /// Avisos suaves (no bloquean; la longitud real varía por banco —
+  /// hallazgo goldfish #6): número != 20 dígitos o CI fuera de 5-9.
+  bool get numberLooksOdd => number.isNotEmpty && number.length != 20;
+  bool get docIdLooksOdd {
+    final digits = docId.replaceAll(RegExp(r'[^0-9]'), '');
+    return docId.isNotEmpty && (digits.length < 5 || digits.length > 9);
+  }
+
+  /// Número enmascarado para listados: 0134 •••• 1234.
+  String get maskedNumber =>
+      number.length <= 8 ? number : '${number.substring(0, 4)} •••• ${number.substring(number.length - 4)}';
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'bankCode': bankCode,
+        'bankName': bankName,
+        'type': type,
+        'number': number,
+        'docId': docId,
+        'phone': phone,
+        'holder': holder,
+      };
+
+  static PayAccount fromJson(Map<String, dynamic> j) => PayAccount(
+        id: sOf(j['id']),
+        bankCode: sOf(j['bankCode']),
+        bankName: sOf(j['bankName']),
+        type: sOf(j['type'], 'corriente') == 'ahorro' ? 'ahorro' : 'corriente',
+        number: sOf(j['number']),
+        docId: sOf(j['docId']),
+        phone: sOf(j['phone']),
+        holder: sOf(j['holder']),
+      );
+
+  /// Texto plano del Pago Móvil listo para compartir (monto es-VE).
+  String shareText(double amountVes) {
+    // Formato es-VE autocontenido (1.234,56) — sin importar fmt.dart para
+    // evitar el ciclo models ⇄ fmt.
+    final fixed = amountVes.toStringAsFixed(2).split('.');
+    final intPart =
+        fixed[0].replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.');
+    final amount = '$intPart,${fixed[1]}';
+    final buf = StringBuffer('Pago Móvil por Bs $amount\n');
+    buf.writeln('Banco: $bankName ($bankCode)');
+    if (holder.isNotEmpty) buf.writeln('Titular: $holder');
+    buf.writeln('Tipo: ${type == 'ahorro' ? 'Ahorro' : 'Corriente'}');
+    if (number.isNotEmpty) buf.writeln('Cuenta: $number');
+    if (docId.isNotEmpty) buf.writeln('Cédula: $docId');
+    if (phone.isNotEmpty) buf.writeln('Teléfono: $phone');
+    return buf.toString().trimRight();
+  }
+}
+
 /// Estado completo persistido (§1.9 AppData, 13 claves).
 class AppData {
   final int version;
@@ -1198,6 +1302,7 @@ class AppData {
   final Map<String, String> rateSource; // CurrencyCode → sourceId
   final Map<String, double> manualRates; // sourceId → valor
   final List<CustomRate> customRates; // tasas propias con nombre (máx 8)
+  final List<PayAccount> accounts; // cuentas para cobrar Pago Móvil
   final ConverterState converter;
   final List<Product> products;
   final List<Transaction> transactions;
@@ -1222,6 +1327,7 @@ class AppData {
     },
     this.manualRates = const {},
     this.customRates = const [],
+    this.accounts = const [],
     this.converter = const ConverterState(),
     this.products = const [],
     this.transactions = const [],
@@ -1240,6 +1346,7 @@ class AppData {
         'rateSource': rateSource,
         'manualRates': manualRates,
         'customRates': customRates.map((e) => e.toJson()).toList(),
+        'accounts': accounts.map((e) => e.toJson()).toList(),
         'converter': converter.toJson(),
         'products': products.map((e) => e.toJson()).toList(),
         'transactions': transactions.map((e) => e.toJson()).toList(),
@@ -1267,6 +1374,12 @@ class AppData {
                 .map((e) => CustomRate.fromJson(Map<String, dynamic>.from(e)))
                 .toList()
             : const <CustomRate>[]),
+        accounts: (j['accounts'] is List
+            ? (j['accounts'] as List)
+                .whereType<Map>()
+                .map((e) => PayAccount.fromJson(Map<String, dynamic>.from(e)))
+                .toList()
+            : const <PayAccount>[]),
         converter: j['converter'] is Map
             ? ConverterState.fromJson(Map<String, dynamic>.from(j['converter'] as Map))
             : const ConverterState(),

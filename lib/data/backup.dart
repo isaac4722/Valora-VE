@@ -173,6 +173,18 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
     }
   }
 
+  // ── Cuentas de Pago Móvil: unión por id (empate=local), mismo criterio
+  // que tasas propias — el respaldo de un teléfono nuevo NO pierde cuentas.
+  final accounts = <String, PayAccount>{};
+  for (final a in local.accounts) {
+    accounts[a.id] = a;
+  }
+  for (final a in incoming.accounts) {
+    if (a.id.isNotEmpty && !accounts.containsKey(a.id)) {
+      accounts[a.id] = a;
+    }
+  }
+
   final merged = AppData(
     version: kDataVersion,
     // merge NO toca board/rateSource/manualRates/converter/settings.
@@ -180,6 +192,7 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
     rateSource: local.rateSource,
     manualRates: local.manualRates,
     customRates: customRates.values.toList(),
+    accounts: accounts.values.toList(),
     converter: local.converter,
     settings: local.settings,
     products: products.values.toList(),
@@ -254,6 +267,7 @@ BackupResult importBackup(
     rateSource: rateSource,
     manualRates: incoming.manualRates,
     customRates: incoming.customRates,
+    accounts: incoming.accounts,
     converter: incoming.converter,
     products: incoming.products,
     transactions: incoming.transactions,
