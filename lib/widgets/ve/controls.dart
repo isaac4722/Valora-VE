@@ -380,6 +380,8 @@ class VeChip extends StatelessWidget {
     this.active = false,
     this.dashed = false,
     this.expands = false,
+    this.icon,
+    this.dense = false,
   });
 
   final Widget child;
@@ -391,16 +393,30 @@ class VeChip extends StatelessWidget {
   /// v18.0: «±10 % · ±100» alineados sin Wrap que los reordene).
   final bool expands;
 
+  /// Icono opcional antes del texto (v23.2: fichas de secciones del
+  /// Conversor). 13 px, mismo color del texto — no cambia el alto 28.
+  final IconData? icon;
+
+  /// Padding horizontal 6 en vez de 12 (v23.2: filas de fichas expandidas
+  /// del piso de teclado — 7 slots por línea no dan para 24 px de aire).
+  final bool dense;
+
   @override
   Widget build(BuildContext context) {
     final shad = ShadTheme.of(context);
     final scheme = shad.colorScheme;
     final bool dark = shad.brightness == Brightness.dark;
 
-    final Widget content = _chipText(
-      context,
-      active ? scheme.background : scheme.foreground,
-    );
+    final Widget content = icon == null
+        ? _chipText(context, active ? scheme.background : scheme.foreground)
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 13, color: active ? scheme.background : scheme.foreground),
+              const SizedBox(width: 5),
+              Flexible(child: _chipText(context, active ? scheme.background : scheme.foreground)),
+            ],
+          );
 
     Widget button = ShadButton.raw(
       variant: ShadButtonVariant.ghost,
@@ -412,7 +428,7 @@ class VeChip extends StatelessWidget {
           : MainAxisAlignment.start,
       padding: dashed
           ? EdgeInsets.zero
-          : const EdgeInsets.symmetric(horizontal: 12),
+          : EdgeInsets.symmetric(horizontal: dense ? 6 : 12),
       backgroundColor: active ? scheme.primary : scheme.card,
       hoverBackgroundColor: active
           ? _shift(scheme.primary, dark ? 0.10 : -0.08)

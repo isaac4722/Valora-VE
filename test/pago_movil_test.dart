@@ -7,6 +7,8 @@ library;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'
+    show rootBundle, FontLoader, ByteData;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:provider/provider.dart';
@@ -24,8 +26,32 @@ import 'package:shadcn_ui/shadcn_ui.dart' show ShadApp;
 import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 
-void main() {
+Future<void> main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  // Fuentes REALES (patrón de widgets_test/gui_correcta): el fallback de
+  // test mide cada glifo al ancho del fontSize y fabrica overflows falsos
+  // en los chips expandidos del conversor — con Inter las medidas son las
+  // del teléfono.
+  final root = rootBundle;
+  Future<void> una(String family, List<Future<ByteData>> assets) async {
+    final loader = FontLoader(family);
+    for (final a in assets) {
+      loader.addFont(a);
+    }
+    await loader.load();
+  }
+
+  await una('Inter', [
+    root.load('assets/fonts/Inter-Regular.ttf'),
+    root.load('assets/fonts/Inter-Medium.ttf'),
+    root.load('assets/fonts/Inter-SemiBold.ttf'),
+    root.load('assets/fonts/Inter-Bold.ttf'),
+  ]);
+  await una('SpaceGrotesk', [
+    root.load('assets/fonts/SpaceGrotesk-Medium.ttf'),
+    root.load('assets/fonts/SpaceGrotesk-Bold.ttf'),
+  ]);
 
   group('Modelo PayAccount', () {
     test('round-trip toJson/tryParse completo', () {
@@ -194,6 +220,11 @@ void main() {
     });
 
     Future<void> pumpConverter(WidgetTester tester) async {
+      // v23.2: superficie de teléfono real (390×844) — el botón y el piso
+      // de teclado conviven sin pantallas gigantes.
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
       await tester.pumpWidget(
         MultiProvider(
           providers: [

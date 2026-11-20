@@ -135,7 +135,7 @@ class _Notas extends StatelessWidget {
               maxLines: 4,
               maxLength: 5000,
               decoration: const InputDecoration(
-                hintText: 'Apunta aquí: dónde vi la tasa, qué comparé…',
+                hintText: 'Nota libre (dónde viste la tasa, qué comparaste…)',
                 border: InputBorder.none,
               ),
             ),
@@ -280,7 +280,7 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
                     ),
                     SizedBox(height: 12),
                     Text(
-                      'Consultando los días disponibles…',
+                      'Consultando días…',
                       style: TextStyle(fontSize: 12.5),
                     ),
                   ],
@@ -292,11 +292,7 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
                 child: VeEmpty(
                   icon: LucideIcons.calendar,
                   title: 'Aún no hay fechas guardadas',
-                  sub:
-                      'Sin conexión y sin snapshots locales todavía. La app '
-                      'guarda un snapshot por día cada vez que se refrescan '
-                      'las tasas; con internet este calendario llena sus 180 '
-                      'días al instante.',
+                  sub: 'Se llena sola: un snapshot por día al refrescar tasas.',
                 ),
               )
             else ...[
@@ -351,8 +347,7 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
               Text(
                 _remotosPendientes
                     ? 'Llegando más días desde la API…'
-                    : 'Los días sombreados vienen de la API y de tus '
-                          'snapshots guardados.',
+                    : 'Días sombreados: API + tus snapshots guardados.',
                 style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
               ),
             ],

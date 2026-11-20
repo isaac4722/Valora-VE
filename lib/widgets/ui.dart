@@ -2006,7 +2006,7 @@ class VeKeypad extends StatelessWidget {
             onKey(k);
           },
           child: Container(
-            height: 48,
+            height: 44, // v23.2: piso calculadora — tecla alineada al kit (44)
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: shad.colorScheme.card,

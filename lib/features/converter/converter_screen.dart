@@ -13,7 +13,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+
 import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show LucideIcons, ShadTheme;
 import 'package:share_plus/share_plus.dart';
@@ -377,6 +377,12 @@ class _ConverterScreenState extends State<ConverterScreen> {
     });
   }
 
+  /// v23.2 (patrón calculadora): las secciones secundarias viven en
+  /// half-sheets — la pantalla queda a la vista sin subir/bajar.
+  Future<void> _showSeccion(String titulo, WidgetBuilder builder) async {
+    await showVeHalfSheet<void>(context: context, title: titulo, builder: builder);
+  }
+
   @override
   Widget build(BuildContext context) {
     final fromCode = context.select<AppStore, String>((s) => s.data.converter.from);
@@ -384,7 +390,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final numMode = context.select<AppStore, String>((s) => s.settings.numMode);
     final from = CurrencyX.from(fromCode);
     final to = CurrencyX.from(toCode);
-    
+
     final store = context.watch<AppStore>();
     final ctx = _context(store);
     final plan = ctx.plan(from, to);
@@ -406,119 +412,215 @@ class _ConverterScreenState extends State<ConverterScreen> {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
       body: VeEntry(
-        child: ListView(
-          scrollCacheExtent: ScrollCacheExtent.pixels(800),
-          addAutomaticKeepAlives: false,
-          addRepaintBoundaries: true,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        // v23.2 — patrón calculadora: el teclado es PISO FIJO abajo y la
+        // cifra queda siempre a la vista; el bloque superior solo hace
+        // scroll si un modo histórico lo estrena (en «Hoy» no hay scroll).
+        child: Column(
           children: [
-            const TipsTrigger(scope: 'conversor'),
-            VeTitle(sub: Text(subTitulo), child: const Text('Conversor')),
-            KeyedSubtree(
-              key: TourKeys.convFecha,
-              child: _FechaTasas(
-                mode: _dateMode, customDate: _customDate, loading: _historicLoading,
-                sinDatos: _historicRates != null && !_historicLoading && (plan == null || plan.rate <= 0),
-                onMode: (m) { setState(() => _dateMode = m); _applyRateContext(); },
-                onOpenCalendar: _openHistoricCalendar,
-              ),
-            ),
-            const SizedBox(height: 14),
-            KeyedSubtree(
-              key: TourKeys.convFuente,
-              child: RepaintBoundary(
-                child: _DualInput(
-                  fromCtrl: _fromCtrl, toCtrl: _toCtrl, from: from, to: to, result: result, plan: plan, ctx: ctx,
-                  activeSourceId: primaryId, frescura: frescura, hasOverride: _hasOverride(store, from),
-                  onFromInput: (v) => setState(() { _fromTyped = v; _driver = 'from'; _lastSyncedPassive = ''; }),
-                  onToInput: (v) => setState(() { _toTyped = v; _driver = 'to'; _lastSyncedPassive = ''; }),
-                  onAdjust: (v) => setState(() {
-                    _fromTyped = v <= 0 ? 0 : v; _driver = 'from'; _lastSyncedPassive = '';
-                    _fromCtrl.text = fmtNum(_fromTyped, decimals: smartDecimals(_fromTyped, from));
-                  }),
-                  onSwap: () => _swapSides(store, from, to, plan, result),
-                  onFrom: (c) => c == to ? _swapSides(store, from, to, plan, result) : store.setConverterPair(c.code, to.code),
-                  onTo: (c) => c == from ? _swapSides(store, from, to, plan, result) : store.setConverterPair(from.code, c.code),
-                  onPickSource: _pickSource,
-                  onClearOverride: () => store.setModuleRateSource(RateModule.converter, from, null),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const TipsTrigger(scope: 'conversor'),
+                    VeTitle(sub: Text(subTitulo), child: const Text('Conversor')),
+                    KeyedSubtree(
+                      key: TourKeys.convFecha,
+                      child: _FechaTasas(
+                        mode: _dateMode, customDate: _customDate, loading: _historicLoading,
+                        sinDatos: _historicRates != null && !_historicLoading && (plan == null || plan.rate <= 0),
+                        onMode: (m) { setState(() => _dateMode = m); _applyRateContext(); },
+                        onOpenCalendar: _openHistoricCalendar,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    KeyedSubtree(
+                      key: TourKeys.convFuente,
+                      child: RepaintBoundary(
+                        child: _DualInput(
+                          fromCtrl: _fromCtrl, toCtrl: _toCtrl, from: from, to: to, result: result, plan: plan, ctx: ctx,
+                          activeSourceId: primaryId, frescura: frescura, hasOverride: _hasOverride(store, from),
+                          onFromInput: (v) => setState(() { _fromTyped = v; _driver = 'from'; _lastSyncedPassive = ''; }),
+                          onToInput: (v) => setState(() { _toTyped = v; _driver = 'to'; _lastSyncedPassive = ''; }),
+                          onAdjust: (v) => setState(() {
+                            _fromTyped = v <= 0 ? 0 : v; _driver = 'from'; _lastSyncedPassive = '';
+                            _fromCtrl.text = fmtNum(_fromTyped, decimals: smartDecimals(_fromTyped, from));
+                          }),
+                          onSwap: () => _swapSides(store, from, to, plan, result),
+                          onFrom: (c) => c == to ? _swapSides(store, from, to, plan, result) : store.setConverterPair(c.code, to.code),
+                          onTo: (c) => c == from ? _swapSides(store, from, to, plan, result) : store.setConverterPair(from.code, c.code),
+                          onPickSource: _pickSource,
+                          onClearOverride: () => store.setModuleRateSource(RateModule.converter, from, null),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      // v23.2: acciones al mínimo — iconos con etiqueta para
+                      // el lector (Semantics) y texto solo donde la palabra
+                      // es la marca del flujo («Pago Móvil»).
+                      child: Row(children: [
+                        Semantics(
+                          label: 'Compartir resultado',
+                          child: VeBtn(
+                            variant: VeBtnVariant.secondary,
+                            enabled: plan != null && result > 0,
+                            onPressed: _shareCard,
+                            child: const Icon(LucideIcons.share2, size: 16),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Semantics(
+                          label: 'Copiar resultado',
+                          child: VeBtn(
+                            variant: VeBtnVariant.secondary,
+                            enabled: plan != null && result > 0,
+                            onPressed: _copyResult,
+                            child: const Icon(LucideIcons.copy, size: 16),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (to == Currency.ves)
+                          Expanded(
+                            child: VeBtn(
+                              variant: VeBtnVariant.secondary,
+                              icon: LucideIcons.smartphone,
+                              enabled: result > 0,
+                              onPressed: () => showPagoMovilSheet(context, montoBs: result),
+                              child: const Text('Pago Móvil'),
+                            ),
+                          )
+                        else
+                          const Spacer(),
+                        Semantics(
+                          label: _keypad ? 'Ocultar teclado' : 'Mostrar teclado',
+                          child: VeBtn(
+                            variant: VeBtnVariant.secondary,
+                            onPressed: () => setState(() => _keypad = !_keypad),
+                            child: Icon(_keypad ? LucideIcons.chevronDown : LucideIcons.calculator, size: 16),
+                          ),
+                        ),
+                      ]),
+                    ),
+                    // v23.2: secciones secundarias como fichas — abren
+                    // half-sheets y NO compiten por el alto de la pantalla.
+                    // 4 slots iguales: SIEMPRE una sola línea.
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(children: [
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: VeChip(
+                              dense: true,
+                              onTap: () => _showSeccion('Referencia de fuentes', (c) => _ReferenciaFuentes(ctx: ctx, from: from, to: to, onPick: _pickSource)),
+                              child: FittedBox(fit: BoxFit.scaleDown, child: const Text('Fuentes')),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: VeChip(
+                              dense: true,
+                              onTap: () => _showSeccion('Tabla de montos', (c) => _TablaMontos(
+                                ctx: ctx, amount: amount, from: from,
+                                onAmount: (v) { setState(() { _fromTyped = v <= 0 ? 0 : v; _driver = 'from'; _lastSyncedPassive = ''; _fromCtrl.text = fmtNum(_fromTyped, decimals: smartDecimals(_fromTyped, from)); }); Navigator.pop(c); },
+                              )),
+                              child: FittedBox(fit: BoxFit.scaleDown, child: const Text('Tabla')),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: VeChip(
+                              dense: true,
+                              onTap: () => _showSeccion('Recientes', (c) => _Recientes(from: from, to: to, amount: amount, result: result, plan: plan,
+                                onRestore: (r) {
+                                  final rf = CurrencyX.from(r.from);
+                                  if (from != rf || to != CurrencyX.from(r.to)) store.setConverterPair(r.from, r.to);
+                                  setState(() { _fromTyped = r.amount; _driver = 'from'; _lastSyncedPassive = ''; _fromCtrl.text = fmtNum(r.amount, decimals: smartDecimals(r.amount, rf)); });
+                                  Navigator.pop(c);
+                                },
+                              )),
+                              child: FittedBox(fit: BoxFit.scaleDown, child: const Text('Recientes')),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: VeChip(
+                              dense: true,
+                              onTap: () => _showSeccion('Notas', (c) => _Notas(ctrl: _notesCtrl)),
+                              child: FittedBox(fit: BoxFit.scaleDown, child: const Text('Notas')),
+                            ),
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Wrap(spacing: 8, runSpacing: 6, children: [
-                VeBtn(variant: VeBtnVariant.secondary, icon: LucideIcons.share2, enabled: plan != null && result > 0, onPressed: _shareCard, child: const Text('Compartir')),
-                VeBtn(variant: VeBtnVariant.secondary, icon: LucideIcons.copy, enabled: plan != null && result > 0, onPressed: _copyResult, child: const Text('Copiar')),
-                // v23 · Pago Móvil (comparativa CalculaYa): compartir el
-                // monto en Bs con los datos de cobro — solo cuando el
-                // destino ES bolívares.
-                if (to == Currency.ves)
-                  VeBtn(
-                    variant: VeBtnVariant.secondary,
-                    icon: LucideIcons.smartphone,
-                    enabled: result > 0,
-                    onPressed: () => showPagoMovilSheet(context, montoBs: result),
-                    child: const Text('Pago Móvil'),
-                  ),
-                // v23: el teclado propio se pliega desde aquí (por defecto
-                // desplegado — el patrón estrella de CalculaYa 1.1.0).
-                VeBtn(variant: VeBtnVariant.secondary, icon: LucideIcons.calculator, onPressed: () => setState(() => _keypad = !_keypad), child: Text(_keypad ? 'Ocultar teclado' : 'Teclado')),
-              ]),
-            ),
             // v23 (GUI simple · comparativa CalculaYa): teclado propio +
-            // fichas de montos + modo de vista del resultado, en una VeCard
-            // bajo el dual input. Plegable — el dual input queda intacto.
+            // fichas de montos + modo de vista del resultado como PISO
+            // FIJO — el «modo calculadora» del dueño.
             AnimatedSize(
               duration: kLayoutDur,
               curve: kEaseVe,
-              alignment: Alignment.topCenter,
+              alignment: Alignment.bottomCenter,
               child: _keypad
                   ? Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: VeCard(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(spacing: 8, runSpacing: 6, children: [
-                              for (final v in const [1, 5, 10, 20, 50, 100])
-                                VeChip(onTap: () => _setFromAmount(v.toDouble(), from), child: Text('$v')),
-                              VeChip(onTap: () => _setFromAmount(0, from), child: const Text('Limpiar')),
-                            ]),
-                            const SizedBox(height: 10),
-                            VeKeypad(onKey: _padKey),
-                            const SizedBox(height: 10),
-                            Row(children: [
-                              Expanded(
-                                child: VeSegmented<String>(
-                                  value: numMode,
-                                  onChanged: store.setNumMode,
-                                  segments: const [
-                                    VeSegment(value: 'decimales', label: 'Decimales'),
-                                    VeSegment(value: 'redondeo', label: 'Redondear'),
-                                  ],
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                      child: RepaintBoundary(
+                        child: VeCard(
+                          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Fichas en UNA línea: 6 expandidas + «Limpiar»
+                              // natural al final — cada slot sobra aire.
+                              Row(children: [
+                                for (final v in const [1, 5, 10, 20, 50, 100])
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                                      child: VeChip(
+                                        expands: true,
+                                        dense: true,
+                                        onTap: () => _setFromAmount(v.toDouble(), from),
+                                        child: Text('$v'),
+                                      ),
+                                    ),
+                                  ),
+                                VeChip(
+                                  dense: true,
+                                  onTap: () => _setFromAmount(0, from),
+                                  child: const Text('Limpiar'),
                                 ),
+                              ]),
+                              const SizedBox(height: 8),
+                              VeKeypad(onKey: _padKey),
+                              const SizedBox(height: 8),
+                              VeSegmented<String>(
+                                value: numMode,
+                                onChanged: store.setNumMode,
+                                segments: const [
+                                  VeSegment(value: 'decimales', label: 'Decimales'),
+                                  VeSegment(value: 'redondeo', label: 'Redondear'),
+                                ],
                               ),
-                            ]),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     )
                   : const SizedBox(width: double.infinity),
             ),
-            _ReferenciaFuentes(ctx: ctx, from: from, to: to, onPick: _pickSource),
-            _TablaMontos(
-              ctx: ctx, amount: amount, from: from,
-              onAmount: (v) => setState(() { _fromTyped = v <= 0 ? 0 : v; _driver = 'from'; _lastSyncedPassive = ''; _fromCtrl.text = fmtNum(_fromTyped, decimals: smartDecimals(_fromTyped, from)); }),
-            ),
-            _Recientes(from: from, to: to, amount: amount, result: result, plan: plan,
-              onRestore: (r) {
-                final rf = CurrencyX.from(r.from);
-                if (from != rf || to != CurrencyX.from(r.to)) store.setConverterPair(r.from, r.to);
-                setState(() { _fromTyped = r.amount; _driver = 'from'; _lastSyncedPassive = ''; _fromCtrl.text = fmtNum(r.amount, decimals: smartDecimals(r.amount, rf)); });
-              },
-            ),
-            _Notas(ctrl: _notesCtrl),
           ],
         ),
       ),
@@ -537,31 +639,31 @@ class _FechaTasas extends StatelessWidget {
       'yesterday' => 'de ayer', 'week' => 'de hace 7 días',
       _ => customDate == null ? 'del día elegido' : 'del ${fmtDate(customDate!)}',
     };
-    return VeCard(
-      padding: const EdgeInsets.all(12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Wrap(spacing: 6, runSpacing: 6, children: [
-          VeChip(active: mode == 'today', onTap: () => onMode('today'), child: const Text('Hoy')),
-          VeChip(active: mode == 'yesterday', onTap: () => onMode('yesterday'), child: const Text('Ayer')),
-          VeChip(active: mode == 'week', onTap: () => onMode('week'), child: const Text('Hace 7 días')),
-          VeChip(active: mode == 'custom', onTap: onOpenCalendar, child: const Text('Elegir fecha')),
-        ]),
+    // v23.2: sin tarjeta envolvente — la fila de fechas respira directa en
+    // la página (cada dp cuenta en el patrón calculadora).
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Wrap(spacing: 6, runSpacing: 6, children: [
+        VeChip(active: mode == 'today', onTap: () => onMode('today'), child: const Text('Hoy')),
+        VeChip(active: mode == 'yesterday', onTap: () => onMode('yesterday'), child: const Text('Ayer')),
+        VeChip(active: mode == 'week', onTap: () => onMode('week'), child: const Text('Hace 7 días')),
+        VeChip(active: mode == 'custom', icon: LucideIcons.calendarDays, onTap: onOpenCalendar, child: const Text('Fecha')),
+      ]),
         if (mode != 'today') ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           if (loading)
-            const Row(children: [SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('Buscando la tasa del día…', style: TextStyle(fontSize: 12))])
+            const Row(children: [SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('Buscando tasa…', style: TextStyle(fontSize: 12))])
           else
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(color: ink.warnBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: ink.warn.withValues(alpha: 0.35))),
               child: Row(children: [
                 Icon(Icons.history, size: 15, color: ink.warn), const SizedBox(width: 8),
-                Expanded(child: Text(sinDatos ? 'Sin datos para esa fecha. Elige un día del calendario.' : 'Mostrando la tasa $periodo', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: ink.warn), maxLines: 2, overflow: TextOverflow.ellipsis)),
-                VeBtn(variant: VeBtnVariant.ghost, size: VeBtnSize.sm, onPressed: () => onMode('today'), child: const Text('Volver a hoy')),
+                Expanded(child: Text(sinDatos ? 'Sin datos ese día — elige otro en el calendario' : 'Tasa $periodo', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: ink.warn), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                VeBtn(variant: VeBtnVariant.ghost, size: VeBtnSize.sm, onPressed: () => onMode('today'), child: const Text('Hoy')),
               ]),
             ),
         ],
-      ]),
+        ],
     );
   }
 }
@@ -600,9 +702,9 @@ class _DualInput extends StatelessWidget {
   Widget _montoRow(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-      Text(from.symbol, style: VeText.displayNum(28, color: scheme.onSurfaceVariant, weight: FontWeight.w600)),
+      Text(from.symbol, style: VeText.displayNum(24, color: scheme.onSurfaceVariant, weight: FontWeight.w600)),
       const SizedBox(width: 8),
-      Expanded(child: MoneyField(controller: fromCtrl, onChanged: onFromInput, maxDecimals: 6, style: VeText.displayNum(38, color: scheme.onSurface, weight: FontWeight.w600), decoration: const InputDecoration(hintText: 'Monto', border: InputBorder.none, isCollapsed: true, contentPadding: EdgeInsets.symmetric(vertical: 8)))),
+      Expanded(child: MoneyField(controller: fromCtrl, onChanged: onFromInput, maxDecimals: 6, style: VeText.displayNum(34, color: scheme.onSurface, weight: FontWeight.w600), decoration: const InputDecoration(hintText: 'Monto', border: InputBorder.none, isCollapsed: true, contentPadding: EdgeInsets.symmetric(vertical: 6)))),
       const SizedBox(width: 8), CurrencySelect(value: from, onChanged: onFrom),
     ]);
   }
@@ -610,7 +712,7 @@ class _DualInput extends StatelessWidget {
     final ok = plan != null && result > 0;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Expanded(child: MoneyField(controller: toCtrl, onChanged: onToInput, maxDecimals: 6, style: VeText.displayNum(46, color: ok ? scheme.onSurface : scheme.onSurfaceVariant), decoration: InputDecoration(hintText: 'Resultado', border: InputBorder.none, isCollapsed: true, contentPadding: const EdgeInsets.symmetric(vertical: 8), hintStyle: VeText.displayNum(46, color: scheme.onSurfaceVariant)))),
+        Expanded(child: MoneyField(controller: toCtrl, onChanged: onToInput, maxDecimals: 6, style: VeText.displayNum(40, color: ok ? scheme.onSurface : scheme.onSurfaceVariant), decoration: InputDecoration(hintText: 'Resultado', border: InputBorder.none, isCollapsed: true, contentPadding: const EdgeInsets.symmetric(vertical: 6), hintStyle: VeText.displayNum(40, color: scheme.onSurfaceVariant)))),
         const SizedBox(width: 8), CurrencySelect(value: to, onChanged: onTo),
       ]),
       Padding(padding: const EdgeInsets.only(left: 4, top: 2), child: Text(ok ? '≈ ${fmtMoney(result, to)}' : 'sin tasa para este par', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: ok ? 12 : 10.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant))),
@@ -620,12 +722,34 @@ class _DualInput extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return VeCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       child: Column(children: [
-        _fuenteLine(context, scheme), const Divider(height: 18), _montoRow(context),
-        Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: SizedBox(height: 36, child: Stack(alignment: Alignment.center, children: [const Positioned.fill(child: Center(child: Divider(height: 1))), _SwapBtn(onTap: onSwap)]))),
+        _fuenteLine(context, scheme), const Divider(height: 12), _montoRow(context),
+        Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: SizedBox(height: 32, child: Stack(alignment: Alignment.center, children: [const Positioned.fill(child: Center(child: Divider(height: 1))), _SwapBtn(onTap: onSwap)]))),
         _resultadoRow(scheme),
-        Padding(padding: const EdgeInsets.only(top: 10), child: Row(children: [for (final adj in quickAdjustments) Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: VeChip(expands: true, onTap: () => onAdjust(adj.apply(_fromValueOf(result, plan))), child: Text(adj.label))))])),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              for (final adj in quickAdjustments)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    // FittedBox: el sello ±10 %/±100 nunca rebosa en
+                    // pantallas angostas (cifras blindadas §9.2).
+                    child: VeChip(
+                      expands: true,
+                      onTap: () => onAdjust(adj.apply(_fromValueOf(result, plan))),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(adj.label),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ]),
     );
   }

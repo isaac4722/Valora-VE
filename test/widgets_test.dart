@@ -383,6 +383,11 @@ Future<void> main() async {
     });
 
     testWidgets('Conversor: dual + swap + referencia + notas', (tester) async {
+      // v23.2: superficie de teléfono real — el piso de teclado convive con
+      // el contenido sin pantallas gigantes.
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
       final store = _pumpedStore(tester, dir: 'w3');
       await _initServices(store);
       store.setRateBoard(
@@ -401,14 +406,13 @@ Future<void> main() async {
       await tester.tap(find.byIcon(Icons.swap_vert));
       await tester.pumpAndSettle();
       expect(store.data.converter.from, isNot(fromBefore));
-      // v20: Ruta del cálculo ELIMINADA (orden del dueño) — la sección de
-      // tasas del par es ahora la Referencia de fuentes (RateTiles con
-      // color de categoría).
-      await tester.dragUntilVisible(
-        find.text('REFERENCIA DE FUENTES'),
-        find.byType(ListView).first,
-        const Offset(0, -250),
-      );
+      // v20: Ruta del cálculo ELIMINADA (orden del dueño). v23.2: la
+      // Referencia de fuentes vive en un half-sheet (patrón calculadora) —
+      // se abre desde la ficha «Fuentes» y NO ocupa alto de la pantalla.
+      final fuentes = find.text('Fuentes');
+      await tester.ensureVisible(fuentes);
+      await tester.pumpAndSettle();
+      await tester.tap(fuentes);
       await tester.pumpAndSettle();
       expect(find.text('REFERENCIA DE FUENTES'), findsOneWidget);
       expect(find.text('RUTA DEL CÁLCULO'), findsNothing);
@@ -429,9 +433,9 @@ Future<void> main() async {
       );
       // Par limpio USD → VES para leer el monto de origen sin ruido.
       store.setConverterPair('usd', 'ves');
-      // Viewport alto: el conversor completo (dual input + teclado) a la
-      // vista sin scroll — los taps de las teclas nunca quedan fuera.
-      tester.view.physicalSize = const Size(390, 1600);
+      // v23.2: teclado como PISO FIJO — cabe en un teléfono REAL
+      // (390×844): dual input arriba, teclado al fondo, sin subir/bajar.
+      tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
@@ -491,8 +495,9 @@ Future<void> main() async {
         ),
       );
       store.setConverterPair('usd', 'ves');
-      // Viewport alto: dual input + fichas a la vista sin scroll.
-      tester.view.physicalSize = const Size(390, 1600);
+      // v23.2: viewport de teléfono real — el piso de teclado no exige
+      // pantallas gigantes.
+      tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
@@ -529,6 +534,10 @@ Future<void> main() async {
             },
           ),
         );
+        // v23.2: teléfono real — dual input y selects a la vista.
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
         await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
         await tester.pumpAndSettle();
         // Par inicial USD → VES. Escribir 1000 arriba → abajo 40.000 en vivo.
