@@ -118,12 +118,39 @@ void main() {
     await tester.pump();
   }
 
-  /// Lleva la tarjeta «+» a la vista y abre la galería. Bombeo acotado
-  /// (NO pumpAndSettle): el LoadingState con tablero vacío nunca asienta.
+  /// Despliega «Ver todo» (v23: lo cotidiano-ocasional vive tras el pliegue)
+  /// y lleva la tarjeta «+» a la vista para abrir la galería. Bombeo
+  /// acotado (NO pumpAndSettle): el LoadingState con tablero vacío nunca
+  /// asienta y el ticker del Inicio anima siempre.
+  /// El scroll del Inicio: el Scrollable QUE ENVUELVE al pliegue «Todo lo
+  /// demás» (tras expandir aparecen scrollables nuevos dentro de las
+  /// secciones y un `.last` dejaría de apuntar a la lista).
+  Finder homeScroll() => find
+      .ancestor(of: find.text('TODO LO DEMÁS'), matching: find.byType(Scrollable))
+      .first;
+
   Future<void> abrirGaleria(WidgetTester tester) async {
-    final tarjeta = find.text('App Widgets');
-    await tester.ensureVisible(tarjeta);
+    await tester.scrollUntilVisible(
+      find.text('Ver todo'),
+      200,
+      scrollable: homeScroll(),
+    );
     await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Ver todo'));
+    await tester.pump(const Duration(milliseconds: 400));
+    // La tarjeta «+» vive al fondo del contenido desplegado: el pliegue es
+    // UN hijo de la lista y construye TODAS sus secciones de una vez — el
+    // finder las halla aunque estén fuera del viewport y el
+    // scrollUntilVisible se da por satisfecho. Arrastre manual acotado
+    // hasta que la tarjeta entre en pantalla.
+    final tarjeta = find.text('App Widgets');
+    for (var i = 0; i < 10; i++) {
+      final box = tester.renderObject<RenderBox>(tarjeta);
+      if (box.localToGlobal(Offset.zero).dy < 520) break;
+      await tester.drag(homeScroll(), const Offset(0, -300));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.tap(tarjeta);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -134,14 +161,29 @@ void main() {
     );
   }
 
-  testWidgets('el Inicio vuelve a sus secciones fijas + tarjeta «+»', (
+  testWidgets('el Inicio resume en bloques y «Ver todo» no quita nada', (
     tester,
   ) async {
     await pumpHome(tester);
-    // Las secciones de siempre, TODAS visibles — nada configurable.
+    // A la vista: lo que el usuario viene a ver (B2 cotiza, B3 resume).
     expect(find.text('COTIZACIÓN PRINCIPAL'), findsOneWidget);
     expect(find.text('DIVISAS DEL FOCO'), findsOneWidget);
     expect(find.text('RESUMEN DEL MES'), findsOneWidget);
+    // v23: despliegue progresivo — plegado por defecto, a un toque.
+    expect(find.text('TODO LO DEMÁS'), findsOneWidget);
+    expect(find.text('Ver todo'), findsOneWidget);
+    expect(find.text('ALERTAS DE PRECIOS'), findsNothing);
+    expect(find.text('TUS TIENDAS'), findsNothing);
+    expect(find.text('HERRAMIENTAS'), findsNothing);
+    // Desplegar expone las secciones de siempre, en su orden.
+    await tester.scrollUntilVisible(
+      find.text('Ver todo'),
+      200,
+      scrollable: homeScroll(),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Ver todo'));
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('ALERTAS DE PRECIOS'), findsOneWidget);
     expect(find.text('TUS TIENDAS'), findsOneWidget);
     expect(find.text('REGISTROS RECIENTES'), findsOneWidget);
@@ -149,6 +191,12 @@ void main() {
     // La única puerta de widgets: la tarjeta de App Widgets.
     expect(find.text('App Widgets'), findsOneWidget);
     expect(find.textContaining('Tasa BCV, Paralelo y Brecha'), findsOneWidget);
+    // Cerrar replega sin perder nada del árbol.
+    await tester.ensureVisible(find.text('Cerrar'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Cerrar'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('ALERTAS DE PRECIOS'), findsNothing);
     // Nada del sistema retirado: sin selectores de tamaño ni altas/bajas.
     expect(find.byType(SegmentedButton<dynamic>), findsNothing);
     expect(find.text('En Inicio'), findsNothing);

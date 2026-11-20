@@ -81,8 +81,20 @@ class HomeScreen extends StatelessWidget {
 /// siempre, sin preferencias ocultas — lo que el dueño pidió al retirar
 /// los «widgets de Inicio» configurables. Las anclas del tour viven en
 /// Cotización y Divisas (globales en toda la app, línea 38 de app_tour).
-class _HomeSections extends StatelessWidget {
+///
+/// v23 (GUI simple · EGM goldfish): despliegue progresivo — B2 cotiza y
+/// B3 resume a la vista; lo cotidiano-ocasional (alertas, tiendas,
+/// registros, herramientas, widgets) vive tras «Ver todo». RESUMIR SIN
+/// QUITAR: mismas secciones, mismo orden, un toque de distancia.
+class _HomeSections extends StatefulWidget {
   const _HomeSections();
+
+  @override
+  State<_HomeSections> createState() => _HomeSectionsState();
+}
+
+class _HomeSectionsState extends State<_HomeSections> {
+  bool _todo = false;
 
   @override
   Widget build(BuildContext context) {
@@ -93,14 +105,32 @@ class _HomeSections extends StatelessWidget {
         KeyedSubtree(key: TourKeys.cotizacion, child: _CotizacionPrincipal()),
         KeyedSubtree(key: TourKeys.divisasFoco, child: _DivisasFoco()),
         _ResumenMes(),
-        _AlertasPrecios(),
-        _TusTiendas(),
-        _RegistrosRecientes(),
-        _Herramientas(),
-        // Los App Widgets son de la pantalla de inicio de ANDROID: en web
-        // la tarjeta no aplica y molesta al pie del Inicio (auditoría
-        // visual v19.10 · honestidad de plataforma).
-        if (!kIsWeb) _AppWidgetsCard(),
+        _SectionEyebrow(
+          'Todo lo demás',
+          hint: 'Alertas, tiendas, registros y herramientas',
+          actionLabel: _todo ? 'Cerrar' : 'Ver todo',
+          onAction: () => setState(() => _todo = !_todo),
+        ),
+        AnimatedSize(
+          duration: kLayoutDur,
+          curve: kEaseVe,
+          alignment: Alignment.topCenter,
+          child: _todo
+              ? const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    _AlertasPrecios(),
+                    _TusTiendas(),
+                    _RegistrosRecientes(),
+                    _Herramientas(),
+                    // Los App Widgets son de la pantalla de inicio de
+                    // ANDROID: en web la tarjeta no aplica (auditoría
+                    // visual v19.10 · honestidad de plataforma).
+                    if (!kIsWeb) _AppWidgetsCard(),
+                  ],
+                )
+              : const SizedBox(width: double.infinity),
+        ),
       ],
     );
   }
