@@ -57,6 +57,10 @@ class _ListaScreenState extends State<ListaScreen> {
       TextEditingController(); // tienda sugerida (anti-duplicado)
   final _totalsKey = GlobalKey(); // RepaintBoundary de Totales → PNG
   final _plantillasKey = GlobalKey(); // ancla de scroll del chip «Plantillas»
+
+  /// v23.2: despliegue progresivo — frecuentes/totales/plantillas tras
+  /// «Más» (patrón del Home): la captura y el carrito quedan a la vista.
+  bool _showMore = false;
   String _addCurrency = 'VES';
   String _storeName = '';
 
@@ -407,7 +411,7 @@ class _ListaScreenState extends State<ListaScreen> {
             ),
             children: [
               VeTitle(
-                sub: Text('Presupuesto, vuelto y dividir la cuenta'),
+                sub: Text('Presupuesto y vuelto'),
                 child: Text('Lista de compras'),
               ),
               const TipsTrigger(scope: 'lista'),
@@ -428,11 +432,8 @@ class _ListaScreenState extends State<ListaScreen> {
                     ),
                     const SizedBox(width: 8),
                     VeChip(
-                      onTap: () => Scrollable.ensureVisible(
-                        _plantillasKey.currentContext!,
-                        duration: const Duration(milliseconds: 350),
-                        curve: kEaseVe,
-                      ),
+                      active: _showMore,
+                      onTap: () => setState(() => _showMore = !_showMore),
                       child: const Text('Plantillas'),
                     ),
                     const Spacer(),
@@ -486,9 +487,10 @@ class _ListaScreenState extends State<ListaScreen> {
                         Expanded(
                           child: AnimatedNumber(
                             totalInCalc,
-                            // Héroe: cifra a 64 px tabular (firma de la app).
+                            // Héroe: cifra 48 tabular (v23.2: escala única
+                            // con el Conversor — la de 64 empujaba todo).
                             style: VeText.displayNum(
-                              64,
+                              48,
                               color: scheme.onSurface,
                             ),
                             decimals: smartDecimals(totalInCalc, calcCur),
@@ -576,6 +578,9 @@ class _ListaScreenState extends State<ListaScreen> {
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         children: [
+                          // v23.2: captura en 2 filas — nombre+cant+escáner
+                          // arriba, precio+moneda+tienda abajo (la tienda
+                          // ya no roba una fila entera).
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -590,7 +595,7 @@ class _ListaScreenState extends State<ListaScreen> {
                               ),
                               const SizedBox(width: 8),
                               SizedBox(
-                                width: 68,
+                                width: 56,
                                 child: VeInput(
                                   key: const Key('lista-cant'),
                                   controller: _qtyCtrl,
@@ -608,10 +613,11 @@ class _ListaScreenState extends State<ListaScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
                               Expanded(
+                                flex: 2,
                                 child: VeInput(
                                   key: const Key('lista-precio'),
                                   controller: _priceCtrl,
@@ -619,7 +625,7 @@ class _ListaScreenState extends State<ListaScreen> {
                                       const TextInputType.numberWithOptions(
                                         decimal: true,
                                       ),
-                                  placeholder: 'Precio unitario',
+                                  placeholder: 'Precio',
                                   semantic: 'Precio unitario',
                                 ),
                               ),
@@ -629,15 +635,18 @@ class _ListaScreenState extends State<ListaScreen> {
                                 onChanged: (c) =>
                                     setState(() => _addCurrency = c.code),
                               ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                flex: 2,
+                                child: VeInput(
+                                  key: const Key('lista-tienda'),
+                                  controller: _storeCtrl,
+                                  onChanged: (v) => setState(() => _storeName = v),
+                                  placeholder: 'Tienda',
+                                  semantic: 'Tienda',
+                                ),
+                              ),
                             ],
-                          ),
-                          const SizedBox(height: 10),
-                          VeInput(
-                            key: const Key('lista-tienda'),
-                            controller: _storeCtrl,
-                            onChanged: (v) => setState(() => _storeName = v),
-                            placeholder: 'Tienda (opcional)',
-                            semantic: 'Tienda',
                           ),
                           if (suggestion != null)
                             // Sugerencia PASIVA anti-duplicado: nunca bloquea
@@ -749,7 +758,7 @@ class _ListaScreenState extends State<ListaScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            'Sin tasa viva para ${calcCur.code}: el total en esa moneda no se puede calcular.',
+                            'Sin tasa viva para ${calcCur.code} — el total en esa moneda no se calcula.',
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
@@ -761,86 +770,120 @@ class _ListaScreenState extends State<ListaScreen> {
                     ),
                   ),
               ],
-              // «Agregar sin escribir» (prototipo): frecuentes del libro +
-              // picker completo.
-              VeEyebrow(child: const Text('AGREGAR SIN ESCRIBIR')),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final p in _quickProducts(store))
-                    VeChip(
-                      onTap: () => _addFromBook(store, p),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Opacity(
-                            opacity: 0.6,
-                            child: Text(
-                              '+',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(p.name),
-                        ],
-                      ),
-                    ),
+              // v23.2 (despliegue progresivo, patrón del Home): frecuentes,
+              // totales por moneda y plantillas viven tras «Más» — con un
+              // carrito de 1 ítem la pantalla completa queda a la vista.
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(children: [
                   VeChip(
-                    dashed: true,
-                    onTap: () => _openProductPicker(store),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('Elegir de mis productos'),
-                    ),
+                    active: _showMore,
+                    icon: LucideIcons.chevronDown,
+                    onTap: () => setState(() => _showMore = !_showMore),
+                    child: const Text('Más'),
                   ),
-                ],
-              ),
-              // Totales por moneda + compartir (texto y PNG).
-              if (hasCart) ...[
-                VeEyebrow(child: const Text('TOTALES')),
-                VeCard(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    children: [
-                      // Preview en pantalla (v18.0): el PNG del generador
-                      // compone el MISMO TotalsDoc off-stage — el share ya no
-                      // depende de que esta tarjeta siga montada tras el
-                      // scroll.
-                      RepaintBoundary(
-                        key: _totalsKey,
-                        child: TotalsDoc(totals: totals),
+                  const SizedBox(width: 8),
+                  if (hasCart)
+                    Text(
+                      '≈ ${fmtUSD(totals.usd)} · ${store.cart.length} ítems',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
                       ),
-                      const SizedBox(height: 10),
-                      // Wrap (no Row+Expanded): en teléfonos angostos los
-                      // dos botones FLUYEN a dos líneas en vez de desbordar.
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                    ),
+                ]),
+              ),
+              AnimatedSize(
+                duration: kLayoutDur,
+                curve: kEaseVe,
+                alignment: Alignment.topCenter,
+                child: !_showMore
+                    ? const SizedBox(width: double.infinity)
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          VeBtn(
-                            variant: VeBtnVariant.secondary,
-                            size: VeBtnSize.sm,
-                            icon: LucideIcons.image,
-                            onPressed: _shareTotalsPng,
-                            child: const Text('Compartir PNG'),
+                          // «Agregar sin escribir» (prototipo): frecuentes del
+                          // libro + picker completo.
+                          VeEyebrow(child: const Text('AGREGAR SIN ESCRIBIR')),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final p in _quickProducts(store))
+                                VeChip(
+                                  onTap: () => _addFromBook(store, p),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Opacity(
+                                        opacity: 0.6,
+                                        child: Text(
+                                          '+',
+                                          style: TextStyle(fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(p.name),
+                                    ],
+                                  ),
+                                ),
+                              VeChip(
+                                dashed: true,
+                                onTap: () => _openProductPicker(store),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 12),
+                                  child: Text('Elegir de mis productos'),
+                                ),
+                              ),
+                            ],
                           ),
-                          VeBtn(
-                            variant: VeBtnVariant.secondary,
-                            size: VeBtnSize.sm,
-                            icon: LucideIcons.share2,
-                            onPressed: () =>
-                                shareTotalsText(context, store, totals),
-                            child: const Text('Compartir'),
-                          ),
+                          // Totales por moneda + compartir (texto y PNG).
+                          if (hasCart) ...[
+                            VeEyebrow(child: const Text('TOTALES')),
+                            VeCard(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                children: [
+                                  // Preview en pantalla (v18.0): el PNG del
+                                  // generador compone el MISMO TotalsDoc
+                                  // off-stage — el share no depende de que la
+                                  // tarjeta siga montada tras el scroll.
+                                  RepaintBoundary(
+                                    key: _totalsKey,
+                                    child: TotalsDoc(totals: totals),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      VeBtn(
+                                        variant: VeBtnVariant.secondary,
+                                        size: VeBtnSize.sm,
+                                        icon: LucideIcons.image,
+                                        onPressed: _shareTotalsPng,
+                                        child: const Text('Compartir PNG'),
+                                      ),
+                                      VeBtn(
+                                        variant: VeBtnVariant.secondary,
+                                        size: VeBtnSize.sm,
+                                        icon: LucideIcons.share2,
+                                        onPressed: () =>
+                                            shareTotalsText(context, store, totals),
+                                        child: const Text('Compartir'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          // Plantillas.
+                          _Plantillas(anchorKey: _plantillasKey),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ],
-              // Plantillas.
-              _Plantillas(anchorKey: _plantillasKey),
+              ),
             ],
           ),
           // v19 (orden del dueño): Vuelto y Dividir la cuenta viven en el

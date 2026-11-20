@@ -103,11 +103,11 @@ class _HomeSectionsState extends State<_HomeSections> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         KeyedSubtree(key: TourKeys.cotizacion, child: _CotizacionPrincipal()),
-        KeyedSubtree(key: TourKeys.divisasFoco, child: _DivisasFoco()),
-        _ResumenMes(),
+        // v23.2: Divisas del foco y Tu mes viven tras «Ver todo» (el tour
+        // salta pasos con ancla no montada — comportamiento contemplado).
         _SectionEyebrow(
           'Todo lo demás',
-          hint: 'Alertas, tiendas, registros y herramientas',
+          hint: 'Divisas, tu mes, alertas, tiendas y herramientas',
           actionLabel: _todo ? 'Cerrar' : 'Ver todo',
           onAction: () => setState(() => _todo = !_todo),
         ),
@@ -116,9 +116,14 @@ class _HomeSectionsState extends State<_HomeSections> {
           curve: kEaseVe,
           alignment: Alignment.topCenter,
           child: _todo
-              ? const Column(
+              ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    KeyedSubtree(
+                      key: TourKeys.divisasFoco,
+                      child: _DivisasFoco(),
+                    ),
+                    _ResumenMes(),
                     _AlertasPrecios(),
                     _TusTiendas(),
                     _RegistrosRecientes(),
@@ -819,10 +824,7 @@ class _CotizacionPrincipal extends StatelessWidget {
             // Desconexión ELEGIDA (modo offline): cloud_off + guía local.
             OfflineState(
               'Modo offline activo',
-              hint:
-                  'ValoraVE funciona 100% local. Pega tu tasa manual aquí '
-                  'mismo, o desactiva el modo offline cuando quieras volver a '
-                  'consultar las APIs.',
+              hint: 'Todo corre en tu teléfono. Pega una tasa o desactiva el modo offline.',
               actionLabel: 'Tasa manual',
               onAction: () => _editManual(context, store, manualId),
             )
@@ -845,9 +847,7 @@ class _CotizacionPrincipal extends StatelessWidget {
             // PRIMERA CARGA: spinner, cero iconografía de red.
             LoadingState(
               'Buscando tasas…',
-              hint:
-                  'Primera carga de tasas en curso. También puedes pegar '
-                  'una tasa manual ahora mismo.',
+              hint: 'Primera carga… o pega una tasa manual ya.',
               actionLabel: 'Tasa manual',
               onAction: () => _editManual(context, store, manualId),
             )

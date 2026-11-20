@@ -134,10 +134,10 @@ SkeletonPaper). **El sistema se evoluciona; no se reemplaza.**
 |---|---|---|
 | Bienvenida | `welcome_screen` | 0+país+done; tutorial rejugable (13 pasos) |
 | Shell | `main_shell` | 7 rutas / móvil 5 tabs; ticker solo-inicio; badge carrito; banner salud; búsqueda global |
-| Inicio | `home_screen` | v23: héroe fresco + «vs ayer»; cotización + divisas del foco + tu mes a la vista; «TODO LO DEMÁS · Ver todo» (despliegue progresivo: alertas, tiendas, registros, herramientas, App Widgets); bloque «Libro» (Historial·Tickets·Ajustes) siempre visible al pie; tasas propias «TUS TASAS» con GapChip vs BCV (aplicar = mecanismo manual) |
+| Inicio | `home_screen` | v23: héroe fresco + «vs ayer»; cotización + divisas del foco + tu mes a la vista; «TODO LO DEMÁS · Ver todo» (despliegue progresivo: alertas, tiendas, registros, herramientas, App Widgets); bloque «Libro» (Historial·Tickets·Ajustes) siempre visible al pie; tasas propias «TUS TASAS» con GapChip vs BCV (aplicar = mecanismo manual). v23.2: RateTile compacto (~50dp), Divisas del foco + Tu mes tras «Ver todo», estados offline/primera carga a una línea |
 | Conversor | `converter` + reference + history | v23.2 patrón calculadora: teclado VeKeypad (0-9 · «,» · ⌫, teclas 44) como PISO FIJO abajo — cifra del resultado SIEMPRE a la vista, sin subir/bajar; arriba: fecha (Hoy/Ayer/7 días/Fecha) + dual input + ajustes ± y acciones (compartir/copiar iconos · Pago Móvil con destino VES: mensaje de cobro); secciones secundarias Fuentes·Tabla·Recientes·Notas abren half-sheets (4 fichas a una línea); fichas 1-100 en el piso; [Decimales\|Redondear] numMode persiste; puente visible, fecha histórica, notas (5000), recientes 10 |
-| Lista | `lista_screen` (+checkout, item_editor) | presupuesto, plantillas, vuelto, dividir cuenta, checkout con foto ticket, sala en vivo |
-| Productos | `products_screen` (+product_sheet) | libro de precios, sparklines, metas, CSV⇄, escáner |
+| Lista | `lista_screen` (+checkout, item_editor) | presupuesto, plantillas, vuelto, dividir cuenta, checkout con foto ticket, sala en vivo. v23.2: captura en 2 filas, héroe 48, frecuentes+totales+plantillas tras «Más» |
+| Productos | `products_screen` (+product_sheet) | libro de precios, sparklines, metas, CSV⇄, escáner. v23.2: chips de categoría en una línea deslizable |
 | Historial | `history_screen` | asientos por compra, filtros, pág. 20, 2 CSV |
 | Constancias | `statement_screen` | estado de cuenta exportable |
 | Análisis | `insights_*` (§9.7) | 6 anclas + Gastos (§9.6 alimentado por compras), brecha, proyección amortiguada, heatmap con meses con datos, rankings, canasta, exportación |

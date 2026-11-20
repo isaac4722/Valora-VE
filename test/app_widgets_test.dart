@@ -165,10 +165,12 @@ void main() {
     tester,
   ) async {
     await pumpHome(tester);
-    // A la vista: lo que el usuario viene a ver (B2 cotiza, B3 resume).
+    // A la vista: lo que el usuario viene a ver (B2 cotiza). v23.2: las
+    // divisas del foco y el resumen del mes también viven tras «Ver todo» —
+    // la Cotización compacta queda de primera pantalla.
     expect(find.text('COTIZACIÓN PRINCIPAL'), findsOneWidget);
-    expect(find.text('DIVISAS DEL FOCO'), findsOneWidget);
-    expect(find.text('RESUMEN DEL MES'), findsOneWidget);
+    expect(find.text('DIVISAS DEL FOCO'), findsNothing);
+    expect(find.text('RESUMEN DEL MES'), findsNothing);
     // v23: despliegue progresivo — plegado por defecto, a un toque.
     expect(find.text('TODO LO DEMÁS'), findsOneWidget);
     expect(find.text('Ver todo'), findsOneWidget);
@@ -184,6 +186,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Ver todo'));
     await tester.pump(const Duration(milliseconds: 400));
+    // v23.2: divisas y resumen también viven tras «Ver todo».
+    expect(find.text('DIVISAS DEL FOCO'), findsOneWidget);
+    expect(find.text('RESUMEN DEL MES'), findsOneWidget);
     expect(find.text('ALERTAS DE PRECIOS'), findsOneWidget);
     expect(find.text('TUS TIENDAS'), findsOneWidget);
     expect(find.text('REGISTROS RECIENTES'), findsOneWidget);

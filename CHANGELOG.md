@@ -1,5 +1,59 @@
 # Changelog
 
+## 1.15.0-beta+48 · v23.2 — patrón calculadora, cripto USDT+ETH y failover Calculaya (EGM pez→elefante + impeccable + humanizer)
+
+Orden del dueño: «los elementos salen de pantalla — no es una calculadora
+normal donde los datos no hay que subir y bajar», subir la calidad visual
+de proporciones, escritura UX de claves cortas y, por REA del APK de
+CalculaYa 1.1.0, usar su Worker público como respaldo y sumar USDT/ETH
+con iconografía propia. Skills aplicadas: impeccable-uxui (proporciones,
+jerarquía, anti-slop), humanizer (textos ≤1 línea). Modo pez: auditoría
+verídica con archivo:línea de las Core 5 + sheets (12 correcciones TOP).
+
+- **Cripto USDT + ETH** (orden del dueño): 8 divisas del foco — fuentes
+  15→20: `usdt-ves` (referencia P2P, arista DIRECTA Bs↔USDT),
+  `usdt-usd` (tether global), `eth-usd` (CoinGecko) + manuales; símbolos
+  ₮/Ξ (cmap verificado en Inter/JetBrainsMono) y sello PINTADO
+  `CryptoFlagPainter` (₮ teal Tether · rombo indigo ETH, cero assets
+  nuevos); tintas `usdt`/`eth` en VeColors/VeInk/currencyInk.
+- **Failover Calculaya/CoinGecko en el tablero**: Worker público
+  `calculaya-api.jalvarezgw19.workers.dev/tasas` (hallado por REA del APK;
+  `usd` = BCV oficial verificado AL DÍGITO en vivo) como respaldo VE #2
+  que NUNCA pisa dato fresco + COP mercado #2 (remesas); bloque cripto
+  (`_cryptoBlock`): USDT P2P desde Calculaya, ETH/tether desde CoinGecko;
+  derivación honesta de último recurso Bs/USDT = paralelo × tether con
+  guard 0.2–2 USD; diagnóstico añade «Cripto».
+- **Conversor = patrón calculadora** (hallazgo pez #1/#2): teclado
+  VeKeypad como PISO FIJO (teclas 44dp) — la cifra SIEMPRE a la vista, en
+  modo «Hoy» no hay scroll; Fuentes·Tabla·Recientes·Notas → half-sheets
+  (adiós al ListView de 2.200dp); fichas 1-100 en una línea; acciones con
+  iconos + Semantics; dual input comprimido (34/40) con cifras
+  FittedBox-blindadas; fecha sin tarjeta envolvente; textos humanizados.
+- **Lista despejada** (hallazgo pez #3): captura manual de 3 filas → 2
+  (tienda deja de robar una fila); héroe 64→48 (escala única con el
+  Conversor); frecuentes + totales por moneda + plantillas viven tras
+  «Más» (despliegue progresivo, patrón del Home); «Presupuesto y vuelto».
+- **Inicio de primera pantalla**: Cotización con RateTile compacto
+  (filas ~50dp, mismas fuentes); Divisas del foco + Tu mes pasan tras
+  «Ver todo» con alertas/tiendas/herramientas; textos-ensayo de estados
+  offline/primera carga → una línea (humanizer).
+- **Libro**: chips de categoría → UNA línea con deslazo horizontal (dejan
+  de comer 2-3 filas).
+- **Kit** (evolución, no reemplazo): `VeChip` gana `dense` (padding 6) e
+  `icon` (13px, alto 28 intacto — ve_kit verde); techo de `showRateSheet`
+  unificado al 88 % de `showVeSheet` (adiós a los dos techos).
+- **Provider optimizado** (decisión del dueño: NO Riverpod): selects
+  granulares donde el watch era grueso; el conversor y el shell ya usaban
+  select — los rebuilds por ciclo del poller quedan aislados con
+  RepaintBoundary en los pisos.
+- **Tests al teléfono real**: viewport 390×844 (fin del 1600 que delataba
+  el scroll del conversor) + fuentes reales en pago_movil_test; contratos
+  de banderas fiat/cripto separadas; foco = 8 divisas; parsers de
+  Calculaya/CoinGecko con payloads reales de curl 21/11/2026;
+  derivación con guards; goldens del gate regenerados y verificados a la
+  vista (conversor y lista sin scroll). analyze 0 · suite verde ·
+  auditoría VERDE.
+
 ## 1.15.0-beta+48 · v23.0 — GUI simple «Instrumento directo» (EGM goldfish + comparativa CalculaYa 1.1.0)
 
 Orden del dueño: «un GUI más simple», comparar las funciones en común con

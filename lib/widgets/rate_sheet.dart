@@ -70,7 +70,9 @@ class RateTile extends StatelessWidget {
     final has = rate > 0;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      // v23.2: fila compacta (2/6 en vez de 4/9) — la Cotización del Inicio
+      // cabe en media pantalla; la zona de toque sigue ≥48dp.
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Material(
         // v21 (GUI superior): jerarquía calmada estilo Linear — la lista
         // respira en superficie neutra y SOLO la fila activa lleva el tinte
@@ -87,7 +89,7 @@ class RateTile extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: selected
@@ -289,11 +291,12 @@ Future<void> showRateSheet(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (sheetCtx) => SafeArea(
-      // TASK-35 (p3): techo del 80 % de la pantalla — con muchas fuentes
+      // v23.2: techo unificado al 88 % — el mismo de showVeSheet (antes
+      // había DOS techos: 80 % aquí y 88 % en el kit).
       // la lista scrollea dentro del límite en vez de crecer sin fin.
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(sheetCtx).height * 0.8,
+          maxHeight: MediaQuery.sizeOf(sheetCtx).height * 0.88,
         ),
         child: ListView(
           shrinkWrap: true,

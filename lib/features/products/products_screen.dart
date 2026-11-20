@@ -246,45 +246,49 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              // Chips de categoría (activo = tinta invertida).
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  VeChip(
-                    active: _cat == null,
-                    onTap: () => setState(() {
-                      _cat = null;
-                      _page = 0;
-                    }),
-                    child: const Text('Todas'),
-                  ),
-                  for (final c in ProductCategory.values)
+              // Chips de categoría (activo = tinta invertida). v23.2:
+              // UNA línea con deslazo horizontal — dejan de comer 2 filas.
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                child: Row(
+                  spacing: 8,
+                  children: [
                     VeChip(
-                      active: _cat == c,
+                      active: _cat == null,
                       onTap: () => setState(() {
-                        _cat = c;
+                        _cat = null;
                         _page = 0;
                       }),
-                      child: Text(c.label),
+                      child: const Text('Todas'),
                     ),
-                  VeChip(
-                    active: _onlyUnavailable,
-                    onTap: () => setState(() {
-                      _onlyUnavailable = !_onlyUnavailable;
-                      _page = 0;
-                    }),
-                    child: const Text('No disponibles'),
-                  ),
-                  VeChip(
-                    active: _onlyTarget,
-                    onTap: () => setState(() {
-                      _onlyTarget = !_onlyTarget;
-                      _page = 0;
-                    }),
-                    child: const Text('Con meta'),
-                  ),
-                ],
+                    for (final c in ProductCategory.values)
+                      VeChip(
+                        active: _cat == c,
+                        onTap: () => setState(() {
+                          _cat = c;
+                          _page = 0;
+                        }),
+                        child: Text(c.label),
+                      ),
+                    VeChip(
+                      active: _onlyUnavailable,
+                      onTap: () => setState(() {
+                        _onlyUnavailable = !_onlyUnavailable;
+                        _page = 0;
+                      }),
+                      child: const Text('No disponibles'),
+                    ),
+                    VeChip(
+                      active: _onlyTarget,
+                      onTap: () => setState(() {
+                        _onlyTarget = !_onlyTarget;
+                        _page = 0;
+                      }),
+                      child: const Text('Con meta'),
+                    ),
+                  ],
+                ),
               ),
               if (list.isEmpty) ...[
                 const SizedBox(height: 14),
