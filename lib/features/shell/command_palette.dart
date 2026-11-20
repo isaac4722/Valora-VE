@@ -46,7 +46,7 @@ const List<(String, String, IconData, String)> kSearchModules =
     <(String, String, IconData, String)>[
       ('Inicio', 'Tasas del día y resumen', LucideIcons.home, '/'),
       (
-        'Divisas',
+        'Conversor',
         'Conversor con fecha histórica',
         LucideIcons.arrowLeftRight,
         '/conversor',

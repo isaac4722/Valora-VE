@@ -154,15 +154,15 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         title: 'Cinco pestañas, todo a un toque',
         anchor: kNavBarKey,
         body:
-            'Inicio · Divisas · Lista · Productos · Análisis. La campana '
-            'guarda tus avisos y la lupa busca en toda la app; los ajustes '
-            'viven arriba a la derecha.',
+            'Inicio · Conversor · Lista · Productos · Análisis. La campana '
+            'guarda tus avisos y en escritorio ⌘K busca en toda la app; los '
+            'ajustes viven arriba a la derecha.',
       ),
     ],
   ),
   TourSegment(
     location: '/conversor',
-    title: 'DIVISAS',
+    title: 'CONVERSOR',
     steps: [
       TourStep(
         id: 'divisas.fecha',

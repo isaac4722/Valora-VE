@@ -162,7 +162,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 150));
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump(const Duration(milliseconds: 150));
-    // La marca recorrió Inicio → Divisas → Lista: el tercero queda marcado.
+    // La marca recorrió Inicio → Conversor → Lista: el tercero queda marcado.
     expect(find.text('Lista'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -177,7 +177,7 @@ void main() {
     await tester.pump();
     expect(find.text('Análisis'), findsOneWidget);
     expect(find.text('Inicio'), findsNothing);
-    expect(find.text('Divisas'), findsNothing);
+    expect(find.text('Conversor'), findsNothing);
   });
 
   testWidgets('productos y compras aparecen con su grupo', (tester) async {
