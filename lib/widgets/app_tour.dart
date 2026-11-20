@@ -155,8 +155,8 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         anchor: kNavBarKey,
         body:
             'Inicio · Conversor · Lista · Productos · Análisis. La campana '
-            'guarda tus avisos y en escritorio ⌘K busca en toda la app; los '
-            'ajustes viven arriba a la derecha.',
+            'guarda tus avisos y la lupa de arriba abre la búsqueda de toda '
+            'la app; los ajustes viven en el bloque «Libro» del Inicio.',
       ),
     ],
   ),

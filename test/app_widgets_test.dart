@@ -203,6 +203,28 @@ void main() {
     expect(find.text('Inicio limpio'), findsNothing);
   });
 
+  testWidgets('Libro: la sección del sidebar también vive en móvil', (
+    tester,
+  ) async {
+    // Viewport móvil 390×844: sin sidebar, la única puerta a Historial/
+    // Tickets/Ajustes es el bloque «Libro» al pie del Inicio (v23).
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await pumpHome(tester);
+    expect(find.text('LIBRO'), findsOneWidget);
+    expect(find.text('Historial'), findsOneWidget);
+    expect(find.text('Tickets'), findsOneWidget);
+    expect(find.text('Ajustes'), findsWidgets);
+    // La puerta de Tickets navega a la galería (ruta fuera del shell).
+    await tester.ensureVisible(find.text('Tickets'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Tickets'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Galería'), findsOneWidget);
+  });
+
   testWidgets('la galería muestra los 3 widgets con preview fiel', (
     tester,
   ) async {

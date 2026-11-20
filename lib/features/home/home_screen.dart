@@ -131,6 +131,39 @@ class _HomeSectionsState extends State<_HomeSections> {
                 )
               : const SizedBox(width: double.infinity),
         ),
+        // v23 (Libro en móvil): espejo EXACTO de la sección «Libro» del
+        // sidebar de escritorio — Historial · Tickets · Ajustes visibles
+        // SIEMPRE al pie del Inicio. Antes llegaban solo por deep-links
+        // dispersos (campana, resumen del mes, historial): en teléfono no
+        // existía una puerta visible (mal configurado · hallazgo goldfish).
+        const _SectionEyebrow('Libro', hint: 'Historial, tickets y ajustes'),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: _Tool(
+                icon: LucideIcons.history,
+                label: 'Historial',
+                onTap: () => context.go('/historial'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _Tool(
+                icon: LucideIcons.receipt,
+                label: 'Tickets',
+                onTap: () => context.go('/tickets'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _Tool(
+                icon: LucideIcons.settings,
+                label: 'Ajustes',
+                onTap: () => context.go('/ajustes'),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
