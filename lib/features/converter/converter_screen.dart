@@ -33,6 +33,7 @@ import '../../widgets/rate_sheet.dart';
 import '../../widgets/share_card.dart';
 import '../../widgets/export_sheet.dart';
 import '../../widgets/ui.dart';
+import 'pago_movil_sheet.dart';
 
 part 'converter_reference.dart';
 part 'converter_history.dart';
@@ -448,6 +449,17 @@ class _ConverterScreenState extends State<ConverterScreen> {
               child: Wrap(spacing: 8, runSpacing: 6, children: [
                 VeBtn(variant: VeBtnVariant.secondary, icon: LucideIcons.share2, enabled: plan != null && result > 0, onPressed: _shareCard, child: const Text('Compartir')),
                 VeBtn(variant: VeBtnVariant.secondary, icon: LucideIcons.copy, enabled: plan != null && result > 0, onPressed: _copyResult, child: const Text('Copiar')),
+                // v23 · Pago Móvil (comparativa CalculaYa): compartir el
+                // monto en Bs con los datos de cobro — solo cuando el
+                // destino ES bolívares.
+                if (to == Currency.ves)
+                  VeBtn(
+                    variant: VeBtnVariant.secondary,
+                    icon: LucideIcons.smartphone,
+                    enabled: result > 0,
+                    onPressed: () => showPagoMovilSheet(context, montoBs: result),
+                    child: const Text('Pago Móvil'),
+                  ),
                 // v23: el teclado propio se pliega desde aquí (por defecto
                 // desplegado — el patrón estrella de CalculaYa 1.1.0).
                 VeBtn(variant: VeBtnVariant.secondary, icon: LucideIcons.calculator, onPressed: () => setState(() => _keypad = !_keypad), child: Text(_keypad ? 'Ocultar teclado' : 'Teclado')),

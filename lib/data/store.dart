@@ -260,6 +260,7 @@ class AppStore extends ChangeNotifier {
     bool? biometricLock,
     String? sseUrl,
     String? numMode,
+    bool? accountsBiometric,
   }) {
     final s = _data.settings;
     final patched = s.copyWith(
@@ -271,6 +272,7 @@ class AppStore extends ChangeNotifier {
       biometricLock: biometricLock,
       sseUrl: sseUrl,
       numMode: numMode == 'redondeo' ? 'redondeo' : (numMode == null ? null : 'decimales'),
+      accountsBiometric: accountsBiometric,
     );
     _data = _data.copyWith(settings: patched);
     _persist();
@@ -289,6 +291,33 @@ class AppStore extends ChangeNotifier {
   /// Modo de vista del resultado del conversor (v23 · GUI simple):
   /// 'decimales' (fiel) o 'redondeo' (entero; la ruta conserva la cifra).
   void setNumMode(String v) => _patchSettings(numMode: v);
+
+  /// Candado biométrico de la sección Cuentas y Pago Móvil (v23).
+  void setAccountsBiometric(bool v) =>
+      _patchSettings(accountsBiometric: v);
+
+  // ─── 2.1c Cuentas y Pago Móvil (v23 · comparativa CalculaYa) ───────────
+
+  /// Máximo de cuentas propias (CalculaYa no limita; 4 basta y respira).
+  static const int kMaxAccounts = 4;
+
+  /// Agrega una cuenta de cobro. Validación SUAVE en la UI (avisos, no
+  /// bloqueos: la longitud real varía por banco); aquí solo lo esencial.
+  bool addAccount(PayAccount a) {
+    if (a.bank.isEmpty || a.number.trim().isEmpty) return false;
+    if (_data.accounts.length >= kMaxAccounts) return false;
+    _data = _data.copyWith(accounts: [..._data.accounts, a]);
+    _persist();
+    return true;
+  }
+
+  /// Retira una cuenta por id.
+  void removeAccount(String id) {
+    _data = _data.copyWith(
+      accounts: _data.accounts.where((a) => a.id != id).toList(),
+    );
+    _persist();
+  }
 
   /// URL del despliegue web con SSE en vivo (17.7): '' apaga el stream.
   void setSseUrl(String v) => _patchSettings(sseUrl: v.trim());

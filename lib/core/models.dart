@@ -895,6 +895,7 @@ class Settings {
   final String
   sseUrl; // 17.7: SSE en vivo opcional de un despliegue web ('' = off)
   final String numMode; // v23 'decimales' | 'redondeo' (vista del resultado)
+  final bool accountsBiometric; // v23: huella para ver Cuentas y Pago Móvil
 
   const Settings({
     this.country = 'VE',
@@ -923,6 +924,7 @@ class Settings {
     this.tickerSpeed = 120,
     this.currencyOrder = const [],
     this.numMode = 'decimales',
+    this.accountsBiometric = false,
   });
 
   const Settings.defaults() : this._defaultC();
@@ -953,7 +955,8 @@ class Settings {
       tickerSize = 'normal',
       tickerSpeed = 120,
       currencyOrder = const [],
-      numMode = 'decimales';
+      numMode = 'decimales',
+      accountsBiometric = false;
 
   Settings copyWith({
     String? country,
@@ -989,6 +992,7 @@ class Settings {
     bool? biometricLock,
     String? sseUrl,
     String? numMode,
+    bool? accountsBiometric,
   }) => Settings(
     country: country ?? this.country,
     autoRefresh: autoRefresh ?? this.autoRefresh,
@@ -1020,6 +1024,7 @@ class Settings {
     biometricLock: biometricLock ?? this.biometricLock,
     sseUrl: sseUrl ?? this.sseUrl,
     numMode: numMode ?? this.numMode,
+    accountsBiometric: accountsBiometric ?? this.accountsBiometric,
   );
 
   Map<String, dynamic> toJson() => {
@@ -1050,6 +1055,7 @@ class Settings {
     'biometricLock': biometricLock,
     'sseUrl': sseUrl,
     'numMode': numMode,
+    'accountsBiometric': accountsBiometric,
   };
 
   /// Mapa de sueldo tolerante: el modo fijo usa amount; los modos variables
@@ -1158,6 +1164,7 @@ class Settings {
       numMode: sOf(j['numMode'], 'decimales') == 'redondeo'
           ? 'redondeo'
           : 'decimales',
+      accountsBiometric: j['accountsBiometric'] == true,
     );
   }
 }
@@ -1345,6 +1352,66 @@ class CustomRate {
   }
 }
 
+/// Cuenta bancaria propia para compartir el cobro por Pago Móvil (v23 ·
+/// comparativa CalculaYa): banco, tipo, número, CI y teléfono. Dato
+/// SENSIBLE: vive SOLO en el teléfono (allowBackup=false desde v20.4) y
+/// puede blindarse con huella (Ajustes → Cuentas y Pago Móvil).
+class PayAccount {
+  const PayAccount({
+    required this.id,
+    required this.bank,
+    required this.type,
+    required this.number,
+    this.docId = '',
+    this.phone = '',
+  });
+
+  final String id;
+
+  /// Nombre del banco tal como se muestra (kVkBanks).
+  final String bank;
+
+  /// 'corriente' | 'ahorro'.
+  final String type;
+
+  /// Número de cuenta (20 dígitos en la mayoría de los bancos).
+  final String number;
+
+  /// Cédula (V/E + dígitos).
+  final String docId;
+
+  /// Teléfono vinculado al pago móvil.
+  final String phone;
+
+  bool get isSavings => type == 'ahorro';
+
+  String get typeLabel => isSavings ? 'Ahorro' : 'Corriente';
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'bank': bank,
+    'type': type,
+    'number': number,
+    'docId': docId,
+    'phone': phone,
+  };
+
+  static PayAccount? tryParse(Map j) {
+    final id = sOf(j['id']);
+    final bank = sOf(j['bank']).trim();
+    final number = sOf(j['number']).trim();
+    if (id.isEmpty || bank.isEmpty || number.isEmpty) return null;
+    return PayAccount(
+      id: id,
+      bank: bank,
+      type: sOf(j['type'], 'corriente') == 'ahorro' ? 'ahorro' : 'corriente',
+      number: number,
+      docId: sOf(j['docId']).trim(),
+      phone: sOf(j['phone']).trim(),
+    );
+  }
+}
+
 /// Estado completo persistido (§1.9 AppData, 13 claves).
 class AppData {
   final int version;
@@ -1362,6 +1429,7 @@ class AppData {
   final List<ShoppingTemplate> templates;
   final Settings settings;
   final List<CustomRate> customRates; // v23: tasas propias con nombre (máx 8)
+  final List<PayAccount> accounts; // v23: cuentas y Pago Móvil (máx 4)
 
   const AppData({
     this.version = kDataVersion,
@@ -1386,6 +1454,7 @@ class AppData {
     this.templates = const [],
     this.settings = const Settings(),
     this.customRates = const [],
+    this.accounts = const [],
   });
 
   /// Copia tipada (v22.0 · rendimiento): sustituye al round-trip
@@ -1412,6 +1481,7 @@ class AppData {
     List<ShoppingTemplate>? templates,
     Settings? settings,
     List<CustomRate>? customRates,
+    List<PayAccount>? accounts,
   }) => AppData(
     version: version ?? this.version,
     board: board ?? this.board,
@@ -1428,6 +1498,7 @@ class AppData {
     templates: templates ?? this.templates,
     settings: settings ?? this.settings,
     customRates: customRates ?? this.customRates,
+    accounts: accounts ?? this.accounts,
   );
 
   Map<String, dynamic> toJson() => {
@@ -1446,6 +1517,7 @@ class AppData {
     'templates': templates.map((e) => e.toJson()).toList(),
     'settings': settings.toJson(),
     'customRates': customRates.map((e) => e.toJson()).toList(),
+    'accounts': accounts.map((e) => e.toJson()).toList(),
   };
 
   static AppData fromJson(Map<String, dynamic> j) => AppData(
@@ -1517,6 +1589,14 @@ class AppData {
               .take(8)
               .toList()
         : const <CustomRate>[]),
+    accounts: (j['accounts'] is List
+        ? (j['accounts'] as List)
+              .whereType<Map>()
+              .map((e) => PayAccount.tryParse(Map<String, dynamic>.from(e)))
+              .whereType<PayAccount>()
+              .take(4)
+              .toList()
+        : const <PayAccount>[]),
   );
 }
 

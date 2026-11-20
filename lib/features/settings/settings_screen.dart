@@ -35,6 +35,7 @@ import '../../state/app_state.dart';
 import '../../widgets/app_tour.dart';
 import '../../widgets/rate_sheet.dart';
 import '../../widgets/ui.dart';
+import '../../core/banks_ve.dart';
 import '../../core/version.dart';
 
 // v18.0: la versión visible vive en core/version.dart (fuente única — la
@@ -45,6 +46,7 @@ export '../../core/version.dart' show kAppVersionVisible;
 part 'settings_sections.dart';
 part 'settings_alertas.dart';
 part 'settings_system.dart';
+part 'cuentas_pago_movil.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -68,6 +70,9 @@ class SettingsScreen extends StatelessWidget {
             _DatosConexion(store: store),
             _Personalizacion(store: store),
             _Monedas(store: store),
+            // v23: cuentas de cobro para compartir el Pago Móvil desde el
+            // Conversor (comparativa CalculaYa).
+            const CuentasPagoMovil(),
             _Diagnostico(),
             _Registros(),
             _Apariencia(),

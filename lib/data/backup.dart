@@ -201,6 +201,19 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
     }
   }
 
+  // ── Accounts (v23): unión por id (empate=local), mismo criterio que
+  // customRates — las cuentas de cobro del respaldo sobreviven (instalación
+  // limpia + restaurar merge conserva lo del respaldo).
+  final accounts = <String, PayAccount>{};
+  for (final a in local.accounts) {
+    accounts[a.id] = a;
+  }
+  for (final a in incoming.accounts) {
+    if (!accounts.containsKey(a.id) && a.id.isNotEmpty) {
+      accounts[a.id] = a;
+    }
+  }
+
   final merged = AppData(
     version: kDataVersion,
     // merge NO toca board/rateSource/manualRates/converter/settings.
@@ -217,6 +230,7 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
     templates: templates.values.toList(),
     stores: stores,
     customRates: customRates.values.take(AppStore.kMaxCustomRates).toList(),
+    accounts: accounts.values.take(AppStore.kMaxAccounts).toList(),
     // cart/budget: locales (merge no los toca).
     cart: local.cart,
     budget: local.budget,
