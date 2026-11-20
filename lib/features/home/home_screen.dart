@@ -799,10 +799,13 @@ class _CotizacionPrincipal extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final poller = context.watch<RatesPoller>();
+    final scheme = Theme.of(context).colorScheme;
     final country = CountryX.from(store.settings.country);
     final ctx = store.contextOf();
     final manualId = '${country.currency.code.toLowerCase()}-manual';
     final hasAny = !store.board.isEmpty || ctx.rates.containsKey(manualId);
+    final customRates = store.data.customRates;
+    final hasAnyCustom = hasAny || customRates.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -811,7 +814,7 @@ class _CotizacionPrincipal extends StatelessWidget {
           'Cotización principal',
           hint: 'Tasas de hoy y qué tasa usan tus cálculos',
         ),
-        if (!hasAny)
+        if (!hasAnyCustom)
           if (poller.offlineActive)
             // Desconexión ELEGIDA (modo offline): cloud_off + guía local.
             OfflineState(
@@ -866,6 +869,34 @@ class _CotizacionPrincipal extends StatelessWidget {
                   Currency.brl,
                   Currency.mxn,
                 ], country.currency),
+                // ── Tus tasas (v23 · comparativa CalculaYa): tasas propias
+                // con nombre y brecha vs BCV; tocar = aplicar (mecanismo
+                // manual existente, cero cambios en el core).
+                if (customRates.isNotEmpty) ...<Widget>[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
+                    child: Text(
+                      'TUS TASAS',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.76,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  for (final r in customRates)
+                    _CustomRateRow(
+                      rate: r,
+                      bcv: ctx.rate('ves-bcv'),
+                      selected:
+                          ctx.sel(Currency.ves) == 'ves-manual' &&
+                          (store.data.manualRates['ves-manual'] ==
+                              r.bsPerUsd),
+                      onTap: () => store.applyCustomRate(r),
+                    ),
+                ],
                 // ── Grupo EUR: aristas del euro (solo si alguna tiene valor) ──
                 if (_visibleSources(ctx, const [
                   Currency.eur,
@@ -944,6 +975,82 @@ class _CotizacionPrincipal extends StatelessWidget {
     if (saved && context.mounted) {
       store.setRateSource(s.currency, s.id);
     }
+  }
+}
+
+/// Fila de tasa propia (v23): sello manual (violeta) + nombre + GapChip de
+/// brecha vs BCV + valor tabular a la derecha; seleccionada invierte la
+/// tinta como las filas de fuente. Mismo ritmo vertical que RateTile.
+class _CustomRateRow extends StatelessWidget {
+  const _CustomRateRow({
+    required this.rate,
+    required this.bcv,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final CustomRate rate;
+  final double bcv;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final VeInk ink = Theme.of(context).extension<VeInk>()!;
+    final gap = bcv > 0 ? (rate.bsPerUsd / bcv - 1) * 100 : null;
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        // Selected: tinte manual al 12 % — el mismo lenguaje de RateTile.
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? ink.manual.withValues(alpha: 0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const SourceSeal(SourceCategory.manual),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rate.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  if (gap != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: GapChip(gapPct: gap),
+                    ),
+                ],
+              ),
+            ),
+            Text(
+              '${fmtRate(rate.bsPerUsd)} Bs',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+                color: scheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

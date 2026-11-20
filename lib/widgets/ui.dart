@@ -1969,6 +1969,50 @@ class VeKeypad extends StatelessWidget {
   }
 }
 
+/// ─── GapChip (v23 · GUI simple · comparativa CalculaYa) ─────────────────────
+/// Brecha porcentual de una tasa propia contra el BCV: «+12,4 % vs BCV».
+/// Texto tabular 10.5 px; tinta warn cuando la prima supera el 5 %,
+/// neutral si no (§5: el color SOLO significa). Recibe la brecha ya
+/// calculada; null/nan → el chip NO se pinta (sin BCV no hay brecha
+/// honesta, jamás un «NaN»).
+class GapChip extends StatelessWidget {
+  const GapChip({super.key, this.gapPct});
+
+  /// Brecha en % ((bsPerUsd / bcv - 1) * 100); null la oculta.
+  final double? gapPct;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = gapPct;
+    if (g == null || g.isNaN || !g.isFinite) {
+      return const SizedBox.shrink();
+    }
+    final scheme = Theme.of(context).colorScheme;
+    final VeInk ink = Theme.of(context).extension<VeInk>()!;
+    final hot = g.abs() > 5;
+    final sign = g >= 0 ? '+' : '−';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: hot ? ink.warnBg : scheme.onSurfaceVariant.withValues(
+          alpha: 0.08,
+        ),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$sign${fmtNum(g.abs(), decimals: 1)} % vs BCV',
+        style: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+          fontFeatures: const [FontFeature.tabularFigures()],
+          color: hot ? ink.warn : scheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
 /// Banner de salud de tasas (§9 ui-bits). Dos causas, dos copys:
 /// · SIN RED (v17.8, señal viva de connectivity_plus): calmado — las
 ///   tasas guardadas siguen siendo la verdad y la red vuelve sola.

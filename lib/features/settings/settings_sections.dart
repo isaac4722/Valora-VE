@@ -317,6 +317,16 @@ class _Monedas extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 const _ManualRates(),
+                const Divider(height: 18),
+                // v23: tasas propias con nombre (comparativa CalculaYa) —
+                // el atajo cotidiano; las manuales por fuente son el modo
+                // avanzado de siempre, intacto.
+                Text(
+                  'Tus tasas con nombre',
+                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 4),
+                const _CustomRates(),
               ],
             ),
           ),
@@ -457,6 +467,172 @@ class _ManualField extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// v23 · Editor de tasas propias con nombre (máx 8): lista con borrar y
+/// alta en hoja modal (nombre + Bs/USD). Al tocar una tasa en Inicio se
+/// APLICA como fuente manual — aquí solo vive la gestión.
+class _CustomRates extends StatelessWidget {
+  const _CustomRates();
+
+  Future<void> _abrirAlta(BuildContext context, AppStore store) async {
+    final nameCtrl = TextEditingController();
+    final rateCtrl = TextEditingController();
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + MediaQuery.viewInsetsOf(ctx).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Nueva tasa tuya',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'p. ej. Zelle, Efectivo, Binance — aparece en Inicio con su '
+              'brecha vs BCV',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: nameCtrl,
+              maxLength: 18,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Nombre',
+                hintText: 'Zelle',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            MoneyField(
+              controller: rateCtrl,
+              maxDecimals: 4,
+              decoration: const InputDecoration(
+                labelText: 'Bs por USD',
+                hintText: '0,00',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text('Guardar'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) {
+      store.addCustomRate(nameCtrl.text, parseLocaleNum(rateCtrl.text) ?? 0);
+    }
+    nameCtrl.dispose();
+    rateCtrl.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final scheme = Theme.of(context).colorScheme;
+    final rates = store.data.customRates;
+    return Column(
+      children: [
+        for (final r in rates)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(
+              children: [
+                const SourceSeal(SourceCategory.manual),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    r.name,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${fmtRate(r.bsPerUsd)} Bs',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                // Borrar directo: sin confirmación — la lista es corta y la
+                // acción se rehace en segundos (patrón del carrito).
+                InkWell(
+                  onTap: () => store.removeCustomRate(r.id),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      Icons.close,
+                      size: 15,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (rates.length < AppStore.kMaxCustomRates)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: VeBtn(
+              variant: VeBtnVariant.ghost,
+              size: VeBtnSize.sm,
+              onPressed: () => _abrirAlta(context, store),
+              icon: LucideIcons.plus,
+              child: const Text('Agregar tasa'),
+            ),
+          ),
+        if (rates.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              'Tus tasas viven también en el Inicio, junto al BCV y el '
+              'paralelo, con su brecha.',
+              style: TextStyle(
+                fontSize: 11,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

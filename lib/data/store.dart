@@ -173,6 +173,50 @@ class AppStore extends ChangeNotifier {
     _persist();
   }
 
+  // ─── 2.1b Tasas personalizadas con nombre (v23 · comparativa CalculaYa) ──
+
+  /// Máximo de tasas propias (la fila de Cotización respira: 8 basta).
+  static const int kMaxCustomRates = 8;
+
+  /// Agrega una tasa propia. Rechaza nombre vacío/repetido (case-insensitive,
+  /// como «A rate with this name already exists» de CalculaYa), valor inválido
+  /// y el tope de 8.
+  bool addCustomRate(String name, double bsPerUsd) {
+    final n = name.trim();
+    if (n.isEmpty || n.length > 18 || bsPerUsd <= 0 || !bsPerUsd.isFinite) {
+      return false;
+    }
+    if (_data.customRates.length >= kMaxCustomRates) return false;
+    final exists = _data.customRates.any(
+      (r) => r.name.toLowerCase() == n.toLowerCase(),
+    );
+    if (exists) return false;
+    _data = _data.copyWith(
+      customRates: [
+        ..._data.customRates,
+        CustomRate(id: newId(), name: n, bsPerUsd: bsPerUsd),
+      ],
+    );
+    _persist();
+    return true;
+  }
+
+  /// Retira una tasa propia por id.
+  void removeCustomRate(String id) {
+    _data = _data.copyWith(
+      customRates: _data.customRates.where((r) => r.id != id).toList(),
+    );
+    _persist();
+  }
+
+  /// Aplica una tasa propia COMO FUENTE MANUAL de VES (REGLA DE ORO v23:
+  /// cero cambios en el core §3 — reusa el mecanismo manual existente y
+  /// la activa, como hace el editor manual de siempre).
+  void applyCustomRate(CustomRate r) {
+    setManualRate('ves-manual', r.bsPerUsd);
+    setRateSource(Currency.ves, 'ves-manual');
+  }
+
   /// setConverterPair: par directo del conversor. v19 (orden del dueño): el
   /// par SIEMPRE tiene divisas distintas — nunca «VES → VES». Si llega un
   /// par igual (respaldo viejo o caller descuidado), el otro lado cae al

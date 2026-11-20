@@ -1313,6 +1313,38 @@ class SnapshotPoint {
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }
 
+/// Tasa personalizada con nombre (v23 · comparativa CalculaYa 1.1.0):
+/// «Zelle», «Efectivo», «Binance»… vive junto al BCV/paralelo con su
+/// brecha porcentual; al tocarla se aplica por el mecanismo manual
+/// EXISTENTE del motor ('ves-manual'), sin tocar el core (§3).
+class CustomRate {
+  const CustomRate({
+    required this.id,
+    required this.name,
+    required this.bsPerUsd,
+  });
+
+  final String id;
+  final String name;
+
+  /// Bs por USD (positiva, finita).
+  final double bsPerUsd;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'bsPerUsd': bsPerUsd,
+  };
+
+  static CustomRate? tryParse(Map j) {
+    final id = sOf(j['id']);
+    final name = sOf(j['name']).trim();
+    final v = dOf(j['bsPerUsd']);
+    if (id.isEmpty || name.isEmpty || v <= 0 || !v.isFinite) return null;
+    return CustomRate(id: id, name: name, bsPerUsd: v);
+  }
+}
+
 /// Estado completo persistido (§1.9 AppData, 13 claves).
 class AppData {
   final int version;
@@ -1329,6 +1361,7 @@ class AppData {
   final List<String> stores;
   final List<ShoppingTemplate> templates;
   final Settings settings;
+  final List<CustomRate> customRates; // v23: tasas propias con nombre (máx 8)
 
   const AppData({
     this.version = kDataVersion,
@@ -1352,6 +1385,7 @@ class AppData {
     this.stores = const [],
     this.templates = const [],
     this.settings = const Settings(),
+    this.customRates = const [],
   });
 
   /// Copia tipada (v22.0 · rendimiento): sustituye al round-trip
@@ -1377,6 +1411,7 @@ class AppData {
     List<String>? stores,
     List<ShoppingTemplate>? templates,
     Settings? settings,
+    List<CustomRate>? customRates,
   }) => AppData(
     version: version ?? this.version,
     board: board ?? this.board,
@@ -1392,6 +1427,7 @@ class AppData {
     stores: stores ?? this.stores,
     templates: templates ?? this.templates,
     settings: settings ?? this.settings,
+    customRates: customRates ?? this.customRates,
   );
 
   Map<String, dynamic> toJson() => {
@@ -1409,6 +1445,7 @@ class AppData {
     'stores': stores,
     'templates': templates.map((e) => e.toJson()).toList(),
     'settings': settings.toJson(),
+    'customRates': customRates.map((e) => e.toJson()).toList(),
   };
 
   static AppData fromJson(Map<String, dynamic> j) => AppData(
@@ -1472,6 +1509,14 @@ class AppData {
     settings: j['settings'] is Map
         ? Settings.fromJson(Map<String, dynamic>.from(j['settings'] as Map))
         : const Settings(),
+    customRates: (j['customRates'] is List
+        ? (j['customRates'] as List)
+              .whereType<Map>()
+              .map((e) => CustomRate.tryParse(Map<String, dynamic>.from(e)))
+              .whereType<CustomRate>()
+              .take(8)
+              .toList()
+        : const <CustomRate>[]),
   );
 }
 

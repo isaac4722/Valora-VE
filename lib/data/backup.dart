@@ -9,6 +9,7 @@ import 'dart:convert';
 
 import '../core/currencies.dart';
 import '../core/models.dart';
+import 'store.dart' show AppStore;
 
 class MergeCounts {
   final int products;
@@ -186,6 +187,20 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
     stores.length,
   );
 
+  // ── CustomRates (v23): unión por id (empate=local) — distinto del
+  // criterio local-only de manualRates: las tasas propias CON NOMBRE viajan
+  // entre respaldos, como los productos (hallazgo goldfish: una tasa
+  // «Zelle» definida en el respaldo debe sobrevivir a restaurar).
+  final customRates = <String, CustomRate>{};
+  for (final r in local.customRates) {
+    customRates[r.id] = r;
+  }
+  for (final r in incoming.customRates) {
+    if (!customRates.containsKey(r.id) && r.id.isNotEmpty) {
+      customRates[r.id] = r;
+    }
+  }
+
   final merged = AppData(
     version: kDataVersion,
     // merge NO toca board/rateSource/manualRates/converter/settings.
@@ -201,6 +216,7 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
       ..sort((a, b) => b.date.compareTo(a.date)),
     templates: templates.values.toList(),
     stores: stores,
+    customRates: customRates.values.take(AppStore.kMaxCustomRates).toList(),
     // cart/budget: locales (merge no los toca).
     cart: local.cart,
     budget: local.budget,
