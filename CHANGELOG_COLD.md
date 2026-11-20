@@ -1,6 +1,228 @@
 # Changelog
 
 ## 1.9.4-beta+22 · v19.4 — 5 encargos del dueño: tarjetas TIPs, compartir, widgets de Inicio, buscar sala y FlutLab
+## 1.9.10-beta+28 · v19.10 — Auditoría visual premium + notificaciones que sí llegan en 2º plano
+## 1.14.1-beta+44 · v22.1 — la app compila también para WEB
+
+- **`flutter build web` en verde**: los 4 servicios que usaban `dart:io`
+  sin condicional (`lan_hub`, `workmanager_service`, `ticket_files`, el
+  `downloadBytes` de `sharing`) pasaron al patrón facade del repo (`_vm`
+  + `_stub` con `if (dart.library.io)`). Firmas públicas idénticas,
+  comportamiento web honesto: la sala WiFi-local devuelve vacío (la web
+  usa el servidor socket.io), las fotos de ticket siguen como data URL,
+  el respaldo en disco no existe y `downloadBytes` da null. En
+  Android/iOS nativo NO cambia nada (mismo `_vm` de siempre).
+- **Preview del repo = la app misma**: `scripts/web_preview_daemon.js` +
+  `web_preview_server.js` sirven `build/web` en :3000 con fallback SPA
+  (rutas de go_router). Verificado en vivo con el navegador a 390×844:
+  onboarding + Inicio con tasas reales (BCV 886,23 · Paralelo 998,08) y
+  0 errores de página.
+- Las optimizaciones de rendimiento, el `minSdk` estable (24 · Android
+  7.0) y la GUI clara de v22.0 quedan intactos.
+
+## 1.14.0-beta+43 · v22.0 — «la app directa»: repo solo-app, rendimiento en dispositivos humildes, minSdk al mínimo estable y GUI más clara
+
+Orden del dueño: «pasemos a desarrollar la app directamente». El repo deja
+de arrastrar la burocracia de proceso y el código se afinó para los
+teléfonos viejos (carga aceptable, pero se sentía entrecortada).
+
+- **Repo limpio (solo la app):** fuera `.agents/` (201 archivos de skills
+  del agente), `AGENT.md`, `MVP-CRUD.md`, `PROGRESS.md`,
+  `PROGRESS_WARM.md`, `PROGRESS_COLD.md`, `CHANGELOG_WARM.md`,
+  `CHANGELOG_COLD.md` y `skills-lock.json`. Queda el proyecto real:
+  `lib/`, `test/`, `android/`, `ios/`, `web/`, `tools/`, `server/` +
+  README/CHANGELOG/LICENSE. Los archivos siguen en el historial git si
+  alguna vez hiciera falta consultarlos. README actualizado (sin enlaces
+  muertos, contador de tests al día).
+- **Rendimiento (la causa real del «se siente entrecortada»):**
+  - `AppData.copyWith` (nuevo) + las 36 mutaciones del store convertidas:
+    antes CADA mutación (cada tap del carrito, cada tecla del conversor,
+    cada aviso) hacía `AppData.fromJson(_data.toJson())` — serializar y
+    re-parsear TODO el estado (todos los productos con sus registros,
+    compras, notificaciones). Ahora la mutación es O(campo): solo cambia
+    la lista tocada y el resto viaja por referencia.
+  - `RateTicker` (cinta de tasas del Inicio): RepaintBoundary alrededor de
+    la fila móvil — cada frame solo recoloca la capa ya rasterizada en vez
+    de re-pintar el shell entero a 60 fps; y la animación SE DETIENE
+    cuando no hay filas o el modo es off (antes seguía marcando 60 fps
+    en vacío).
+  - `VeStickyBar` SIN BackdropFilter: el blur (sigma 12) re-blurreaba el
+    contenido completo por debajo en cada frame de scroll de
+    Lista/Productos/Historial — el jank nº1 de scroll en teléfonos
+    humildes. Fondo casi opaco (alpha 0.96/0.97): misma lectura, costo de
+    un rectángulo plano.
+  - `MainShell` solo se reconstruye con lo que pinta: `context.select`
+    para país / modo offline / fuente activa del país / contador del
+    carrito (antes `watch<AppStore>()` reconstruía Scaffold + fondo
+    ambiental + tabs en cada mutación del store).
+- **minSdk al mínimo estable (orden del dueño):** `minSdk =
+  flutter.minSdkVersion` directo del framework — **24 · Android 7.0** en
+  Flutter 3.47.4, sin hardcodes. Nota honesta: API 9 (Android 2.3, 2010)
+  es técnicamente imposible para Flutter (el motor no arranca por debajo
+  de su mínimo declarado); 24 es el mínimo real y estable soportado.
+- **GUI más clara:**
+  - Cada sección de Inicio explica en una línea qué ofrece (hint bajo el
+    eyebrow): Cotización principal, Divisas del foco, Alertas, Resumen del
+    mes, Tus tiendas, Registros recientes, Herramientas.
+  - La pestaña móvil se unifica con el resto: «Conversor» (decía
+    «Divisas» mientras la ruta, el sidebar y la paleta decían Conversor).
+- **Gates:** analyze 0 · suite completa verde · auditoría lib/ limpia ·
+  goldens del visual gate regenerados (sticky bar y hints cambian
+  píxeles) · Impeccable 4.5.2 sobre los archivos tocados.
+
+
+## 1.14.0-beta+39 · v21.5 — Micro-espaciados del checkout de Lista
+
+La candidata pendiente de la auditoría GUI que solo se veía con ítems en
+el carrito — el teclado del CLI no escribe en campos Flutter, así que esta
+ronda se hizo por revisión de código y se blindó con tests de widgets que
+seedean el carrito y miden la geometría real del sheet a 390×844.
+
+- **El recibo por tienda respira**: las filas del desglose (`LedgerRow`)
+  no traen padding propio y en el checkout iban desnudas — se pegaban
+  entre sí y contra el filete doble. Ahora llevan `vertical: 3`, el mismo
+  ritmo de recibo que ya usaba Inicio; el hueco entre filas pasó de 0 px
+  a 6 px y el test lo mide geométricamente.
+- **«Total USD» se sienta en la línea base de la cifra**: junto al número
+  de 34 px el rótulo flotaba centrado verticalmente, como un dato suelto.
+  La fila ahora alinea por `CrossAxisAlignment.baseline` — la cifra manda
+  y el complemento acompaña, igual que en el resto del lenguaje Ve.
+- **Multitienda: el primer campo de tienda abre con 10 px**: antes el
+  lead-in tras el subtotal medía 6 px, igual que el ritmo entre campos,
+  y la zona de edición quedaba pegada al cierre del recibo. El primer
+  campo del grupo abre con 10 px y los siguientes conservan el 6 px. El
+  closure usa el elemento de la vuelta (`identical`), no un índice, para
+  que «Tienda de <ítem>» edite siempre su propio ítem.
+
+analyze 0 · 243/243 tests (3 nuevos del checkout) · gate VERDE · web 3000
+verificada en vivo (390×844).
+
+## 1.14.0-beta+38 · v21.4 — Arranque sin controles muertos
+
+Última pasada de producción: una pantalla más verificada de primera mano y
+la integración DolarVZLA re-auditada contra su spec oficial en vivo.
+
+- **El slide 1 de la bienvenida ya no muestra «Atrás»**: el botón estaba
+  deshabilitado en la primera página, pero seguir visible como un control
+  que no lleva a ninguna parte confunde al usuario nuevo. Ahora se
+  desvanece (`AnimatedOpacity` + `IgnorePointer` + `ExcludeSemantics`) y
+  el hueco se reserva igual — los puntos de progreso no saltan de
+  posición al navegar. En los slides 2-4 vuelve con fade, como siempre.
+  Aserción del contrato en `widgets_test.dart`.
+- **Integración DolarVZLA re-verificada contra el openapi.json en vivo**:
+  el CDN `rates.dolarvzla.com/bcv/current.json` responde 200 y su payload
+  (`current.usd`/`current.eur`/`current.date`) casa 1:1 con
+  `parseDolarVzlaBcv`. El monitor USDT/paralelo de
+  `api.dolarvzla.com/public/usdt/exchange-rate` exige la cabecera
+  `x-dolarvzla-key` (401 sin ella, claves temporales por usuario) — queda
+  descartado como respaldo anónimo con motivo documentado; el paralelo
+  sigue en DolarAPI, su única fuente pública estable. Salud del tablero:
+  8/9 endpoints vivos (AwesomeAPI respondió 429 de cuota; es solo
+  respaldo y la app lo degrada honestamente).
+
+analyze 0 · 240/240 tests · gate VERDE · web 3000 verificada en vivo
+(390×844: onboarding 4 slides, tutorial, Inicio, Conversor, Lista,
+Análisis con scrub, Historial y Tickets por deep link, Sala, Ajustes).
+
+## 1.14.0-beta+37 · v21.3 — Respaldo BCV vivo (auditoría externa)
+
+Un test tipo pentest sobre el build web encontró la fuente de respaldo
+venezolana muerta y este release la reemplaza. También desmiente un
+hallazgo con evidencia de navegador.
+
+- **El respaldo de tasas VE ya no apunta a un dominio muerto**: la app
+  consultaba `pydolarve.org` cuando DolarAPI falla, pero ese dominio
+  caducó el 07/2025 y hoy resuelve NXDOMAIN — el respaldo llevaba meses
+  siendo decorativo. Ahora el oficial BCV (USD y EUR) viene de
+  `rates.dolarvzla.com/bcv/current.json`: JSON estático en CDN, sin
+  auth, CORS abierto, verificado en vivo el 05/10/2026 con el mismo
+  valor que muestra la app (871,37). Se consulta solo si el oficial no
+  llegó (no publica paralelo); si el bloque de euros de DolarAPI vive,
+  su dato más fresco sobreescribe el del respaldo. Parser puro con
+  tests del payload real, y las pantallas Acerca de/README actualizadas
+  con la fuente nueva.
+- **Hallazgo 2.1 del informe desmentido**: «assets/ 404, fuentes y
+  banderas rotas» era un artefacto de leer el AssetManifest sin
+  navegador. El build de Flutter 3.47.4 guarda los assets propios un
+  nivel más adentro (`assets/assets/…`) y el runtime pide EXACTAMENTE
+  esas rutas anidadas — verificadas con el log de red real: banderas y
+  fuentes 200. Las rutas de un nivel que el informe probó jamás son
+  pedidas por la app.
+
+analyze 0 · 240/240 tests (2 nuevos del parser DolarVZLA) · gate VERDE.
+
+## 1.14.0-beta+36 · v21.2 — Tacto y movimiento (una ronda de craft)
+
+La app ya se ve bien; esta ronda la hace sentir bien. Tres cambios de
+sistema, todos invisibles hasta que los usas:
+
+- **Transición unificada de pantallas empujadas**: legal, tickets, sala y
+  sala en vivo compartían las transiciones por defecto de cada plataforma,
+  así que la app se sentía distinta según el sistema. Ahora las cuatro
+  entran con el mismo gesto (fade + subida de 10 px, kEaseVe, 220 ms — el
+  easing propio de la app). Las pestañas siguen cambiando al instante, sin
+  animación de por medio, y el shell no se tocó.
+- **Háptica en las confirmaciones** (Android/iOS; en web no hace nada):
+  clic de selección al cambiar de pestaña, al copiar una tasa y al mover
+  un segmento; toque de luz cuando un ítem queda agregado a la lista. El
+  toast avisa a la vista y la vibración avisa a la mano — antes solo uno
+  de los dos trabajaba.
+- **Los controles mudos hablan**: las flechas subir/bajar del orden de
+  foco en Ajustes ahora dicen a qué país se refieren («Subir Bolívar»), y
+  el LED de SSE en vivo explica su estado («Conectado en vivo», «Sin
+  conexión — sigue el ciclo normal») por tooltip y por semántica de
+  accesibilidad. Antes era un punto de color sin nombre.
+
+analyze 0 · 238/238 tests · detector Impeccable limpio · web puerto 3000
+verificado en claro y oscuro.
+
+
+## 1.14.0-beta+34 · v21.0 — GUI superior (pulido de sistema, identidad intacta)
+
+Ronda de pulido Impeccable sobre la interfaz ya validada: nada de
+rediseño — la identidad zinc Linear/Vercel, los 19 arreglos del dueño y
+la minimalidad de En vivo quedan intactos. Seis mejoras, cada una en el
+nivel correcto del sistema:
+
+- **VeEmpty 2.0 (un solo lenguaje de vacíos)**: el estado vacío del kit
+  ahora trae medallón de icono (Lucide, 44 px con fondo muted y borde
+  `--line`), título 14/700 y pista 12.5 con aire de línea. Antes era una
+  caja punteada con dos renglones tímidos que leía como «algo se rompió»;
+  ahora lee como «aquí aún no hay nada, y así se llena». Migrados los 7
+  `EmptyState` de Material que sobrevivían (Inicio · Resumen del mes,
+  Canasta, Gastos, Fuentes, Inflación personal, Calendario del conversor)
+  al componente del kit — cero sistemas tipográficos mezclados y cero
+  tarjetas anidadas. Iconos puestos en los 9 vacíos de la app
+  (shoppingCart, receiptText, images, scanBarcode, bell, searchX, history,
+  flame, shoppingBasket).
+- **Cotización principal calmada (jerarquía Linear)**: ANTES toda fila
+  llevaba el tinte de su categoría al 7 % y el tablero era un mosaico de
+  pastillas verdes/rojas/ámbar/violeta compitiendo. AHORA la superficie es
+  neutra y SOLO la fuente activa se tinta (12 % + borde 1.4 + check): la
+  selección se encuentra de un vistazo. El color semántico no se pierde:
+  los sellos OFICIAL/MERCADO/PROMEDIO/MANUAL (v20, orden del dueño) y el
+  símbolo de la divisa lo conservan en todas las filas.
+- **Héroe de Inicio: bandera + moneda como UN token**: la banderita
+  flotaba entre la cifra y «USD» y el trío leía suelto. Ahora es un chip
+  con borde que apoya en la línea base de la cifra — el número respira y
+  la unidad se lee de una pieza.
+- **KPI «Brecha» sin truncar**: «Brecha BCV ↔ Paralelo» no cabía ni en 2
+  líneas en la fila de 3 KPIs del móvil y salía con «…». Queda «Brecha» a
+  secas — el par lo escribe el panel que sigue («BCV ↔ PARALELO») y el
+  sub sigue diciendo si es alta o normal.
+- **Filas de Producto sin redundancia triple**: «Sin precios registrados»
+  + «—» + badge «Sin dato» decían lo mismo tres veces. Sin registros, la
+  fila queda en nombre + subtítulo + guion; con registros conserva
+  sparkline y badge de estado.
+- **Galería de Tickets sin eco**: con la galería vacía, «Sin fotos
+  todavía» aparecía DOS veces (subtítulo del título y dentro del estado
+  vacío). Fuera el eco — el vacío ya explica cómo llenarla.
+
+Verificación: flutter analyze 0 · 238/238 tests · quality_gate VERDE ·
+detector Impeccable sin hallazgos · web recompilada y recorrida en el
+navegador (390×844) en claro y oscuro: Inicio, Divisas, Lista, Productos,
+Análisis, Historial, Tickets.
+
 
 - **Tarjetas de TIPs y Tutorial sin aire muerto**: la tarjeta ocupaba
   todo el hueco disponible aunque el texto fuera corto — el contenido

@@ -40,6 +40,8 @@ este documento con la orden del dueño.
 | `Settings` / `Budget` / `ConverterState` | preferencias (13 claves AppData) | editar; persistir |
 | `NotificationItem` (9 kinds) | centro de notificaciones | listar; leer; limpiar |
 | `RecentConversion` / `SnapshotPoint` | recientes (dedupe 60s) / «vs ayer» | agregar/podar; snapshots diarios |
+| `CustomRate` (v23) | tasa propia con nombre + brecha vs BCV (máx 8) | crear/retirar; aplicar (por el mecanismo manual) |
+| `PayAccount` (v23) | cuenta de cobro para Pago Móvil (máx 4) | crear/retirar; candado biométrico opt-in |
 | Semillas | 21 productos de arranque | primera ejecución |
 
 Persistencia: Hive en 4 cajas JSON (`lib/data/store.dart`), migración
@@ -122,15 +124,15 @@ SkeletonPaper). **El sistema se evoluciona; no se reemplaza.**
 |---|---|---|
 | Bienvenida | `welcome_screen` | 0+país+done; tutorial rejugable (13 pasos) |
 | Shell | `main_shell` | 7 rutas / móvil 5 tabs; ticker solo-inicio; badge carrito; banner salud; búsqueda global |
-| Inicio | `home_screen` | héroe fresco + «vs ayer»; resumen del mes con compras; tiendas (StoreSheet); recientes |
-| Conversor | `converter` + reference + history | puente visible, fecha histórica, ruta del cálculo, notas (5000), recientes 10 |
+| Inicio | `home_screen` | v23: héroe fresco + «vs ayer»; cotización + divisas del foco + tu mes a la vista; «TODO LO DEMÁS · Ver todo» (despliegue progresivo: alertas, tiendas, registros, herramientas, App Widgets); bloque «Libro» (Historial·Tickets·Ajustes) siempre visible al pie; tasas propias «TUS TASAS» con GapChip vs BCV (aplicar = mecanismo manual) |
+| Conversor | `converter` + reference + history | v23: VeKeypad (0-9 · «,» · ⌫) en el campo activo + fichas 1-100 + [Decimales\|Redondear] (numMode, solo la vista; la ruta conserva la cifra); puente visible, fecha histórica, ruta del cálculo, notas (5000), recientes 10; «Pago Móvil» con destino VES: mensaje de cobro con la cuenta elegida |
 | Lista | `lista_screen` (+checkout, item_editor) | presupuesto, plantillas, vuelto, dividir cuenta, checkout con foto ticket, sala en vivo |
 | Productos | `products_screen` (+product_sheet) | libro de precios, sparklines, metas, CSV⇄, escáner |
 | Historial | `history_screen` | asientos por compra, filtros, pág. 20, 2 CSV |
 | Constancias | `statement_screen` | estado de cuenta exportable |
 | Análisis | `insights_*` (§9.7) | 6 anclas + Gastos (§9.6 alimentado por compras), brecha, proyección amortiguada, heatmap con meses con datos, rankings, canasta, exportación |
 | Sala | `room_*` + `sala_viva` + `join_sheet` + `pin_emoji` | lobby (conexión→nombre→código+PIN), sala viva, PIN emojis, QR |
-| Ajustes | `settings_*` | 8 anclas, respaldo replace/merge, tema, fuentes por módulo, Zona peligro |
+| Ajustes | `settings_*` | 8 anclas, respaldo replace/merge, tema, fuentes por módulo, Zona peligro; v23: «Cuentas y Pago Móvil» (máx 4, biométrico opt-in) y «Tus tasas con nombre» (máx 8) bajo Monedas y tasas |
 | Escáner | `scanner_screen` | continuo + linterna + fallback manual + debounce; Productos/Lista consumen |
 | Tickets | `tickets_screen` | foto de ticket 1024px ≤12MB, zoom 1–8× |
 
@@ -138,7 +140,9 @@ SkeletonPaper). **El sistema se evoluciona; no se reemplaza.**
 
 Hive 4 cajas JSON; `migrate` + merge tolerante; respaldo JSON
 replace/merge manual + **automático semanal con retención 4**
-(WorkManager). Round-trip de respaldos viejos garantizado (tests).
+(WorkManager). Round-trip de respaldos viejos garantizado (tests). v23:
+customRates y accounts fusionan por id (unión, empate=local) — distinto
+del criterio local-only de manualRates.
 
 ## §11 · Escáner y códigos
 

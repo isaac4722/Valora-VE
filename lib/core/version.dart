@@ -6,7 +6,7 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v22.4 · instalación in-app: la app descarga el
-/// APK de la Release a su cache y lanza el instalador de Android; adiós al
-/// navegador de la v22.3).
-const String kAppVersionVisible = '22.4';
+/// Versión visible (ronda v23.0 · GUI simple «Instrumento directo»:
+/// Inicio en 4 bloques + Libro en móvil, VeKeypad y redondeo, tasas
+/// propias con brecha, Cuentas y Pago Móvil — comparativa CalculaYa).
+const String kAppVersionVisible = '23.0';

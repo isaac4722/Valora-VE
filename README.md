@@ -22,8 +22,8 @@ teléfono.
 ## Módulos
 | Módulo | Qué hace |
 |---|---|
-| **Inicio** | tablero del país, resumen del mes con tus compras, tiendas, recientes |
-| **Conversor** | puente USD + EUR visible, fecha histórica honesta, ruta del cálculo, notas y recientes |
+| **Inicio** | tablero del país, resumen del mes con tus compras, tiendas, recientes; «Ver todo» despliega alertas/herramientas sin quitar nada; bloque «Libro» (Historial · Tickets · Ajustes) siempre visible; tasas propias con nombre y brecha vs BCV |
+| **Conversor** | teclado propio VeKeypad + fichas 1-100 + redondeo, puente USD + EUR visible, fecha histórica honesta, ruta del cálculo, notas, recientes y **Pago Móvil** compartible (cuentas propias) |
 | **Lista** | presupuesto, plantillas, vuelto, dividir la cuenta, checkout con foto de ticket, **sala en vivo** |
 | **Productos** | libro de precios con tiendas, sparklines, metas con aviso, CSV ⇄, escáner |
 | **Historial** | asientos por compra, filtros, CSV de compras, constancias |
@@ -41,7 +41,7 @@ los cambios quedan en outbox y salen al reconectar.
 ```bash
 flutter pub get
 flutter run                 # debug
-flutter test                # unit + widget (243 tests)
+flutter test                # unit + widget (291 tests)
 
 # release (requiere android/keystore.properties — ver example):
 flutter build apk --release --split-per-abi \
