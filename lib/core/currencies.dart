@@ -6,9 +6,11 @@
 /// (BCV+paralelo)/2, nunca llega de red.
 library;
 
-/// Divisas del foco de producto (v5): VES · USD · EUR · COP · BRL · MXN.
-/// No existe ninguna otra moneda en la app.
-enum Currency { usd, ves, cop, eur, brl, mxn }
+/// Divisas del foco de producto (v5 + v23.2 cripto): VES · USD · EUR · COP ·
+/// BRL · MXN · USDT · ETH. Las cripto entran por orden del dueño (v23.2) con
+/// su iconografía propia: USDT como referencia P2P del mercado venezolano y
+/// ETH como activo global. No existe ninguna otra moneda en la app.
+enum Currency { usd, ves, cop, eur, brl, mxn, usdt, eth }
 
 /// Categoría de fuente de tasa — el SELLO dice QUÉ es la tasa (v19.0:
 /// icono + palabra, no rayita de color): official 🏛 · mixed ⚖ ·
@@ -39,6 +41,10 @@ extension CurrencyX on Currency {
     Currency.ves => 'Bs',
     Currency.eur => '€',
     Currency.brl => r'R$',
+    // ₮ y Ξ viven en Inter y JetBrainsMono (verificado cmap 21/11/2026);
+    // los iconos de bandera van PINTADOS (no dependen de la fuente).
+    Currency.usdt => '₮',
+    Currency.eth => 'Ξ',
     _ => code,
   };
   String get label => switch (this) {
@@ -48,6 +54,8 @@ extension CurrencyX on Currency {
     Currency.eur => 'Euro',
     Currency.brl => 'Real',
     Currency.mxn => 'Peso mexicano',
+    Currency.usdt => 'Tether',
+    Currency.eth => 'Ethereum',
   };
 
   /// Decimales por defecto al mostrar montos (COP 0, resto 2).
@@ -60,7 +68,7 @@ extension CurrencyX on Currency {
   /// Parser tolerante: id desconocido/nulo → USD (nunca lanza).
   static Currency from(String? s) => _byCode[s?.toUpperCase()] ?? Currency.usd;
 
-  /// Orden canónico del foco: VES · USD · EUR · COP · BRL · MXN.
+  /// Orden canónico del foco: VES · USD · EUR · COP · BRL · MXN · USDT · ETH.
   static List<Currency> get focus => [
     Currency.ves,
     Currency.usd,
@@ -68,6 +76,8 @@ extension CurrencyX on Currency {
     Currency.cop,
     Currency.brl,
     Currency.mxn,
+    Currency.usdt,
+    Currency.eth,
   ];
 
   /// Foco sin USD (para selects donde el dólar no compite).
@@ -76,7 +86,7 @@ extension CurrencyX on Currency {
 
   /// Orden respetando la preferencia del usuario (v13): las elegidas
   /// primero en su orden, las que falten al final en orden canónico.
-  /// Devuelve SIEMPRE las 6 divisas y purga duplicados/extraños.
+  /// Devuelve SIEMPRE las 8 divisas y purga duplicados/extraños.
   static List<Currency> focusOrder(List<String>? userOrder) {
     if (userOrder == null || userOrder.isEmpty) return focus;
     final valid = userOrder
@@ -306,6 +316,57 @@ class RateSource {
       Currency.eur,
       Currency.brl,
     ),
+    // USDT (v23.2): la referencia P2P del mercado venezolano es la arista
+    // DIRECTA usdt→Bs; el precio global del tether es la arista usdt→USD.
+    RateSource(
+      'usdt-ves',
+      Currency.usdt,
+      'USDT',
+      'Referencia P2P · mercado local',
+      Currency.usdt,
+      Currency.ves,
+      category: SourceCategory.parallel,
+    ),
+    RateSource(
+      'usdt-usd',
+      Currency.usdt,
+      'Global',
+      'Precio global del tether',
+      Currency.usdt,
+      Currency.usd,
+      category: SourceCategory.parallel,
+    ),
+    RateSource(
+      'usdt-manual',
+      Currency.usdt,
+      'Manual',
+      'Tu propia tasa en Bs por USDT',
+      Currency.usdt,
+      Currency.ves,
+      live: false,
+      category: SourceCategory.manual,
+    ),
+    // ETH (v23.2): activo global — la arista directa es eth→USD; a Bs va
+    // por puente USD. CoinGecko es la única fuente pública estable.
+    RateSource(
+      'eth-usd',
+      Currency.eth,
+      'ETH',
+      'Mercado global · CoinGecko',
+      Currency.eth,
+      Currency.usd,
+      category: SourceCategory.parallel,
+    ),
+    RateSource(
+      'eth-manual',
+      Currency.eth,
+      'Manual',
+      'Tu propia tasa en USD por ETH',
+      Currency.eth,
+      Currency.usd,
+      live: false,
+      category: SourceCategory.manual,
+    ),
   ];
 
   static final Map<String, RateSource> byId = {for (final s in all) s.id: s};
@@ -335,6 +396,8 @@ class RateSource {
     Currency.eur: 'eur-ves-oficial',
     Currency.brl: 'brl-br',
     Currency.mxn: 'mxn-banxico',
+    Currency.usdt: 'usdt-ves',
+    Currency.eth: 'eth-usd',
   };
 
   /// ¿El id es válido para esta divisa (con fallback al default)?
@@ -365,6 +428,11 @@ const Map<String, String> convSourceNames = {
   'eur-ves-paralelo': 'EUR Paralelo',
   'eur-cop': 'EUR a COP',
   'eur-brl': 'EUR a BRL',
+  'usdt-ves': 'USDT',
+  'usdt-usd': 'Tether global',
+  'usdt-manual': 'Manual',
+  'eth-usd': 'ETH',
+  'eth-manual': 'Manual',
 };
 
 /// Plan de conversión (ConversionPlan del web v15): la tasa efectiva, la
@@ -583,6 +651,8 @@ const Map<Currency, List<double>> quickAmounts = {
   Currency.eur: [1, 5, 10, 20, 50, 100],
   Currency.brl: [5, 10, 20, 50, 100, 200],
   Currency.mxn: [20, 50, 100, 200, 500, 1000],
+  Currency.usdt: [10, 50, 100, 500, 1000, 5000],
+  Currency.eth: [0.01, 0.05, 0.1, 0.25, 0.5, 1],
 };
 
 /// Ajustes rápidos del monto del conversor.

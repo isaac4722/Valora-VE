@@ -49,8 +49,18 @@ tolerante y merge HMR-safe. `AppData` es el agregado de las 13 claves.
 
 ## §3 · Motor de tasas
 
-- **Fuentes:** 15 con kind/category + DEFAULT oficiales (BCV oficial,
-  paralelo, manuales) — `lib/core/currencies.dart`.
+- **Fuentes:** 20 con kind/category + DEFAULT oficiales (BCV oficial,
+  paralelo, manuales) + cripto v23.2 por orden del dueño: USDT
+  (P2P «Referencia P2P», Global «tether» y Manual) y ETH (Global
+  CoinGecko y Manual) — `lib/core/currencies.dart`. USDT↔Bs es arista
+  DIRECTA; ETH a Bs va por puente USD.
+- **Respaldos por región (v23.2):** VE → DolarAPI → DolarVZLA → Worker
+  Calculaya (`calculaya-api.jalvarezgw19.workers.dev/tasas`, hallado por
+  REA del APK 1.1.0; `usd` = BCV verificado al dígito en vivo) — el
+  respaldo NUNCA pisa dato fresco. COP mercado → AwesomeAPI → remesas
+  Calculaya. Cripto: USDT P2P desde Calculaya; ETH y tether global desde
+  CoinGecko; si Calculaya cae, Bs/USDT se DERIVA del paralelo × tether
+  global (guard sanidad 0.2–2 USD; el sello sigue «Mercado»).
 - **Plan de conversión:** `RateContext.plan` devuelve la ruta VISIBLE
   (path + sourceIds), incl. puente USD y ruta EUR de 4 tramos
   (`ConversionPlan.direct`).

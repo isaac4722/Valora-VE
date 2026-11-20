@@ -875,8 +875,8 @@ Future<void> main() async {
     });
   });
 
-  group('Banderas (v19): las 6 divisas cargan su asset real', () {
-    testWidgets('Flag de cada divisa pinta la imagen, no el fallback', (
+  group('Banderas (v19 + v23.2): fiat con asset real, cripto pintada', () {
+    testWidgets('Flag fiat pinta la imagen; cripto pinta su sello propio', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -889,10 +889,20 @@ Future<void> main() async {
           ),
         ),
       );
-      // Las 6 divisas del foco tienen asset real (assets/flags): ninguna
-      // cae al fallback (ColoredBox del errorBuilder).
-      expect(find.byType(Image), findsNWidgets(Currency.values.length));
+      // Las 6 divisas fiat tienen asset real (assets/flags): ninguna cae al
+      // fallback (ColoredBox del errorBuilder).
+      final fiat = Currency.values
+          .where((c) => c != Currency.usdt && c != Currency.eth)
+          .length;
+      expect(find.byType(Image), findsNWidgets(fiat));
       expect(find.byType(ColoredBox), findsNothing);
+      // v23.2: USDT y ETH se PINTAN con su sello exacto (no cualquier paint).
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is CustomPaint && w.painter is CryptoFlagPainter,
+        ),
+        findsNWidgets(2),
+      );
     });
   });
 

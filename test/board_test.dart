@@ -270,4 +270,129 @@ void main() {
       expect(result.changed, contains('ves-bcv'));
     });
   });
+
+  group('parseCalculayaTasas (v23.2 · respaldo VE + USDT P2P)', () {
+    // Payload REAL del Worker https://calculaya-api.jalvarezgw19.workers.dev
+    // /tasas (curl 21/11/2026). `usd` coincide AL DÍGITO con el oficial de
+    // DolarAPI ese mismo minuto (918.7662) — atribución verificada en vivo.
+    final real = {
+      'usd': 918.7662,
+      'eur': 1009.07172979,
+      'usdt': 1075.67,
+      'rate_date': '2026-11-20',
+      'has_tomorrow': false,
+      'date': '2026-11-20T20:21:31.014Z',
+      'source': 'cloudflare_edge',
+      'remesas': {
+        'COP': {
+          'code': 'COP',
+          'name': 'Peso Colombiano',
+          'rate_per_usd': 3345.3929,
+          'rate_bs': 0.321538,
+        },
+        'BRL': {
+          'code': 'BRL',
+          'rate_per_usd': 5.8932,
+          'rate_bs': 182.52732,
+        },
+      },
+    };
+
+    test('formato real: oficiales + USDT P2P + remesas COP', () {
+      final out = parseCalculayaTasas(real);
+      expect(out['ves-bcv']!.rate, closeTo(918.7662, 1e-9));
+      expect(out['eur-ves-oficial']!.rate, closeTo(1009.07172979, 1e-9));
+      expect(out['usdt-ves']!.rate, closeTo(1075.67, 1e-9));
+      expect(out['cop-market']!.rate, closeTo(3345.3929, 1e-9));
+      // El sello usa la fecha de publicación del Worker (rate_date).
+      expect(out['ves-bcv']!.updatedAt, DateTime(2026, 11, 20));
+      // NO inventa claves que el Worker no dio: BRL oficial no va aquí.
+      expect(out.containsKey('brl-br'), isFalse);
+      expect(out.length, 4);
+    });
+
+    test('malformado o vacío → mapa vacío (nunca lanza)', () {
+      expect(parseCalculayaTasas(null), isEmpty);
+      expect(parseCalculayaTasas({'error': 'not found'}), isEmpty);
+      expect(
+        parseCalculayaTasas({
+          'usd': 'x',
+          'usdt': 0,
+          'remesas': 'no-map',
+        }),
+        isEmpty,
+      );
+    });
+  });
+
+  group('parseCoinGeckoUsd (v23.2 · cripto global sin clave)', () {
+    // Payload REAL de simple/price (curl 21/11/2026).
+    final real = {
+      'tether': {'usd': 0.998651},
+      'ethereum': {'usd': 1611.41},
+    };
+
+    test('formato real: tether y ethereum en USD', () {
+      final eth = parseCoinGeckoUsd(real, 'ethereum');
+      expect(eth, isNotNull);
+      expect(eth!.rate, closeTo(1611.41, 1e-9));
+      final tether = parseCoinGeckoUsd(real, 'tether');
+      expect(tether!.rate, closeTo(0.998651, 1e-9));
+    });
+
+    test('coin ausente o inválido → null', () {
+      expect(parseCoinGeckoUsd(null, 'ethereum'), isNull);
+      expect(parseCoinGeckoUsd({}, 'bitcoin'), isNull);
+      expect(
+        parseCoinGeckoUsd({
+          'ethereum': {'usd': 'x'},
+        }, 'ethereum'),
+        isNull,
+      );
+      expect(
+        parseCoinGeckoUsd({
+          'ethereum': {'usd': 0},
+        }, 'ethereum'),
+        isNull,
+      );
+    });
+  });
+
+  group('deriveUsdtVesFromGlobal (v23.2 · último recurso)', () {
+    test('Bs por USDT = paralelo × precio global del tether', () {
+      final derived = deriveUsdtVesFromGlobal(
+        RateEntry(rate: 0.9986, updatedAt: DateTime(2026, 11, 21)),
+        RateEntry(rate: 1069.737113, updatedAt: DateTime(2026, 11, 20)),
+      );
+      expect(derived, isNotNull);
+      expect(derived!.rate, closeTo(1069.737113 * 0.9986, 1e-6));
+      // Sello: la fecha más fresca de las dos fuentes usadas.
+      expect(derived.updatedAt, DateTime(2026, 11, 21));
+    });
+
+    test('guards: tether fuera de rango o paralelo muerto → null', () {
+      // Un tether a 5 USD es basura (hack/API rota) — no se deriva.
+      expect(
+        deriveUsdtVesFromGlobal(
+          RateEntry(rate: 5.0, updatedAt: DateTime(2026, 11, 21)),
+          RateEntry(rate: 1069.73, updatedAt: DateTime(2026, 11, 20)),
+        ),
+        isNull,
+      );
+      expect(
+        deriveUsdtVesFromGlobal(
+          RateEntry(rate: 0.9986, updatedAt: DateTime(2026, 11, 21)),
+          null,
+        ),
+        isNull,
+      );
+      expect(
+        deriveUsdtVesFromGlobal(
+          RateEntry(rate: 0.9986, updatedAt: DateTime(2026, 11, 21)),
+          RateEntry(rate: 0, updatedAt: DateTime(2026, 11, 20)),
+        ),
+        isNull,
+      );
+    });
+  });
 }

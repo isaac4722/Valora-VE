@@ -176,6 +176,71 @@ RateEntry? parseDolarVzlaBcv(dynamic v, {required bool euro}) {
   );
 }
 
+/// Worker público de Calculaya `/tasas` (v23.2 — REA del APK 1.1.0, endpoint
+/// hallado en libapp-strings y VERIFICADO con curl 21/11/2026):
+/// {"usd":918.7662,"eur":1009.07,"usdt":1075.67,"rate_date":"2026-11-20",
+///  "remesas":{"COP":{…,"rate_per_usd":3345.3929,…},…}}
+/// Atribución verificada EN VIVO: `usd` = BCV oficial (idéntico a DolarAPI
+/// ese mismo minuto) y `usdt` = referencia P2P del mercado (~+0.5 % sobre el
+/// paralelo) — NO se disfraza de paralelo: tiene fuente propia. El mapa
+/// devuelve TODAS las claves posibles; el bloque decide cuáles faltaban
+/// (el respaldo nunca pisa dato fresco).
+Map<String, RateEntry> parseCalculayaTasas(dynamic v) {
+  final out = <String, RateEntry>{};
+  if (v is! Map) return out;
+  final date = DateTime.tryParse('${v['rate_date'] ?? ''}');
+  RateEntry? e(dynamic n) => SourceEntryX.entry(
+    n is num ? n : (n == null ? null : num.tryParse('$n')),
+    date?.toIso8601String(),
+  );
+  final usd = e(v['usd']);
+  if (usd != null) out['ves-bcv'] = usd;
+  final eur = e(v['eur']);
+  if (eur != null) out['eur-ves-oficial'] = eur;
+  final usdt = e(v['usdt']);
+  if (usdt != null) out['usdt-ves'] = usdt;
+  final remesas = v['remesas'];
+  if (remesas is Map) {
+    final cop = remesas['COP'];
+    if (cop is Map) {
+      final ce = e(cop['rate_per_usd']);
+      if (ce != null) out['cop-market'] = ce;
+    }
+  }
+  return out;
+}
+
+/// CoinGecko `simple/price` (v23.2 — cripto global, sin clave):
+/// {"tether":{"usd":0.9986},"ethereum":{"usd":1611.41}} — USD por unidad.
+RateEntry? parseCoinGeckoUsd(dynamic v, String coinId) {
+  if (v is! Map) return null;
+  final coin = v[coinId];
+  if (coin is! Map) return null;
+  // Tolerante (nunca cast que lance): la red puede mandar strings o basura.
+  final raw = coin['usd'];
+  final double? r = raw is num ? raw.toDouble() : double.tryParse('$raw');
+  if (r == null || !r.isFinite || r <= 0) return null;
+  return RateEntry(rate: r, updatedAt: DateTime.now());
+}
+
+/// Derivación honesta de último recurso (v23.2): Bs por USDT = Bs por USD
+/// (paralelo vivo) × USD por USDT (precio global del tether). Publicada
+/// como función PURA para el test — se usa solo si el Worker de Calculaya
+/// no dio la referencia P2P.
+RateEntry? deriveUsdtVesFromGlobal(RateEntry? usdtUsd, RateEntry? parallel) {
+  if (usdtUsd == null || parallel == null) return null;
+  // Guard sanidad: el tether ronda 1 USD (0.2–2). Fuera de rango, el dato
+  // es basura y NO se deriva nada.
+  if (usdtUsd.rate <= 0.2 || usdtUsd.rate >= 2) return null;
+  if (parallel.rate <= 0) return null;
+  return RateEntry(
+    rate: parallel.rate * usdtUsd.rate,
+    updatedAt: usdtUsd.updatedAt.isAfter(parallel.updatedAt)
+        ? usdtUsd.updatedAt
+        : parallel.updatedAt,
+  );
+}
+
 /// Resultado de un bloque regional: fuentes, errores y proveedores usados
 /// (v19.0: los respaldos cuentan su origen real en el tablero).
 typedef RegionBlock = (Map<String, RateEntry>, List<String>, List<String>);
@@ -229,6 +294,30 @@ Future<RegionBlock> _veBlock() async {
     }
   }
   if (dolarapiVivo) providers.add('dolarapi.com');
+  // Respaldo VE #2 (v23.2): el Worker público de Calculaya — mismo valor
+  // oficial que DolarAPI (verificado en vivo). Solo llena los oficiales que
+  // SIGAN FALTANDO: el respaldo nunca pisa dato fresco. La referencia USDT
+  // P2P vive en el bloque cripto (_cryptoBlock), no aquí.
+  if (!sources.containsKey('ves-bcv') || !sources.containsKey('eur-ves-oficial')) {
+    try {
+      final data = await _fetchJson(
+        Uri.parse('https://calculaya-api.jalvarezgw19.workers.dev/tasas'),
+        timeout: const Duration(seconds: 4),
+      );
+      final calc = parseCalculayaTasas(data);
+      if (calc.isNotEmpty) providers.add('calculaya.workers.dev');
+      if (!sources.containsKey('ves-bcv') && calc['ves-bcv'] != null) {
+        sources['ves-bcv'] = calc['ves-bcv']!;
+      }
+      if (!sources.containsKey('eur-ves-oficial') &&
+          calc['eur-ves-oficial'] != null) {
+        sources['eur-ves-oficial'] = calc['eur-ves-oficial']!;
+      }
+    } catch (e) {
+      errors.add('calculaya (respaldo VE): $e');
+      VeLog.e('board', e);
+    }
+  }
   try {
     final euros = await _fetchJson(
       Uri.parse('https://ve.dolarapi.com/v1/euros'),
@@ -323,9 +412,72 @@ Future<RegionBlock> _coBlock() async {
       errors.add('cop-market respaldo awesome: $err');
     }
   }
+  // Respaldo COP mercado #2 (v23.2): remesas COP del Worker de Calculaya.
+  if (!sources.containsKey('cop-market')) {
+    try {
+      final v = await _fetchJson(
+        Uri.parse('https://calculaya-api.jalvarezgw19.workers.dev/tasas'),
+        timeout: const Duration(seconds: 4),
+      );
+      final e = parseCalculayaTasas(v)['cop-market'];
+      if (e != null) {
+        sources['cop-market'] = e;
+        providers.add('calculaya.workers.dev');
+      }
+    } catch (err) {
+      errors.add('cop-market respaldo calculaya: $err');
+    }
+  }
   return (sources, errors, providers.toList());
 }
 
+/// Cripto (v23.2): USDT P2P (Worker de Calculaya) + tether global y ETH
+/// (CoinGecko). ETH no tiene segunda fuente pública estable — el manual del
+/// usuario la cubre.
+Future<RegionBlock> _cryptoBlock() async {
+  final sources = <String, RateEntry>{};
+  final errors = <String>[];
+  final providers = <String>{};
+  var calculayaUsdt = false;
+  try {
+    final v = await _fetchJson(
+      Uri.parse('https://calculaya-api.jalvarezgw19.workers.dev/tasas'),
+      timeout: const Duration(seconds: 4),
+    );
+    final e = parseCalculayaTasas(v)['usdt-ves'];
+    if (e != null) {
+      sources['usdt-ves'] = e;
+      providers.add('calculaya.workers.dev');
+      calculayaUsdt = true;
+    }
+  } catch (err) {
+    errors.add('usdt-ves calculaya: $err');
+  }
+  try {
+    final v = await _fetchJson(
+      Uri.parse(
+        'https://api.coingecko.com/api/v3/simple/price'
+        '?ids=tether,ethereum&vs_currencies=usd',
+      ),
+    );
+    final eth = parseCoinGeckoUsd(v, 'ethereum');
+    if (eth != null) {
+      sources['eth-usd'] = eth;
+      providers.add('coingecko.com');
+    }
+    final tether = parseCoinGeckoUsd(v, 'tether');
+    if (tether != null) {
+      sources['usdt-usd'] = tether;
+      providers.add('coingecko.com');
+      // Último recurso para la referencia local: se deriva en fetchBoard
+      // cuando el paralelo vivo ya llegó (el bloque corre en paralelo).
+      if (!calculayaUsdt) sources['__tetherDerive__'] = tether;
+    }
+  } catch (err) {
+    errors.add('cripto coingecko: $err');
+  }
+  return (sources, errors, providers.toList());
+}
 /// México: USD fix (DolarAPI → Frankfurter como respaldo).
 Future<RegionBlock> _mxBlock() async {
   final sources = <String, RateEntry>{};
@@ -426,15 +578,31 @@ class BoardResult {
 
 const changeEps = 0.0005;
 
-/// Consulta las 4 regiones en paralelo y compara contra [previous].
+/// Consulta las 4 regiones + cripto en paralelo y compara contra [previous].
 Future<BoardResult> fetchBoard([RateBoard? previous]) async {
   final results = await Future.wait([
     _veBlock(),
     _coBlock(),
     _mxBlock(),
     _brBlock(),
+    _cryptoBlock(),
   ]);
-  return mergeRegionBlocks(results, previous);
+  // v23.2 — USDT de último recurso: si el Worker de Calculaya no dio la
+  // referencia P2P, deriva Bs por USDT = paralelo vivo × tether global
+  // (derivación honesta con guard; el sello sigue diciendo «Mercado»).
+  var crypto = results[4];
+  final pendingDerive = crypto.$1.remove('__tetherDerive__');
+  if (pendingDerive != null && !crypto.$1.containsKey('usdt-ves')) {
+    final derived = deriveUsdtVesFromGlobal(pendingDerive, results[0].$1['ves-parallel']);
+    if (derived != null) {
+      crypto = (
+        {...crypto.$1, 'usdt-ves': derived},
+        crypto.$2,
+        [...crypto.$3],
+      );
+    }
+  }
+  return mergeRegionBlocks([...results.take(4), crypto], previous);
 }
 
 /// Fusión pura de bloques (pública: seam de tests, sin red). Los proveedores
@@ -490,6 +658,7 @@ Future<List<RegionHealth>> diagnoseRegions() async {
     ('CO', 'Colombia'),
     ('MX', 'México'),
     ('BR', 'Brasil'),
+    ('CR', 'Cripto'),
   ];
   final out = <RegionHealth>[];
   await Future.wait(
@@ -502,9 +671,11 @@ Future<List<RegionHealth>> diagnoseRegions() async {
           'VE' => await _veBlock(),
           'CO' => await _coBlock(),
           'MX' => await _mxBlock(),
-          _ => await _brBlock(),
+          'BR' => await _brBlock(),
+          _ => await _cryptoBlock(),
         };
-        count = sources.length;
+        // Las claves internas (puente de derivación) no son fuentes reales.
+        count = sources.keys.where((k) => !k.startsWith('__')).length;
       } catch (e) {
         error = '$e';
       }

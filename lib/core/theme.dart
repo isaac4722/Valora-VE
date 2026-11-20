@@ -77,6 +77,12 @@ class VeColors {
   static const Color brlDark = Color(0xFF5FCD84);
   static const Color mxnLight = Color(0xFFB03D90);
   static const Color mxnDark = Color(0xFFE391CB);
+  // Cripto (v23.2): USDT teal y ETH indigo — colores de marca del coin,
+  // con versión clara (contraste AA sobre fondo claro) y oscura (brillo).
+  static const Color usdtLight = Color(0xFF17805F);
+  static const Color usdtDark = Color(0xFF3FCB9C);
+  static const Color ethLight = Color(0xFF4C63D2);
+  static const Color ethDark = Color(0xFF8A9CF0);
 
   // ── Fondos tenues de los tonos (badges del prototipo) ──
   /// `--pos-bg` claro: badge verde sobre fondo mentolado.
@@ -135,6 +141,8 @@ class VeInk extends ThemeExtension<VeInk> {
     required this.cop,
     required this.brl,
     required this.mxn,
+    required this.usdt,
+    required this.eth,
     this.posBg = const Color(0x1A0E7A57),
     this.negBg = const Color(0x1AD33A2C),
     this.warnBg = const Color(0x1AB45309),
@@ -150,6 +158,8 @@ class VeInk extends ThemeExtension<VeInk> {
         cop: VeColors.copLight,
         brl: VeColors.brlLight,
         mxn: VeColors.mxnLight,
+        usdt: VeColors.usdtLight,
+        eth: VeColors.ethLight,
         posBg: VeColors.posBgLight,
         negBg: VeColors.negBgLight,
         warnBg: VeColors.warnBgLight,
@@ -165,6 +175,8 @@ class VeInk extends ThemeExtension<VeInk> {
         cop: VeColors.copDark,
         brl: VeColors.brlDark,
         mxn: VeColors.mxnDark,
+        usdt: VeColors.usdtDark,
+        eth: VeColors.ethDark,
         posBg: VeColors.posBgDark,
         negBg: VeColors.negBgDark,
         warnBg: VeColors.warnBgDark,
@@ -178,6 +190,8 @@ class VeInk extends ThemeExtension<VeInk> {
   final Color cop; // oliva
   final Color brl; // verde Brasil
   final Color mxn; // magenta
+  final Color usdt; // teal USDT (v23.2)
+  final Color eth; // indigo ETH (v23.2)
 
   /// Fondos tenues de badge (`--pos-bg` & co. del prototipo): superficie
   /// donde el tono correspondiente es texto — contraste AA sin esfuerzo.
@@ -195,6 +209,8 @@ class VeInk extends ThemeExtension<VeInk> {
     Color? cop,
     Color? brl,
     Color? mxn,
+    Color? usdt,
+    Color? eth,
     Color? posBg,
     Color? negBg,
     Color? warnBg,
@@ -207,6 +223,8 @@ class VeInk extends ThemeExtension<VeInk> {
     cop: cop ?? this.cop,
     brl: brl ?? this.brl,
     mxn: mxn ?? this.mxn,
+    usdt: usdt ?? this.usdt,
+    eth: eth ?? this.eth,
     posBg: posBg ?? this.posBg,
     negBg: negBg ?? this.negBg,
     warnBg: warnBg ?? this.warnBg,
@@ -224,6 +242,8 @@ class VeInk extends ThemeExtension<VeInk> {
       cop: Color.lerp(cop, other.cop, t)!,
       brl: Color.lerp(brl, other.brl, t)!,
       mxn: Color.lerp(mxn, other.mxn, t)!,
+      usdt: Color.lerp(usdt, other.usdt, t)!,
+      eth: Color.lerp(eth, other.eth, t)!,
       posBg: Color.lerp(posBg, other.posBg, t)!,
       negBg: Color.lerp(negBg, other.negBg, t)!,
       warnBg: Color.lerp(warnBg, other.warnBg, t)!,
