@@ -1885,6 +1885,90 @@ class _MoneyFieldState extends State<MoneyField> {
   }
 }
 
+/// ─── VeKeypad (v23 · GUI simple · comparativa CalculaYa 1.1.0) ──────────────
+/// Teclado numérico propio del conversor: 0-9 · «,» decimal es-VE · ⌫
+/// (el «limpiar» vive junto a las fichas de montos que lo acompañan).
+/// Nace dentro de «El Instrumento»: cifras tabulares Inter, borde 100 %,
+/// papel-tinta (card + línea), háptica sutil (`selectionClick`) y
+/// `Semantics` por tecla; blancos ≥ 48 dp. «⌫» y «,» en tinta muted —
+/// son herramientas, no datos (§5: el color solo significa).
+class VeKeypad extends StatelessWidget {
+  const VeKeypad({super.key, required this.onKey});
+
+  /// Tecla pulsada: '0'…'9' · ',' · '⌫'.
+  final ValueChanged<String> onKey;
+
+  static const List<List<String>> _rows = [
+    ['1', '2', '3'],
+    ['4', '5', '6'],
+    ['7', '8', '9'],
+    [',', '0', '⌫'],
+  ];
+
+  String _semantics(String k) => switch (k) {
+    '⌫' => 'Borrar último dígito',
+    ',' => 'Coma decimal',
+    _ => k,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final shad = ShadTheme.of(context);
+    final bool dark = shad.brightness == Brightness.dark;
+    final quiet = scheme.onSurfaceVariant;
+    Widget key(String k) {
+      final isTool = k == '⌫' || k == ',';
+      return Semantics(
+        button: true,
+        label: _semantics(k),
+        child: TapScale(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onKey(k);
+          },
+          child: Container(
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: shad.colorScheme.card,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: dark
+                    ? VeColors.lineStrongDark
+                    : VeColors.lineStrongLight,
+              ),
+            ),
+            child: Text(
+              k,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 17.5,
+                fontWeight: FontWeight.w600,
+                fontFeatures: const [FontFeature.tabularFigures()],
+                color: isTool ? quiet : scheme.onSurface,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      spacing: 6,
+      children: [
+        for (final row in _rows)
+          Row(
+            spacing: 6,
+            children: [
+              for (final k in row) Expanded(child: key(k)),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
 /// Banner de salud de tasas (§9 ui-bits). Dos causas, dos copys:
 /// · SIN RED (v17.8, señal viva de connectivity_plus): calmado — las
 ///   tasas guardadas siguen siendo la verdad y la red vuelve sola.

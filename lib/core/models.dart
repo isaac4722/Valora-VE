@@ -894,6 +894,7 @@ class Settings {
   final bool biometricLock; // 17.7: pedir huella/rostro al abrir la app
   final String
   sseUrl; // 17.7: SSE en vivo opcional de un despliegue web ('' = off)
+  final String numMode; // v23 'decimales' | 'redondeo' (vista del resultado)
 
   const Settings({
     this.country = 'VE',
@@ -921,6 +922,7 @@ class Settings {
     this.tickerSize = 'normal',
     this.tickerSpeed = 120,
     this.currencyOrder = const [],
+    this.numMode = 'decimales',
   });
 
   const Settings.defaults() : this._defaultC();
@@ -950,7 +952,8 @@ class Settings {
       salaryMax = null,
       tickerSize = 'normal',
       tickerSpeed = 120,
-      currencyOrder = const [];
+      currencyOrder = const [],
+      numMode = 'decimales';
 
   Settings copyWith({
     String? country,
@@ -985,6 +988,7 @@ class Settings {
     List<String>? currencyOrder,
     bool? biometricLock,
     String? sseUrl,
+    String? numMode,
   }) => Settings(
     country: country ?? this.country,
     autoRefresh: autoRefresh ?? this.autoRefresh,
@@ -1015,6 +1019,7 @@ class Settings {
     currencyOrder: currencyOrder ?? this.currencyOrder,
     biometricLock: biometricLock ?? this.biometricLock,
     sseUrl: sseUrl ?? this.sseUrl,
+    numMode: numMode ?? this.numMode,
   );
 
   Map<String, dynamic> toJson() => {
@@ -1044,6 +1049,7 @@ class Settings {
     'currencyOrder': currencyOrder,
     'biometricLock': biometricLock,
     'sseUrl': sseUrl,
+    'numMode': numMode,
   };
 
   /// Mapa de sueldo tolerante: el modo fijo usa amount; los modos variables
@@ -1149,6 +1155,9 @@ class Settings {
         _ => 120,
       },
       currencyOrder: sListOf(j['currencyOrder']),
+      numMode: sOf(j['numMode'], 'decimales') == 'redondeo'
+          ? 'redondeo'
+          : 'decimales',
     );
   }
 }

@@ -4,6 +4,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:flutter/services.dart' show rootBundle, FontLoader, ByteData;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -90,8 +91,32 @@ Widget _wrap(
   );
 }
 
-void main() {
+Future<void> main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  // Fuentes REALES (patrón de gui_correcta_test): la fuente por defecto
+  // de test mide cada glifo al ancho del fontSize y fabrica overflows
+  // falsos en los chips expandidos («+10 %» = 60 px en fallback, ~34 en
+  // Inter) — con las fuentes del asset las medidas son las del teléfono.
+  final root = rootBundle;
+  Future<void> una(String family, List<Future<ByteData>> assets) async {
+    final loader = FontLoader(family);
+    for (final a in assets) {
+      loader.addFont(a);
+    }
+    await loader.load();
+  }
+
+  await una('Inter', [
+    root.load('assets/fonts/Inter-Regular.ttf'),
+    root.load('assets/fonts/Inter-Medium.ttf'),
+    root.load('assets/fonts/Inter-SemiBold.ttf'),
+    root.load('assets/fonts/Inter-Bold.ttf'),
+  ]);
+  await una('SpaceGrotesk', [
+    root.load('assets/fonts/SpaceGrotesk-Medium.ttf'),
+    root.load('assets/fonts/SpaceGrotesk-Bold.ttf'),
+  ]);
 
   group('Componentes de ui.dart', () {
     testWidgets('Stamp · ReadWindow · LedgerRow · TrendBadge renderizan', (
@@ -388,6 +413,107 @@ void main() {
       expect(find.text('REFERENCIA DE FUENTES'), findsOneWidget);
       expect(find.text('RUTA DEL CÁLCULO'), findsNothing);
       expect(find.text('TABLA DE REFERENCIA 6×6'), findsNothing);
+    });
+
+    testWidgets('v23 VeKeypad: teclas escriben, borran y ponen coma es-VE', (
+      tester,
+    ) async {
+      final store = _pumpedStore(tester, dir: 'w3k');
+      await _initServices(store);
+      store.setRateBoard(
+        RateBoard(
+          sources: {
+            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
+          },
+        ),
+      );
+      // Par limpio USD → VES para leer el monto de origen sin ruido.
+      store.setConverterPair('usd', 'ves');
+      // Viewport alto: el conversor completo (dual input + teclado) a la
+      // vista sin scroll — los taps de las teclas nunca quedan fuera.
+      tester.view.physicalSize = const Size(390, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
+      await tester.pumpAndSettle();
+      // Desplegado por defecto: fichas + teclado + modo de vista. Los
+      // finders van ACOTADOS: la tabla de montos de referencia y las fichas
+      // comparten textos («20»…), así que las teclas se buscan dentro del
+      // VeKeypad y las fichas dentro de VeChip.
+      Finder tecla(String k) =>
+          find.descendant(of: find.byType(VeKeypad), matching: find.text(k));
+      Finder ficha(String k) =>
+          find.descendant(of: find.byType(VeChip), matching: find.text(k));
+      expect(find.byType(VeKeypad), findsOneWidget);
+      expect(find.text('Redondear'), findsOneWidget);
+      // El campo de origen arranca en «1»: teclas 2 y 4 → «124».
+      await tester.tap(tecla('2'));
+      await tester.pump();
+      await tester.tap(tecla('4'));
+      await tester.pump();
+      expect(find.text('124'), findsWidgets);
+      // ⌫ borra el último dígito → «12».
+      await tester.tap(tecla('⌫'));
+      await tester.pump();
+      expect(find.text('12'), findsWidgets);
+      expect(find.text('124'), findsNothing);
+      // Coma decimal es-VE + un decimal → «12,7».
+      await tester.tap(tecla(','));
+      await tester.pump();
+      await tester.tap(tecla('7'));
+      await tester.pump();
+      expect(find.text('12,7'), findsWidgets);
+      // Ficha «20» fija el monto directo; «Limpiar» vacía el campo.
+      await tester.ensureVisible(ficha('20'));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(ficha('20'));
+      await tester.pump();
+      expect(store.data.converter.from, 'USD');
+      await tester.ensureVisible(ficha('Limpiar'));
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(ficha('Limpiar'));
+      await tester.pump();
+      expect(find.text('12,7'), findsNothing);
+      expect(ficha('20'), findsOneWidget); // la ficha sigue; el campo no
+    });
+
+    testWidgets('v23 numMode: Redondear entero + Decimales fiel + persiste', (
+      tester,
+    ) async {
+      final store = _pumpedStore(tester, dir: 'w3r');
+      await _initServices(store);
+      store.setRateBoard(
+        RateBoard(
+          sources: {
+            // 10 × 43,25 = 432,50 → decimales «432,50» · redondeo «433».
+            'ves-bcv': RateEntry(rate: 43.25, updatedAt: DateTime.now()),
+          },
+        ),
+      );
+      store.setConverterPair('usd', 'ves');
+      // Viewport alto: dual input + fichas a la vista sin scroll.
+      tester.view.physicalSize = const Size(390, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
+      await tester.pumpAndSettle();
+      Finder ficha(String k) =>
+          find.descendant(of: find.byType(VeChip), matching: find.text(k));
+      // Ficha 10 → resultado fiel con decimales.
+      await tester.tap(ficha('10'));
+      await tester.pumpAndSettle();
+      expect(find.text('432,50'), findsWidgets);
+      // Cambiar a Redondear: el resultado pasa a entero (la línea «≈»
+      // conserva la cifra exacta).
+      await tester.tap(find.text('Redondear'));
+      await tester.pumpAndSettle();
+      expect(find.text('433'), findsWidgets);
+      expect(store.data.settings.numMode, 'redondeo');
+      // Volver a Decimales restaura la vista fiel.
+      await tester.tap(find.text('Decimales'));
+      await tester.pumpAndSettle();
+      expect(find.text('432,50'), findsWidgets);
+      expect(store.data.settings.numMode, 'decimales');
     });
 
     testWidgets(

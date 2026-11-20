@@ -215,6 +215,7 @@ class AppStore extends ChangeNotifier {
     int? pollMinutes,
     bool? biometricLock,
     String? sseUrl,
+    String? numMode,
   }) {
     final s = _data.settings;
     final patched = s.copyWith(
@@ -225,6 +226,7 @@ class AppStore extends ChangeNotifier {
       pollMinutes: pollMinutes,
       biometricLock: biometricLock,
       sseUrl: sseUrl,
+      numMode: numMode == 'redondeo' ? 'redondeo' : (numMode == null ? null : 'decimales'),
     );
     _data = _data.copyWith(settings: patched);
     _persist();
@@ -239,6 +241,10 @@ class AppStore extends ChangeNotifier {
 
   /// Bloqueo biométrico al abrir la app (17.7 — local_auth ya estaba).
   void setBiometricLock(bool v) => _patchSettings(biometricLock: v);
+
+  /// Modo de vista del resultado del conversor (v23 · GUI simple):
+  /// 'decimales' (fiel) o 'redondeo' (entero; la ruta conserva la cifra).
+  void setNumMode(String v) => _patchSettings(numMode: v);
 
   /// URL del despliegue web con SSE en vivo (17.7): '' apaga el stream.
   void setSseUrl(String v) => _patchSettings(sseUrl: v.trim());

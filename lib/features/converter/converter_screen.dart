@@ -61,6 +61,49 @@ class _ConverterScreenState extends State<ConverterScreen> {
   Timer? _notesSave;
   AppStore? _storeRef;
 
+  /// v23 (GUI simple · comparativa CalculaYa): teclado propio desplegado
+  /// por defecto bajo el dual input; plegable desde la fila de acciones.
+  bool _keypad = true;
+
+  /// Tecla del VeKeypad sobre el campo ACTIVO (driver v19: los dos lados
+  /// se editan — el teclado escribe donde el usuario estaba escribiendo).
+  void _padKey(String k) {
+    final isFrom = _driver != 'to';
+    final ctrl = isFrom ? _fromCtrl : _toCtrl;
+    var t = ctrl.text;
+    if (k == '⌫') {
+      if (t.isNotEmpty) t = t.substring(0, t.length - 1);
+    } else if (k == ',') {
+      if (!t.contains(',')) t = t.isEmpty ? '0,' : '$t,';
+    } else {
+      t += k;
+    }
+    final v = parseLocaleNum(t) ?? 0;
+    setState(() {
+      _lastSyncedPassive = '';
+      if (isFrom) {
+        _fromTyped = v;
+        _fromCtrl.text = t;
+      } else {
+        _toTyped = v;
+        _toCtrl.text = t;
+      }
+    });
+  }
+
+  /// Monto directo (fichas 1/5/10/… y tabla de referencia): siempre al
+  /// campo DE ORIGEN, como el camino existente de _TablaMontos.
+  void _setFromAmount(double v, Currency from) {
+    setState(() {
+      _fromTyped = v <= 0 ? 0 : v;
+      _driver = 'from';
+      _lastSyncedPassive = '';
+      _fromCtrl.text = v <= 0
+          ? ''
+          : fmtNum(_fromTyped, decimals: smartDecimals(_fromTyped, from));
+    });
+  }
+
   double _amountNowFor(RateContext ctx, Currency from, Currency to) {
     final rate = ctx.plan(from, to)?.rate ?? 0;
     if (_driver == 'to') return rate > 0 && _toTyped > 0 ? _toTyped / rate : 0;
@@ -312,8 +355,14 @@ class _ConverterScreenState extends State<ConverterScreen> {
 
   void _syncPassiveController(RateContext ctx, Currency from, Currency to, double result, double amount) {
     final passiveTo = _driver == 'from';
+    // v23 (numMode · comparativa CalculaYa «Alternar redondeo»): en modo
+    // redondeo el RESULTADO se muestra entero; la línea «≈» de abajo y la
+    // ruta del cálculo conservan la cifra exacta (honestidad §1.2).
+    final round = _storeRef?.data.settings.numMode == 'redondeo';
     final passiveTxt = passiveTo
-        ? (result > 0 ? fmtNum(result, decimals: smartDecimals(result, to)) : '')
+        ? (result > 0
+              ? fmtNum(result, decimals: round ? 0 : smartDecimals(result, to))
+              : '')
         : (amount > 0 ? fmtNum(amount, decimals: smartDecimals(amount, from)) : '');
     if (passiveTxt == _lastSyncedPassive) return;
     final ctrl = passiveTo ? _toCtrl : _fromCtrl;
@@ -331,6 +380,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
   Widget build(BuildContext context) {
     final fromCode = context.select<AppStore, String>((s) => s.data.converter.from);
     final toCode = context.select<AppStore, String>((s) => s.data.converter.to);
+    final numMode = context.select<AppStore, String>((s) => s.settings.numMode);
     final from = CurrencyX.from(fromCode);
     final to = CurrencyX.from(toCode);
     
@@ -398,7 +448,51 @@ class _ConverterScreenState extends State<ConverterScreen> {
               child: Wrap(spacing: 8, runSpacing: 6, children: [
                 VeBtn(variant: VeBtnVariant.secondary, icon: LucideIcons.share2, enabled: plan != null && result > 0, onPressed: _shareCard, child: const Text('Compartir')),
                 VeBtn(variant: VeBtnVariant.secondary, icon: LucideIcons.copy, enabled: plan != null && result > 0, onPressed: _copyResult, child: const Text('Copiar')),
+                // v23: el teclado propio se pliega desde aquí (por defecto
+                // desplegado — el patrón estrella de CalculaYa 1.1.0).
+                VeBtn(variant: VeBtnVariant.secondary, icon: LucideIcons.calculator, onPressed: () => setState(() => _keypad = !_keypad), child: Text(_keypad ? 'Ocultar teclado' : 'Teclado')),
               ]),
+            ),
+            // v23 (GUI simple · comparativa CalculaYa): teclado propio +
+            // fichas de montos + modo de vista del resultado, en una VeCard
+            // bajo el dual input. Plegable — el dual input queda intacto.
+            AnimatedSize(
+              duration: kLayoutDur,
+              curve: kEaseVe,
+              alignment: Alignment.topCenter,
+              child: _keypad
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: VeCard(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(spacing: 8, runSpacing: 6, children: [
+                              for (final v in const [1, 5, 10, 20, 50, 100])
+                                VeChip(onTap: () => _setFromAmount(v.toDouble(), from), child: Text('$v')),
+                              VeChip(onTap: () => _setFromAmount(0, from), child: const Text('Limpiar')),
+                            ]),
+                            const SizedBox(height: 10),
+                            VeKeypad(onKey: _padKey),
+                            const SizedBox(height: 10),
+                            Row(children: [
+                              Expanded(
+                                child: VeSegmented<String>(
+                                  value: numMode,
+                                  onChanged: store.setNumMode,
+                                  segments: const [
+                                    VeSegment(value: 'decimales', label: 'Decimales'),
+                                    VeSegment(value: 'redondeo', label: 'Redondear'),
+                                  ],
+                                ),
+                              ),
+                            ]),
+                          ],
+                        ),
+                      ),
+                    )
+                  : const SizedBox(width: double.infinity),
             ),
             _ReferenciaFuentes(ctx: ctx, from: from, to: to, onPick: _pickSource),
             _TablaMontos(
