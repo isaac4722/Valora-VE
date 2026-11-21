@@ -16,9 +16,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
-import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/github_releases.dart';
 import 'package:valorave/features/actualizaciones/actualizaciones_screen.dart';
@@ -534,10 +532,7 @@ Future<void> _pump(
   String instalada = '1.14.2-beta+45',
 }) async {
   await tester.pumpWidget(
-    ShadApp.custom(
-      theme: ShadThemeVe.light(),
-      darkTheme: ShadThemeVe.dark(),
-      appBuilder: (context) => MaterialApp(
+    MaterialApp(
         theme: AppTheme.light(),
         home: ActualizacionesScreen(
           cliente: cliente,
@@ -545,7 +540,6 @@ Future<void> _pump(
           versionInstalada: instalada,
         ),
       ),
-    ),
   );
   await tester.pumpAndSettle(const Duration(milliseconds: 120));
 }

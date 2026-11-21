@@ -30,7 +30,6 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/analytics.dart' as an;
 import '../../core/currencies.dart';
@@ -43,6 +42,9 @@ import '../lista/item_editor.dart' show StoreAutocompleteField;
 import '../../widgets/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
+import 'package:intl/intl.dart';
 
 /// Estado visual de un producto (mapa del prototipo Products.tsx):
 /// META OK→pos · Sube→neg · Baja→pos · Estable→neutral · Sin dato→neutral ·
@@ -678,7 +680,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
   // ── Cabecera: categoría + nombre editable + badges + última tienda ──────
 
   Widget _header(BuildContext context, AppStore store, Product p) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final target = an.computeTargetInfo(p);
@@ -819,7 +821,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
   // ── Cifra vigente: precio 34 px + badge + sparkline h48 ─────────────────
 
   Widget _vigente(BuildContext context, Product p) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final last = p.latestRecord;
@@ -982,7 +984,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
   // ── Grid de 3 stats (Mejor · Promedio · Meta) ───────────────────────────
 
   Widget _stats(BuildContext context, Product p) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final recs = p.records;
     final best = recs.isEmpty
@@ -1153,7 +1155,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
   // ── consultor: «comparador de tiendas»). Último precio por tienda.
 
   Widget _tiendas(BuildContext context, Product p) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final byStore = <String, PriceRecord>{};
     final count = <String, int>{};

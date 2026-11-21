@@ -8,13 +8,11 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/analytics.dart' as an;
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
-import '../../core/shad_theme.dart' show kShadRadius;
 import '../../core/theme.dart';
 import '../../data/rate_history.dart';
 import '../../data/store.dart';
@@ -23,6 +21,9 @@ import '../../widgets/ui.dart';
 import 'insights_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
+import 'package:intl/intl.dart';
 
 // ─────────────────────────── Widgets compartidos ───────────────────────────
 
@@ -47,7 +48,7 @@ class KpiTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     final c = color ?? scheme.onSurface;
     // TASK-34 p9: cromática del kit Ve — superficie shad, borde --line,
     // radius 10 (igual que VeCard del prototipo, sin sombra Material).
@@ -55,7 +56,7 @@ class KpiTile extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: shad.card,
-        borderRadius: BorderRadius.circular(kShadRadius),
+        borderRadius: BorderRadius.circular(kVeRadius),
         border: Border.all(color: shad.border),
       ),
       child: Padding(
@@ -180,14 +181,14 @@ class PanelCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     // TASK-34 p9: cromática VeCard — la cabecera pasa de caps-primary al
     // eyebrow del prototipo (caps 10.5 muted + tracking), acción derecha.
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: shad.card,
-        borderRadius: BorderRadius.circular(kShadRadius),
+        borderRadius: BorderRadius.circular(kVeRadius),
         border: Border.all(color: shad.border),
       ),
       child: Padding(

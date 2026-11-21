@@ -11,16 +11,16 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/theme.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 /// Tono de serie.
 enum VeChartTone { pos, neg, warn, info, fg, muted }
 
 /// Resuelve el color de un tono con el tema activo.
 Color _toneColor(BuildContext context, VeChartTone tone) {
-  final scheme = ShadTheme.of(context).colorScheme;
+  final scheme = context.ve.colorScheme;
   final VeInk ink = Theme.of(context).extension<VeInk>()!;
   return switch (tone) {
     VeChartTone.pos => ink.pos,
@@ -182,7 +182,7 @@ class _VeAreaChartState extends State<VeAreaChart> {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final bool dark = shad.brightness == Brightness.dark;
     final Color color = _toneColor(context, widget.tone);
@@ -265,7 +265,7 @@ class _ChartChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final bool dark = shad.brightness == Brightness.dark;
     return Container(
@@ -426,7 +426,7 @@ class VeBars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final Color color = _toneColor(context, tone);
     final max = math.max(1.0, data.isEmpty ? 1 : data.reduce(math.max));
 
@@ -526,7 +526,7 @@ class VeDonut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final total = data.fold<double>(0, (a, b) => a + b);
 
     return Semantics(
@@ -696,7 +696,7 @@ class VeHeatmap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final bool dark = shad.brightness == Brightness.dark;
@@ -907,7 +907,7 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
 
     if (!_hasData) return SizedBox(height: widget.height);
 
@@ -1029,7 +1029,7 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Wrap(

@@ -16,7 +16,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/fmt.dart';
 import '../../core/models.dart';
@@ -28,6 +27,8 @@ import '../../widgets/ui.dart';
 import '../../widgets/export_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 const int kPageSize = 20;
 
@@ -511,7 +512,7 @@ class _ProductRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final st = productStatus(product);
     final last = product.latestRecord;

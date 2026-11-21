@@ -9,12 +9,10 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/analytics.dart' as an;
 import '../../core/fmt.dart';
 import '../../core/models.dart';
-import '../../core/shad_theme.dart' show kShadControlRadius;
 import '../../core/theme.dart';
 import '../../data/history_api.dart';
 import '../../data/rate_history.dart';
@@ -25,6 +23,9 @@ import 'insights_panels.dart';
 import 'insights_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
+import 'package:intl/intl.dart';
 
 class InsightsScreen extends ConsumerStatefulWidget {
   const InsightsScreen({super.key});
@@ -90,13 +91,13 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                     key: TourKeys.anclas,
                     child: Builder(
                       builder: (barCtx) {
-                        final shad = ShadTheme.of(barCtx).colorScheme;
+                        final shad = barCtx.ve.colorScheme;
                         return Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             color: shad.muted,
                             borderRadius:
-                                BorderRadius.circular(kShadControlRadius),
+                                BorderRadius.circular(kVeControlRadius),
                             border: Border.all(color: shad.border),
                           ),
                           child: Row(
@@ -183,7 +184,7 @@ class _AnchorTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     final scheme = Theme.of(context).colorScheme;
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Semantics(

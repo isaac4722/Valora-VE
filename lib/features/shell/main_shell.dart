@@ -13,7 +13,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
@@ -26,6 +25,8 @@ import 'command_palette.dart';
 import '../../widgets/app_router.dart' show kNavBarKey;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 /// Ítems del ticker según modo: featured (protagonistas+EUR) / focus (orden
 /// usuario) / off (no se monta).
@@ -358,7 +359,7 @@ class _VeSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Container(
       width: 224,
       decoration: BoxDecoration(
@@ -489,7 +490,7 @@ class VeLogo extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final side = size * 34 / 48;
     return SizedBox(
       width: size,
@@ -529,7 +530,7 @@ class _SidebarSearch extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -580,7 +581,7 @@ class _SideNavButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
 
     return GestureDetector(
       onTap: onTap,
@@ -657,7 +658,7 @@ class _SidebarRates extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final store = ref.watch(appStoreProvider);
     final poller = ref.watch(ratesPollerProvider);
@@ -755,8 +756,8 @@ class _MobileTabs extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
-    final bool dark = ShadTheme.of(context).brightness == Brightness.dark;
+    final scheme = context.ve.colorScheme;
+    final bool dark = context.ve.brightness == Brightness.dark;
     final Color faint = dark ? VeColors.faintDark : VeColors.faintLight;
 
     return Container(
@@ -806,7 +807,7 @@ class _TabButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,

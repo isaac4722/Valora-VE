@@ -10,7 +10,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/models.dart';
 import '../../core/theme.dart';
@@ -18,6 +17,8 @@ import '../../core/fmt.dart';
 import '../../widgets/ve/ve.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 /// Abre el centro de avisos (hoja «Ve» del prototipo, con techo).
 void showNotificationCenter(BuildContext context, WidgetRef ref) {
@@ -95,7 +96,7 @@ class NotificationCenterBody extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: ShadTheme.of(context).colorScheme.border),
+        border: Border.all(color: context.ve.colorScheme.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -105,7 +106,7 @@ class NotificationCenterBody extends ConsumerWidget {
               Divider(
                 height: 1,
                 thickness: 1,
-                color: ShadTheme.of(context).colorScheme.border,
+                color: context.ve.colorScheme.border,
               ),
             _NotifRow(n: items[i]),
           ],
@@ -147,7 +148,7 @@ class _NotifRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final store = ref.read(appStoreProvider);
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final (icon, tone) = _icon(n.kind);
 
     return InkWell(
@@ -240,7 +241,7 @@ class _NotifRow extends ConsumerWidget {
       VeTone.neg => ink.negBg,
       VeTone.warn => ink.warnBg,
       VeTone.info => ink.infoBg,
-      VeTone.neutral => ShadTheme.of(context).colorScheme.muted,
+      VeTone.neutral => context.ve.colorScheme.muted,
     };
   }
 
@@ -251,7 +252,7 @@ class _NotifRow extends ConsumerWidget {
       VeTone.neg => ink.neg,
       VeTone.warn => ink.warn,
       VeTone.info => ink.manual,
-      VeTone.neutral => ShadTheme.of(context).colorScheme.mutedForeground,
+      VeTone.neutral => context.ve.colorScheme.mutedForeground,
     };
   }
 }

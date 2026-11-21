@@ -11,7 +11,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/theme.dart';
 import '../../room/room_controller.dart';
@@ -23,6 +22,8 @@ import 'join_sheet.dart';
 import 'pin_emoji.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 class RoomScreen extends ConsumerStatefulWidget {
   const RoomScreen({super.key});
@@ -158,7 +159,7 @@ class _EnSalaBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final title = room.roomName.isNotEmpty
         ? room.roomName
         : 'Sala ${room.code}';
@@ -203,7 +204,7 @@ class _ErrorBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sem = VeColors.of(context);
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -240,7 +241,7 @@ class _ConnectingCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final room = ref.watch(roomControllerProvider);
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return VeCard(
       child: Row(
         children: [
@@ -282,7 +283,7 @@ class _ModePicker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return VeCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,7 +361,7 @@ class _JoinEntryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return VeCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,7 +425,7 @@ class _RoomAdTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return VeRow(
       label: Text(ad.label),
       sub: Text('${ad.code} · anfitrión ${ad.hostName}'),
@@ -516,7 +517,7 @@ class _CreateCardState extends ConsumerState<_CreateCard> {
   @override
   Widget build(BuildContext context) {
     final room = widget.room;
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final matches = _matches;
     return VeCard(
       child: Column(
@@ -687,7 +688,7 @@ class _ToggleRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Semantics(
       label: label,
       toggled: value,
@@ -751,7 +752,7 @@ class _ScanCardState extends ConsumerState<_ScanCard> {
   @override
   Widget build(BuildContext context) {
     final room = ref.watch(roomControllerProvider);
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return VeCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -877,7 +878,7 @@ class _ServerCardState extends ConsumerState<_ServerCard> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final ink = VeColors.of(context);
     return VeCard(
       child: Column(

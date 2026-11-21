@@ -10,7 +10,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/theme.dart';
 import '../../room/room_transport.dart'
@@ -19,6 +18,8 @@ import '../../widgets/ve/ve.dart';
 import 'pin_emoji.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 /// Alfabeto del código de sala (RoomProtocol.newCode: 6 chars sin O/I).
 const String _kAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -143,7 +144,7 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
   @override
   Widget build(BuildContext context) {
     final room = ref.watch(roomControllerProvider);
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final inv = widget.invite;
     final ad = widget.ad;
     final isPrefilled = inv != null || ad != null;
@@ -465,7 +466,7 @@ class _StepEyebrow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Padding(
       padding: EdgeInsets.only(top: top, bottom: 8),
       child: Text(
@@ -495,8 +496,8 @@ class _LetterWheel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
-    final bool dark = ShadTheme.of(context).brightness == Brightness.dark;
+    final scheme = context.ve.colorScheme;
+    final bool dark = context.ve.brightness == Brightness.dark;
     final Color lineStrong = dark
         ? VeColors.lineStrongDark
         : VeColors.lineStrongLight;
@@ -549,7 +550,7 @@ class _LetterWheel extends ConsumerWidget {
     VoidCallback onTap,
     String label,
   ) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Semantics(
       button: true,
       label: label,

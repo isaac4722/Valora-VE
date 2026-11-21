@@ -67,7 +67,6 @@ dependencies:
   nearby_connections: ^4.1.0        # sala P2P sin internet (WiFi-Direct/BT/BLE)
 
   # ── UI / visualización / documentos ────────────────────────────────────────
-  shadcn_ui: ^0.57.1                # GUI nueva «Linear/Vercel» (orden del dueño TASK-33): componentes shadcn/ui con tokens VeColors exactos
   lucide_icons_flutter: ^3.1.20     # iconografía Lucide del rediseño (trazo fino, look Linear)
   # syncfusion_flutter_charts RETIRADO (v20.4): los 3 gráficos (brecha,
   # canasta, producto) viven en CustomPainter propio (ve/charts.dart) —

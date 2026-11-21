@@ -19,9 +19,6 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
-import 'package:shadcn_ui/shadcn_ui.dart';
-
-import 'core/shad_theme.dart';
 import 'core/theme.dart';
 import 'data/store.dart';
 import 'providers/providers.dart';
@@ -206,44 +203,37 @@ class _ValoraAppState extends ConsumerState<ValoraApp>
       final theme = ref.watch(themeControllerProvider);
       return DynamicColorBuilder(
         builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-          // TASK-34 (p4): ShadApp.custom + MaterialApp — el tipo default
-          // (`shadcn`) monta un WidgetsApp SIN ScaffoldMessenger, y todo
-          // showToast de la app moriría. Con custom, el ShadTheme viaja
-          // ARRIBA del MaterialApp y Scaffold/SnackBar funcionan de verdad.
+          // v24 · Material 3 PURO: MaterialApp directo, el AppTheme firma
+          // (VeInk + transiciones) viste todo y ScaffoldMessenger vive donde
+          // debe. Material You solo tiñe el par primario, como siempre.
           ColorScheme? dyn(Brightness b) => !theme.dynamicColor
               ? null
               : (b == Brightness.dark ? darkDynamic : lightDynamic)
                     ?.harmonized();
-          return ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
+          return MaterialApp(
+            title: 'ValoraVE',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(dyn(Brightness.light)),
+            darkTheme: AppTheme.dark(dyn(Brightness.dark)),
             themeMode: theme.mode,
-            appBuilder: (context) => MaterialApp(
-              title: 'ValoraVE',
-              debugShowCheckedModeBanner: false,
-              theme: veMaterialBridge(Brightness.light, dyn(Brightness.light)),
-              darkTheme: veMaterialBridge(Brightness.dark, dyn(Brightness.dark)),
-              themeMode: theme.mode,
-              locale: const Locale('es', 'VE'),
-              // Delegates es-VE (fix): sin ellos, MaterialComponents en inglés
-              // (showDatePicker «SELECT DATE»/CANCEL/OK) en una UI 100 % es-VE.
-              localizationsDelegates:
-                  const <LocalizationsDelegate<dynamic>>[
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-                GlobalShadLocalizations.delegate,
-              ],
-              supportedLocales: const <Locale>[
-                Locale('es', 'VE'),
-                Locale('es'),
-              ],
-              home: _BiometricLockScreen(
-                onRetry: () async {
-                  final ok = await _tryUnlock();
-                  if (mounted) setState(() => _locked = !ok);
-                },
-              ),
+            locale: const Locale('es', 'VE'),
+            // Delegates es-VE (fix): sin ellos, MaterialComponents en inglés
+            // (showDatePicker «SELECT DATE»/CANCEL/OK) en una UI 100 % es-VE.
+            localizationsDelegates:
+                const <LocalizationsDelegate<dynamic>>[
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const <Locale>[
+              Locale('es', 'VE'),
+              Locale('es'),
+            ],
+            home: _BiometricLockScreen(
+              onRetry: () async {
+                final ok = await _tryUnlock();
+                if (mounted) setState(() => _locked = !ok);
+              },
             ),
           );
         },
@@ -258,40 +248,29 @@ class _ValoraAppState extends ConsumerState<ValoraApp>
     // sin plataforma devuelve null y el tema queda 100 % de marca.
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        // TASK-34 (p4): ídem bloqueo — ShadApp.custom + MaterialApp.router
-        // para tener ShadTheme Y ScaffoldMessenger/hero/Material de verdad.
+        // v24 · Material 3 PURO: MaterialApp.router directo (la app ya no
+        // vive bajo ShadApp); AppTheme firma + Material You en el par
+        // primario, como siempre.
         ColorScheme? dyn(Brightness b) => !theme.dynamicColor
             ? null
             : (b == Brightness.dark ? darkDynamic : lightDynamic)
                   ?.harmonized();
-        return ShadApp.custom(
-          theme: ShadThemeVe.light(),
-          darkTheme: ShadThemeVe.dark(),
+        return MaterialApp.router(
+          title: 'ValoraVE',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(dyn(Brightness.light)),
+          darkTheme: AppTheme.dark(dyn(Brightness.dark)),
           themeMode: theme.mode,
-          appBuilder: (context) => MaterialApp.router(
-            title: 'ValoraVE',
-            debugShowCheckedModeBanner: false,
-            // TASK-33: el árbol Material sigue recibiendo el AppTheme vigente
-            // (VeInk + transiciones firma); Material You solo tiñe el par
-            // primario, como siempre.
-            theme: veMaterialBridge(Brightness.light, dyn(Brightness.light)),
-            darkTheme: veMaterialBridge(
-              Brightness.dark,
-              dyn(Brightness.dark),
-            ),
-            themeMode: theme.mode,
-            locale: const Locale('es', 'VE'),
-            // Delegates es-VE (fix): ídem arriba — componentes Material en
-            // español real (date pickers, tooltips de texto, etc.).
-            localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-              GlobalShadLocalizations.delegate,
-            ],
-            supportedLocales: const <Locale>[Locale('es', 'VE'), Locale('es')],
-            routerConfig: _router,
-          ),
+          locale: const Locale('es', 'VE'),
+          // Delegates es-VE (fix): ídem arriba — componentes Material en
+          // español real (date pickers, tooltips de texto, etc.).
+          localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const <Locale>[Locale('es', 'VE'), Locale('es')],
+          routerConfig: _router,
         );
       },
     );

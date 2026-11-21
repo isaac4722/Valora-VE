@@ -9,18 +9,14 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
-import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/widgets/ve/ve.dart';
 
-Widget _wrap(Widget child) => ShadApp(
-      theme: ShadThemeVe.light(),
-      darkTheme: ShadThemeVe.dark(),
-      // Mismo puente que main.dart: el tema Material inyecta VeInk.
-      materialThemeBuilder: (context, mTheme) =>
-          veMaterialBridge(Brightness.light, null),
+Widget _wrap(Widget child) => MaterialApp(
+      // AppTheme ya registra VeInk: mismo contrato que main.dart (v24).
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       home: Scaffold(body: Center(child: child)),
     );
 
@@ -52,9 +48,13 @@ void main() {
       final sm = tester.getSize(find.text('sm'));
       final md = tester.getSize(find.text('md'));
       final lg = tester.getSize(find.text('lg'));
-      // El texto vive dentro del botón de altura fija: verificamos que el
-      // botón (ancestro ShadButton) mide lo pactado.
-      final btns = find.byType(ShadButton);
+      // El texto vive dentro del botón de altura fija: el Material interno
+      // del VeBtn (v24) mide lo pactado — el _VeBorder añade su borde
+      // alrededor, como en la era shadcn.
+      final btns = find.descendant(
+        of: find.byType(VeBtn),
+        matching: find.byType(Material),
+      );
       expect(tester.getSize(btns.at(0)).height, 28);
       expect(tester.getSize(btns.at(1)).height, 36);
       expect(tester.getSize(btns.at(2)).height, 44);
@@ -71,9 +71,18 @@ void main() {
       )));
       await tester.pumpAndSettle();
 
-      final btn = tester.widget<ShadButton>(find.byType(ShadButton));
-      expect(btn.backgroundColor, VeColors.fgLight);
-      expect(btn.foregroundColor, VeColors.bgLight);
+      final mat = tester.widget<Material>(find.descendant(
+        of: find.byType(VeBtn),
+        matching: find.byType(Material),
+      ));
+      expect(mat.color, VeColors.fgLight);
+      final dts = tester.widget<DefaultTextStyle>(find
+          .descendant(
+            of: find.byType(VeBtn),
+            matching: find.byType(DefaultTextStyle),
+          )
+          .last);
+      expect(dts.style.color, VeColors.bgLight);
     });
 
     testWidgets('danger: superficie + tinta neg + borde neg 40 %', (tester) async {
@@ -84,9 +93,18 @@ void main() {
       )));
       await tester.pumpAndSettle();
 
-      final btn = tester.widget<ShadButton>(find.byType(ShadButton));
-      expect(btn.backgroundColor, VeColors.cardLight);
-      expect(btn.foregroundColor, VeColors.negLight);
+      final mat = tester.widget<Material>(find.descendant(
+        of: find.byType(VeBtn),
+        matching: find.byType(Material),
+      ));
+      expect(mat.color, VeColors.cardLight);
+      final dts = tester.widget<DefaultTextStyle>(find
+          .descendant(
+            of: find.byType(VeBtn),
+            matching: find.byType(DefaultTextStyle),
+          )
+          .last);
+      expect(dts.style.color, VeColors.negLight);
     });
   });
 
@@ -100,9 +118,18 @@ void main() {
       testWidgets('tono $tone usa el token -bg de VeInk', (tester) async {
         await tester.pumpWidget(_wrap(VeBadge(tone: tone, child: Text('X'))));
         await tester.pumpAndSettle();
-        final badge = tester.widget<ShadBadge>(find.byType(ShadBadge));
-        expect(badge.backgroundColor, bg);
-        expect(badge.foregroundColor, fg);
+        final cont = tester.widget<Container>(find.descendant(
+          of: find.byType(VeBadge),
+          matching: find.byType(Container),
+        ));
+        expect((cont.decoration as BoxDecoration).color, bg);
+        final dts = tester.widget<DefaultTextStyle>(find
+            .descendant(
+              of: find.byType(VeBadge),
+              matching: find.byType(DefaultTextStyle),
+            )
+            .last);
+        expect(dts.style.color, fg);
       });
     }
   });
@@ -113,7 +140,7 @@ void main() {
         _wrap(const VeToggle(value: false, onChanged: null)),
       );
       await tester.pumpAndSettle();
-      expect(tester.getSize(find.byType(ShadSwitch)), const Size(32, 18));
+      expect(tester.getSize(find.byType(VeToggle)), const Size(32, 18));
     });
   });
 
@@ -147,7 +174,13 @@ void main() {
         _wrap(const VeSparkline(data: [1], tone: VeChartTone.pos)),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(CustomPaint), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(VeSparkline),
+          matching: find.byType(CustomPaint),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('VeSparkline con serie normal pinta polyline', (tester) async {
@@ -155,7 +188,13 @@ void main() {
         _wrap(const VeSparkline(data: [1, 2, 1.5, 3, 2.8])),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(CustomPaint), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(VeSparkline),
+          matching: find.byType(CustomPaint),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('VeDonut con categorías pinta y leyenda', (tester) async {
@@ -181,7 +220,13 @@ void main() {
         format: (v) => '$v',
       )));
       await tester.pumpAndSettle();
-      expect(find.byType(CustomPaint), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(VeAreaChart),
+          matching: find.byType(CustomPaint),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('VeHeatmap con offset pinta celdas vacías', (tester) async {
@@ -228,11 +273,9 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(ShadApp(
-        theme: ShadThemeVe.light(),
-        darkTheme: ShadThemeVe.dark(),
-        materialThemeBuilder: (context, mTheme) =>
-            veMaterialBridge(Brightness.light, null),
+      await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
         home: Scaffold(
           body: Builder(
             builder: (context) => Center(

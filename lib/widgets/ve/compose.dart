@@ -1,17 +1,18 @@
-/// ─── Composición «Ve» · cards, rows, sheets y ambiente (TASK-34) ───────────
-/// Piezas de composición del prototipo web sobre shadcn_ui: Card/Group/Row
-/// (listas divididas), Eyebrow/Title (jerarquía tipográfica), Sheet (bottom
-/// móvil / modal centrado escritorio — como el original), StickyBar con blur,
-/// Empty punteado y el fondo ambiental (radiales pos/warn + rejilla de puntos).
+/// ─── Composición «Ve» · cards, rows, sheets y ambiente ──────────────────────
+/// Piezas de composición del prototipo web sobre Material 3 puro (v24):
+/// Card/Group/Row (listas divididas), Eyebrow/Title (jerarquía tipográfica),
+/// Sheet (bottom móvil / modal centrado escritorio — como el original),
+/// StickyBar con blur, Empty punteado y el fondo ambiental (radiales
+/// pos/warn + rejilla de puntos).
 library;
 
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/shad_theme.dart' show kShadRadius;
 import '../../core/theme.dart';
+import '../../core/ve_theme.dart';
 
 // ──────────────────────────────────────────────────────────────── Card ─────
 
@@ -41,7 +42,7 @@ class _VeCardState extends State<VeCard> {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final bool dark = shad.brightness == Brightness.dark;
     final Color lineStrong = dark
@@ -74,7 +75,7 @@ class _VeCardState extends State<VeCard> {
             clipBehavior: widget.clip ? Clip.antiAlias : Clip.none,
             decoration: BoxDecoration(
               color: scheme.card,
-              borderRadius: BorderRadius.circular(kShadRadius),
+              borderRadius: BorderRadius.circular(kVeRadius),
               border: Border.all(
                 color: _hover && interactive ? lineStrong : scheme.border,
               ),
@@ -97,14 +98,14 @@ class VeGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Semantics(
       label: semantic,
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: scheme.card,
-          borderRadius: BorderRadius.circular(kShadRadius),
+          borderRadius: BorderRadius.circular(kVeRadius),
           border: Border.all(color: scheme.border),
         ),
         child: Column(
@@ -152,7 +153,7 @@ class _VeRowState extends State<VeRow> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
 
     final content = Row(
@@ -261,7 +262,7 @@ class VeEyebrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(top: 24, bottom: 8),
       child: Column(
@@ -327,7 +328,7 @@ class VeTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -406,7 +407,7 @@ class VeEntry extends StatelessWidget {
 /// estado) — el cuerpo scrollea dentro de ese límite y nada «sube sin
 /// techo» por encima del notch.
 ///
-/// Construido sobre `showShadSheet` (móvil) y `showShadDialog` (escritorio).
+/// Construido sobre `showModalBottomSheet` (móvil) y `showDialog` (escritorio).
 Future<T?> showVeSheet<T>({
   required BuildContext context,
   required String title,
@@ -417,13 +418,20 @@ Future<T?> showVeSheet<T>({
   bool dismissible = true,
 }) {
   final bool desktop = MediaQuery.sizeOf(context).width >= 700;
-  final shad = ShadTheme.of(context);
+  final shad = context.ve;
   final barrier = shad.brightness == Brightness.dark
       ? Colors.black.withValues(alpha: 0.55)
       : Colors.black.withValues(alpha: 0.40);
+  // TECHO (v24 fix): se calcula con el MediaQuery del CONTEXTO QUE ABRE —
+  // el modal bottom sheet con useSafeArea expone un MediaQuery sin padding
+  // y el 88 % «útil» se inflaría sobre la barra de estado.
+  final double ceiling =
+      (MediaQuery.sizeOf(context).height -
+          MediaQuery.paddingOf(context).top) *
+      0.88;
 
   if (desktop) {
-    return showShadDialog<T>(
+    return showDialog<T>(
       context: context,
       barrierDismissible: dismissible,
       barrierColor: barrier,
@@ -437,16 +445,20 @@ Future<T?> showVeSheet<T>({
           trailing: trailing,
           wide: wide,
           dismissible: dismissible,
+          ceiling: ceiling,
           body: builder(context),
         ),
       ),
     );
   }
-  return showShadSheet<T>(
+  return showModalBottomSheet<T>(
     context: context,
-    side: ShadSheetSide.bottom,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
     barrierColor: barrier,
     isDismissible: dismissible,
+    enableDrag: false,
     // FIX CRÍTICO (TASK-35 · p3): el overlay posiciona el contenido suelto
     // arriba-izquierda — sin este Align, la hoja «subía» hasta el notch.
     // Alineado al borde inferior + ancho completo + techo del chrome: hoja
@@ -461,6 +473,7 @@ Future<T?> showVeSheet<T>({
           trailing: trailing,
           wide: wide,
           dismissible: dismissible,
+          ceiling: ceiling,
           body: builder(context),
           bottomSheet: true,
         ),
@@ -497,7 +510,7 @@ Future<T?> showVeHalfSheet<T>({
       dismissible: dismissible,
     );
   }
-  final shad = ShadTheme.of(context);
+  final shad = context.ve;
   final barrier = shad.brightness == Brightness.dark
       ? Colors.black.withValues(alpha: 0.55)
       : Colors.black.withValues(alpha: 0.40);
@@ -555,7 +568,7 @@ class _VeHalfChrome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final double maxW = wide ? 576 : 448;
 
     return Container(
@@ -614,24 +627,8 @@ class _VeHalfChrome extends StatelessWidget {
                     if (dismissible)
                       // v23.3 (pez 2-a P1-1): caja de golpe ≥44 — visual
                       // 32 (mismo icono 15), pista 44×44 centrada.
-                      SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: Center(
-                          child: ShadButton.raw(
-                            variant: ShadButtonVariant.ghost,
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            width: 32,
-                            height: 32,
-                            padding: EdgeInsets.zero,
-                            backgroundColor: Colors.transparent,
-                            hoverBackgroundColor: scheme.accent,
-                            foregroundColor: scheme.mutedForeground,
-                            hoverForegroundColor: scheme.foreground,
-                            child: Icon(LucideIcons.x, size: 15),
-                          ),
-                        ),
-                      ),
+                      const _VeSheetCloseBtn(),
+
                   ],
                 ),
               ),
@@ -674,6 +671,7 @@ class _VeSheetChrome extends StatelessWidget {
     required this.dismissible,
     this.trailing,
     this.bottomSheet = false,
+    this.ceiling,
   });
 
   final String title;
@@ -684,18 +682,23 @@ class _VeSheetChrome extends StatelessWidget {
   /// Limpiar» del centro de avisos.
   final Widget? trailing;
 
+  /// Techo ya resuelto por quien abre (MediaQuery del contexto REAL — el
+  /// modal bottom sheet con useSafeArea expone su MediaQuery sin padding).
+  final double? ceiling;
+
   final bool wide;
   final bool dismissible;
   final bool bottomSheet;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final double maxW = wide ? 576 : 448;
     // Techo del prototipo (Sheet · max-h-[88dvh]): altura ÚTIL (bajo la
     // barra de estado) por 0.88 — móvil y escritorio.
     final mq = MediaQuery.of(context);
-    final double ceiling = (mq.size.height - mq.padding.top) * 0.88;
+    final double ceiling =
+        this.ceiling ?? (mq.size.height - mq.padding.top) * 0.88;
 
     Widget chrome = ConstrainedBox(
       constraints: BoxConstraints(maxHeight: ceiling),
@@ -745,24 +748,8 @@ class _VeSheetChrome extends StatelessWidget {
                     if (dismissible)
                       // v23.3 (pez 2-a P1-1): caja de golpe ≥44 — visual
                       // 32 (mismo icono 15), pista 44×44 centrada.
-                      SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: Center(
-                          child: ShadButton.raw(
-                            variant: ShadButtonVariant.ghost,
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            width: 32,
-                            height: 32,
-                            padding: EdgeInsets.zero,
-                            backgroundColor: Colors.transparent,
-                            hoverBackgroundColor: scheme.accent,
-                            foregroundColor: scheme.mutedForeground,
-                            hoverForegroundColor: scheme.foreground,
-                            child: Icon(LucideIcons.x, size: 15),
-                          ),
-                        ),
-                      ),
+                      const _VeSheetCloseBtn(),
+
                   ],
                 ),
               ),
@@ -820,7 +807,7 @@ class VeStickyBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final bool dark = shad.brightness == Brightness.dark;
 
@@ -877,7 +864,7 @@ class VeEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final bool dark = shad.brightness == Brightness.dark;
     final Color lineStrong = dark
@@ -888,11 +875,11 @@ class VeEmpty extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(kShadRadius),
+        borderRadius: BorderRadius.circular(kVeRadius),
       ),
       foregroundDecoration: _DashedDecoration(
         color: lineStrong,
-        radius: kShadRadius,
+        radius: kVeRadius,
       ),
       child: Column(
         children: [
@@ -997,7 +984,7 @@ class VeAmbient extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final bool dark = shad.brightness == Brightness.dark;
@@ -1132,7 +1119,7 @@ class _VeFlashState extends State<VeFlash> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final bool dark = shad.brightness == Brightness.dark;
 
@@ -1165,7 +1152,7 @@ class VeNum extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Semantics(
       label: semanticsLabel ?? data,
       child: Text(
@@ -1178,6 +1165,51 @@ class VeNum extends StatelessWidget {
                       color: scheme.foreground,
                     ))
                 .copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+      ),
+    );
+  }
+}
+
+/// ✕ de la hoja (v23.3 P1-1: visual 32, pista 44×44 centrada): ghost
+/// Material puro — tinta muted que sube a fg y fondo accent al hover.
+class _VeSheetCloseBtn extends StatefulWidget {
+  const _VeSheetCloseBtn();
+
+  @override
+  State<_VeSheetCloseBtn> createState() => _VeSheetCloseBtnState();
+}
+
+class _VeSheetCloseBtnState extends State<_VeSheetCloseBtn> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.ve.colorScheme;
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Center(
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _hover = true),
+          onExit: (_) => setState(() => _hover = false),
+          child: Material(
+            color: _hover ? scheme.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(kVeControlRadius),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => Navigator.of(context).maybePop(),
+              child: SizedBox(
+                width: 32,
+                height: 32,
+                child: Icon(
+                  LucideIcons.x,
+                  size: 15,
+                  color: _hover ? scheme.foreground : scheme.mutedForeground,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

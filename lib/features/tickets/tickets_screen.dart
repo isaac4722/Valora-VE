@@ -14,12 +14,10 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
-import '../../core/shad_theme.dart' show kShadRadius;
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../services/photo_compress.dart';
@@ -28,6 +26,8 @@ import '../../widgets/ui.dart';
 import '../lista/checkout_modal.dart' show photoToDataUrl;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 /// Extrae los bytes de un data URL 'data:image/...;base64,…' (o base64
 /// crudo). Devuelve null si no se puede decodificar — la celda muestra el
@@ -39,7 +39,7 @@ class TicketsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final store = ref.watch(appStoreProvider);
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     final withPhoto =
         store.purchases
             .where((p) => p.ticketPhoto != null && p.ticketPhoto!.isNotEmpty)
@@ -317,7 +317,7 @@ class _TicketCardState extends ConsumerState<_TicketCard> {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     final scheme = Theme.of(context).colorScheme;
     final bool dark = Theme.of(context).brightness == Brightness.dark;
 
@@ -336,7 +336,7 @@ class _TicketCardState extends ConsumerState<_TicketCard> {
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: shad.card,
-              borderRadius: BorderRadius.circular(kShadRadius),
+              borderRadius: BorderRadius.circular(kVeRadius),
               border: Border.all(
                 color: _hover
                     ? (dark
@@ -445,7 +445,7 @@ class _AddTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     return Semantics(
       button: true,
       label: 'Agregar foto de ticket',
@@ -454,11 +454,11 @@ class _AddTile extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(kShadRadius),
+            borderRadius: BorderRadius.circular(kVeRadius),
           ),
           foregroundDecoration: _DashedAddDecoration(
             color: shad.mutedForeground.withValues(alpha: 0.55),
-            radius: kShadRadius,
+            radius: kVeRadius,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

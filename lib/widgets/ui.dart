@@ -12,14 +12,15 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart' show GoRouter;
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../core/currencies.dart';
 import '../core/fmt.dart';
 import '../core/models.dart';
-import '../core/shad_theme.dart' show kShadRadius;
 import '../core/theme.dart';
 import 've/ve.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
+import 'package:intl/intl.dart';
 
 /// Curva firma del sistema (EASE [0.16, 1, 0.3, 1]) — definida UNA sola vez
 /// en core/theme.dart (§8) y re-exportada aquí para no romper a quien ya la
@@ -592,13 +593,13 @@ class VePanelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     return Container(
       margin: margin,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: shad.card,
-        borderRadius: BorderRadius.circular(kShadRadius),
+        borderRadius: BorderRadius.circular(kVeRadius),
         border: Border.all(color: shad.border),
       ),
       child: Material(type: MaterialType.transparency, child: child),
@@ -1992,7 +1993,7 @@ class VeKeypad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final bool dark = shad.brightness == Brightness.dark;
     final quiet = scheme.onSurfaceVariant;
     Widget key(String k) {

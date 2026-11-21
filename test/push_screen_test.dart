@@ -6,8 +6,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/data/store.dart';
@@ -15,6 +13,7 @@ import 'package:valorave/features/room/room_screen.dart';
 import 'package:valorave/widgets/ui.dart' show VeInput;
 import 'package:valorave/room/room_controller.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 void main() {
   testWidgets('Sala: PushScreen con back, safe-area y modo Servidor visible', (
@@ -28,10 +27,7 @@ void main() {
           roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
         ],
         // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme.
-        child: ShadApp.custom(
-          theme: ShadThemeVe.light(),
-          darkTheme: ShadThemeVe.dark(),
-          appBuilder: (context) => MaterialApp(
+        child: MaterialApp(
             theme: AppTheme.light(),
             // Se EMPUJA como en producción (push sobre otra ruta → hay back).
             home: Builder(
@@ -44,7 +40,6 @@ void main() {
               ),
             ),
           ),
-        ),
       ),
     );
     await tester.tap(find.text('abrir'));
@@ -73,12 +68,7 @@ void main() {
           roomControllerProvider.overrideWith((ref) => ctrl, disposeNotifier: false),
         ],
         // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme.
-        child: ShadApp.custom(
-          theme: ShadThemeVe.light(),
-          darkTheme: ShadThemeVe.dark(),
-          appBuilder: (context) =>
-              MaterialApp(theme: AppTheme.light(), home: const RoomScreen()),
-        ),
+        child: MaterialApp(theme: AppTheme.light(), home: const RoomScreen()),
       ),
     );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));

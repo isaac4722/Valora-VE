@@ -12,10 +12,8 @@ import 'package:flutter/services.dart' show rootBundle, FontLoader, ByteData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'package:valorave/core/models.dart';
-import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/services/alerts.dart';
@@ -27,6 +25,7 @@ import 'package:valorave/widgets/ve/ve.dart' show showVeSheet;
 import 'package:valorave/features/welcome/welcome_screen.dart';
 import 'package:valorave/room/room_controller.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 Future<void> main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -78,10 +77,7 @@ Future<void> main() async {
         ),
         sharedPreferencesProvider.overrideWithValue(prefs),
       ],
-      child: ShadApp.custom(
-        theme: ShadThemeVe.light(),
-        darkTheme: ShadThemeVe.dark(),
-        appBuilder: (context) => MaterialApp.router(
+      child: MaterialApp.router(
             // v20: sin banner DEBUG — ensuciaba los goldens (cinta diagonal
             // roja arriba a la derecha que el VLM marcaba como slop).
             debugShowCheckedModeBanner: false,
@@ -89,7 +85,6 @@ Future<void> main() async {
           darkTheme: AppTheme.dark(),
           routerConfig: router,
         ),
-      ),
     );
   }
 
@@ -199,10 +194,7 @@ Future<void> main() async {
           themeControllerProvider.overrideWith((ref) => theme, disposeNotifier: false),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
-        child: ShadApp.custom(
-          theme: ShadThemeVe.light(),
-          darkTheme: ShadThemeVe.dark(),
-          appBuilder: (context) => MaterialApp(
+        child: MaterialApp(
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light(),
             home: Scaffold(
@@ -229,7 +221,6 @@ Future<void> main() async {
               ),
             ),
           ),
-        ),
       ),
     );
     await tester.tap(find.text('abrir'));
@@ -299,10 +290,7 @@ Future<void> main() async {
             roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) => MaterialApp.router(
+          child: MaterialApp.router(
             // v20: sin banner DEBUG — ensuciaba los goldens (cinta diagonal
             // roja arriba a la derecha que el VLM marcaba como slop).
             debugShowCheckedModeBanner: false,
@@ -310,7 +298,6 @@ Future<void> main() async {
               darkTheme: AppTheme.dark(),
               routerConfig: router,
             ),
-          ),
         ),
       );
       debugPrint("RUTA-AUDIT: $path");
@@ -351,10 +338,7 @@ Future<void> main() async {
           themeControllerProvider.overrideWith((ref) => theme, disposeNotifier: false),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
-        child: ShadApp.custom(
-          theme: ShadThemeVe.light(),
-          darkTheme: ShadThemeVe.dark(),
-          appBuilder: (context) => MaterialApp.router(
+        child: MaterialApp.router(
             // v20: sin banner DEBUG — ensuciaba los goldens (cinta diagonal
             // roja arriba a la derecha que el VLM marcaba como slop).
             debugShowCheckedModeBanner: false,
@@ -362,7 +346,6 @@ Future<void> main() async {
             darkTheme: AppTheme.dark(),
             routerConfig: router,
           ),
-        ),
       ),
     );
     await tester.pump();

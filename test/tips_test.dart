@@ -6,9 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:valorave/core/models.dart';
-import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/features/converter/converter_screen.dart';
@@ -87,14 +85,10 @@ void main() {
             appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) => MaterialApp(
+          child: MaterialApp(
               theme: AppTheme.light(),
               home: const Scaffold(body: ConverterScreen()),
             ),
-          ),
         ),
       );
       // El trigger dispara tras el primer frame; el overlay no tiene
@@ -129,14 +123,10 @@ void main() {
             appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
             sharedPreferencesProvider.overrideWithValue(prefs),
           ],
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) => MaterialApp(
+          child: MaterialApp(
               theme: AppTheme.light(),
               home: const Scaffold(body: ConverterScreen()),
             ),
-          ),
         ),
       );
       for (var i = 0; i < 10; i++) {
@@ -152,14 +142,10 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),],
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) => MaterialApp(
+          child: MaterialApp(
               theme: AppTheme.light(),
               home: const Scaffold(body: ConverterScreen()),
             ),
-          ),
         ),
       );
       for (var i = 0; i < 6; i++) {

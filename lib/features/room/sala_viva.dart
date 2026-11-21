@@ -13,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/theme.dart';
 import '../../room/room_controller.dart';
@@ -22,6 +21,8 @@ import '../../widgets/ui.dart';
 import 'pin_emoji.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 const String kSalaVivaRoute = '/sala-viva';
 
@@ -184,7 +185,7 @@ class _ErrorBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sem = VeColors.of(context);
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
@@ -223,7 +224,7 @@ class _ConnectingCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return VeCard(
       child: Row(
         children: [
@@ -256,7 +257,7 @@ class _ViewerNotice extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
@@ -332,7 +333,7 @@ class _CodigoQrCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return VeCard(
       child: Column(
         children: [
@@ -453,7 +454,7 @@ class _MiembrosCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return VeCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -507,7 +508,7 @@ class _MemberTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final isHostRow = m.id == 'host';
     final canManage = room.canAdmin && !isHostRow && m.id != room.myId;
 

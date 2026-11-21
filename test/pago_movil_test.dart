@@ -24,8 +24,6 @@ import 'package:valorave/features/settings/settings_screen.dart'
 import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadApp;
-import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/providers/providers.dart';
 
@@ -280,16 +278,12 @@ Future<void> main() async {
             appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
             themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
           ],
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) => MaterialApp(
+          child: MaterialApp(
               theme: AppTheme.light(),
               home: const Scaffold(
                 body: SingleChildScrollView(child: CuentasPagoMovil()),
               ),
             ),
-          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -379,14 +373,10 @@ Future<void> main() async {
             themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
             ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
           ],
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) => MaterialApp(
+          child: MaterialApp(
               theme: AppTheme.light(),
               home: const Scaffold(body: ConverterScreen()),
             ),
-          ),
         ),
       );
       await tester.pumpAndSettle();

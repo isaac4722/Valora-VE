@@ -11,14 +11,12 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valorave/core/models.dart';
-import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/features/shell/command_palette.dart';
@@ -104,14 +102,10 @@ Widget _host(AppStore store) {
     // Mismo patrón de main.dart (TASK-34 p4): ShadApp.custom envuelve al
     // MaterialApp.router para que los overlays (palette, sheets) hereden
     // el ShadTheme — igual que en producción.
-    child: ShadApp.custom(
-      theme: ShadThemeVe.light(),
-      darkTheme: ShadThemeVe.dark(),
-      appBuilder: (context) => MaterialApp.router(
+    child: MaterialApp.router(
         theme: AppTheme.light(),
         routerConfig: _router(),
       ),
-    ),
   );
 }
 
@@ -239,10 +233,7 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(prefs),
           roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
         ],
-        child: ShadApp.custom(
-          theme: ShadThemeVe.light(),
-          darkTheme: ShadThemeVe.dark(),
-          appBuilder: (context) => MaterialApp.router(
+        child: MaterialApp.router(
             theme: AppTheme.light(),
             routerConfig: GoRouter(
             initialLocation: '/',
@@ -263,7 +254,6 @@ void main() {
             ],
           ),
           ),
-        ),
       ),
     );
     await tester.pump();

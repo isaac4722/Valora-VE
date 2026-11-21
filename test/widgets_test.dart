@@ -3,7 +3,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter/services.dart' show rootBundle, FontLoader, ByteData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +10,6 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valorave/core/currencies.dart';
 import 'package:valorave/core/models.dart';
-import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/features/converter/converter_screen.dart';
@@ -77,18 +75,13 @@ Widget _wrap(
     // real), que necesita ShadTheme en el árbol — como en la app
     // (ShadApp.custom en main.dart monta MaterialApp dentro). El harness
     // replica ese shell.
-    child: ShadApp.custom(
-      theme: ShadThemeVe.light(),
-      darkTheme: ShadThemeVe.dark(),
-      themeMode: mode,
-      appBuilder: (context) => MaterialApp(
+    child: MaterialApp(
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
         themeMode: mode,
         localizationsDelegates: const [],
         home: child,
       ),
-    ),
   );
 }
 
@@ -160,10 +153,7 @@ Future<void> main() async {
       // v20: el selector ahora abre una HOJA «Ve» (showCurrencySheet) que
       // exige ShadTheme en el árbol — mismo shell de producción.
       await tester.pumpWidget(
-        ShadApp.custom(
-          theme: ShadThemeVe.light(),
-          darkTheme: ShadThemeVe.dark(),
-          appBuilder: (context) => MaterialApp(
+        MaterialApp(
             theme: AppTheme.light(),
             home: Scaffold(
               body: Center(
@@ -174,7 +164,6 @@ Future<void> main() async {
               ),
             ),
           ),
-        ),
       );
       await tester.tap(find.byType(CurrencySelect));
       await tester.pumpAndSettle();
@@ -300,14 +289,10 @@ Future<void> main() async {
             ratesPollerProvider.overrideWith((ref) => _poller, disposeNotifier: false),
             sharedPreferencesProvider.overrideWithValue(_prefs),
           ],
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) => MaterialApp.router(
+          child: MaterialApp.router(
               theme: AppTheme.light(),
               routerConfig: router2,
             ),
-          ),
         ),
       );
       await tester.pump(const Duration(milliseconds: 300));
@@ -828,14 +813,10 @@ Future<void> main() async {
             // v18.0: la Lista lee el controlador de sala del árbol.
             roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
           ],
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) => MaterialApp.router(
+          child: MaterialApp.router(
               theme: AppTheme.light(),
               routerConfig: router,
             ),
-          ),
         ),
       );
       // v17.6: la rama Home del shell tiene board vacío → LoadingState
@@ -1035,14 +1016,10 @@ Future<void> main() async {
             // v18.0: el shell/Lista leen el controlador de sala del árbol.
             roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
           ],
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) => MaterialApp.router(
+          child: MaterialApp.router(
               theme: AppTheme.light(),
               routerConfig: router,
             ),
-          ),
         ),
       );
       // El shell monta → _TourTrigger dispara el tour. La cadena

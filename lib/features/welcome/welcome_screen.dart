@@ -13,15 +13,14 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
-import '../../core/shad_theme.dart' show kShadRadius;
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../widgets/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -274,7 +273,7 @@ class _VeLogo extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     return CustomPaint(
       size: Size.square(size),
       painter: _VeLogoPainter(fg: shad.foreground, bg: shad.background),
@@ -415,13 +414,13 @@ class _SlideDatos extends ConsumerWidget {
               const SizedBox(height: 18),
               Builder(
                 builder: (cardCtx) {
-                  final shad = ShadTheme.of(cardCtx).colorScheme;
+                  final shad = cardCtx.ve.colorScheme;
                   return Container(
                     padding: const EdgeInsets.all(16),
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       color: shad.card,
-                      borderRadius: BorderRadius.circular(kShadRadius),
+                      borderRadius: BorderRadius.circular(kVeRadius),
                       border: Border.all(color: shad.border),
                     ),
                     child: Column(
@@ -597,7 +596,7 @@ class _CountryChip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     final bool dark = Theme.of(context).brightness == Brightness.dark;
     final lineStrong = dark
         ? VeColors.lineStrongDark
@@ -667,14 +666,14 @@ class _WelcomeBullet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     // TASK-34 p11: cromática VeCard — superficie card, borde --line, radio 10.
     return Container(
       padding: const EdgeInsets.all(14),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: shad.card,
-        borderRadius: BorderRadius.circular(kShadRadius),
+        borderRadius: BorderRadius.circular(kVeRadius),
         border: Border.all(color: shad.border),
       ),
       child: Row(

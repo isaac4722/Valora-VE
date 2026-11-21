@@ -14,7 +14,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import 'package:shadcn_ui/shadcn_ui.dart' show LucideIcons, ShadTheme;
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/currencies.dart';
@@ -34,6 +33,8 @@ import '../../widgets/ui.dart';
 import 'pago_movil_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 part 'converter_reference.dart';
 part 'converter_history.dart';
@@ -789,7 +790,7 @@ class _SwapBtnState extends ConsumerState<_SwapBtn> {
   double _turns = 0;
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final bool dark = shad.brightness == Brightness.dark;
     return Semantics(

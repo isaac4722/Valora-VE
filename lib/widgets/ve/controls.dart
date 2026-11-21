@@ -1,8 +1,8 @@
-/// ─── Controles «Ve» · capa shadcn/ui del prototipo web (TASK-34) ────────────
+/// ─── Controles «Ve» · Material 3 nativo (v24) ───────────────────────────────
 /// Botones, chips, badges, inputs y selectores del lenguaje del prototipo,
-/// construidos SOBRE componentes reales de `shadcn_ui` (ShadButton.raw,
-/// ShadBadge.raw, ShadInput, ShadSwitch, ShadCheckbox, ShadSelect): la app se
-/// viste con el port Flutter de shadcn/ui — no con imitaciones Material.
+/// construidos sobre Material 3 PURO (InkWell/Material/TextField/MenuAnchor):
+/// la misma piel exacta — medidas, tintas y estados hover/pressed — sin capa
+/// de terceros. Era shadcn (TASK-34), hoy Flutter puro por orden del dueño.
 ///
 /// Medidas EXACTAS del prototipo (ui.tsx):
 ///   Btn   sm 28 · md 36 · lg 44 px, radius 8, active:scale .98
@@ -15,10 +15,10 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../core/shad_theme.dart' show kShadControlRadius;
 import '../../core/theme.dart';
+import '../../core/ve_theme.dart';
 
 // ─────────────────────────────────────────────────────────────── Botones ───
 
@@ -28,8 +28,8 @@ enum VeBtnVariant { primary, secondary, ghost, danger }
 /// Tamaño de [VeBtn] (sm 28 · md 36 · lg 44 px).
 enum VeBtnSize { sm, md, lg }
 
-/// Botón del sistema sobre [ShadButton.raw] — el componente shadcn/ui real
-/// con la piel exacta del prototipo.
+/// Botón del sistema sobre [_VeRawButton] — Material 3 puro con la piel
+/// exacta del prototipo.
 ///
 /// - primary: tinta invertida (bg fg / texto bg).
 /// - secondary: superficie + borde fuerte, hover en `--hover`.
@@ -70,10 +70,9 @@ class VeBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
-    final scheme = shad.colorScheme;
+    final scheme = context.ve.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
-    final bool dark = shad.brightness == Brightness.dark;
+    final bool dark = context.ve.brightness == Brightness.dark;
 
     final (
       double h,
@@ -88,7 +87,6 @@ class VeBtn extends StatelessWidget {
     };
 
     final (
-      ShadButtonVariant rawVariant,
       Color bg,
       Color hoverBg,
       Color pressedBg,
@@ -96,7 +94,6 @@ class VeBtn extends StatelessWidget {
       Color? borderColor,
     ) = switch (variant) {
       VeBtnVariant.primary => (
-        ShadButtonVariant.primary,
         scheme.primary,
         _shift(scheme.primary, dark ? 0.10 : -0.08),
         _shift(scheme.primary, dark ? 0.16 : -0.14),
@@ -104,7 +101,6 @@ class VeBtn extends StatelessWidget {
         null,
       ),
       VeBtnVariant.secondary => (
-        ShadButtonVariant.secondary,
         scheme.card,
         scheme.accent,
         scheme.accent,
@@ -112,7 +108,6 @@ class VeBtn extends StatelessWidget {
         dark ? VeColors.lineStrongDark : VeColors.lineStrongLight,
       ),
       VeBtnVariant.ghost => (
-        ShadButtonVariant.ghost,
         Colors.transparent,
         scheme.accent,
         scheme.accent,
@@ -120,7 +115,6 @@ class VeBtn extends StatelessWidget {
         null,
       ),
       VeBtnVariant.danger => (
-        ShadButtonVariant.secondary,
         scheme.card,
         ink.negBg,
         ink.negBg,
@@ -129,8 +123,7 @@ class VeBtn extends StatelessWidget {
       ),
     };
 
-    Widget button = ShadButton.raw(
-      variant: rawVariant,
+    Widget button = _VeRawButton(
       onPressed: enabled ? onPressed : null,
       height: h,
       width: expands ? double.infinity : null,
@@ -141,8 +134,6 @@ class VeBtn extends StatelessWidget {
       hoverBackgroundColor: hoverBg,
       pressedBackgroundColor: pressedBg,
       foregroundColor: fg,
-      hoverForegroundColor: fg,
-      pressedForegroundColor: fg,
       gap: gap,
       padding: EdgeInsets.symmetric(horizontal: px),
       textStyle: TextStyle(
@@ -151,16 +142,14 @@ class VeBtn extends StatelessWidget {
         fontWeight: FontWeight.w500,
         color: fg,
       ),
-      // Sin borde shadcn: el borde vive en el envoltorio exterior (_VeBorder)
-      // — reserva CERO píxeles y el botón mide exactamente `h`.
-      decoration: _flushDecor(radius: kShadControlRadius),
+      radius: kVeControlRadius,
       leading: icon == null ? null : Icon(icon, size: iconSize ?? isz),
       child: child,
     );
 
     if (borderColor != null) {
       button = _VeBorder(
-        radius: kShadControlRadius,
+        radius: kVeControlRadius,
         color: borderColor,
         child: button,
       );
@@ -203,7 +192,7 @@ class _VeBorderState extends State<_VeBorder> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final ring = widget.ringColor ?? scheme.primary.withValues(alpha: 0.25);
     return Focus(
       canRequestFocus: false,
@@ -225,19 +214,120 @@ class _VeBorderState extends State<_VeBorder> {
   }
 }
 
-/// Decoración flush (sin reserva de foco) para variantes sin borde propio.
-ShadDecoration _flushDecor({double radius = 999}) => ShadDecoration(
-  border: ShadBorder.fromBorderSide(
-    const ShadBorderSide(color: Colors.transparent, width: 0),
-    padding: EdgeInsets.zero,
-    radius: BorderRadius.circular(radius),
-  ),
-  focusedBorder: ShadBorder.fromBorderSide(
-    const ShadBorderSide(color: Colors.transparent, width: 0),
-    padding: EdgeInsets.zero,
-    radius: BorderRadius.circular(radius),
-  ),
-);
+/// Botón Material 3 crudo con la piel exacta del prototipo: fondo animado
+/// por estado (reposo → hover → pressed), tinta del texto fija y CERO
+/// píxeles reservados — el control mide exactamente `height`. Ocupa el
+/// lugar del ShadButton.raw de la era shadcn con la misma superficie.
+class _VeRawButton extends StatefulWidget {
+  const _VeRawButton({
+    required this.onPressed,
+    required this.height,
+    required this.backgroundColor,
+    required this.hoverBackgroundColor,
+    required this.pressedBackgroundColor,
+    required this.foregroundColor,
+    this.width,
+    this.mainAxisAlignment = MainAxisAlignment.start,
+    this.padding = EdgeInsets.zero,
+    this.gap = 0,
+    this.textStyle,
+    this.radius = 999,
+    this.leading,
+    required this.child,
+  });
+
+  final VoidCallback? onPressed;
+  final double height;
+  final double? width;
+  final Color backgroundColor;
+  final Color hoverBackgroundColor;
+  final Color pressedBackgroundColor;
+  final Color foregroundColor;
+  final MainAxisAlignment mainAxisAlignment;
+  final EdgeInsets padding;
+  final double gap;
+  final TextStyle? textStyle;
+  final double radius;
+  final Widget? leading;
+  final Widget child;
+
+  @override
+  State<_VeRawButton> createState() => _VeRawButtonState();
+}
+
+class _VeRawButtonState extends State<_VeRawButton> {
+  bool _hover = false;
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.onPressed != null;
+    final Color bg = !enabled
+        ? widget.backgroundColor
+        : _down
+        ? widget.pressedBackgroundColor
+        : _hover
+        ? widget.hoverBackgroundColor
+        : widget.backgroundColor;
+    final BorderRadius r = BorderRadius.circular(widget.radius);
+    return MouseRegion(
+      onEnter: enabled ? (_) => setState(() => _hover = true) : null,
+      onExit: enabled ? (_) => setState(() => _hover = false) : null,
+      child: Material(
+        color: bg,
+        borderRadius: r,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: widget.onPressed,
+          onHighlightChanged: enabled
+              ? (v) => setState(() => _down = v)
+              : null,
+          borderRadius: r,
+          child: Opacity(
+            opacity: enabled ? 1 : 0.6,
+            child: SizedBox(
+              height: widget.height,
+              width: widget.width,
+              child: Padding(
+                padding: widget.padding,
+                child: Row(
+                  mainAxisSize: widget.width == null
+                      ? MainAxisSize.min
+                      : MainAxisSize.max,
+                  mainAxisAlignment: widget.mainAxisAlignment,
+                  children: [
+                    if (widget.leading != null) ...[
+                      widget.leading!,
+                      SizedBox(width: widget.gap),
+                    ],
+                    // Fill mode: Flexible(loose) da al hijo un máximo ACOTADO
+                    // (lo que resta del ancho) — hijos con Expanded interno
+                    // (trigger del VeSelect) son legales y los chicos (iconos,
+                    // textos) miden lo suyo sin forced stretch.
+                    widget.width == null
+                        ? DefaultTextStyle(
+                            style: widget.textStyle ??
+                                TextStyle(color: widget.foregroundColor),
+                            child: widget.child,
+                          )
+                        : Flexible(
+                            fit: FlexFit.loose,
+                            child: DefaultTextStyle(
+                              style: widget.textStyle ??
+                                  TextStyle(color: widget.foregroundColor),
+                              child: widget.child,
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// Escala 0.98 al presionar (active:scale del prototipo) sin robar el gesto.
 class _TapScaleVe extends StatefulWidget {
@@ -307,28 +397,26 @@ class VeIconBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
-    final scheme = shad.colorScheme;
+    final scheme = context.ve.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
-    final bool dark = shad.brightness == Brightness.dark;
+    final bool dark = context.ve.brightness == Brightness.dark;
 
     Widget core = Semantics(
       button: true,
       label: label,
       child: _TapScaleVe(
         onTap: onTap,
-        child: ShadTooltip(
+        child: Tooltip(
+          message: label,
           waitDuration: const Duration(milliseconds: 450),
-          builder: (context) => Text(label),
           child: _VeBorder(
-            radius: kShadControlRadius,
+            radius: kVeControlRadius,
             color: danger
                 ? ink.neg.withValues(alpha: 0.4)
                 : dark
                 ? VeColors.lineStrongDark
                 : VeColors.lineStrongLight,
-            child: ShadButton.raw(
-              variant: ShadButtonVariant.secondary,
+            child: _VeRawButton(
               onPressed: onTap,
               width: size,
               height: size,
@@ -337,8 +425,7 @@ class VeIconBtn extends StatelessWidget {
               hoverBackgroundColor: scheme.accent,
               pressedBackgroundColor: scheme.accent,
               foregroundColor: danger ? ink.neg : scheme.foreground,
-              hoverForegroundColor: danger ? ink.neg : scheme.foreground,
-              decoration: _flushDecor(radius: kShadControlRadius),
+              radius: kVeControlRadius,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -418,9 +505,8 @@ class VeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
-    final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
+    final scheme = context.ve.colorScheme;
+    final bool dark = context.ve.brightness == Brightness.dark;
 
     final Widget content = icon == null
         ? _chipText(context, active ? scheme.background : scheme.foreground)
@@ -433,8 +519,7 @@ class VeChip extends StatelessWidget {
             ],
           );
 
-    Widget button = ShadButton.raw(
-      variant: ShadButtonVariant.ghost,
+    Widget button = _VeRawButton(
       onPressed: onTap,
       height: 28,
       width: expands ? double.infinity : null,
@@ -448,6 +533,9 @@ class VeChip extends StatelessWidget {
       hoverBackgroundColor: active
           ? _shift(scheme.primary, dark ? 0.10 : -0.08)
           : scheme.accent,
+      pressedBackgroundColor: active
+          ? _shift(scheme.primary, dark ? 0.16 : -0.14)
+          : scheme.accent,
       foregroundColor: active ? scheme.background : scheme.foreground,
       textStyle: TextStyle(
         fontFamily: 'Inter',
@@ -455,8 +543,6 @@ class VeChip extends StatelessWidget {
         fontWeight: FontWeight.w500,
         color: active ? scheme.background : scheme.foreground,
       ),
-      // Borde via envoltorio Flutter: cero píxeles reservados.
-      decoration: _flushDecor(),
       child: content,
     );
 
@@ -560,7 +646,7 @@ class _DashedRRectPainter extends CustomPainter {
 enum VeTone { neutral, pos, neg, warn, info }
 
 /// Badge caps del prototipo: 10.5 px w600 mayúsculas, fondo tenue del tono
-/// (`--pos-bg` & co.) y punto pulsante opcional. Sobre [ShadBadge.raw].
+/// (`--pos-bg` & co.) y punto pulsante opcional. Flutter puro (v24).
 class VeBadge extends StatelessWidget {
   const VeBadge({
     super.key,
@@ -575,7 +661,7 @@ class VeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
 
     final (Color bg, Color fg) = switch (tone) {
@@ -586,14 +672,11 @@ class VeBadge extends StatelessWidget {
       VeTone.info => (ink.infoBg, ink.manual),
     };
 
-    return ShadBadge.raw(
-      variant: ShadBadgeVariant.secondary,
-      backgroundColor: bg,
-      foregroundColor: fg,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      shape: RoundedRectangleBorder(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
         borderRadius: BorderRadius.circular(6),
-        side: const BorderSide(style: BorderStyle.none),
       ),
       child: DefaultTextStyle(
         style: TextStyle(
@@ -660,7 +743,7 @@ class _VePulseDotState extends State<VePulseDot>
 
 // ────────────────────────────────────────────────────────────── Toggle ─────
 
-/// Switch compacto 32×18 del prototipo sobre [ShadSwitch]: pista tinta al
+/// Switch compacto 32×18 del prototipo, Flutter puro (v24): pista tinta al
 /// activar, pista `--line-strong` al reposo, pulgada de fondo siempre.
 class VeToggle extends StatelessWidget {
   const VeToggle({
@@ -676,34 +759,45 @@ class VeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
-    final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
+    final scheme = context.ve.colorScheme;
+    final bool dark = context.ve.brightness == Brightness.dark;
     final Color lineStrong = dark
         ? VeColors.lineStrongDark
         : VeColors.lineStrongLight;
 
-    final Widget toggle = ShadSwitch(
-      value: value,
-      onChanged: onChanged,
-      // 32×18 EXACTOS del prototipo (margin = aire interno del pulgar).
-      width: 32,
-      height: 18,
-      margin: 2,
-      duration: const Duration(milliseconds: 180),
-      thumbColor: scheme.background,
-      checkedTrackColor: scheme.primary,
-      uncheckedTrackColor: lineStrong,
-      decoration: ShadDecoration(
-        border: ShadBorder.fromBorderSide(
-          ShadBorderSide(color: Colors.transparent, width: 0),
-          padding: EdgeInsets.zero,
-          radius: BorderRadius.circular(999),
-        ),
-        focusedBorder: ShadBorder.fromBorderSide(
-          ShadBorderSide(color: Colors.transparent, width: 0),
-          padding: EdgeInsets.zero,
-          radius: BorderRadius.circular(999),
+    // 32×18 EXACTOS del prototipo; pulgada 14 con 2 de aire (margin: 2).
+    final Widget toggle = Semantics(
+      toggled: value,
+      enabled: onChanged != null,
+      child: GestureDetector(
+        onTap: onChanged == null ? null : () => onChanged!(!value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          width: 32,
+          height: 18,
+          decoration: BoxDecoration(
+            color: value ? scheme.primary : lineStrong,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            alignment: value
+                ? Alignment.centerRight
+                : Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: scheme.background,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -713,7 +807,7 @@ class VeToggle extends StatelessWidget {
 
 // ──────────────────────────────────────────────────────────── Checkbox ─────
 
-/// Checkbox 18 px radius 5 sobre [ShadCheckbox], con la animación pop del
+/// Checkbox 18 px radius 5, Flutter puro (v24), con la animación pop del
 /// prototipo al marcar y el check en tinta invertida.
 class VeCheckbox extends StatelessWidget {
   const VeCheckbox({
@@ -729,9 +823,8 @@ class VeCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
-    final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
+    final scheme = context.ve.colorScheme;
+    final bool dark = context.ve.brightness == Brightness.dark;
     final Color lineStrong = dark
         ? VeColors.lineStrongDark
         : VeColors.lineStrongLight;
@@ -740,15 +833,29 @@ class VeCheckbox extends StatelessWidget {
       radius: 5,
       color: value ? scheme.primary : lineStrong,
       ringColor: scheme.primary.withValues(alpha: 0.45),
-      child: ShadCheckbox(
-        value: value,
-        onChanged: onChanged == null ? null : (_) => onChanged!(),
-        size: 18,
-        duration: const Duration(milliseconds: 180),
-        color: scheme.primary,
-        uncheckedColor: scheme.card,
-        decoration: _flushDecor(radius: 5),
-        icon: _PopCheck(color: scheme.background, size: 12, checked: value),
+      child: Semantics(
+        checked: value,
+        enabled: onChanged != null,
+        child: Material(
+          color: value ? scheme.primary : scheme.card,
+          child: InkWell(
+            onTap: onChanged,
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: Center(
+                // Desmarcado: card sobre card — el check no se ve; marcado:
+                // fondo (tinta invertida sobre primary). El pop vive en
+                // _PopCheck (solo en la transición a marcado).
+                child: _PopCheck(
+                  color: value ? scheme.background : scheme.card,
+                  size: 12,
+                  checked: value,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -833,7 +940,7 @@ class VeSegmented<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final bool dark = shad.brightness == Brightness.dark;
     final int active = segments.indexWhere((s) => s.value == value);
@@ -843,7 +950,7 @@ class VeSegmented<T> extends StatelessWidget {
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: scheme.muted,
-        borderRadius: BorderRadius.circular(kShadControlRadius),
+        borderRadius: BorderRadius.circular(kVeControlRadius),
         border: Border.all(color: scheme.border),
       ),
       child: LayoutBuilder(
@@ -938,7 +1045,7 @@ class VeStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final bool dark = shad.brightness == Brightness.dark;
     final Color lineStrong = dark
@@ -970,7 +1077,7 @@ class VeStepper extends StatelessWidget {
         height: 36,
         decoration: BoxDecoration(
           color: scheme.card,
-          borderRadius: BorderRadius.circular(kShadControlRadius),
+          borderRadius: BorderRadius.circular(kVeControlRadius),
           border: Border.all(color: lineStrong),
         ),
         clipBehavior: Clip.antiAlias,
@@ -1014,8 +1121,8 @@ class VeStepper extends StatelessWidget {
 
 // ────────────────────────────────────────────────────────────── Input ──────
 
-/// Campo de texto 36 px del prototipo sobre [ShadInput]: borde fuerte,
-/// placeholder `--faint` y foco con borde tinta.
+/// Campo de texto 36 px del prototipo sobre `TextField` de Material 3
+/// (v24): borde fuerte, placeholder `--faint` y foco con borde tinta.
 class VeInput extends StatelessWidget {
   const VeInput({
     super.key,
@@ -1050,48 +1157,61 @@ class VeInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
-    final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
+    final scheme = context.ve.colorScheme;
+    final bool dark = context.ve.brightness == Brightness.dark;
     final Color faint = dark ? VeColors.faintDark : VeColors.faintLight;
 
     return Semantics(
       label: semantic,
       textField: true,
       child: _VeBorder(
-        radius: kShadControlRadius,
+        radius: kVeControlRadius,
         color: dark ? VeColors.lineStrongDark : VeColors.lineStrongLight,
-        child: ShadInput(
-          controller: controller,
-          placeholder: placeholder == null
-              ? null
-              : Text(
-                  placeholder!,
-                  style: TextStyle(
+        child: Material(
+          color: scheme.card,
+          borderRadius: BorderRadius.circular(kVeControlRadius),
+          clipBehavior: Clip.antiAlias,
+          child: SizedBox(
+            height: 36,
+            child: Center(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                enabled: enabled,
+                autofocus: autofocus,
+                keyboardType: keyboardType,
+                inputFormatters: inputFormatters,
+                maxLength: maxLength,
+                textAlign: textAlign,
+                onChanged: onChanged,
+                onSubmitted: onSubmitted,
+                cursorColor: scheme.primary,
+                style:
+                    style ??
+                    TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13.5,
+                      color: scheme.foreground,
+                    ),
+                decoration: InputDecoration(
+                  hintText: placeholder,
+                  hintStyle: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 13.5,
                     color: faint,
                   ),
+                  border: InputBorder.none,
+                  isCollapsed: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
+                  // maxLength NO muestra contador (contrato de la era shadcn).
+                  counterText: '',
                 ),
-          onChanged: onChanged,
-          onSubmitted: onSubmitted,
-          focusNode: focusNode,
-          enabled: enabled,
-          autofocus: autofocus,
-          keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
-          maxLength: maxLength,
-          textAlign: textAlign,
-          style:
-              style ??
-              TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.5,
-                color: scheme.foreground,
               ),
-          decoration: ShadDecoration(
-            color: scheme.card,
-          ).merge(_flushDecor(radius: kShadControlRadius)),
+            ),
+          ),
         ),
       ),
     );
@@ -1113,7 +1233,7 @@ class VeField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1154,12 +1274,9 @@ class VeSelectOption<T> {
   final String label;
 }
 
-/// Select sobre [ShadSelect] con la piel del prototipo (36 px · borde
-/// fuerte). Menú popover nativo de shadcn/ui.
-///
-/// Nota de API: ShadSelect no es controlado (su valor viaja en
-/// `initialValue`); para reflejar cambios externos se remonta con una
-/// ValueKey derivada del valor — patrón ligero y sin controlador extra.
+/// Select sobre `MenuAnchor` de Material 3 (v24) con la piel del prototipo
+/// (36 px · borde fuerte). Menú nativo de Flutter — controlado por `value`,
+/// sin trucos de remount.
 class VeSelect<T> extends StatelessWidget {
   const VeSelect({
     super.key,
@@ -1178,17 +1295,14 @@ class VeSelect<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = ShadTheme.of(context);
-    final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
+    final scheme = context.ve.colorScheme;
+    final bool dark = context.ve.brightness == Brightness.dark;
     final Color faint = dark ? VeColors.faintDark : VeColors.faintLight;
 
-    final String? selectedLabel = value == null
-        ? null
-        : options
-              .where((o) => o.value == value)
-              .map((o) => o.label)
-              .firstOrNull;
+    String? selectedLabel;
+    for (final o in options) {
+      if (o.value == value) selectedLabel = o.label;
+    }
 
     Widget triggerRow(String text, {bool isPlaceholder = false}) => Row(
       children: [
@@ -1211,25 +1325,26 @@ class VeSelect<T> extends StatelessWidget {
     return Semantics(
       label: semantic,
       child: _VeBorder(
-        radius: kShadControlRadius,
+        radius: kVeControlRadius,
         color: dark ? VeColors.lineStrongDark : VeColors.lineStrongLight,
-        child: ShadSelect<T>(
-          key: ValueKey<T?>(value),
-          initialValue: value,
-          placeholder: Text(
-            placeholder ?? 'Elegir…',
-            style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: faint),
+        child: MenuAnchor(
+          alignmentOffset: const Offset(0, 4),
+          style: MenuStyle(
+            backgroundColor: WidgetStatePropertyAll(scheme.popover),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(kVeRadius),
+                side: BorderSide(color: scheme.border),
+              ),
+            ),
+            padding: const WidgetStatePropertyAll(
+              EdgeInsets.symmetric(vertical: 4),
+            ),
           ),
-          selectedOptionBuilder: (context, v) => selectedLabel == null
-              ? triggerRow(placeholder ?? 'Elegir…', isPlaceholder: true)
-              : triggerRow(selectedLabel),
-          onChanged: (v) {
-            if (v != null) onChanged?.call(v);
-          },
-          options: [
+          menuChildren: [
             for (final o in options)
-              ShadOption(
-                value: o.value,
+              MenuItemButton(
+                onPressed: () => onChanged?.call(o.value),
                 child: Text(
                   o.label,
                   style: TextStyle(
@@ -1240,9 +1355,26 @@ class VeSelect<T> extends StatelessWidget {
                 ),
               ),
           ],
-          decoration: ShadDecoration(
-            color: scheme.card,
-          ).merge(_flushDecor(radius: kShadControlRadius)),
+          builder: (context, controller, child) => _VeRawButton(
+            onPressed: () {
+              if (controller.isOpen) {
+                controller.close();
+              } else {
+                controller.open();
+              }
+            },
+            height: 36,
+            width: double.infinity,
+            backgroundColor: scheme.card,
+            hoverBackgroundColor: scheme.accent,
+            pressedBackgroundColor: scheme.accent,
+            foregroundColor: scheme.foreground,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            radius: kVeControlRadius,
+            child: selectedLabel == null
+                ? triggerRow(placeholder ?? 'Elegir…', isPlaceholder: true)
+                : triggerRow(selectedLabel),
+          ),
         ),
       ),
     );
@@ -1259,7 +1391,7 @@ class VeKbd extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(

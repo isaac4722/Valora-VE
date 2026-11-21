@@ -11,12 +11,10 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
-import '../../core/shad_theme.dart' show kShadRadius;
 import '../../core/theme.dart';
 import '../../data/backup.dart';
 import '../../data/board.dart';
@@ -34,6 +32,8 @@ import '../../core/banks_ve.dart';
 import '../../core/version.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:valorave/core/ve_theme.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 // v18.0: la versión visible vive en core/version.dart (fuente única — la
 // usan las constancias PNG/PDF y los totales compartidos). Se re-exporta
@@ -93,12 +93,12 @@ class _VeSettingsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: shad.card,
-        borderRadius: BorderRadius.circular(kShadRadius),
+        borderRadius: BorderRadius.circular(kVeRadius),
         border: Border.all(color: shad.border),
       ),
       // Ancestro Material transparente: las secciones mezclan controles

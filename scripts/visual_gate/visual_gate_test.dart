@@ -15,10 +15,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'package:valorave/core/models.dart';
-import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/features/converter/converter_screen.dart';
@@ -283,18 +281,13 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(prefs),
           roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
         ],
-        child: ShadApp.custom(
-          theme: ShadThemeVe.light(),
-          darkTheme: ShadThemeVe.dark(),
-          appBuilder: (context) =>
-              MaterialApp.router(
+        child: MaterialApp.router(
                 // v20: sin banner DEBUG — la cinta diagonal roja
                 // ensuciaba los goldens (VLM la marcó como slop).
                 debugShowCheckedModeBanner: false,
                 theme: AppTheme.light(),
                 routerConfig: router,
               ),
-        ),
       ),
     );
     await tester.pump(const Duration(milliseconds: 600));

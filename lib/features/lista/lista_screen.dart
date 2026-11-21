@@ -19,7 +19,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/analytics.dart' as an;
 import '../../core/currencies.dart';
@@ -41,6 +40,8 @@ import 'roi_scanner.dart';
 import '../room/room_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 class ListaScreen extends ConsumerStatefulWidget {
   const ListaScreen({super.key});
@@ -1205,7 +1206,7 @@ class _CartRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final c = CurrencyX.from(item.currency);
     // Detalle multitienda + peso capturado (v17.2), si existe.
@@ -1346,7 +1347,7 @@ class _PanelPresupuesto extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final budget = store.data.budget;
@@ -1602,7 +1603,7 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
   @override
   Widget build(BuildContext context) {
     final budget = widget.store.data.budget;
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1746,7 +1747,7 @@ class _RoomHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!room.connected) return const SizedBox.shrink();
-    final shad = ShadTheme.of(context);
+    final shad = context.ve;
     final scheme = shad.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final title = room.roomName.isNotEmpty
@@ -1833,7 +1834,7 @@ class _RoomHeader extends ConsumerWidget {
 
   Widget _avatar(BuildContext context, String initials,
       {required bool online, required VeInk ink}) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return Container(
       width: 32,
       height: 32,
@@ -1935,7 +1936,7 @@ class _ProductPickerState extends ConsumerState<_ProductPicker> {
                       Icon(
                         LucideIcons.plus,
                         size: 14,
-                        color: ShadTheme.of(context).colorScheme.mutedForeground,
+                        color: context.ve.colorScheme.mutedForeground,
                       ),
                     ],
                   ),

@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.16.0-beta+49 · v24.0b — Material 3 nativo: shadcn_ui fuera
+
+Orden del dueño: «usa la nativa de Material 3 que tiene Flutter, una
+interfaz más simple y mejor». La capa shadcn_ui (TASK-33/34) se retira
+COMPLETA y el kit Ve se reconstruye sobre Material puro — misma piel,
+mismas medidas.
+
+- **`VeThemeData` (core/ve_theme.dart)**: fachada con la MISMA superficie
+  que `ShadTheme.of` (`context.ve.colorScheme.*` + `.brightness`) — las
+  102 llamadas de pantallas son un rename mecánico. Tokens 1:1 con
+  VeColors (guardián: test/ve_theme_test.dart, el sucesor de
+  shad_theme_test). Radii firma 10/8 (`kVeRadius`/`kVeControlRadius`).
+- **Kit Ve sobre Material puro**: `VeBtn`/`VeChip` sobre un botón crudo
+  propio (Material + InkWell, estados hover/pressed animados, alturas
+  exactas 28/36/44); `VeIconBtn` con `Tooltip` nativo; `VeBadge` Container
+  puro; `VeToggle` 32×18 propio con Semantics(toggled); `VeCheckbox` 18 px
+  con InkWell y el pop intacto; `VeInput` sobre `TextField` (36 px, sin
+  contador); `VeSelect` sobre `MenuAnchor` — controlado, sin remount.
+- **Hojas**: `showVeSheet` = `showModalBottomSheet` (móvil) + `showDialog`
+  (escritorio) con el chrome intacto; TECHO del 88 % ahora resuelto con el
+  MediaQuery del contexto que ABRE (useSafeArea del bottom sheet exponía
+  padding cero y el techo se inflaba — fix con test del notch al verde).
+- **main.dart**: `MaterialApp.router` directo (adiós ShadApp.custom y
+  GlobalShadLocalizations); DynamicColorBuilder + AppTheme intactos.
+- **Lucide directo** (`lucide_icons_flutter`) en los 25 archivos que lo
+  tomaban del re-export de shadcn; `intl` explícito donde shadcn lo
+  re-exportaba.
+- **pubspec**: `shadcn_ui` FUERA (cero referencias). Tests: 13 harnesses
+  sin el wrapper ShadApp; ve_kit_test mide el Material interno (contrato
+  28/36/44) y los CustomPaint de gráficos acotados al widget.
+
+Gates: analyze 0 · 316/316 · auditoría VERDE.
+
 ## 1.16.0-beta+49 · v24.0a — Riverpod como estado (patrón CalculaYa), provider fuera
 
 Orden del dueño: «usa riverpod para manejar los estados como lo hace

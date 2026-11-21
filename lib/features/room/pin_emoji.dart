@@ -12,10 +12,11 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/theme.dart';
 import '../../widgets/ve/ve.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 /// Paleta fija de 12 (los mismos para todos: reconocibles, distinguibles
 /// entre sí y sin pares confusos).
@@ -75,7 +76,7 @@ class PinShowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     return VeCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +145,7 @@ class PinShowCard extends StatelessWidget {
 }
 
 Color _lineStrong(BuildContext context) {
-  final dark = ShadTheme.of(context).brightness == Brightness.dark;
+  final dark = context.ve.brightness == Brightness.dark;
   return dark ? VeColors.lineStrongDark : VeColors.lineStrongLight;
 }
 
@@ -168,7 +169,7 @@ class PinEmojiPad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final chars = entered.characters.toList();
     return Column(

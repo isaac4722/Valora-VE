@@ -8,7 +8,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/fmt.dart';
 import '../../core/models.dart';
@@ -16,6 +15,7 @@ import '../../core/theme.dart';
 import '../../widgets/ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Mensaje de cobro por Pago Móvil: monto es-VE + datos de la cuenta.
 /// Texto plano, sin marcas — lo pega cualquier chat.

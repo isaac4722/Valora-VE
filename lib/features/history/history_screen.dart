@@ -15,7 +15,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/currencies.dart';
@@ -29,6 +28,8 @@ import '../../widgets/ui.dart';
 import '../statement/statement_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 const List<String> kPeriods = ['Todo', '7d', '30d', '90d', '365d'];
 
@@ -106,7 +107,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           VeEntry(
             child: Builder(
               builder: (listCtx) {
-                final scheme = ShadTheme.of(listCtx).colorScheme;
+                final scheme = listCtx.ve.colorScheme;
                 return ListView(
                   // Padding inferior extra: la barra pegadiza de export siempre
                   // presente puede tapar la última fila + el paginador.
@@ -585,7 +586,7 @@ class _DetailBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = context.ve.colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

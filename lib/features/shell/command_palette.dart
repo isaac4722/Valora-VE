@@ -16,7 +16,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/fmt.dart';
 import '../../core/models.dart';
@@ -24,6 +23,8 @@ import '../../core/theme.dart';
 import '../../widgets/ui.dart' show showToast;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:valorave/core/ve_theme.dart';
 
 /// Un resultado del palette: a dónde ir y cómo pintarse.
 class _Hit {
@@ -146,7 +147,7 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     final store = ref.watch(appStoreProvider);
     final width = MediaQuery.sizeOf(context).width;
     final paletteWidth = (width - 32).clamp(0, 620).toDouble();
@@ -442,7 +443,7 @@ class _PaletteRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final shad = ShadTheme.of(context).colorScheme;
+    final shad = context.ve.colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

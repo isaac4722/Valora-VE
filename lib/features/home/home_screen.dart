@@ -15,7 +15,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shadcn_ui/shadcn_ui.dart' show LucideIcons;
 
 import '../../core/analytics.dart' as an;
 import '../../core/currencies.dart';
@@ -36,6 +35,7 @@ import '../shell/notifs_center.dart' show showNotificationCenter;
 import 'app_widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});

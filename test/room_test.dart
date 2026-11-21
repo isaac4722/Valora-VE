@@ -12,8 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/data/store.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/widgets/ui.dart'
     show VeCard, VeInput;
 import 'package:valorave/core/theme.dart';
@@ -422,12 +420,7 @@ void main() {
           overrides: [roomControllerProvider.overrideWith((ref) => room, disposeNotifier: false)],
           // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme
           // que los widgets Ve (VeTitle/VePanelCard) de la sala exigen.
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) =>
-                MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
-          ),
+          child: MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
         ),
       );
       // v20 (orden del dueño): la búsqueda vive SOLO en el flujo CREAR —
@@ -507,12 +500,7 @@ void main() {
           overrides: [roomControllerProvider.overrideWith((ref) => room, disposeNotifier: false)],
           // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme
           // que los widgets Ve (VeTitle/VePanelCard) de la sala exigen.
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) =>
-                MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
-          ),
+          child: MaterialApp(theme: AppTheme.light(), home: RoomScreen()),
         ),
       );
       // v20 (orden del dueño): la búsqueda vive SOLO en el flujo CREAR.

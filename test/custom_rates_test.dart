@@ -12,9 +12,7 @@ import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valorave/core/currencies.dart';
 import 'package:valorave/core/models.dart';
-import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
-import 'package:shadcn_ui/shadcn_ui.dart' show ShadApp;
 import 'package:valorave/data/backup.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/features/home/home_screen.dart';
@@ -172,14 +170,10 @@ void main() {
           ],
           // Mismo shell que la app (main.dart): ShadTheme arriba del
           // MaterialApp — la GUI «Ve» lo exige.
-          child: ShadApp.custom(
-            theme: ShadThemeVe.light(),
-            darkTheme: ShadThemeVe.dark(),
-            appBuilder: (context) => MaterialApp(
+          child: MaterialApp(
               theme: AppTheme.light(),
               home: const Scaffold(body: HomeScreen()),
             ),
-          ),
         ),
       );
       await tester.pump(const Duration(milliseconds: 300));
