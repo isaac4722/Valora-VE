@@ -86,6 +86,7 @@ dependencies:
   flutter_localizations:            # delegates es-VE (fix: showDatePicker
     sdk: flutter                    # renderizaba en inglés — es-VE real)
   decimal: ^3.0.2                   # dinero exacto (decimal.js del web → Decimal Dart)
+  fl_chart: ^1.3.1
 
 dev_dependencies:
   connectivity_plus_platform_interface: ^2.1.0  # seam de tests (v17.8): fake de plataforma

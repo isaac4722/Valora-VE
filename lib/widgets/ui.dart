@@ -2563,7 +2563,7 @@ String fmtMesAno(DateTime d) => DateFormat.MMMM('es').format(d).substring(0, 3);
 // dp6 · Componentes adoptados del motor v17 «Consolidación nativa» (GUI dp6,
 // decisión del dueño: el actual manda, se integra lo que faltaba). Adaptados
 // a los tokens de ESTA rama (VeText/VeColors/SourceSeal) — sin segundas
-// bibliotecas. Botones (Primary/Ghost), Sparkline, MiniRateCard, SectionCard,
+// bibliotecas. Botones (Primary/Ghost), MiniRateCard, SectionCard,
 // SheetHeader, Paginator, Settle y CategoryLegend.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -2626,112 +2626,6 @@ class GhostButton extends StatelessWidget {
   }
 }
 
-/// Sparkline editorial: mini-tendencia teñida por dirección. Sube → neg (una
-/// tasa que sube es devaluación), baja → pos; meta punteada si cae en rango.
-/// Sin datos suficientes (menos de 2 puntos) no pinta nada — honesto.
-class Sparkline extends StatelessWidget {
-  const Sparkline({
-    super.key,
-    required this.values,
-    this.height = 28,
-    this.width = 84,
-    this.target,
-    this.up,
-    this.down,
-  });
-
-  final List<double> values;
-  final double height;
-  final double? target;
-  final double width;
-  final Color? up;
-  final Color? down;
-
-  @override
-  Widget build(BuildContext context) {
-    if (values.length < 2) return SizedBox(height: height, width: width);
-    final VeInk sem = VeColors.of(context);
-    final bool rising = values.last >= values.first;
-    final Color ink = rising ? (up ?? sem.neg) : (down ?? sem.pos);
-    return SizedBox(
-      width: width,
-      height: height,
-      child: CustomPaint(
-        size: Size(width, height),
-        painter: _SparklinePainter(
-          values: values,
-          ink: ink,
-          target: target,
-          targetInk: sem.warn,
-        ),
-      ),
-    );
-  }
-}
-
-class _SparklinePainter extends CustomPainter {
-  _SparklinePainter({
-    required this.values,
-    required this.ink,
-    required this.targetInk,
-    this.target,
-  });
-
-  final List<double> values;
-  final Color ink;
-  final Color targetInk;
-  final double? target;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    double lo = values.reduce(math.min), hi = values.reduce(math.max);
-    if (target != null) {
-      lo = math.min(lo, target!);
-      hi = math.max(hi, target!);
-    }
-    if (hi - lo < 1e-9) hi = lo + 1;
-    Offset pt(int i) => Offset(
-      size.width * i / (values.length - 1),
-      size.height - 3 - (size.height - 6) * (values[i] - lo) / (hi - lo),
-    );
-    final path = Path()..moveTo(pt(0).dx, pt(0).dy);
-    for (var i = 1; i < values.length; i++) {
-      path.lineTo(pt(i).dx, pt(i).dy);
-    }
-    final paint = Paint()
-      ..color = ink
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(path, paint);
-    // Punto «hoy» al final de la serie.
-    canvas.drawCircle(pt(values.length - 1), 2.2, Paint()..color = ink);
-    if (target != null && target! >= lo && target! <= hi) {
-      final y =
-          size.height - 3 - (size.height - 6) * (target! - lo) / (hi - lo);
-      final dash = Paint()
-        ..color = targetInk
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1;
-      var x = 0.0;
-      while (x < size.width) {
-        canvas.drawLine(
-          Offset(x, y),
-          Offset(math.min(x + 3, size.width), y),
-          dash,
-        );
-        x += 6;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _SparklinePainter old) =>
-      old.values.length != values.length ||
-      (values.length > 1 && old.values.last != values.last) ||
-      old.target != target;
-}
 
 /// Tarjeta compacta de tasa (grid 2-col de «Divisas del foco»): bandera +
 /// etiqueta arriba, cifra displayNum abajo, tinte por categoría de fuente.

@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.16.0-beta+49 · v24.0c — todas las gráficas sobre fl_chart (la librería de CalculaYa)
+
+Orden del dueño: «arregla las gráficas todas las gráficas usando la misma
+librería de gráficas que tiene CalculaYa». fl_chart **1.3.1** (confirmada
+por REA del APK de la app de referencia) — la misma que pinta su historial.
+
+- **VeTimelineChart → `LineChart`**: multi-serie con eje Y COMPARTIDO (la
+  normalización por serie de la era syncfusion era un truco del pintor;
+  todas las series de la app viven en la misma unidad y el eje único dice
+  la verdad), rejilla punteada 25/50/75 % (`--border`), ejes X 0/⅓/⅔/1 con
+  `xLabel` e Y opcional con `yLabel`, áreas degradadas 28 %→0, series
+  punteadas (proyecciones), crosshair + puntos por serie (indicador de
+  fl_chart punteado en `--faint`) y el chip de valores de SIEMPRE
+  (`tooltipBuilder`/TipBox intacto — el tooltip interno apagado, el
+  overlay de la app pinta el chip; `onScrub` sigue sincronizando el panel
+  del día en Brecha).
+- **VeSparkline → `LineChart`** mini (polyline 1.6 px, sin ejes; vacío =
+  línea punteada al 30 %). **VeBars → `BarChart`** (barras 26 px
+  redondeadas, tooltip al tocar, etiquetas abajo, crece con kEaseVe).
+  **VeDonut → `PieChart`** (anillo 68 %, ciclo de tonos, leyenda propia
+  intacta).
+- **Retirados**: VeAreaChart y VeHeatmap (cero llamadas en producción —
+  vivían solo en el test del kit) y el Sparkline legacy de ui.dart (código
+  muerto desde v20). CustomPainter queda para lo decorativo (banderas ₮/Ξ,
+  ambientes, bordes punteados) — los DATOS viven en fl_chart.
+
+Gates: analyze 0 · 313/313 · auditoría VERDE.
+
 ## 1.16.0-beta+49 · v24.0b — Material 3 nativo: shadcn_ui fuera
 
 Orden del dueño: «usa la nativa de Material 3 que tiene Flutter, una

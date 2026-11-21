@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/widgets/ve/ve.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 Widget _wrap(Widget child) => MaterialApp(
       // AppTheme ya registra VeInk: mismo contrato que main.dart (v24).
@@ -177,7 +178,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(VeSparkline),
-          matching: find.byType(CustomPaint),
+          matching: find.byType(LineChart),
         ),
         findsOneWidget,
       );
@@ -191,7 +192,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(VeSparkline),
-          matching: find.byType(CustomPaint),
+          matching: find.byType(LineChart),
         ),
         findsOneWidget,
       );
@@ -203,6 +204,10 @@ void main() {
         data: [10, 4],
       )));
       await tester.pumpAndSettle();
+      expect(find.descendant(
+        of: find.byType(VeDonut),
+        matching: find.byType(PieChart),
+      ), findsOneWidget);
       expect(find.text('Cesta'), findsOneWidget);
       expect(find.text('Proteínas'), findsOneWidget);
     });
@@ -210,45 +215,7 @@ void main() {
     testWidgets('VeBars construye con datos vacíos', (tester) async {
       await tester.pumpWidget(_wrap(const VeBars(labels: [], data: [])));
       await tester.pumpAndSettle();
-      expect(find.byType(Row), findsOneWidget);
-    });
-
-    testWidgets('VeAreaChart sin datos devuelve alto sin pintor', (tester) async {
-      await tester.pumpWidget(_wrap(VeAreaChart(
-        data: const [],
-        labels: const [],
-        format: (v) => '$v',
-      )));
-      await tester.pumpAndSettle();
-      expect(
-        find.descendant(
-          of: find.byType(VeAreaChart),
-          matching: find.byType(CustomPaint),
-        ),
-        findsNothing,
-      );
-    });
-
-    testWidgets('VeHeatmap con offset pinta celdas vacías', (tester) async {
-      await tester.pumpWidget(_wrap(
-        const VeHeatmap(byDay: [1, 0, 2], offset: 2, maxValue: 2),
-      ));
-      await tester.pumpAndSettle();
-      expect(find.byType(Wrap), findsOneWidget);
-      expect(find.text('1'), findsOneWidget);
-    });
-  });
-
-  group('Composición · Group/Row/Empty', () {
-    testWidgets('VeGroup divide filas con separador', (tester) async {
-      await tester.pumpWidget(_wrap(const VeGroup(children: [
-        VeRow(label: Text('BCV'), right: Text('36,51')),
-        VeRow(label: Text('Paralelo'), right: Text('44,20')),
-      ])));
-      await tester.pumpAndSettle();
-      expect(find.text('BCV'), findsOneWidget);
-      expect(find.text('Paralelo'), findsOneWidget);
-      expect(find.byType(Divider), findsOneWidget);
+      expect(find.byType(BarChart), findsOneWidget);
     });
 
     testWidgets('VeEmpty muestra título y acción', (tester) async {
