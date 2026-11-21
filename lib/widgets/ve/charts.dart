@@ -225,10 +225,13 @@ class VeBars extends StatelessWidget {
                         toY: data[i] <= 0
                             ? 2.0
                             : math.max(3.0, data[i] * t),
-                        width: 26,
+                        // v24.1: con pocas barras (la serie de 7 días arranca
+                        // con 2-3 días) el ancho fijo 26 hacía vigas negras;
+                        // el ancho acompaña a la cantidad de datos.
+                        width: data.length <= 3 ? 18 : 26,
                         color: color.withValues(alpha: 0.8),
                         borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(4),
+                          top: Radius.circular(6),
                         ),
                       ),
                     ],
@@ -549,6 +552,10 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
                           maxX: maxX,
                           minY: minY,
                           maxY: maxY,
+                          // v24.1: la rejilla de títulos se ancla en minX —
+                          // así los 4 rótulos del eje X caen EXACTOS en las
+                          // anclas (sin múltiplos de época de por medio).
+                          baselineX: minX,
                           clipData: const FlClipData.all(),
                           gridData: FlGridData(
                             show: true,
@@ -598,18 +605,40 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
                                 showTitles: true,
                                 reservedSize: 18,
                                 interval: (maxX - minX) / 3,
-                                getTitlesWidget: (value, meta) => Text(
-                                  widget.xLabel(
-                                    DateTime.fromMillisecondsSinceEpoch(
-                                      value.round(),
+                                // v24.1: CUATRO ANCLAS EXACTAS — los múltiplos
+                                // del intervalo no calzan con los extremos del
+                                // rango y fabricaban solapes al borde derecho
+                                // («19/11 24/11» pegados). Fuera de ancla →
+                                // nada; en borde → fitInside lo mete dentro.
+                                getTitlesWidget: (value, meta) {
+                                  final paso = (maxX - minX) / 3;
+                                  final esAncla = <double>[
+                                    minX,
+                                    minX + paso,
+                                    minX + 2 * paso,
+                                    maxX,
+                                  ].any((a) => (a - value).abs() < paso / 8);
+                                  if (!esAncla) return const SizedBox.shrink();
+                                  return SideTitleWidget(
+                                    meta: meta,
+                                    fitInside:
+                                        SideTitleFitInsideData.fromTitleMeta(
+                                          meta,
+                                        ),
+                                    child: Text(
+                                      widget.xLabel(
+                                        DateTime.fromMillisecondsSinceEpoch(
+                                          value.round(),
+                                        ),
+                                      ),
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 10,
+                                        color: scheme.mutedForeground,
+                                      ),
                                     ),
-                                  ),
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 10,
-                                    color: scheme.mutedForeground,
-                                  ),
-                                ),
+                                  );
+                                },
                               ),
                             ),
                           ),

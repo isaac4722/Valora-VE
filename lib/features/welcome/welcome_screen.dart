@@ -216,14 +216,34 @@ class _SlideMarca extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 34),
-              // Las seis divisas del foco, con banderas reales (assets/flags).
+              // Las ocho divisas del foco con banderas reales (assets/flags).
+              // v24.1: rejilla 4+4 equilibrada — el Wrap dejaba a ETH sola en
+              // una segunda fila (7+1), un elemento mal ubicado a la vista.
               Center(
-                child: Wrap(
-                  spacing: 14,
-                  runSpacing: 14,
-                  alignment: WrapAlignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    for (final c in CurrencyX.focus) _FlagPill(currency: c),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        for (final (i, c) in CurrencyX.focus.indexed)
+                          if (i < 4) ...<Widget>[
+                            if (i > 0) const SizedBox(width: 14),
+                            _FlagPill(currency: c),
+                          ],
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        for (final (i, c) in CurrencyX.focus.indexed)
+                          if (i >= 4) ...<Widget>[
+                            if (i > 4) const SizedBox(width: 14),
+                            _FlagPill(currency: c),
+                          ],
+                      ],
+                    ),
                   ],
                 ),
               ),

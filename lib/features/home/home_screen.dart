@@ -606,7 +606,9 @@ class _RateHero extends ConsumerWidget {
                   ),
                 ],
               );
-              final Widget? chispa = serie.length >= 2
+              // v24.1: con 2 puntos la chispa es un guion plano flotante
+              // (sin forma que contar) — se muestra desde 3.
+              final Widget? chispa = serie.length >= 3
                   ? SizedBox(
                       width: inline ? 96 : 120,
                       height: 44,
@@ -779,7 +781,10 @@ class _WeekSpark extends ConsumerWidget {
             VeBars(
               labels: labels,
               data: values,
-              tone: VeChartTone.fg,
+              // v24.1: tono pos (verde marca) — las barras en tinta fg
+              // (negro) leían como vigas muertas; el color solo significa
+              // (§5) y aquí la serie es un dato positivo del tablero.
+              tone: VeChartTone.pos,
               height: 96,
               formatValue: fmtRate,
               semantic: 'Tasa de los últimos 7 días, una barra por día',
