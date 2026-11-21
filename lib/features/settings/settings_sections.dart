@@ -480,29 +480,21 @@ class _CustomRates extends StatelessWidget {
   Future<void> _abrirAlta(BuildContext context, AppStore store) async {
     final nameCtrl = TextEditingController();
     final rateCtrl = TextEditingController();
-    final ok = await showModalBottomSheet<bool>(
+    // v23.3 (pez 2-a P0-1): alta con el patrón COMPLETO del kit —
+    // showVeSheet (radio 14, asa, cabecera 48 + ✕), VeField/VeInput y pie
+    // con VeBtn. Antes: modal crudo de radio 20, TextField con
+    // OutlineInputBorder y TextButton/FilledButton — otra piel de hoja.
+    final ok = await showVeSheet<bool>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      title: 'Nueva tasa tuya',
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          16,
-          16,
-          16 + MediaQuery.viewInsetsOf(ctx).bottom,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(ctx).bottom,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Nueva tasa tuya',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 4),
             Text(
               'p. ej. Zelle, Efectivo, Binance — aparece en Inicio con su '
               'brecha vs BCV',
@@ -512,42 +504,46 @@ class _CustomRates extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: nameCtrl,
-              maxLength: 18,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Nombre',
-                hintText: 'Zelle',
-                border: OutlineInputBorder(),
-                isDense: true,
+            VeField(
+              label: 'Nombre',
+              child: VeInput(
+                controller: nameCtrl,
+                placeholder: 'Zelle',
+                maxLength: 18,
+                semantic: 'Nombre de la tasa',
               ),
             ),
             const SizedBox(height: 10),
-            MoneyField(
-              controller: rateCtrl,
-              maxDecimals: 4,
-              decoration: const InputDecoration(
-                labelText: 'Bs por USD',
+            VeField(
+              label: 'Bs por USD',
+              child: MoneyField(
+                controller: rateCtrl,
+                maxDecimals: 4,
                 hintText: '0,00',
-                border: OutlineInputBorder(),
-                isDense: true,
               ),
             ),
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('Cancelar'),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: const Text('Guardar'),
-                ),
-              ],
+          ],
+        ),
+      ),
+      footer: Builder(
+        builder: (sheetCtx) => Row(
+          children: [
+            Expanded(
+              child: VeBtn(
+                variant: VeBtnVariant.secondary,
+                expands: true,
+                onPressed: () => Navigator.of(sheetCtx).pop(false),
+                child: const Text('Cancelar'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: VeBtn(
+                variant: VeBtnVariant.primary,
+                expands: true,
+                onPressed: () => Navigator.of(sheetCtx).pop(true),
+                child: const Text('Guardar'),
+              ),
             ),
           ],
         ),
@@ -594,15 +590,24 @@ class _CustomRates extends StatelessWidget {
                 const SizedBox(width: 6),
                 // Borrar directo: sin confirmación — la lista es corta y la
                 // acción se rehace en segundos (patrón del carrito).
-                InkWell(
-                  onTap: () => store.removeCustomRate(r.id),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Icon(
-                      Icons.close,
-                      size: 15,
-                      color: scheme.onSurfaceVariant,
+                // v23.3 (pez 2-a P1-1): pista 44×44 + Semantics — era un
+                // blanco de ~23 dp sin etiqueta (acción destructiva).
+                Semantics(
+                  button: true,
+                  label: 'Borrar tasa ${r.name}',
+                  child: InkWell(
+                    onTap: () => store.removeCustomRate(r.id),
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Center(
+                        child: Icon(
+                          Icons.close,
+                          size: 15,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                   ),
                 ),

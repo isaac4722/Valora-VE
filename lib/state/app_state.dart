@@ -100,6 +100,11 @@ class RatesPoller extends ChangeNotifier {
   bool _stale = false;
   bool _networkBlocked = false;
   bool _disposed = false;
+
+  /// v23.3 (pez 2-b P1-2): stopAuto() disparó — nada re-arma el ciclo (ni
+  /// el callback en vuelo, ni un flap de red en background) hasta que
+  /// startAuto() lo levante de nuevo (markActive al volver a la app).
+  bool _autoPaused = false;
   bool get loading => _loading;
   bool get stale => _stale;
   bool get networkBlocked => _networkBlocked;
@@ -118,8 +123,12 @@ class RatesPoller extends ChangeNotifier {
     _offlineNet = !online;
     if (online) {
       // Volvió la red: solo si el ciclo está permitido (modo offline ELEGIDO
-      // y autoRefresh respetados — el dueño manda, no la red).
-      if (!_store.settings.offlineMode && _store.settings.autoRefresh) {
+      // y autoRefresh respetados — el dueño manda, no la red). v23.3: si
+      // stopAuto() ya pausó (app en background >10 min), un flap de red
+      // NO revive el polling en background.
+      if (!_autoPaused &&
+          !_store.settings.offlineMode &&
+          _store.settings.autoRefresh) {
         unawaited(refreshNow());
         startAuto();
       }
@@ -253,11 +262,17 @@ class RatesPoller extends ChangeNotifier {
           }
         }
         if (sources.isEmpty) return; // payload vacío: nada que ingerir
-        final changed = _changedVs(sources);
+        // v23.3 (pez 2-b P1-1): el payload SSE puede llegar PARCIAL (un
+        // despliegue web sin las fuentes cripto/CO de v23.2) — el stream
+        // FUSIONA por id contra el tablero vigente, jamás lo reemplaza
+        // (mergeSseSources es pura y vive testeada en board.dart): lo
+        // ausente sobrevive y un push viejo no pisa un dato fresco.
+        final merged = mergeSseSources(_store.board.sources, sources);
+        final changed = _changedVs(merged);
         final now = DateTime.now();
         _ingestBoard(
           RateBoard(
-            sources: sources,
+            sources: merged,
             providers: const ['sse'],
             degraded: const [],
             lastUpdate: now,
@@ -367,6 +382,7 @@ class RatesPoller extends ChangeNotifier {
   /// en éxito espera el intervalo elegido.
   void _scheduleNext({bool fast = false}) {
     _timer?.cancel();
+    if (_autoPaused) return; // v23.3: pausado por stopAuto — no re-armar
     if (!_store.settings.autoRefresh || _store.settings.offlineMode) return;
     final mins = _store.settings.pollMinutes.clamp(1, 60);
     final delay = fast || mins == 1
@@ -374,17 +390,21 @@ class RatesPoller extends ChangeNotifier {
         : Duration(minutes: mins);
     _timer = Timer(delay, () async {
       await refreshNow();
-      _scheduleNext();
+      // v23.3: si stopAuto() llegó mientras el fetch estaba en vuelo,
+      // la cancelación de arriba fue no-op — este guard cierra la fuga.
+      if (!_disposed && !_autoPaused) _scheduleNext();
     });
   }
 
   void startAuto() {
     if (_store.settings.offlineMode) return;
+    _autoPaused = false;
     _scheduleNext();
     _syncSse(); // SSE en vivo cuando hay URL configurada (17.7)
   }
 
   void stopAuto() {
+    _autoPaused = true; // v23.3: nada re-arma hasta startAuto()
     _timer?.cancel();
     _idleTimer?.cancel();
     _stopSse(); // idle/background: ni poll ni stream gastan batería

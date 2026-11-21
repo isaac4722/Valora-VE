@@ -1,5 +1,92 @@
 # Changelog
 
+## 1.15.0-beta+48 · v23.3 — auditoría doble pez→elefante: integridad de datos, chrome unificado y gate visual con iconos reales
+
+Orden del dueño: subagentes TOTALEMENTE sin contexto en modo fish para un
+análisis completo y terminar sin nada pendiente, ejecutar todo y darle
+polish a las pantallas. Dos peces auditaron (solo lectura, archivo:línea):
+2-a UX/visual (21 piezas: pantallas core + sheets + kit) y 2-b
+arquitectura/data-layer (board, estado, persistencia, inventario ticker
+completo: 24 ocurrencias — 20 OK, 3 sospechosas, 0 fugas). Elefante
+ejecutó TODOS los hallazgos P0/P1/P2 + el ítem Análisis pendiente.
+
+**Integridad de datos (pez 2-b):**
+- **P0-1 · Import «Reemplazar» perdía `customRates` y `accounts`**: el
+  `AppData` reconstruido de ambos caminos (backup.dart + la ruta paralela
+  de settings_system) omitía las listas v23 → caían a `[]` en silencio.
+  Arreglado en ambos + conteos en `MergeCounts`/toast de fusión + test de
+  round-trip que fija el contrato.
+- **P1-1 · El SSE REEMPLAZABA el tablero fusionado del poll**: un payload
+  parcial (despliegue web sin cripto/CO) borraba fuentes hasta el próximo
+  poll. Ahora `mergeSseSources` (pura, testeada) FUSIONA por id: lo
+  ausente sobrevive y un push viejo no pisa un dato fresco.
+- **P1-2 · El poll revivía en background**: un flap de red tras el
+  stopAuto de los 10 min re-armaba el ciclo para siempre (y el callback en
+  vuelo re-armaba tras la cancelación). Bandera `_autoPaused`: nada se
+  re-arma sin startAuto (markActive al volver).
+- **P1-3 · Calculaya se consultaba en TODAS las rondas**: la condición se
+  evaluaba antes del fetch de euros (con `eur-ves-oficial` aún ausente) →
+  request desperdiciado en cada poll. El respaldo vive DESPUÉS del bloque
+  de euros; y `mergeRegionBlocks` filtra claves `__` (el contrato del
+  puente de derivación ya no depende del caller).
+- **P1-4 · El sello de la derivación Bs/USDT mentía**: usaba el máx de
+  updatedAt (CoinGecko estampa ahora()) → «hace 0 min» sobre un paralelo
+  con horas. Sello honesto = mín (test actualizado al comportamiento
+  verdadero); guard de finitud explícito (P2-4) + bordes exactos 0.2/2.0
+  con tests.
+- **P2-1..P2-9**: timeout cancela DE VERDAD el request (CancelToken + no
+  reintentar cancelaciones); backoff muerto y catch muerto de `_brBlock`
+  fuera; memo del Worker de Calculaya (1 consulta por ventana de 30 s
+  compartida por VE/CO/cripto — antes hasta 3 idénticas por ronda);
+  `_PopCheck` solo anima al marcar (patrón VeFlash); flush final en
+  `detached` (`AppStore.flushAll`); doble merge de `_import` eliminado
+  usando el resultado de `importBackup`.
+- **Inventario ticker/timer completo** (pez 2-b, encargo del dueño): 24
+  ocurrencias documentadas con veredicto por ocurrencia; las 2 sospechosas
+  de verdad se cerraron (P1-2 y _PopCheck).
+
+**UX/visual (pez 2-a + gate visual):**
+- **P0-1 · Chrome de hojas UNIFICADO**: las 7 hojas que quedaban crudas
+  (fuentes del Conversor, export×2, Pago Móvil, alta de tasa propia, alta
+  de cuenta, calendario histórico, galería de App Widgets — esta última
+  hallada al ejecutar la auditoría) migran a
+  `showVeSheet`/`showVeHalfSheet`: radio 14, asa, cabecera 48 + ✕, pie
+  con VeBtn, `VeField`/`VeInput`/`VeSelect`/`VeSegmented` en los formularios
+  (adiós a OutlineInputBorder/DropdownButtonFormField/SegmentedButton
+  Material/TextButton/FilledButton de segunda piel).
+- **Ítem Análisis pendiente cerrado**: barra de anclas FIJA (título +
+  anclas + rango fuera del scroll — los paneles largos ya no se llevan la
+  navegación), 4 gráficos 190→184 (familia unificada), pestañas con
+  `Semantics(selected)` + una línea con elipsis, sombra de la píldora en
+  tokens (`VeColors.shadowLight/Dark`).
+- **P1-1 · Targets táctiles**: VeIconBtn visual 32/pista 44 (GestureDetector
+  opaco exterior), ✕ de hojas y swap del Conversor a 44, borrar-tasa de
+  Ajustes 23→44 dp + `Semantics` (acción destructiva), lápiz del selector
+  25→44, steppers de carrito/canasta a 36 (densidad de fila preservada,
+  AA holgado), acciones del Conversor md→lg (44).
+- **P1-2..P1-4**: hint offline del Inicio a UNA línea (el claim v23.2 no
+  había llegado a ese estado); cifras del Historial en `VeNum` tabular;
+  el chip «Plantillas» de Lista ahora SÍ scrollea a su ancla
+  (`ensureVisible`; la GlobalKey existía pero nadie la usaba).
+- **P2**: KpiTile 12/12 (el 13 rompía la rejilla que su propio comentario
+  declara), borde del heatmap del esquema (el negro plano era invisible en
+  dark), «BCV hoy»/«Paralelo hoy» → «BCV»/«Paralelo» (la etiqueta larga
+  envolvía a 2 líneas a 390 — precedente «Brecha» v21), respiro 8 entre
+  «TOTAL DE LA COMPRA» y el badge Bs.
+- **Gate visual con iconos REALES**: MaterialIcons no es asset de la app
+  y en tests la familia cae a Ahem — TODOS los `Icons.*` salían como tofu
+  □ en los goldens desde v20 (pestañas de Análisis, swap, chevrons…).
+  El gate ahora carga el OTF del caché del SDK (FLUTTER_ROOT con
+  caminata de respaldo, portátil). Goldens regenerados y auditados por
+  VLM: Conversor y Análisis APROBADO directo; Inicio y Lista verificados
+  por zoom (ticker-marquee y fixture de fechas son por diseño, no cortes).
+  Nota honesta: el estado OfflineState se queda con su `Card` del tema
+  (borde + sombra firma §8 ya de la paleta) — solo el copy cambió.
+
+analyze 0 · 312/312 (20 tests nuevos: round-trip replace, fusión SSE ×3,
+contrato `__tetherDerive__`, bordes de guardia, parsers tolerantes ×2,
+galería a viewport móvil ×3) · auditoría de prohibiciones VERDE.
+
 ## 1.15.0-beta+48 · v23.2 — patrón calculadora, cripto USDT+ETH y failover Calculaya (EGM pez→elefante + impeccable + humanizer)
 
 Orden del dueño: «los elementos salen de pantalla — no es una calculadora

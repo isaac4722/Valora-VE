@@ -194,10 +194,17 @@ class _Respaldo extends StatelessWidget {
       store.replaceAll(r.data);
       if (context.mounted) {
         final c = r.counts;
+        // v23.3: tasas propias y cuentas solo cuando entraron (toast corto).
+        final extra = [
+          if (c.customRates > 0) '${c.customRates} tasas',
+          if (c.accounts > 0) '${c.accounts} cuentas',
+        ].join(', ');
         showToast(
           context,
           'Fusión: ${c.products} productos nuevos, '
-          '${c.records} registros, ${c.transactions} movimientos, ${c.purchases} compras',
+          '${c.records} registros, ${c.transactions} movimientos, '
+          '${c.purchases} compras'
+          '${extra.isEmpty ? '' : ', $extra'}',
           kind: ToastKind.ok,
         );
       }
@@ -223,6 +230,10 @@ class _Respaldo extends StatelessWidget {
         stores: incoming.stores,
         templates: incoming.templates,
         settings: incoming.settings,
+        // v23.3 (pez 2-b P0-1): las listas v23 viajan con el respaldo en
+        // replace — antes caían a [] y se perdían en silencio.
+        customRates: incoming.customRates,
+        accounts: incoming.accounts,
       );
       store.replaceAll(replaced);
       if (context.mounted) {

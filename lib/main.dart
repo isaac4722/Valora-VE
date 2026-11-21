@@ -179,6 +179,11 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
       poller.refreshNow();
     } else if (state == AppLifecycleState.paused) {
       poller.markIdle();
+    } else if (state == AppLifecycleState.detached) {
+      // v23.3 (pez 2-b P2-7): última ventana del proceso — se apaga el
+      // ciclo y se empuja a disco el persist pendiente antes del kill.
+      poller.stopAuto();
+      unawaited(context.read<AppStore>().flushAll());
     }
   }
 

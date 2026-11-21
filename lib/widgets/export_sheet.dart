@@ -131,98 +131,82 @@ ExportFormat textFormat({
 
 /// Abre el menú UNIFICADO de exportación: formatos → (compartir|guardar).
 Future<void> showExportSheet(BuildContext context, ExportSpec spec) async {
-  final fmt = await showModalBottomSheet<ExportFormat>(
+  // v23.3 (pez 2-a P0-1): chrome unificado del kit (showVeHalfSheet —
+  // radio 14, asa, cabecera 48 + ✕). Antes dos hojas Material crudas con
+  // asa propia y títulos ad-hoc de 15 w800: era la excepción MÁS vista
+  // (se abre desde Conversor, Análisis, Historial y Productos).
+  final fmt = await showVeHalfSheet<ExportFormat>(
     context: context,
-    showDragHandle: true,
-    builder: (ctx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              spec.title,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              spec.subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 10),
-            for (final f in spec.formats)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                leading: Icon(f.icon, size: 22),
-                title: Text(
-                  f.label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                subtitle: Text(f.hint, style: const TextStyle(fontSize: 11.5)),
-                onTap: () => Navigator.pop(ctx, f),
-              ),
-          ],
+    title: spec.title,
+    builder: (ctx) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          spec.subtitle,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+          ),
         ),
-      ),
+        const SizedBox(height: 10),
+        for (final f in spec.formats)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            leading: Icon(f.icon, size: 22),
+            title: Text(
+              f.label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            subtitle: Text(f.hint, style: const TextStyle(fontSize: 11.5)),
+            onTap: () => Navigator.pop(ctx, f),
+          ),
+      ],
     ),
   );
   if (fmt == null || !context.mounted) return;
 
   // Modo: compartir (otra app) o guardar (descarga).
-  final share = await showModalBottomSheet<bool>(
+  final share = await showVeHalfSheet<bool>(
     context: context,
-    showDragHandle: true,
-    builder: (ctx) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${spec.title} · ${fmt.label}',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 10),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              leading: const Icon(Icons.ios_share, size: 22),
-              title: const Text(
-                'Compartir',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-              ),
-              subtitle: const Text(
-                'Con otra app (WhatsApp, Telegram, correo…)',
-                style: TextStyle(fontSize: 11.5),
-              ),
-              onTap: () => Navigator.pop(ctx, true),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              leading: const Icon(Icons.download, size: 22),
-              title: const Text(
-                'Guardar en el dispositivo',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-              ),
-              subtitle: const Text(
-                'Descargar el archivo sin abrir otra app',
-                style: TextStyle(fontSize: 11.5),
-              ),
-              onTap: () => Navigator.pop(ctx, false),
-            ),
-          ],
+    title: '${spec.title} · ${fmt.label}',
+    builder: (ctx) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          leading: const Icon(Icons.ios_share, size: 22),
+          title: const Text(
+            'Compartir',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+          subtitle: const Text(
+            'Con otra app (WhatsApp, Telegram, correo…)',
+            style: TextStyle(fontSize: 11.5),
+          ),
+          onTap: () => Navigator.pop(ctx, true),
         ),
-      ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          leading: const Icon(Icons.download, size: 22),
+          title: const Text(
+            'Guardar en el dispositivo',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+          subtitle: const Text(
+            'Descargar el archivo sin abrir otra app',
+            style: TextStyle(fontSize: 11.5),
+          ),
+          onTap: () => Navigator.pop(ctx, false),
+        ),
+      ],
     ),
   );
   if (share == null || !context.mounted) return;

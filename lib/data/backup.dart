@@ -19,6 +19,11 @@ class MergeCounts {
   final int templates;
   final int stores;
 
+  /// v23.3 (pez 2-b P2-9): las listas v23 también se cuentan — el toast de
+  /// fusión debe decir cuántas tasas propias y cuentas entraron.
+  final int customRates;
+  final int accounts;
+
   const MergeCounts({
     this.products = 0,
     this.records = 0,
@@ -26,6 +31,8 @@ class MergeCounts {
     this.purchases = 0,
     this.templates = 0,
     this.stores = 0,
+    this.customRates = 0,
+    this.accounts = 0,
   });
 
   Map<String, int> toMap() => {
@@ -35,6 +42,8 @@ class MergeCounts {
     'purchases': purchases,
     'templates': templates,
     'stores': stores,
+    'customRates': customRates,
+    'accounts': accounts,
   };
 }
 
@@ -195,9 +204,11 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
   for (final r in local.customRates) {
     customRates[r.id] = r;
   }
+  int addedCustomRates = 0;
   for (final r in incoming.customRates) {
     if (!customRates.containsKey(r.id) && r.id.isNotEmpty) {
       customRates[r.id] = r;
+      addedCustomRates++;
     }
   }
 
@@ -208,9 +219,11 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
   for (final a in local.accounts) {
     accounts[a.id] = a;
   }
+  int addedAccounts = 0;
   for (final a in incoming.accounts) {
     if (!accounts.containsKey(a.id) && a.id.isNotEmpty) {
       accounts[a.id] = a;
+      addedAccounts++;
     }
   }
 
@@ -246,6 +259,8 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
       purchases: addedPurchases,
       templates: addedTemplates,
       stores: addedStores,
+      customRates: addedCustomRates,
+      accounts: addedAccounts,
     ),
   );
 }
@@ -301,6 +316,11 @@ BackupResult importBackup(AppData local, String raw, {required bool merge}) {
     stores: incoming.stores,
     templates: incoming.templates,
     settings: incoming.settings,
+    // v23.3 (pez 2-b P0-1): el replace sustituye el estado COMPLETO —
+    // las tasas propias y cuentas Pago Móvil viajan con el respaldo
+    // (antes caían a [] y se perdían en silencio en ambos sentidos).
+    customRates: incoming.customRates,
+    accounts: incoming.accounts,
   );
   assert(replaced.version == kDataVersion);
   return (
@@ -316,6 +336,8 @@ BackupResult importBackup(AppData local, String raw, {required bool merge}) {
       'purchases': incoming.purchases.length,
       'templates': incoming.templates.length,
       'stores': incoming.stores.length,
+      'customRates': incoming.customRates.length,
+      'accounts': incoming.accounts.length,
     },
   );
 }

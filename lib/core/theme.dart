@@ -54,6 +54,14 @@ class VeColors {
   /// `--line-strong` oscuro.
   static const Color lineStrongDark = Color(0xFF34343B);
 
+  // ── Sombras cortas (elevación 1: píldoras activas del segmentado Ve) ──
+  /// v23.3 (pez 2-a): la sombra de la píldora activa en claro — la tinta
+  /// `fg` al 8 % (el literal gemelo `0x140C1016` de theme.dart unificado).
+  static const Color shadowLight = Color(0x1409090B);
+
+  /// Sombra corta en oscuro — negro al 35 %.
+  static const Color shadowDark = Color(0x59000000);
+
   /// `--faint` claro: texto terciario (placeholders, hints, kbd).
   static const Color faintLight = Color(0xFFA1A1AA);
 

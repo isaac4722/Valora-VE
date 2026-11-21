@@ -433,7 +433,25 @@ class _ListaScreenState extends State<ListaScreen> {
                     const SizedBox(width: 8),
                     VeChip(
                       active: _showMore,
-                      onTap: () => setState(() => _showMore = !_showMore),
+                      onTap: () {
+                        setState(() => _showMore = !_showMore);
+                        // v23.3 (pez 2-a P1-4): el chip promete llevar a las
+                        // plantillas — al expandir, el ancla entra al
+                        // viewport (la GlobalKey existía pero nadie la usaba;
+                        // plegar no scrollea: el carrito queda a la vista).
+                        if (_showMore) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            final anchorCtx = _plantillasKey.currentContext;
+                            if (anchorCtx != null) {
+                              Scrollable.ensureVisible(
+                                anchorCtx,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOutCubic,
+                              );
+                            }
+                          });
+                        }
+                      },
                       child: const Text('Plantillas'),
                     ),
                     const Spacer(),
@@ -466,7 +484,9 @@ class _ListaScreenState extends State<ListaScreen> {
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        // v23.3 (gate visual): 8 de respiro — a 6 el badge
+                        // «Bs» se pegaba al rótulo a 390.
+                        const SizedBox(width: 8),
                         // Divisa de cálculo SIEMPRE visible junto a la cifra
                         // (v17.5).
                         CurrencyTag(calcCur.code),

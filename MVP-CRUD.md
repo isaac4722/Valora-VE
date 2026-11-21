@@ -94,6 +94,13 @@ tolerante y merge HMR-safe. `AppData` es el agregado de las 13 claves.
   con aviso al usuario.
 - Color de datos SOLO con significado: oficial verde · mixto ámbar ·
   paralelo rojo · manual violeta; sube/baja pos/neg.
+- **v23.3 · Ingesta:** el stream SSE FUSIONA por id contra el tablero
+  vigente (`mergeSseSources`: lo ausente sobrevive, un push viejo no pisa
+  un dato fresco del poll); el respaldo de Calculaya se consulta solo tras
+  el bloque de euros (antes en cada ronda) y con memo de 30 s compartido
+  por VE/CO/cripto; el sello de una tasa DERIVADA es el mín de sus
+  insumos (tan fresco como el más viejo); el auto-poll pausado en
+  background no revive con flaps de red (`_autoPaused` hasta startAuto).
 
 ## §6 · Sala en vivo (protocolo lista-sync)
 
@@ -140,11 +147,18 @@ SkeletonPaper). **El sistema se evoluciona; no se reemplaza.**
 | Productos | `products_screen` (+product_sheet) | libro de precios, sparklines, metas, CSV⇄, escáner. v23.2: chips de categoría en una línea deslizable |
 | Historial | `history_screen` | asientos por compra, filtros, pág. 20, 2 CSV |
 | Constancias | `statement_screen` | estado de cuenta exportable |
-| Análisis | `insights_*` (§9.7) | 6 anclas + Gastos (§9.6 alimentado por compras), brecha, proyección amortiguada, heatmap con meses con datos, rankings, canasta, exportación |
+| Análisis | `insights_*` (§9.7) | 6 anclas + Gastos (§9.6 alimentado por compras), brecha, proyección amortiguada, heatmap con meses con datos, rankings, canasta, exportación. v23.3: barra de anclas FIJA (título+anclas+rango fuera del scroll), gráficos a 184, pestañas con Semantics(selected) |
 | Sala | `room_*` + `sala_viva` + `join_sheet` + `pin_emoji` | lobby (conexión→nombre→código+PIN), sala viva, PIN emojis, QR |
-| Ajustes | `settings_*` | 8 anclas, respaldo replace/merge, tema, fuentes por módulo, Zona peligro; v23: «Cuentas y Pago Móvil» (máx 4, biométrico opt-in) y «Tus tasas con nombre» (máx 8) bajo Monedas y tasas |
+| Ajustes | `settings_*` | 8 anclas, respaldo replace/merge, tema, fuentes por módulo, Zona peligro; v23: «Cuentas y Pago Móvil» (máx 4, biométrico opt-in) y «Tus tasas con nombre» (máx 8) bajo Monedas y tasas; v23.3: altas de tasas/cuentas con chrome+kit Ve (VeField/VeInput/VeSelect, pie VeBtn) |
 | Escáner | `scanner_screen` | continuo + linterna + fallback manual + debounce; Productos/Lista consumen |
 | Tickets | `tickets_screen` | foto de ticket 1024px ≤12MB, zoom 1–8× |
+
+v23.3 · Chrome de hojas UNIFICADO: las 7 hojas que quedaban crudas
+(fuentes del Conversor, export×2, Pago Móvil, alta de tasa propia, alta
+de cuenta, calendario histórico, galería de App Widgets) usan
+`showVeSheet`/`showVeHalfSheet` — radio 14, asa, cabecera 48 + ✕, pie
+con VeBtn. Targets táctiles: botones sueltos 44 (visual 32), steppers de
+fila 36.
 
 ## §10 · Persistencia y respaldo
 
@@ -152,7 +166,10 @@ Hive 4 cajas JSON; `migrate` + merge tolerante; respaldo JSON
 replace/merge manual + **automático semanal con retención 4**
 (WorkManager). Round-trip de respaldos viejos garantizado (tests). v23:
 customRates y accounts fusionan por id (unión, empate=local) — distinto
-del criterio local-only de manualRates.
+del criterio local-only de manualRates. v23.3: el modo REPLACE también
+restaura customRates y accounts del respaldo (antes se perdían en
+silencio; conteos en el toast de fusión); `detached` hace flush final de
+las 4 cajas.
 
 ## §11 · Escáner y códigos
 

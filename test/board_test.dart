@@ -366,8 +366,11 @@ void main() {
       );
       expect(derived, isNotNull);
       expect(derived!.rate, closeTo(1069.737113 * 0.9986, 1e-6));
-      // Sello: la fecha más fresca de las dos fuentes usadas.
-      expect(derived.updatedAt, DateTime(2026, 11, 21));
+      // v23.3 (pez 2-b P1-4): sello honesto — un valor derivado solo es
+      // tan fresco como su insumo MÁS VIEJO (antes afirmábamos el máx y
+      // el now() de CoinGecko pintaba «hace 0 min» sobre un paralelo
+      // con horas de antigüedad).
+      expect(derived.updatedAt, DateTime(2026, 11, 20));
     });
 
     test('guards: tether fuera de rango o paralelo muerto → null', () {
@@ -392,6 +395,127 @@ void main() {
           RateEntry(rate: 0, updatedAt: DateTime(2026, 11, 20)),
         ),
         isNull,
+      );
+    });
+
+    test('v23.3: bordes EXACTOS de la guardia 0.2–2 y finitud (pez 2-b)', () {
+      final par = RateEntry(rate: 1069.73, updatedAt: DateTime(2026, 11, 20));
+      // Tether exactamente en los bordes del rango: basura, no se deriva.
+      expect(deriveUsdtVesFromGlobal(RateEntry(rate: 0.2, updatedAt: DateTime(2026, 11, 21)), par), isNull);
+      expect(deriveUsdtVesFromGlobal(RateEntry(rate: 2.0, updatedAt: DateTime(2026, 11, 21)), par), isNull);
+      // Paralelo negativo: no se deriva.
+      expect(
+        deriveUsdtVesFromGlobal(
+          RateEntry(rate: 0.9986, updatedAt: DateTime(2026, 11, 21)),
+          RateEntry(rate: -1069.73, updatedAt: DateTime(2026, 11, 20)),
+        ),
+        isNull,
+      );
+      // Paralelo no finito (P2-4): jamás llega Infinity a la UI.
+      expect(
+        deriveUsdtVesFromGlobal(
+          RateEntry(rate: 0.9986, updatedAt: DateTime(2026, 11, 21)),
+          RateEntry(rate: double.infinity, updatedAt: DateTime(2026, 11, 20)),
+        ),
+        isNull,
+      );
+      expect(
+        deriveUsdtVesFromGlobal(
+          RateEntry(rate: double.infinity, updatedAt: DateTime(2026, 11, 21)),
+          par,
+        ),
+        isNull,
+      );
+    });
+  });
+
+  group('mergeSseSources (v23.3 · pez 2-b P1-1: el SSE fusiona, no reemplaza)', () {
+    test('payload PARCIAL: lo ausente sobrevive (cripto/CO del poll viven)', () {
+      final current = {
+        'ves-bcv': RateEntry(rate: 918.76, updatedAt: DateTime(2026, 11, 21, 8)),
+        'usdt-ves': RateEntry(rate: 1075.67, updatedAt: DateTime(2026, 11, 21, 8)),
+        'cop-market': RateEntry(rate: 3345.39, updatedAt: DateTime(2026, 11, 21, 8)),
+      };
+      // Push de un despliegue web SIN las fuentes v23.2.
+      final incoming = {
+        'ves-bcv': RateEntry(rate: 919.01, updatedAt: DateTime(2026, 11, 21, 8, 5)),
+      };
+      final merged = mergeSseSources(current, incoming);
+      expect(merged.length, 3); // NADA se pierde
+      expect(merged['usdt-ves']!.rate, 1075.67);
+      expect(merged['cop-market']!.rate, 3345.39);
+      expect(merged['ves-bcv']!.rate, 919.01); // la fresca del push gana
+    });
+
+    test('push VIEJO no pisa dato fresco del poll (updatedAt decide)', () {
+      final current = {
+        'ves-bcv': RateEntry(rate: 919.01, updatedAt: DateTime(2026, 11, 21, 8, 5)),
+      };
+      final incoming = {
+        'ves-bcv': RateEntry(rate: 915.00, updatedAt: DateTime(2026, 11, 21, 7)), // más viejo
+      };
+      final merged = mergeSseSources(current, incoming);
+      expect(merged['ves-bcv']!.rate, 919.01);
+    });
+
+    test('misma marca de tiempo: gana el push (empate no regresa)', () {
+      final t = DateTime(2026, 11, 21, 8);
+      final merged = mergeSseSources(
+        {'ves-bcv': RateEntry(rate: 918.76, updatedAt: t)},
+        {'ves-bcv': RateEntry(rate: 918.80, updatedAt: t)},
+      );
+      expect(merged['ves-bcv']!.rate, 918.80);
+    });
+  });
+
+  group('mergeRegionBlocks (v23.3 · contrato de claves internas)', () {
+    test('un bloque con __tetherDerive__ JAMÁS lo publica como fuente', () {
+      final block = (
+        <String, RateEntry>{
+          'usdt-usd': RateEntry(rate: 0.9986, updatedAt: DateTime(2026, 11, 21)),
+          '__tetherDerive__': RateEntry(rate: 0.9986, updatedAt: DateTime(2026, 11, 21)),
+        },
+        <String>[],
+        <String>['coingecko.com'],
+      );
+      final result = mergeRegionBlocks([block], null);
+      expect(result.board.sources.containsKey('__tetherDerive__'), isFalse);
+      expect(result.board.sources.containsKey('usdt-usd'), isTrue);
+    });
+  });
+
+  group('parseCalculayaTasas (v23.3 · tolerancia extra, pez 2-b gaps)', () {
+    test('números como STRING («usd»: "918.76") se toleran', () {
+      final v = {
+        'usd': '918.76',
+        'eur': '1009.07',
+        'usdt': '1075.67',
+        'rate_date': '2026-11-20',
+      };
+      final out = parseCalculayaTasas(v);
+      expect(out['ves-bcv']!.rate, closeTo(918.76, 1e-9));
+      expect(out['eur-ves-oficial']!.rate, closeTo(1009.07, 1e-9));
+      expect(out['usdt-ves']!.rate, closeTo(1075.67, 1e-9));
+    });
+
+    test('sin rate_date: el sello cae a ahora() sin lanzar', () {
+      final out = parseCalculayaTasas({'usd': 918.76});
+      expect(out['ves-bcv'], isNotNull);
+      expect(
+        DateTime.now().difference(out['ves-bcv']!.updatedAt).inMinutes,
+        lessThan(1),
+      );
+    });
+  });
+
+  group('parseCoinGeckoUsd (v23.3 · bordes, pez 2-b gaps)', () {
+    test('moneda sin clave usd y valor negativo → null', () {
+      expect(parseCoinGeckoUsd({'tether': {}}, 'tether'), isNull);
+      expect(parseCoinGeckoUsd({'tether': {'usd': -1}}, 'tether'), isNull);
+      expect(parseCoinGeckoUsd({'tether': {'usd': 'x'}}, 'tether'), isNull);
+      expect(
+        parseCoinGeckoUsd({'tether': {'usd': 0.9986}}, 'tether')!.rate,
+        closeTo(0.9986, 1e-9),
       );
     });
   });

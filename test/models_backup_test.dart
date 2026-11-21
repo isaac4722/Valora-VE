@@ -1,6 +1,8 @@
 /// Tests del modelo + respaldo + snapshots + analítica (MVP Fase A/B · §13).
 library;
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valorave/core/analytics.dart' as an;
 import 'package:valorave/core/currencies.dart';
@@ -355,6 +357,37 @@ void main() {
       // replace no ejecuta la fusión aquí: el caller hace replaceAll —
       // comprobamos el saneo vía export→import round-trip en merge.
       expect(r.counts, isNotNull);
+    });
+
+    test('v23.3 (pez 2-b P0-1): replace NO PIERDE customRates ni accounts', () {
+      // Un respaldo exportado HOY con 2 tasas propias y 2 cuentas de cobro,
+      // restaurado con «Reemplazar»: ambas listas sobreviven (antes caían
+      // a [] en silencio — pérdida de datos del usuario en ambos sentidos).
+      final data = AppData(
+        version: kDataVersion,
+        customRates: const [
+          CustomRate(id: 'cr1', name: 'Zelle', bsPerUsd: 92.5),
+          CustomRate(id: 'cr2', name: 'Efectivo', bsPerUsd: 90),
+        ],
+        accounts: const [
+          PayAccount(id: 'a1', bank: 'BDV', type: 'corriente', number: '0134…'),
+          PayAccount(id: 'a2', bank: 'Mercantil', type: 'ahorro', number: '0105…'),
+        ],
+      );
+      final raw = exportBackupJson(data);
+      final r = importBackup(local, raw, merge: false);
+      expect(r.ok, isTrue);
+      expect(r.counts!['customRates'], 2);
+      expect(r.counts!['accounts'], 2);
+      // El round-trip completo: el JSON del respaldo re-importado conserva
+      // las listas con sus ids (los datos viajan, no solo los conteos).
+      final again = AppData.fromJson(
+        Map<String, dynamic>.from(
+          (jsonDecode(raw) as Map)['data'] as Map,
+        ),
+      );
+      expect(again.customRates.map((c) => c.id), containsAll(['cr1', 'cr2']));
+      expect(again.accounts.map((a) => a.id), containsAll(['a1', 'a2']));
     });
 
     test('export/import JSON round-trip con versión 12', () {

@@ -243,31 +243,21 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
     final puedeNext = _month.isBefore(_maxMonth);
     final mes = kMeses[_month.month - 1];
 
-    return SafeArea(
-      top: false,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Elegir fecha histórica',
-              style: TextStyle(
-                fontFamily: 'SpaceGrotesk',
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Fuentes: ${widget.sourceLabel}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 12),
+    // v23.3: sin scroll interno NI SafeArea — el chrome de la hoja ya pone
+    // ambos (un scrollable anidado robaría el gesto de arrastre de la hoja).
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // v23.3 (pez 2-a P0-1): el título vive en la cabecera del chrome
+        // de la hoja (antes se repetía aquí en SpaceGrotesk 15 w800).
+        Text(
+          'Fuentes: ${widget.sourceLabel}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 12),
             if (_days.isEmpty && _remotosPendientes)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 28),
@@ -351,9 +341,7 @@ class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
                 style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
               ),
             ],
-          ],
-        ),
-      ),
+      ],
     );
   }
 

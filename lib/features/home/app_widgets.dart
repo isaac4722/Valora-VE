@@ -19,10 +19,12 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/fmt.dart';
 import '../../data/store.dart';
+import '../../widgets/ui.dart';
 
 /// Canal nativo de App Widgets (MainActivity.kt · pin en el launcher).
 const MethodChannel _kPinChannel = MethodChannel('valorave/widgets');
@@ -59,31 +61,20 @@ class _AppWidgetSpec {
 /// Hoja de la galería de App Widgets (v19.6). El «+» del Inicio abre
 /// esta puerta; nada de esto se configura DENTRO de la app.
 Future<void> showAppWidgetGallery(BuildContext context) {
-  return showModalBottomSheet<void>(
+  // v23.3 (pez 2-a P0-1): chrome del kit (7ª hoja cruda hallada al
+  // ejecutar la auditoría) — antes armaba SU PROPIO
+  // DraggableScrollableSheet dentro de un modal de radio 20 con cabecera
+  // ad-hoc. El chrome de showVeHalfSheet ya trae asa, cabecera 48 + ✕ y
+  // el acople scroll-arrastre.
+  return showVeHalfSheet<void>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (ctx) => DraggableScrollableSheet(
-      expand: false,
-      // TASK-35 (p3): techo real — nace a media pantalla y sube con snap
-      // hasta el 85 %, JAMÁS al 95 % «sin techo» de antes.
-      initialChildSize: 0.72,
-      minChildSize: 0.4,
-      maxChildSize: 0.85,
-      snap: true,
-      snapSizes: const <double>[0.72, 0.85],
-      builder: (sheetCtx, scroll) => _AppWidgetsSheet(scrollController: scroll),
-    ),
+    title: 'App Widgets',
+    builder: (ctx) => const _AppWidgetsSheet(),
   );
 }
 
 class _AppWidgetsSheet extends StatelessWidget {
-  const _AppWidgetsSheet({required this.scrollController});
-
-  final ScrollController scrollController;
+  const _AppWidgetsSheet();
 
   @override
   Widget build(BuildContext context) {
@@ -131,27 +122,12 @@ class _AppWidgetsSheet extends StatelessWidget {
       ),
     ];
 
-    return ListView(
-      controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+    // v23.3: Column directo — el chrome de la hoja aporta el scroll
+    // acoplado al arrastre (antes un ListView con el controlador propio).
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Icon(
-              Icons.add_to_home_screen_outlined,
-              size: 20,
-              color: scheme.primary,
-            ),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                'App Widgets',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
         Text(
           'Los widgets de ValoraVE viven en tu pantalla de inicio de '
           'Android, no aquí adentro. Míralos tal como quedan y añádelos '
@@ -190,13 +166,12 @@ class _AppWidgetsSheet extends StatelessWidget {
         ),
         // Cierre explícito: la salida clara no deja la hoja al ensayo.
         const SizedBox(height: 14),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.tonalIcon(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.check_rounded, size: 17),
-            label: const Text('Listo'),
-          ),
+        VeBtn(
+          variant: VeBtnVariant.primary,
+          expands: true,
+          onPressed: () => Navigator.of(context).pop(),
+          icon: LucideIcons.check,
+          child: const Text('Listo'),
         ),
       ],
     );

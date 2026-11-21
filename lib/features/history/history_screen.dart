@@ -250,7 +250,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
+                                  // v23.3 (pez 2-a P1-3): cifras tabulares
+                                  // (VeNum) — el ojo compara renglón a
+                                  // renglón y con Inter proporcional los
+                                  // anchos bailan.
+                                  VeNum(
                                     fmtUSD(p.totalUSD),
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
@@ -654,9 +658,9 @@ class _DetailBody extends StatelessWidget {
                   right: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(fmtUSD(i.priceUSD)),
+                      VeNum(fmtUSD(i.priceUSD)),
                       const SizedBox(width: 8),
-                      Text(
+                      VeNum(
                         fmtUSD(i.priceUSD * i.quantity),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),

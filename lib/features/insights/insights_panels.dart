@@ -61,7 +61,9 @@ class KpiTile extends StatelessWidget {
         // 9P·Pulido: aire interno 12/12 (antes 11 vertical — los KPIs se
         // veían apretados contra el borde de la tarjeta en la auditoría
         // visual de la web).
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+        // v23.3 (pez 2-a): 12/12 de verdad — el 13 rompía la rejilla de 4
+        // que el propio comentario declara.
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -749,8 +751,10 @@ class _QtyStepper extends StatelessWidget {
     Color? color,
   }) {
     return SizedBox(
-      width: 30,
-      height: 34,
+      // v23.3 (pez 2-a P1-1): pista 36×36 — igual que VeStepper: filas
+      // densas de la Canasta, AA holgado sin engordar la fila.
+      width: 36,
+      height: 36,
       child: IconButton(
         padding: EdgeInsets.zero,
         visualDensity: VisualDensity.compact,
@@ -1009,7 +1013,7 @@ class _HistoricaAnchorState extends State<HistoricaAnchor> {
               // leyenda cuando hay varias y chip con TODOS los valores de
               // la fecha tocada (antes: un valor suelto por toque).
               child: VeTimelineChart(
-                height: 190,
+                height: 184,
                 margin: EdgeInsets.zero,
                 legend: multi,
                 xLabel: (t) => DateFormat('dd/MM').format(t),
@@ -1220,21 +1224,21 @@ class HeatmapCalendar extends StatelessWidget {
             runSpacing: 4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              _legendBox(ink.pos.withValues(alpha: 0.7)),
+              _legendBox(context, ink.pos.withValues(alpha: 0.7)),
               const SizedBox(width: 4),
               Text(
                 'baja',
                 style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(width: 10),
-              _legendBox(scheme.surfaceContainerHighest),
+              _legendBox(context, scheme.surfaceContainerHighest),
               const SizedBox(width: 4),
               Text(
                 'sin datos',
                 style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(width: 10),
-              _legendBox(ink.neg.withValues(alpha: 0.7)),
+              _legendBox(context, ink.neg.withValues(alpha: 0.7)),
               const SizedBox(width: 4),
               Text(
                 'subida · más intenso = mayor cambio',
@@ -1247,13 +1251,18 @@ class HeatmapCalendar extends StatelessWidget {
     );
   }
 
-  Widget _legendBox(Color c) => Container(
+  Widget _legendBox(BuildContext context, Color c) => Container(
     width: 11,
     height: 11,
     decoration: BoxDecoration(
       color: c,
       borderRadius: BorderRadius.circular(3),
-      border: Border.all(color: Colors.black26, width: 0.5),
+      // v23.3 (pez 2-a): borde del esquema — el negro plano era invisible
+      // sobre el papel oscuro (la cajita «sin datos» se fundía).
+      border: Border.all(
+        color: Theme.of(context).colorScheme.outlineVariant,
+        width: 0.5,
+      ),
     ),
   );
 

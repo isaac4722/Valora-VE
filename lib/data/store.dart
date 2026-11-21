@@ -1227,6 +1227,20 @@ class AppStore extends ChangeNotifier {
     }
   }
 
+  /// v23.3 (pez 2-b P2-7): drenaje final — `detached` es la última ventana
+  /// del proceso; `_persist` es fire-and-forget y este flush explícito
+  /// empuja a disco lo que quede en el búfer de Hive antes de que el SO
+  /// mate la app. Idempotente y sin efecto en app viva.
+  Future<void> flushAll() async {
+    try {
+      await _boxData?.flush();
+      await _boxNotifs?.flush();
+      await _boxSnapshots?.flush();
+    } catch (_) {
+      // Sin caja abierta (host de pruebas, isolate en cierre): no bloquea.
+    }
+  }
+
   void persistSnapshots() {
     final box = _boxSnapshots;
     if (box != null) {

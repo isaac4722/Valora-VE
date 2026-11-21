@@ -36,13 +36,12 @@ Future<void> showPagoMovilSheet(
   final store = context.read<AppStore>();
   final accounts = store.data.accounts;
 
-  await showModalBottomSheet<void>(
+  // v23.3 (pez 2-a P0-1): chrome del kit (showVeSheet — radio 14, asa,
+  // cabecera 48 + ✕). Antes un modal crudo de radio 20 con título propio
+  // dentro del cuerpo y sin pie del sistema.
+  await showVeSheet<void>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
+    title: 'Compartir Pago Móvil',
     builder: (ctx) => _PagoMovilSheet(montoBs: montoBs, accounts: accounts),
   );
 }
@@ -116,11 +115,8 @@ class _PagoMovilSheetState extends State<_PagoMovilSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Compartir Pago Móvil',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10),
+          // v23.3: el título vive en la cabecera del chrome (antes se
+          // repetía dentro del cuerpo con estilo propio de 16 w700).
           // El monto manda: cifra grande tabular en ReadWindow del sistema.
           ReadWindow(
             child: Text(

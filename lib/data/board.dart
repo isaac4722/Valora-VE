@@ -32,18 +32,19 @@ final Dio _dio = () {
     InterceptorsWrapper(
       onError: (e, handler) async {
         // Reintento único con backoff para 429/5xx/timeout (anti-ráfaga).
+        // v23.3 (pez 2-b): las CANCELACIONES no se reintentan — el timeout
+        // de _fetchJsonResponse cancela el token y un retry sería una
+        // segunda petición fantasma sobre la misma URL.
         final retriable =
-            e.response == null ||
-            (e.response?.statusCode ?? 0) >= 500 ||
-            e.type == DioExceptionType.connectionTimeout;
+            e.type != DioExceptionType.cancel &&
+            (e.response == null ||
+                (e.response?.statusCode ?? 0) >= 500 ||
+                e.type == DioExceptionType.connectionTimeout);
         final tried = (e.requestOptions.extra['retried'] as bool?) ?? false;
         if (retriable && !tried) {
-          final req = e.requestOptions;
-          await Future.delayed(
-            Duration(milliseconds: req.extra['attempt'] == 1 ? 1300 : 650),
-          );
+          await Future.delayed(const Duration(milliseconds: 650));
           try {
-            final res = await _fetchRaw(req.uri, attempt: 2);
+            final res = await _fetchRaw(e.requestOptions.uri, attempt: 2);
             return handler.resolve(res);
           } catch (_) {
             /* cae al error original */
@@ -73,9 +74,23 @@ Future<Response<dynamic>> _fetchJsonResponse(
   Uri uri, {
   Duration timeout = const Duration(seconds: 7),
 }) async {
-  final res = await _dio.getUri<dynamic>(uri).timeout(timeout);
-  if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
-  return res;
+  // v23.3 (pez 2-b P2-1): al vencer el timeout se CANCELA la petición
+  // subyacente (CancelToken) — antes seguía viva en segundo plano y el
+  // reintento podía apilar una consulta fantasma sobre la misma URL.
+  final ct = CancelToken();
+  try {
+    final res = await _dio
+        .getUri<dynamic>(uri, cancelToken: ct)
+        .timeout(timeout, onTimeout: () {
+      ct.cancel('timeout');
+      throw Exception('timeout ${uri.host}');
+    });
+    if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
+    return res;
+  } on DioException {
+    if (ct.isCancelled) throw Exception('timeout ${uri.host}');
+    rethrow;
+  }
 }
 
 class SourceEntryX {
@@ -232,13 +247,49 @@ RateEntry? deriveUsdtVesFromGlobal(RateEntry? usdtUsd, RateEntry? parallel) {
   // Guard sanidad: el tether ronda 1 USD (0.2–2). Fuera de rango, el dato
   // es basura y NO se deriva nada.
   if (usdtUsd.rate <= 0.2 || usdtUsd.rate >= 2) return null;
+  // v23.3 (pez 2-b P2-4): finitud explícita — un paralelo finito pero
+  // gigante × tether puede desbordar a Infinity y colarse en la UI.
+  if (!usdtUsd.rate.isFinite || !parallel.rate.isFinite) return null;
   if (parallel.rate <= 0) return null;
-  return RateEntry(
-    rate: parallel.rate * usdtUsd.rate,
-    updatedAt: usdtUsd.updatedAt.isAfter(parallel.updatedAt)
-        ? usdtUsd.updatedAt
-        : parallel.updatedAt,
-  );
+  final rate = parallel.rate * usdtUsd.rate;
+  if (!rate.isFinite || rate <= 0) return null;
+  // v23.3 (pez 2-b P1-4): un valor derivado solo es tan fresco como su
+  // insumo MÁS VIEJO — el sello honesto es el mín (antes el máx pintaba
+  // «hace 0 min» solo porque CoinGecko estampa ahora()).
+  final oldest = parallel.updatedAt.isBefore(usdtUsd.updatedAt)
+      ? parallel.updatedAt
+      : usdtUsd.updatedAt;
+  return RateEntry(rate: rate, updatedAt: oldest);
+}
+
+/// Memo del Worker de Calculaya (v23.3, pez 2-b P2-3): VE, CO y cripto
+/// pueden pedir /tasas en la MISMA ronda (y corren en paralelo) — UNA
+/// consulta por ventana de 30 s compartida por todos: la primera llamada
+/// dispara el fetch, el resto espera el mismo futuro, y un Worker caído
+/// no se martilla 3 veces por ronda (se cachea el vacío hasta la próxima
+/// ventana — degradación honesta).
+Map<String, RateEntry>? _calculayaMemo;
+DateTime _calculayaMemoAt = DateTime(0);
+Future<Map<String, RateEntry>>? _calculayaFetching;
+
+Future<Map<String, RateEntry>> _calculayaTasas() {
+  if (DateTime.now().difference(_calculayaMemoAt) <
+      const Duration(seconds: 30)) {
+    return Future.value(_calculayaMemo ?? const {});
+  }
+  return _calculayaFetching ??= () async {
+    try {
+      final v = await _fetchJson(
+        Uri.parse('https://calculaya-api.jalvarezgw19.workers.dev/tasas'),
+        timeout: const Duration(seconds: 4),
+      );
+      _calculayaMemo = parseCalculayaTasas(v);
+    } catch (_) {
+      _calculayaMemo = const {}; // caído en esta ventana: nada que aportar
+    }
+    _calculayaMemoAt = DateTime.now();
+    return _calculayaMemo!;
+  }().whenComplete(() => _calculayaFetching = null);
 }
 
 /// Resultado de un bloque regional: fuentes, errores y proveedores usados
@@ -294,30 +345,6 @@ Future<RegionBlock> _veBlock() async {
     }
   }
   if (dolarapiVivo) providers.add('dolarapi.com');
-  // Respaldo VE #2 (v23.2): el Worker público de Calculaya — mismo valor
-  // oficial que DolarAPI (verificado en vivo). Solo llena los oficiales que
-  // SIGAN FALTANDO: el respaldo nunca pisa dato fresco. La referencia USDT
-  // P2P vive en el bloque cripto (_cryptoBlock), no aquí.
-  if (!sources.containsKey('ves-bcv') || !sources.containsKey('eur-ves-oficial')) {
-    try {
-      final data = await _fetchJson(
-        Uri.parse('https://calculaya-api.jalvarezgw19.workers.dev/tasas'),
-        timeout: const Duration(seconds: 4),
-      );
-      final calc = parseCalculayaTasas(data);
-      if (calc.isNotEmpty) providers.add('calculaya.workers.dev');
-      if (!sources.containsKey('ves-bcv') && calc['ves-bcv'] != null) {
-        sources['ves-bcv'] = calc['ves-bcv']!;
-      }
-      if (!sources.containsKey('eur-ves-oficial') &&
-          calc['eur-ves-oficial'] != null) {
-        sources['eur-ves-oficial'] = calc['eur-ves-oficial']!;
-      }
-    } catch (e) {
-      errors.add('calculaya (respaldo VE): $e');
-      VeLog.e('board', e);
-    }
-  }
   try {
     final euros = await _fetchJson(
       Uri.parse('https://ve.dolarapi.com/v1/euros'),
@@ -337,6 +364,28 @@ Future<RegionBlock> _veBlock() async {
   } catch (e) {
     errors.add('ve.dolarapi/euros: $e');
     VeLog.e('board', e);
+  }
+  // Respaldo VE #2 (v23.2): el Worker público de Calculaya — mismo valor
+  // oficial que DolarAPI (verificado en vivo). Solo llena los oficiales que
+  // SIGAN FALTANDO: el respaldo nunca pisa dato fresco. La referencia USDT
+  // P2P vive en el bloque cripto (_cryptoBlock), no aquí.
+  // v23.3 (pez 2-b P1-3): este bloque vive DESPUÉS del fetch de euros —
+  // antes la condición se evaluaba con «eur-ves-oficial» todavía ausente
+  // (los euros se pedían más abajo) y el Worker se consultaba en TODAS las
+  // rondas aunque DolarAPI estuviera sano. Y la consulta pasa por el memo
+  // (_calculayaTasas): 1 por ronda, compartida con CO y cripto.
+  if (!sources.containsKey('ves-bcv') ||
+      !sources.containsKey('eur-ves-oficial')) {
+    final calc = await _calculayaTasas();
+    if (!sources.containsKey('ves-bcv') && calc['ves-bcv'] != null) {
+      sources['ves-bcv'] = calc['ves-bcv']!;
+      providers.add('calculaya.workers.dev');
+    }
+    if (!sources.containsKey('eur-ves-oficial') &&
+        calc['eur-ves-oficial'] != null) {
+      sources['eur-ves-oficial'] = calc['eur-ves-oficial']!;
+      providers.add('calculaya.workers.dev');
+    }
   }
   return (sources, errors, providers.toList());
 }
@@ -413,13 +462,11 @@ Future<RegionBlock> _coBlock() async {
     }
   }
   // Respaldo COP mercado #2 (v23.2): remesas COP del Worker de Calculaya.
+  // v23.3 (pez 2-b P2-3): consulta por el memo — la misma ventana de 30 s
+  // que VE y cripto (nada de 3 hits idénticos al Worker por ronda).
   if (!sources.containsKey('cop-market')) {
     try {
-      final v = await _fetchJson(
-        Uri.parse('https://calculaya-api.jalvarezgw19.workers.dev/tasas'),
-        timeout: const Duration(seconds: 4),
-      );
-      final e = parseCalculayaTasas(v)['cop-market'];
+      final e = (await _calculayaTasas())['cop-market'];
       if (e != null) {
         sources['cop-market'] = e;
         providers.add('calculaya.workers.dev');
@@ -440,11 +487,9 @@ Future<RegionBlock> _cryptoBlock() async {
   final providers = <String>{};
   var calculayaUsdt = false;
   try {
-    final v = await _fetchJson(
-      Uri.parse('https://calculaya-api.jalvarezgw19.workers.dev/tasas'),
-      timeout: const Duration(seconds: 4),
-    );
-    final e = parseCalculayaTasas(v)['usdt-ves'];
+    // v23.3 (pez 2-b P2-3): mismo memo que VE/CO — 1 consulta al Worker
+    // por ventana de 30 s aunque los 3 bloques corran en paralelo.
+    final e = (await _calculayaTasas())['usdt-ves'];
     if (e != null) {
       sources['usdt-ves'] = e;
       providers.add('calculaya.workers.dev');
@@ -544,28 +589,27 @@ Future<RegionBlock> _brBlock() async {
     errors.add('cotacoes BR: $err');
   }
   // Respaldo BRL: AwesomeAPI (bid USD-BRL y EUR-BRL).
-  try {
-    final pairs = [
-      ('brl-br', 'USD-BRL', 'USDBRL'),
-      ('eur-brl', 'EUR-BRL', 'EURBRL'),
-    ];
-    for (final (id, pair, key) in pairs) {
-      if (sources.containsKey(id)) continue;
-      try {
-        final v = await _fetchJson(
-          Uri.parse('https://economia.awesomeapi.com.br/json/last/$pair'),
-        );
-        final e = parseAwesomePair(v, key);
-        if (e != null) {
-          sources[id] = e;
-          providers.add('awesomeapi.com.br');
-        }
-      } catch (err) {
-        errors.add('$id respaldo awesome: $err');
+  // v23.3 (pez 2-b P2-2): fuera el try/catch exterior muerto — el loop ya
+  // tiene su propio try/catch por par y el envoltorio solo ocultaría un
+  // error real del loop (código muerto desde v19).
+  final pairs = [
+    ('brl-br', 'USD-BRL', 'USDBRL'),
+    ('eur-brl', 'EUR-BRL', 'EURBRL'),
+  ];
+  for (final (id, pair, key) in pairs) {
+    if (sources.containsKey(id)) continue;
+    try {
+      final v = await _fetchJson(
+        Uri.parse('https://economia.awesomeapi.com.br/json/last/$pair'),
+      );
+      final e = parseAwesomePair(v, key);
+      if (e != null) {
+        sources[id] = e;
+        providers.add('awesomeapi.com.br');
       }
+    } catch (err) {
+      errors.add('$id respaldo awesome: $err');
     }
-  } catch (_) {
-    /* sin respaldo: degradación honesta */
   }
   return (sources, errors, providers.toList());
 }
@@ -577,6 +621,25 @@ class BoardResult {
 }
 
 const changeEps = 0.0005;
+
+/// v23.3 (pez 2-b P1-1): fusión PURA del payload SSE contra el tablero
+/// vigente (seam de test). El stream puede llegar PARCIAL (un despliegue
+/// web sin las fuentes cripto/CO) — lo ausente SOBREVIVE y por clave
+/// presente gana el `updatedAt` más reciente: un push viejo jamás pisa
+/// un dato fresco del poll.
+Map<String, RateEntry> mergeSseSources(
+  Map<String, RateEntry> current,
+  Map<String, RateEntry> incoming,
+) {
+  final merged = <String, RateEntry>{...current};
+  incoming.forEach((id, entry) {
+    final cur = merged[id];
+    if (cur == null || !entry.updatedAt.isBefore(cur.updatedAt)) {
+      merged[id] = entry;
+    }
+  });
+  return merged;
+}
 
 /// Consulta las 4 regiones + cripto en paralelo y compara contra [previous].
 Future<BoardResult> fetchBoard([RateBoard? previous]) async {
@@ -621,6 +684,10 @@ BoardResult mergeRegionBlocks(List<RegionBlock> results, RateBoard? previous) {
     degraded.addAll(e);
     providers.addAll(p);
   }
+  // v23.3 (pez 2-b): las claves internas de puente (`__tetherDerive__`) NO
+  // son fuentes — el filtro vive AQUÍ para que el contrato no dependa del
+  // caller (antes solo fetchBoard lo respetaba).
+  sources.removeWhere((k, _) => k.startsWith('__'));
   final changed = <String>[];
   final prev = previous?.sources ?? const {};
   if (prev.isEmpty) {

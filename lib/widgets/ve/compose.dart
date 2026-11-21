@@ -612,17 +612,25 @@ class _VeHalfChrome extends StatelessWidget {
                       trailing!,
                     ],
                     if (dismissible)
-                      ShadButton.raw(
-                        variant: ShadButtonVariant.ghost,
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        width: 32,
-                        height: 32,
-                        padding: EdgeInsets.zero,
-                        backgroundColor: Colors.transparent,
-                        hoverBackgroundColor: scheme.accent,
-                        foregroundColor: scheme.mutedForeground,
-                        hoverForegroundColor: scheme.foreground,
-                        child: Icon(LucideIcons.x, size: 15),
+                      // v23.3 (pez 2-a P1-1): caja de golpe ≥44 — visual
+                      // 32 (mismo icono 15), pista 44×44 centrada.
+                      SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Center(
+                          child: ShadButton.raw(
+                            variant: ShadButtonVariant.ghost,
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            width: 32,
+                            height: 32,
+                            padding: EdgeInsets.zero,
+                            backgroundColor: Colors.transparent,
+                            hoverBackgroundColor: scheme.accent,
+                            foregroundColor: scheme.mutedForeground,
+                            hoverForegroundColor: scheme.foreground,
+                            child: Icon(LucideIcons.x, size: 15),
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -735,17 +743,25 @@ class _VeSheetChrome extends StatelessWidget {
                       trailing!,
                     ],
                     if (dismissible)
-                      ShadButton.raw(
-                        variant: ShadButtonVariant.ghost,
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        width: 32,
-                        height: 32,
-                        padding: EdgeInsets.zero,
-                        backgroundColor: Colors.transparent,
-                        hoverBackgroundColor: scheme.accent,
-                        foregroundColor: scheme.mutedForeground,
-                        hoverForegroundColor: scheme.foreground,
-                        child: Icon(LucideIcons.x, size: 15),
+                      // v23.3 (pez 2-a P1-1): caja de golpe ≥44 — visual
+                      // 32 (mismo icono 15), pista 44×44 centrada.
+                      SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Center(
+                          child: ShadButton.raw(
+                            variant: ShadButtonVariant.ghost,
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            width: 32,
+                            height: 32,
+                            padding: EdgeInsets.zero,
+                            backgroundColor: Colors.transparent,
+                            hoverBackgroundColor: scheme.accent,
+                            foregroundColor: scheme.mutedForeground,
+                            hoverForegroundColor: scheme.foreground,
+                            child: Icon(LucideIcons.x, size: 15),
+                          ),
+                        ),
                       ),
                   ],
                 ),

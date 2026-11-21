@@ -150,106 +150,107 @@ class _CuentasPagoMovilState extends State<CuentasPagoMovil> {
     final phoneCtrl = TextEditingController();
     String bank = kVkBanks.first;
     String type = 'corriente';
-    final ok = await showModalBottomSheet<bool>(
+    // v23.3 (pez 2-a P0-1): alta con el patrón COMPLETO del kit —
+    // showVeSheet (radio 14, asa, cabecera 48 + ✕), VeField/VeInput/
+    // VeSelect/VeSegmented y pie con VeBtn. Antes: modal crudo de radio 20
+    // con DropdownButtonFormField, SegmentedButton Material y TextButton/
+    // FilledButton — otra piel de hoja para el mismo flujo.
+    final ok = await showVeSheet<bool>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      title: 'Nueva cuenta de cobro',
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            16 + MediaQuery.viewInsetsOf(ctx).bottom,
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(ctx).bottom,
           ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Nueva cuenta de cobro',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: bank,
-                  decoration: const InputDecoration(
-                    labelText: 'Banco',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  items: [
-                    for (final b in kVkBanks)
-                      DropdownMenuItem(value: b, child: Text(b)),
-                  ],
-                  onChanged: (v) => setSheet(() => bank = v ?? bank),
-                ),
-                const SizedBox(height: 10),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'corriente', label: Text('Corriente')),
-                    ButtonSegment(value: 'ahorro', label: Text('Ahorro')),
-                  ],
-                  selected: {type},
-                  onSelectionChanged: (s) =>
-                      setSheet(() => type = s.first),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: numberCtrl,
-                  keyboardType: TextInputType.number,
-                  maxLength: 20,
-                  decoration: const InputDecoration(
-                    labelText: 'Número de cuenta',
-                    hintText: '20 dígitos',
-                    border: OutlineInputBorder(),
-                    isDense: true,
+                VeField(
+                  label: 'Banco',
+                  child: VeSelect<String>(
+                    value: bank,
+                    semantic: 'Banco',
+                    options: [
+                      for (final b in kVkBanks)
+                        VeSelectOption(value: b, label: b),
+                    ],
+                    onChanged: (v) => setSheet(() => bank = v),
                   ),
                 ),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: docCtrl,
-                  maxLength: 10,
-                  decoration: const InputDecoration(
-                    labelText: 'Cédula (ej. V12345678)',
-                    border: OutlineInputBorder(),
-                    isDense: true,
+                VeField(
+                  label: 'Tipo',
+                  child: VeSegmented<String>(
+                    value: type,
+                    onChanged: (v) => setSheet(() => type = v),
+                    segments: const [
+                      VeSegment(value: 'corriente', label: 'Corriente'),
+                      VeSegment(value: 'ahorro', label: 'Ahorro'),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: phoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  maxLength: 11,
-                  decoration: const InputDecoration(
-                    labelText: 'Teléfono',
-                    hintText: '04141234567',
-                    border: OutlineInputBorder(),
-                    isDense: true,
+                VeField(
+                  label: 'Número de cuenta',
+                  hint: 'Suele tener 20 dígitos',
+                  child: VeInput(
+                    controller: numberCtrl,
+                    keyboardType: TextInputType.number,
+                    maxLength: 20,
+                    placeholder: '20 dígitos',
+                    semantic: 'Número de cuenta',
                   ),
                 ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(false),
-                      child: const Text('Cancelar'),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: () => Navigator.of(ctx).pop(true),
-                      child: const Text('Guardar'),
-                    ),
-                  ],
+                const SizedBox(height: 10),
+                VeField(
+                  label: 'Cédula',
+                  child: VeInput(
+                    controller: docCtrl,
+                    maxLength: 10,
+                    placeholder: 'V12345678',
+                    semantic: 'Cédula',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                VeField(
+                  label: 'Teléfono',
+                  child: VeInput(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    maxLength: 11,
+                    placeholder: '04141234567',
+                    semantic: 'Teléfono',
+                  ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+      footer: Builder(
+        builder: (sheetCtx) => Row(
+          children: [
+            Expanded(
+              child: VeBtn(
+                variant: VeBtnVariant.secondary,
+                expands: true,
+                onPressed: () => Navigator.of(sheetCtx).pop(false),
+                child: const Text('Cancelar'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: VeBtn(
+                variant: VeBtnVariant.primary,
+                expands: true,
+                onPressed: () => Navigator.of(sheetCtx).pop(true),
+                child: const Text('Guardar'),
+              ),
+            ),
+          ],
         ),
       ),
     );

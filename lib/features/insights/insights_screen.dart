@@ -60,82 +60,105 @@ class _InsightsScreenState extends State<InsightsScreen> {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
       body: VeEntry(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        // v23.3 (pez 2-a): título + barra de anclas + rango FIJOS — antes
+        // vivían DENTRO del ListView y al scrollear paneles largos (Canasta
+        // con N ítems, tabla «Últimos días») la navegación se iba del
+        // viewport. Ahora solo scrollea el panel activo; las anclas del
+        // tour viajan con los widgets (TourKeys.anclas/rango intactas).
+        child: Column(
           children: [
-            VeTitle(
-              // v20 (distill): fuera la prosa decorativa — subtítulo
-              // informativo de una línea.
-              sub: const Text('Tasas, inflación, canasta y gastos'),
-              child: const Text('Análisis'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: VeTitle(
+                // v20 (distill): fuera la prosa decorativa — subtítulo
+                // informativo de una línea.
+                sub: const Text('Tasas, inflación, canasta y gastos'),
+                child: const Text('Análisis'),
+              ),
             ),
-            // ── Barra de anclas (v19.8): segmentada, 6 vistas del tablero.
-            // TASK-34 p9: cromática del segmentado Ve (muted + borde),
-            // píldora activa card + borde + sombra corta — sin pérdida de
-            // iconos (la superioridad táctil de la app).
-            KeyedSubtree(
-              key: TourKeys.anclas,
-              child: Builder(
-                builder: (barCtx) {
-                  final shad = ShadTheme.of(barCtx).colorScheme;
-                  return Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: shad.muted,
-                      borderRadius: BorderRadius.circular(kShadControlRadius),
-                      border: Border.all(color: shad.border),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Barra de anclas (v19.8): segmentada, 6 vistas del
+                  // tablero. TASK-34 p9: cromática del segmentado Ve
+                  // (muted + borde), píldora activa card + borde + sombra
+                  // corta — sin pérdida de iconos (la superioridad táctil
+                  // de la app).
+                  KeyedSubtree(
+                    key: TourKeys.anclas,
+                    child: Builder(
+                      builder: (barCtx) {
+                        final shad = ShadTheme.of(barCtx).colorScheme;
+                        return Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: shad.muted,
+                            borderRadius:
+                                BorderRadius.circular(kShadControlRadius),
+                            border: Border.all(color: shad.border),
+                          ),
+                          child: Row(
+                            children: [
+                              for (var i = 0; i < _anchors.length; i++)
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 2,
+                                    ),
+                                    child: _AnchorTab(
+                                      icon: _anchors[i].$1,
+                                      label: _anchors[i].$2,
+                                      selected: _anchor == i,
+                                      onTap: () => setState(() => _anchor = i),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                    child: Row(
+                  ),
+                  // ── Rango: chips del prototipo pegados a la barra de anclas.
+                  const SizedBox(height: 8),
+                  KeyedSubtree(
+                    key: TourKeys.rango,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        for (var i = 0; i < _anchors.length; i++)
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 2,
-                              ),
-                              child: _AnchorTab(
-                                icon: _anchors[i].$1,
-                                label: _anchors[i].$2,
-                                selected: _anchor == i,
-                                onTap: () => setState(() => _anchor = i),
-                              ),
-                            ),
+                        for (final (d, label) in _ranges)
+                          VeChip(
+                            active: _days == d,
+                            onTap: () => setState(() => _days = d),
+                            child: Text(label),
                           ),
                       ],
                     ),
-                  );
-                },
-              ),
-            ),
-            // ── Rango: chips del prototipo pegados a la barra de anclas.
-            const SizedBox(height: 8),
-            KeyedSubtree(
-              key: TourKeys.rango,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final (d, label) in _ranges)
-                    VeChip(
-                      active: _days == d,
-                      onTap: () => setState(() => _days = d),
-                      child: Text(label),
-                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 6),
-            switch (_anchor) {
-              0 => _DivisasAnchor(days: _days),
-              1 => _InflacionAnchor(
-                days: _days,
-                onGoToBasket: () => setState(() => _anchor = 3),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+                children: [
+                  switch (_anchor) {
+                    0 => _DivisasAnchor(days: _days),
+                    1 => _InflacionAnchor(
+                      days: _days,
+                      onGoToBasket: () => setState(() => _anchor = 3),
+                    ),
+                    2 => ProductosAnchor(days: _days),
+                    3 => const CanastaAnchor(),
+                    4 => GastosAnchor(days: _days),
+                    _ => HistoricaAnchor(days: _days),
+                  },
+                ],
               ),
-              2 => ProductosAnchor(days: _days),
-              3 => const CanastaAnchor(),
-              4 => GastosAnchor(days: _days),
-              _ => HistoricaAnchor(days: _days),
-            },
+            ),
           ],
         ),
       ),
@@ -163,50 +186,65 @@ class _AnchorTab extends StatelessWidget {
     final shad = ShadTheme.of(context).colorScheme;
     final scheme = Theme.of(context).colorScheme;
     final bool dark = Theme.of(context).brightness == Brightness.dark;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(vertical: 7),
-        decoration: BoxDecoration(
-          // Píldora activa del VeSegmented: superficie card + borde y una
-          // sombra corta — la píldora «flota» sobre el muted del contenedor.
-          color: selected ? shad.card : null,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? shad.border : Colors.transparent,
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: dark
-                        ? Colors.black.withValues(alpha: 0.35)
-                        : const Color(0x1409090B),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 15,
-              color: selected ? shad.foreground : scheme.onSurfaceVariant,
+    return Semantics(
+      // v23.3 (pez 2-a): el lector de pantalla anuncia la vista y su
+      // estado (antes el InkWell era mudo para TalkBack).
+      button: true,
+      selected: selected,
+      label: 'Vista $label',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          decoration: BoxDecoration(
+            // Píldora activa del VeSegmented: superficie card + borde y una
+            // sombra corta — la píldora «flota» sobre el muted del contenedor.
+            color: selected ? shad.card : null,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected ? shad.border : Colors.transparent,
             ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 9.5,
-                fontWeight: FontWeight.w500,
+            boxShadow: selected
+                ? [
+                    // v23.3 (pez 2-a): la sombra de la píldora sale de los
+                    // tokens (antes Colors.black y un literal fuera de
+                    // ve.dart — invisible en dark el borde del heatmap).
+                    BoxShadow(
+                      color: dark ? VeColors.shadowDark : VeColors.shadowLight,
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                size: 15,
                 color: selected ? shad.foreground : scheme.onSurfaceVariant,
               ),
-            ),
-          ],
+              const SizedBox(height: 3),
+              // v23.3 (pez 2-a): una línea con elipsis + Semantics — a
+              // textScale ≥1.3 «Inflación» ya no envuelve y descuadra la
+              // píldora. OJO: sin el tracking de labelCaps — con él
+              // «Productos» no cabía en 6 pestañas a 390 y quedaba
+              // «Produ…» (hallazgo del gate visual).
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w500,
+                  color: selected ? shad.foreground : scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -351,7 +389,8 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
               color: gap == null ? scheme.onSurface : ink.warn,
             ),
             KpiTile(
-              label: 'BCV hoy',
+              // v23.3: «BCV» a secas (simetría con «Paralelo» — ver arriba).
+              label: 'BCV',
               value: bcv.isEmpty ? '—' : fmtRate(bcv.last.rate),
               sub: bcv.isEmpty
                   ? null
@@ -360,7 +399,10 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
               color: ink.pos,
             ),
             KpiTile(
-              label: 'Paralelo hoy',
+              // v23.3 (gate visual): «Paralelo» a secas — igual que «Brecha»
+              // en v21: a 390 la etiqueta larga envolvía a 2 líneas y se
+              // amontonaba con el sub; el «hoy» ya lo dice la fecha del sub.
+              label: 'Paralelo',
               value: par.isEmpty ? '—' : fmtRate(par.last.rate),
               sub: par.isEmpty
                   ? 'sin registro hoy'
@@ -430,7 +472,9 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
                 // syncfusion — área BCV + línea Paralelo, leyenda y el
                 // panel de día sincronizado con el dedo (onScrub).
                 VeTimelineChart(
-                  height: 190,
+                  // v23.3 (pez 2-a): 184 — la familia de referencia del kit
+                  // (product_sheet 186, default 200) y la meta sin scroll.
+                  height: 184,
                   // 9P·Pulido: margen interno para que la curva no roce
                   // el borde superior de la tarjeta (auditoría de la web).
                   margin: const EdgeInsets.fromLTRB(6, 14, 10, 4),
@@ -915,7 +959,7 @@ class _InflacionAnchor extends StatelessWidget {
                 // v20.4: VeTimelineChart — área real + proyección PUNTEADA
                 // (DAMP φ 0.85) que se distingue a la vista de la serie real.
                 VeTimelineChart(
-                  height: 190,
+                  height: 184,
                   margin: EdgeInsets.zero,
                   xLabel: (t) => DateFormat('dd/MM').format(t),
                   yLabel: (v) => fmtNum(v, decimals: 0),
@@ -1026,7 +1070,7 @@ class _InflacionAnchor extends StatelessWidget {
             ),
             // v20.4: VeTimelineChart en lugar de syncfusion.
             child: VeTimelineChart(
-              height: 190,
+              height: 184,
               margin: EdgeInsets.zero,
               xLabel: (t) => DateFormat('dd/MM').format(t),
               yLabel: (v) => fmtNum(v, decimals: 0),

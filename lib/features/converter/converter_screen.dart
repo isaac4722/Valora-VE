@@ -280,11 +280,11 @@ class _ConverterScreenState extends State<ConverterScreen> {
     final days = <String>{ for (final id in ids) for (final p in snapshotSeries(store.snapshots, id, 180)) p.day };
     if (!mounted) return;
     final label = ids.map((id) => convSourceNames[id] ?? RateSource.of(id)?.label ?? id).join(' + ');
-    final picked = await showModalBottomSheet<DateTime>(
+    // v23.3 (pez 2-a P0-1): chrome del kit — el calendario histórico era
+    // el último modal crudo de radio 20 de la app.
+    final picked = await showVeHalfSheet<DateTime>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      title: 'Elegir fecha histórica',
       builder: (_) => _CalendarioHistorico(days: days, futureDays: _diasRemotos(ids.toList()), initial: _dateMode == 'custom' ? _customDate : null, sourceLabel: label),
     );
     if (picked == null || !mounted) return;
@@ -464,6 +464,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
                         Semantics(
                           label: 'Compartir resultado',
                           child: VeBtn(
+                            size: VeBtnSize.lg,
                             variant: VeBtnVariant.secondary,
                             enabled: plan != null && result > 0,
                             onPressed: _shareCard,
@@ -474,6 +475,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
                         Semantics(
                           label: 'Copiar resultado',
                           child: VeBtn(
+                            size: VeBtnSize.lg,
                             variant: VeBtnVariant.secondary,
                             enabled: plan != null && result > 0,
                             onPressed: _copyResult,
@@ -484,6 +486,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
                         if (to == Currency.ves)
                           Expanded(
                             child: VeBtn(
+                              size: VeBtnSize.lg,
                               variant: VeBtnVariant.secondary,
                               icon: LucideIcons.smartphone,
                               enabled: result > 0,
@@ -496,6 +499,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
                         Semantics(
                           label: _keypad ? 'Ocultar teclado' : 'Mostrar teclado',
                           child: VeBtn(
+                            size: VeBtnSize.lg,
                             variant: VeBtnVariant.secondary,
                             onPressed: () => setState(() => _keypad = !_keypad),
                             child: Icon(_keypad ? LucideIcons.chevronDown : LucideIcons.calculator, size: 16),
@@ -725,7 +729,23 @@ class _DualInput extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       child: Column(children: [
         _fuenteLine(context, scheme), const Divider(height: 12), _montoRow(context),
-        Padding(padding: const EdgeInsets.symmetric(vertical: 2), child: SizedBox(height: 32, child: Stack(alignment: Alignment.center, children: [const Positioned.fill(child: Center(child: Divider(height: 1))), _SwapBtn(onTap: onSwap)]))),
+        Padding(
+          // v23.3 (pez 2-a P1-1): fila del swap a 44 — el botón insignia de
+          // la pantalla tenía 32×32 de pista.
+          padding: EdgeInsets.zero,
+          child: SizedBox(
+            height: 44,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Positioned.fill(
+                  child: Center(child: Divider(height: 1)),
+                ),
+                _SwapBtn(onTap: onSwap),
+              ],
+            ),
+          ),
+        ),
         _resultadoRow(scheme),
         Padding(
           padding: const EdgeInsets.only(top: 8),
@@ -775,9 +795,15 @@ class _SwapBtnState extends State<_SwapBtn> {
         child: AnimatedRotation(
           turns: _turns, duration: const Duration(milliseconds: 220), curve: kEaseVe,
           child: Container(
-            width: 32, height: 32,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.card, border: Border.all(width: 1, color: dark ? VeColors.lineStrongDark : VeColors.lineStrongLight)),
-            child: Icon(Icons.swap_vert, size: 16, color: scheme.foreground),
+            // v23.3 (pez 2-a P1-1): visual 32, pista 44×44 — el dedo
+            // tiene margen sin engordar el círculo.
+            width: 44, height: 44,
+            alignment: Alignment.center,
+            child: Container(
+              width: 32, height: 32,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.card, border: Border.all(width: 1, color: dark ? VeColors.lineStrongDark : VeColors.lineStrongLight)),
+              child: Icon(Icons.swap_vert, size: 16, color: scheme.foreground),
+            ),
           ),
         ),
       ),

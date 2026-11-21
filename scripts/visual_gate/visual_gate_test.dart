@@ -33,8 +33,8 @@ import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
 import 'package:valorave/widgets/app_tour.dart' show kTourDoneKey;
 
-/// Carga las fuentes reales (Inter · Space Grotesk · JetBrains · Lucide) para
-/// que los goldens no salgan en Ahem.
+/// Carga las fuentes reales (Inter · SpaceGrotesk · JetBrains · Lucide ·
+/// MaterialIcons) para que los goldens no salgan en Ahem.
 Future<void> _cargarFuentes() async {
   Future<void> una(String family, List<Future<ByteData>> assets) async {
     final loader = FontLoader(family);
@@ -59,6 +59,50 @@ Future<void> _cargarFuentes() async {
   await una('packages/lucide_icons_flutter/Lucide', [
     root.load('packages/lucide_icons_flutter/assets/lucide.ttf'),
   ]);
+  await _cargarMaterialIcons();
+}
+
+/// v23.3 (gate visual): MaterialIcons NO es un asset de la app — en tests la
+/// familia cae a Ahem y TODOS los `Icons.*` salían como tofu □ en los goldens
+/// (pestañas de Análisis, swap del Conversor, chevrons de moneda…). El OTF
+/// vive en el caché del SDK: primero vía FLUTTER_ROOT (la variable que el
+/// tool exporta a los tests) y si no, caminando hacia arriba desde el
+/// ejecutable (flutter_tester vive en `<root>/bin/cache/artifacts/engine/…`);
+/// si no aparece, se omite sin fallar (estado previo, no peor).
+Future<void> _cargarMaterialIcons() async {
+  try {
+    final paths = <String>[];
+    final envRoot = Platform.environment['FLUTTER_ROOT'];
+    if (envRoot != null && envRoot.isNotEmpty) {
+      paths.add(
+        '$envRoot/bin/cache/artifacts/material_fonts/'
+        'MaterialIcons-Regular.otf',
+      );
+    }
+    var dir = File(Platform.resolvedExecutable).parent;
+    for (var i = 0; i < 7; i++) {
+      paths.add(
+        '${dir.path}/bin/cache/artifacts/material_fonts/'
+        'MaterialIcons-Regular.otf',
+      );
+      dir = dir.parent;
+    }
+    File? otf;
+    for (final p in paths) {
+      final f = File(p);
+      if (f.existsSync()) {
+        otf = f;
+        break;
+      }
+    }
+    if (otf == null) return;
+    final bytes = await otf.readAsBytes();
+    final loader = FontLoader('MaterialIcons')
+      ..addFont(Future<void>.value().then((_) => ByteData.sublistView(bytes)));
+    await loader.load();
+  } catch (_) {
+    // Sin la fuente del SDK en esta máquina: la familia queda como estaba.
+  }
 }
 
 /// Store honesto con datos de muestra: tablero VE (BCV + paralelo), dos

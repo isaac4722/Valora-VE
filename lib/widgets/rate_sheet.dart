@@ -200,15 +200,24 @@ class RateTile extends StatelessWidget {
                 if (s.category == SourceCategory.manual &&
                     onEdit != null) ...<Widget>[
                   const SizedBox(width: 6),
-                  InkWell(
-                    onTap: onEdit,
-                    borderRadius: BorderRadius.circular(999),
-                    child: Padding(
-                      padding: const EdgeInsets.all(5),
-                      child: Icon(
-                        Icons.edit_outlined,
-                        size: 15,
-                        color: scheme.onSurfaceVariant,
+                  // v23.3 (pez 2-a P1-1): pista 44×44 + Semantics — el
+                  // lápiz era un blanco de ~25 dp.
+                  Semantics(
+                    button: true,
+                    label: 'Editar tasa manual',
+                    child: InkWell(
+                      onTap: onEdit,
+                      borderRadius: BorderRadius.circular(999),
+                      child: SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Center(
+                          child: Icon(
+                            Icons.edit_outlined,
+                            size: 15,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -283,53 +292,40 @@ Future<void> showRateSheet(
 }) async {
   final store = context.read<AppStore>();
   final sources = RateSource.sourcesFor(currency);
-  final picked = await showModalBottomSheet<String>(
+  // v23.3 (pez 2-a P0-1): chrome unificado del kit — showVeHalfSheet
+  // (radio 14, asa, cabecera 48 + ✕, cuerpo con el controlador de la hoja).
+  // Antes era un showModalBottomSheet crudo con radio 20, sin asa ni ✕ y
+  // cabecera artesanal: el «mismo menú» con otra piel.
+  final picked = await showVeHalfSheet<String>(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (sheetCtx) => SafeArea(
-      // v23.2: techo unificado al 88 % — el mismo de showVeSheet (antes
-      // había DOS techos: 80 % aquí y 88 % en el kit).
-      // la lista scrollea dentro del límite en vez de crecer sin fin.
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(sheetCtx).height * 0.88,
-        ),
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 10),
-              child: Row(
-                children: <Widget>[
-                  Flag(currency, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      title ?? 'Fuente de tasa · ${currency.label}',
-                      style: VeText.labelCaps(
-                        10.5,
-                        color: Theme.of(sheetCtx).colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            for (final s in sources)
-              RateTile(
-                sourceId: s.id,
-                rate: ctx.rate(s.id),
-                selected: s.id == currentId,
-                freshness: _freshnessOf(store, s.id),
-                onTap: () async {
-                  if (s.category == SourceCategory.manual &&
-                      ctx.rate(s.id) <= 0) {
-                    // Manual sin valor: el editor ES la selección.
+    title: title ?? 'Fuente de tasa · ${currency.label}',
+    trailing: Flag(currency, size: 18),
+    builder: (sheetCtx) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        for (final s in sources)
+          RateTile(
+            sourceId: s.id,
+            rate: ctx.rate(s.id),
+            selected: s.id == currentId,
+            freshness: _freshnessOf(store, s.id),
+            onTap: () async {
+              if (s.category == SourceCategory.manual &&
+                  ctx.rate(s.id) <= 0) {
+                // Manual sin valor: el editor ES la selección.
+                final saved = await showManualRateEditor(
+                  sheetCtx,
+                  sourceId: s.id,
+                );
+                if (saved && sheetCtx.mounted) {
+                  Navigator.of(sheetCtx).pop(s.id);
+                }
+                return;
+              }
+              Navigator.of(sheetCtx).pop(s.id);
+            },
+            onEdit: s.category == SourceCategory.manual
+                ? () async {
                     final saved = await showManualRateEditor(
                       sheetCtx,
                       sourceId: s.id,
@@ -337,26 +333,11 @@ Future<void> showRateSheet(
                     if (saved && sheetCtx.mounted) {
                       Navigator.of(sheetCtx).pop(s.id);
                     }
-                    return;
                   }
-                  Navigator.of(sheetCtx).pop(s.id);
-                },
-                onEdit: s.category == SourceCategory.manual
-                    ? () async {
-                        final saved = await showManualRateEditor(
-                          sheetCtx,
-                          sourceId: s.id,
-                        );
-                        if (saved && sheetCtx.mounted) {
-                          Navigator.of(sheetCtx).pop(s.id);
-                        }
-                      }
-                    : null,
-              ),
-            const SizedBox(height: 6),
-          ],
-        ),
-      ),
+                : null,
+          ),
+        const SizedBox(height: 6),
+      ],
     ),
   );
   if (picked != null) onPick(picked);

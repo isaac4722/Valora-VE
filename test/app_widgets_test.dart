@@ -233,6 +233,12 @@ void main() {
   testWidgets('la galería muestra los 3 widgets con preview fiel', (
     tester,
   ) async {
+    // v23.3: la galería vive en showVeHalfSheet — en escritorio (≥700) la
+    // media pantalla se vuelve diálogo; el contexto honesto de una
+    // galería de widgets de ANDROID es el teléfono (390×844).
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     await pumpHome(tester);
     await abrirGaleria(tester);
     // La hoja se pinta SOBRE el Inicio: los asserts de cifras van
@@ -287,6 +293,10 @@ void main() {
       ),
     );
 
+    // v23.3: contexto móvil (ver nota del test de la galería).
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     await pumpHome(tester);
     await abrirGaleria(tester);
     // El botón de la primera entrada (Tasa BCV).
@@ -309,6 +319,10 @@ void main() {
   });
 
   testWidgets('launcher sin soporte → guía manual de 3 pasos', (tester) async {
+    // v23.3: contexto móvil (ver nota del test de la galería).
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       pinChannel,
       (message) async =>

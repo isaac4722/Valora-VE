@@ -312,7 +312,7 @@ class VeIconBtn extends StatelessWidget {
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final bool dark = shad.brightness == Brightness.dark;
 
-    return Semantics(
+    Widget core = Semantics(
       button: true,
       label: label,
       child: _TapScaleVe(
@@ -363,6 +363,21 @@ class VeIconBtn extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    // v23.3 (pez 2-a P1-1): caja de golpe ≥44 — el visual sigue siendo
+    // `size` (32 por defecto) pero el dedo tiene 44×44 de pista: la caja
+    // exterior crece y el margen también dispara el tap (GestureDetector
+    // opaco por fuera, botón por dentro — la arena elige al ganador y
+    // onTap corre UNA vez).
+    final double hit = size < 44 ? 44 : size;
+    if (onTap == null) {
+      return SizedBox(width: hit, height: hit, child: Center(child: core));
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(width: hit, height: hit, child: Center(child: core)),
     );
   }
 }
@@ -733,7 +748,7 @@ class VeCheckbox extends StatelessWidget {
         color: scheme.primary,
         uncheckedColor: scheme.card,
         decoration: _flushDecor(radius: 5),
-        icon: _PopCheck(color: scheme.background, size: 12),
+        icon: _PopCheck(color: scheme.background, size: 12, checked: value),
       ),
     );
   }
@@ -741,10 +756,18 @@ class VeCheckbox extends StatelessWidget {
 
 /// Check con animación pop (scale 0.4 → 1.15 → 1, 220 ms).
 class _PopCheck extends StatefulWidget {
-  const _PopCheck({required this.color, required this.size});
+  const _PopCheck({
+    required this.color,
+    required this.size,
+    this.checked = true,
+  });
 
   final Color color;
   final double size;
+
+  /// v23.3 (pez 2-b P2-5): el pop se dispara solo al MARCAR — antes cada
+  /// rebuild del padre re-animaba (mismo patrón de guard que VeFlash).
+  final bool checked;
 
   @override
   State<_PopCheck> createState() => _PopCheckState();
@@ -760,7 +783,9 @@ class _PopCheckState extends State<_PopCheck>
   @override
   void didUpdateWidget(covariant _PopCheck old) {
     super.didUpdateWidget(old);
-    _c.forward(from: 0);
+    // v23.3: solo en la transición a marcado — un rebuild cualquiera no
+    // re-anima.
+    if (widget.checked && !old.checked) _c.forward(from: 0);
   }
 
   @override
@@ -924,11 +949,14 @@ class VeStepper extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: SizedBox(
-        width: 28,
+        // v23.3 (pez 2-a P1-1): pista de 36 — el stepper vive en filas
+        // densas (carrito 2 líneas) donde 44 engordaría la fila; 36 es
+        // AA holgado (24) manteniendo la densidad de la Lista.
+        width: 36,
         height: double.infinity,
         child: Icon(
           i,
-          size: 13,
+          size: 14,
           color: onTap == null
               ? scheme.mutedForeground.withValues(alpha: 0.4)
               : scheme.foreground,
@@ -939,7 +967,7 @@ class VeStepper extends StatelessWidget {
     return Semantics(
       label: semantic,
       child: Container(
-        height: 28,
+        height: 36,
         decoration: BoxDecoration(
           color: scheme.card,
           borderRadius: BorderRadius.circular(kShadControlRadius),
@@ -954,7 +982,7 @@ class VeStepper extends StatelessWidget {
               value <= min ? null : () => onChanged(value - 1),
             ),
             Container(
-              width: 32,
+              width: 36,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 border: Border(

@@ -833,10 +833,12 @@ class _CotizacionPrincipal extends StatelessWidget {
             // wifi_off + salidas reales — NUNCA spinner de 7 s que va a fallar.
             OfflineState(
               'Sin conexión · sin tasas guardadas todavía',
+              // v23.3 (pez 2-a P1-2): UNA línea — el claim v23.2 de «offline
+              // a una línea» no había llegado a este estado (3 líneas a
+              // 390 px). La salida corta conserva el mensaje y las dos
+              // salidas reales siguen a un toque.
               hint:
-                  'No pierdes nada: todo lo demás de la app funciona igual '
-                  'con los datos de tu teléfono. Cuando vuelva la red, las '
-                  'tasas se descargan solas; o pega una tasa manual ahora.',
+                  'Todo lo demás funciona igual — pega una tasa o espera la red.',
               icon: Icons.wifi_off,
               actionLabel: poller.loading ? 'Consultando…' : 'Reintentar',
               onAction: poller.loading ? null : () => poller.retryNow(),
