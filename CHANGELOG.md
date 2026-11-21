@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.16.0-beta+49 · v24.0d — polish impeccable + gate visual al día (iconos con tinta, tooltips de marca, techo fiel)
+
+Vuelta de polish sobre el Material 3 nuevo con auditoría visual VLM de las
+6 capturas + zoom de evidencia (la metodología de v23.3):
+
+- **Iconos de botón con la tinta del texto (fix REAL de la auditoría)**: el
+  icono `leading` de VeBtn/VeIconBtn caía al negro del IconTheme de la app
+  y DESAPARECÍA sobre el botón primario (el «+» de Agregar producto era
+  casi invisible — el zoom lo confirmó). `IconTheme.merge` con la tinta
+  del texto, como la era shadcn.
+- **Tooltips de tinta invertida** en AppTheme (la piel de shadcn, en
+  Material puro): claro = tinta #09090B con texto blanco; oscuro =
+  superficie accent con texto claro; 450 ms de espera.
+- **Techo del sheet fiel al notch** (v24.0b): el 88 % se resuelve con el
+  MediaQuery del contexto que ABRE — el bottom sheet de useSafeArea exponía
+  padding cero y el techo se inflaba; el test del notch lo guarda.
+- **Gate visual regenerado** (6 capturas, Material 3 + fl_chart) y
+  auditado: 1 defecto real (el icono, corregido arriba); lecturas falsas
+  documentadas con zoom y medición (el sparkline mide SU caja exacta de
+  200 px; el ticker corta al borde porque es marquee; LIBRO vive bajo la
+  barra al hacer scroll; el sidebar muestra 2 decimales por diseño
+  compacto).
+
+Gates: analyze 0 · 313/313 · auditoría VERDE · visual gate 6/6.
+
 ## 1.16.0-beta+49 · v24.0c — todas las gráficas sobre fl_chart (la librería de CalculaYa)
 
 Orden del dueño: «arregla las gráficas todas las gráficas usando la misma

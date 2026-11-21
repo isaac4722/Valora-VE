@@ -297,7 +297,16 @@ class _VeRawButtonState extends State<_VeRawButton> {
                   mainAxisAlignment: widget.mainAxisAlignment,
                   children: [
                     if (widget.leading != null) ...[
-                      widget.leading!,
+                      // La tinta del icono es la del TEXTO del botón (como
+                      // la era shadcn): IconTheme.merge tiñe los Icon sin
+                      // color propio — sin esto, el icono caía al negro del
+                      // IconTheme de la app y desaparecía sobre el primario.
+                      IconTheme.merge(
+                        data: IconThemeData(
+                          color: widget.foregroundColor,
+                        ),
+                        child: widget.leading!,
+                      ),
                       SizedBox(width: widget.gap),
                     ],
                     // Fill mode: Flexible(loose) da al hijo un máximo ACOTADO

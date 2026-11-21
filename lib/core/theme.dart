@@ -483,6 +483,22 @@ abstract final class AppTheme {
           ),
         ),
       ),
+      // Tooltip de tinta invertida (la piel de la era shadcn, ahora en
+      // Material puro): claro = tinta sobre blanco; oscuro = superficie
+      // accent con texto claro.
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: isDark ? VeColors.accentDark : VeColors.primaryLight,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        textStyle: TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: isDark ? VeColors.fgDark : Colors.white,
+        ),
+        waitDuration: const Duration(milliseconds: 450),
+      ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: isDark ? VeColors.accentDark : VeColors.primaryLight,
