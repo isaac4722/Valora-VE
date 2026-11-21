@@ -19,6 +19,8 @@ import 'package:valorave/data/store.dart';
 import 'package:valorave/features/converter/converter_screen.dart';
 import 'package:valorave/features/converter/pago_movil_sheet.dart'
     show pagoMovilMessage;
+import 'package:valorave/features/settings/settings_screen.dart'
+    show CuentasPagoMovil, pagoMovilSoftWarnings;
 import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
@@ -199,6 +201,150 @@ Future<void> main() async {
       expect(msg, contains('Cuenta ahorro: 123'));
       expect(msg, isNot(contains('CI:')));
       expect(msg, isNot(contains('Teléfono:')));
+    });
+  });
+
+  group('Validación suave (diseño P4: cuenta 20 · CI 5-9 · teléfono 11)', () {
+    test('todo bien → sin avisos', () {
+      expect(
+        pagoMovilSoftWarnings(
+          number: '01341234567890123456',
+          docId: 'V12345678',
+          phone: '04141234567',
+        ),
+        isEmpty,
+      );
+    });
+
+    test('cuenta corta, CI corto y teléfono corto → un aviso por campo', () {
+      final avisos = pagoMovilSoftWarnings(
+        number: '123',
+        docId: 'V123',
+        phone: '0414',
+      );
+      expect(avisos, hasLength(3));
+      expect(avisos[0], contains('no 20'));
+      expect(avisos[1], contains('no entre 5 y 9'));
+      expect(avisos[2], contains('no 11'));
+    });
+
+    test('CI: la letra no cuenta; 5 y 9 dígitos son válidos; vacío no avisa',
+        () {
+      expect(
+        pagoMovilSoftWarnings(
+          number: '0' * 20,
+          docId: 'V12345',
+          phone: '04141234567',
+        ),
+        isEmpty,
+      );
+      expect(
+        pagoMovilSoftWarnings(
+          number: '0' * 20,
+          docId: 'E123456789',
+          phone: '04141234567',
+        ),
+        isEmpty,
+      );
+      expect(
+        pagoMovilSoftWarnings(number: '0' * 20, docId: '', phone: ''),
+        isEmpty,
+      );
+    });
+
+    test('espacios y guiones no cuentan como dígitos (teléfono 10 avisa)', () {
+      final avisos = pagoMovilSoftWarnings(
+        number: '0' * 20,
+        docId: 'V12345678',
+        phone: '0414 123 45',
+      );
+      expect(avisos, hasLength(1));
+      expect(avisos.single, contains('no 11'));
+    });
+  });
+
+  group('Alta de cuenta: aviso suave, jamás bloqueo (H2)', () {
+    late AppStore store;
+
+    // Como pumpConverter: la sección usa componentes Ve que leen el tema
+    // shadcn — el harness replica el ShadApp.custom de la app. Superficie
+    // de teléfono real (390×844) como la puerta del Conversor.
+    Future<void> pumpCuentas(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: store),
+            ChangeNotifierProvider(create: (_) => ThemeController()),
+          ],
+          child: ShadApp.custom(
+            theme: ShadThemeVe.light(),
+            darkTheme: ShadThemeVe.dark(),
+            appBuilder: (context) => MaterialApp(
+              theme: AppTheme.light(),
+              home: const Scaffold(
+                body: SingleChildScrollView(child: CuentasPagoMovil()),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('CI corto: snackbar avisa y la cuenta se guarda igual', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      store = AppStore.withData(
+        AppData(settings: const Settings(onboarded: true)),
+      );
+      await pumpCuentas(tester);
+
+      await tester.tap(find.text('Agregar cuenta'));
+      await tester.pumpAndSettle();
+      // v23.3: el alta es VeField/VeInput (rótulo fuera del campo) — los
+      // tres EditableText de la hoja en orden: número · cédula · teléfono.
+      await tester.enterText(find.byType(EditableText).at(0), '123');
+      await tester.enterText(find.byType(EditableText).at(1), 'V123');
+      await tester.enterText(find.byType(EditableText).at(2), '0414');
+      await tester.tap(find.text('Guardar'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // Avisos suaves en el snackbar (uno por campo raro)...
+      expect(find.textContaining('no 20'), findsOneWidget);
+      expect(find.textContaining('no entre 5 y 9'), findsOneWidget);
+      expect(find.textContaining('no 11'), findsOneWidget);
+      // ...y la cuenta quedó guardada igual (jamás bloqueo).
+      expect(store.data.accounts, hasLength(1));
+      expect(store.data.accounts.single.docId, 'V123');
+    });
+
+    testWidgets('datos completos: sin snackbar, guarda silencioso', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      store = AppStore.withData(
+        AppData(settings: const Settings(onboarded: true)),
+      );
+      await pumpCuentas(tester);
+
+      await tester.tap(find.text('Agregar cuenta'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText).at(0), '01341234567890123456');
+      await tester.enterText(find.byType(EditableText).at(1), 'V12345678');
+      await tester.enterText(find.byType(EditableText).at(2), '04141234567');
+      await tester.tap(find.text('Guardar'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.textContaining('Ojo:'), findsNothing);
+      expect(store.data.accounts, hasLength(1));
+      // La fila de la cuenta ya vive en Ajustes (banco · tipo + CI).
+      expect(find.textContaining('CI V12345678'), findsOneWidget);
     });
   });
 

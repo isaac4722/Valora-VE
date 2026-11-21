@@ -256,15 +256,20 @@ class _CuentasPagoMovilState extends State<CuentasPagoMovil> {
     );
     if (ok == true) {
       final number = numberCtrl.text.trim();
-      // Suaves: avisos en pantalla, guardado siempre posible.
-      if (number.isNotEmpty && number.length != 20 && context.mounted) {
+      final docId = docCtrl.text.trim();
+      final phone = phoneCtrl.text.trim();
+      // Suaves y simétricas (diseño P4): cuenta 20 · CI 5-9 con la letra
+      // fuera de la cuenta · teléfono 11 — un solo snackbar junta los
+      // avisos y el guardado NUNCA se bloquea (la longitud real varía por
+      // banco — hallazgo goldfish).
+      final avisos = pagoMovilSoftWarnings(
+        number: number,
+        docId: docId,
+        phone: phone,
+      );
+      if (avisos.isNotEmpty && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Ojo: la cuenta tiene ${number.length} dígitos, no 20 — '
-              'revisa que esté completa.',
-            ),
-          ),
+          SnackBar(content: Text('Ojo: ${avisos.join(' · ')}.')),
         );
       }
       store.addAccount(
@@ -273,14 +278,21 @@ class _CuentasPagoMovilState extends State<CuentasPagoMovil> {
           bank: bank,
           type: type,
           number: number,
-          docId: docCtrl.text.trim(),
-          phone: phoneCtrl.text.trim(),
+          docId: docId,
+          phone: phone,
         ),
       );
     }
-    numberCtrl.dispose();
-    docCtrl.dispose();
-    phoneCtrl.dispose();
+    // La hoja resuelve su futuro ANTES de terminar la animación de
+    // salida: los campos siguen pintándose unos ms más y botar los
+    // controllers aquí los mataba a mitad de fade («used after being
+    // disposed», cazado por el test del alta). Viven hasta que el texto
+    // deje de pintarse.
+    Future<void>.delayed(const Duration(milliseconds: 400), () {
+      numberCtrl.dispose();
+      docCtrl.dispose();
+      phoneCtrl.dispose();
+    });
   }
 }
 
@@ -340,6 +352,39 @@ class _AccountTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Avisos SUAVES de datos de cobro (diseño P4, simétricos por campo):
+/// cuenta 20 dígitos · cédula 5-9 (la letra no cuenta) · teléfono 11.
+/// Vacío no avisa; espacios y guiones no son dígitos. Pura y sin UI —
+/// el alta la junta en UN snackbar y el guardado jamás se bloquea.
+List<String> pagoMovilSoftWarnings({
+  required String number,
+  required String docId,
+  required String phone,
+}) {
+  int digitos(String s) => s.replaceAll(RegExp('[^0-9]'), '').length;
+  final avisos = <String>[];
+  final nCuenta = digitos(number);
+  if (number.isNotEmpty && nCuenta != 20) {
+    avisos.add(
+      'la cuenta tiene $nCuenta dígitos, no 20 — revisa que esté completa',
+    );
+  }
+  final nCi = digitos(docId);
+  if (docId.isNotEmpty && (nCi < 5 || nCi > 9)) {
+    avisos.add(
+      'la cédula tiene $nCi dígitos, no entre 5 y 9 — revisa la letra y '
+      'el número',
+    );
+  }
+  final nTel = digitos(phone);
+  if (phone.isNotEmpty && nTel != 11) {
+    avisos.add(
+      'el teléfono tiene $nTel dígitos, no 11 — revisa que esté completo',
+    );
+  }
+  return avisos;
 }
 
 /// Mensaje de cobro por Pago Móvil (compartible): monto es-VE + datos.

@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.15.0-beta+48 · v23.3a — cierre H2 de la revisión EGM: avisos suaves simétricos en el alta de cuentas
+
+El parche `0002-fix-pago-movil` (turno v23.0h) quedó fuera de la cadena
+que el dueño aplicó (0002-feat…0005, ver PROGRESS «v23.2-RECUPERA»);
+este turno lo cierra ENCIMA de v23.3, adaptado a la hoja Ve del kit.
+
+- **H2 · `pagoMovilSoftWarnings()` pura**: cuenta 20 dígitos · cédula
+  5-9 (la letra no cuenta) · teléfono 11; vacío no avisa, espacios y
+  guiones no son dígitos. El alta junta TODOS los avisos en UN solo
+  snackbar y el guardado NUNCA se bloquea (la longitud real varía por
+  banco — hallazgo goldfish). Antes: un único chequeo de la cuenta.
+- **Bug latente cazado por el test del alta**: los controllers se botaban
+  al resolver la hoja, ANTES de que terminara su animación de salida
+  («used after being disposed» en el fade). Dispose diferido 400 ms —
+  viven lo que dura el texto.
+- **6 tests** (4 puros + 2 de widget con la hoja Ve real a 390×844: CI
+  corto avisa Y la cuenta queda guardada; datos completos → sin
+  snackbar). Los de widget adaptados al chrome Ve de v23.3: los campos
+  son `VeField`+`VeInput` (rótulo fuera del campo), se direccionan por
+  orden de `EditableText`, no por el `labelText` viejo.
+
 ## 1.15.0-beta+48 · v23.3 — auditoría doble pez→elefante: integridad de datos, chrome unificado y gate visual con iconos reales
 
 Orden del dueño: subagentes TOTALEMENTE sin contexto en modo fish para un
