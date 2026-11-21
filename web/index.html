@@ -72,6 +72,16 @@
     <div class="nota">Cargando…</div>
   </div>
   <script>
+    // v24.1 — Deep link web: la restauración del history.state de la
+    // sesión PREVIA ganaba sobre la URL («recargar» en /conversor caía en
+    // la pestaña de la sesión pasada). La URL es la verdad: se limpia el
+    // estado de la entrada de historial ANTES de que el framework arranque;
+    // go_router lee el path real (defaultRouteName) y nada más.
+    try {
+      if (window.history && window.history.state) {
+        window.history.replaceState(null, document.title, window.location.href);
+      }
+    } catch (_) { /* modos sin historial: no bloquea */ }
     // Primer frame del motor → retirar el splash con un fundido.
     window.addEventListener('flutter-first-frame', function () {
       var s = document.getElementById('splash');

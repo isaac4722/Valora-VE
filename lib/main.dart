@@ -44,10 +44,16 @@ Future<void> main({String? documentsDir}) async {
   // Inicio. PathUrlStrategy expone el path real al router; en nativo no
   // aplica (kIsWeb guard).
   if (kIsWeb) usePathUrlStrategy();
+  // v24.1 — Deep link web: la estrategia por defecto (hash) del framework
+  // reescribe la URL (/conversor → '/') durante el arranque del motor, ANTES
+  // de que el router exista; Uri.base y defaultRouteName ya llegan tarde.
+  // La captura de la ruta de entrada se hace AQUÍ, primer renglón del boot,
+  // y el router la usa como initialLocation (override de plataforma).
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   final store = AppStore();
   await store.hydrate(testDir: documentsDir);
+  if (kIsWeb) captureWebEntryRoute(Uri.base);
   // v20.4: migración única de tickets (data URL base64 → archivo JPEG en
   // disco; el campo pasa a ruta relativa). Nativo de producción solamente:
   // en web no hay filesystem y en pruebas no hay plugins. Fire-and-forget:

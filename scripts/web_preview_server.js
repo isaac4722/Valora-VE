@@ -56,7 +56,9 @@ const server = HTTP.createServer((req, res) => {
     res.writeHead(200, {
       'Content-Type': MIME[ext] || 'application/octet-stream',
       'Content-Length': body.length,
-      'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600',
+      // v24.1: no-cache para TODO — main.dart.js NO está fingerprinteado, un
+      // max-age servía builds viejos hasta 1 h tras cada rebuild (canal dev).
+      'Cache-Control': 'no-cache',
     });
     res.end(body);
   } catch (e) {

@@ -41,14 +41,54 @@ final GlobalKey kNavBarKey = GlobalKey(debugLabel: 'nav-bar');
 final GlobalKey kHeaderActionsKey = GlobalKey(debugLabel: 'header-actions');
 final GlobalKey kHeroRateKey = GlobalKey(debugLabel: 'hero-rate');
 
+/// Rutas top-level válidas para deep link web (v24.1). Fuera de la lista
+/// (rutas inexistentes o assets) el router decide con su mecanismo propio.
+const Set<String> kDeepLinkRoutes = <String>{
+  '/', '/bienvenida', '/conversor', '/lista', '/productos', '/analisis',
+  '/historial', '/ajustes', '/legal', '/actualizaciones', '/tickets', '/sala',
+};
+
+/// v24.1 — Normaliza la ruta de entrada del motor a una ruta de la app:
+/// acepta «/conversor» y variantes con hash («#/conversor»), descarta
+/// assets/query y devuelve null si no hay ruta profunda válida.
+String? _deepRouteOf(String raw) {
+  var ruta = raw.split('?').first.trim();
+  if (ruta.startsWith('#')) ruta = ruta.substring(1);
+  if (ruta.isEmpty || ruta == '/') return null;
+  if (!ruta.startsWith('/')) return null;
+  return kDeepLinkRoutes.contains(ruta) ? ruta : null;
+}
+
+/// v24.1 — Ruta con la que se ABRÓ la página en web, capturada en main()
+/// antes del primer boot del framework (ver main.dart). Null = sin deep
+/// link (arranque por '/' o en nativo).
+String? webEntryRoute;
+
+/// Captura la ruta de entrada desde la URL real del navegador. Se llama
+/// UNA SOLA VEZ desde main() (kIsWeb guard en el llamador).
+void captureWebEntryRoute(Uri base) {
+  final ruta = base.hasScheme ? base.path : base.toString();
+  webEntryRoute ??= _deepRouteOf(ruta);
+}
+
 GoRouter buildRouter({required AppStore store}) {
+  // v24.1 — Deep link web: el histórico por defecto (hash) del framework
+  // reescribe la URL (/conversor → '/') ANTES de que el router exista, así
+  // que Uri.base llega tarde. La verdad de entrada es defaultRouteName: la
+  // captura PRISTINA que el motor hizo de la URL al abrir la página. Con
+  // ella explícita + overridePlatformDefaultLocation el eco de la sesión
+  // previa ya no pisa el deep link.
+  final String? entradaWeb = webEntryRoute;
   return GoRouter(
-    // Deep link web (v20.3): go_router solo restaura la URL del navegador
-    // cuando NO se pasa initialLocation — pasarla siempre mandaba cualquier
-    // ruta profunda (/conversor, /sala…) de vuelta a Inicio. El gate de
-    // onboarding lo resuelve el redirect de abajo (nativo incluido: sin URL
-    // el default es '/' y el redirect manda a /bienvenida si falta).
-    initialLocation: store.settings.onboarded ? null : '/bienvenida',
+    // Deep link web (v20.3→v24.1): la ruta de arranque es la URL REAL del
+    // navegador (explicita) o, en nativo, el mecanismo propio del router.
+    // El gate de onboarding lo resuelve el redirect de abajo (nativo
+    // incluido: sin URL el default es '/' y el redirect manda a /bienvenida
+    // si falta).
+    initialLocation: !store.settings.onboarded
+        ? '/bienvenida'
+        : entradaWeb,
+    overridePlatformDefaultLocation: entradaWeb != null,
     // El store (ChangeNotifier) re-evalúa el redirect en cada mutación sin
     // perder el estado de navegación: onboarding 0→1 con setCountry ya no
     // rebota al paso 0, y el tutorial rejugable vuelve a enganchar solo.
