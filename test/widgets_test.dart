@@ -527,13 +527,36 @@ Future<void> main() async {
         await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
         await tester.pumpAndSettle();
         // Par inicial USD → VES. Escribir 1000 arriba → abajo 40.000 en vivo.
+        // v24.1 (patrón calculadora): los campos son de SOLO LECTURA — se
+        // escriben con el VeKeypad; tocar un campo cambia el lado ACTIVO.
+        Finder tecla(String k) =>
+            find.descendant(of: find.byType(VeKeypad), matching: find.text(k));
+        Future<void> escribir(
+          WidgetTester t,
+          Finder campo,
+          String cifras,
+        ) async {
+          await t.tap(campo); // cambia el driver al lado tocado
+          await t.pump();
+          for (final k in cifras.split('')) {
+            await t.tap(tecla(k));
+            await t.pump();
+          }
+        }
+
         final fields = find.byType(MoneyField);
-        await tester.enterText(fields.first, '1000');
+        // El campo de origen arranca con «1» de cortesía: Limpiar abre la
+        // entrada nueva (el tocar el lado ya activo NO borra lo tecleado).
+        await tester.tap(
+          find.descendant(of: find.byType(VeChip), matching: find.text('Limpiar')),
+        );
+        await tester.pump();
+        await escribir(tester, fields.first, '1000');
         await tester.pump();
         expect(find.text('1.000'), findsOneWidget);
         expect(find.text('40.000,00'), findsOneWidget);
-        // BIDIRECCIONAL: escribir 80.000 ABAJO → arriba 2.000.
-        await tester.enterText(fields.at(1), '80000');
+        // BIDIRECCIONAL: tocar ABAJO y escribir 80.000 → arriba 2.000.
+        await escribir(tester, fields.at(1), '80000');
         await tester.pump();
         expect(find.text('80.000'), findsOneWidget);
         expect(find.text('2.000,00'), findsOneWidget);

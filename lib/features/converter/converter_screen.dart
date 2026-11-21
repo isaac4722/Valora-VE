@@ -63,10 +63,6 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
   Timer? _notesSave;
   AppStore? _storeRef;
 
-  /// v23 (GUI simple · comparativa CalculaYa): teclado propio desplegado
-  /// por defecto bajo el dual input; plegable desde la fila de acciones.
-  bool _keypad = true;
-
   /// Tecla del VeKeypad sobre el campo ACTIVO (driver v19: los dos lados
   /// se editan — el teclado escribe donde el usuario estaba escribiendo).
   void _padKey(String k) {
@@ -441,9 +437,24 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                       child: RepaintBoundary(
                         child: _DualInput(
                           fromCtrl: _fromCtrl, toCtrl: _toCtrl, from: from, to: to, result: result, plan: plan, ctx: ctx,
+                          driver: _driver,
                           activeSourceId: primaryId, frescura: frescura, hasOverride: _hasOverride(store, from),
-                          onFromInput: (v) => setState(() { _fromTyped = v; _driver = 'from'; _lastSyncedPassive = ''; }),
-                          onToInput: (v) => setState(() { _toTyped = v; _driver = 'to'; _lastSyncedPassive = ''; }),
+                          // v24.1 (patrón calculadora): tocar el lado
+                          // INACTIVO abre una entrada NUEVA (el valor
+                          // pasivo se sustituye, no se concatena); tocar
+                          // el lado ya activo no borra lo tecleado.
+                          onDriverTap: (d) => setState(() {
+                            if (_driver == d) return;
+                            _driver = d;
+                            _lastSyncedPassive = '';
+                            if (d == 'to') {
+                              _toTyped = 0;
+                              _toCtrl.text = '';
+                            } else {
+                              _fromTyped = 0;
+                              _fromCtrl.text = '';
+                            }
+                          }),
                           onAdjust: (v) => setState(() {
                             _fromTyped = v <= 0 ? 0 : v; _driver = 'from'; _lastSyncedPassive = '';
                             _fromCtrl.text = fmtNum(_fromTyped, decimals: smartDecimals(_fromTyped, from));
@@ -501,15 +512,6 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                           )
                         else
                           const Spacer(),
-                        Semantics(
-                          label: _keypad ? 'Ocultar teclado' : 'Mostrar teclado',
-                          child: VeBtn(
-                            size: VeBtnSize.lg,
-                            variant: VeBtnVariant.secondary,
-                            onPressed: () => setState(() => _keypad = !_keypad),
-                            child: Icon(_keypad ? LucideIcons.chevronDown : LucideIcons.calculator, size: 16),
-                          ),
-                        ),
                       ]),
                     ),
                     // v23.2: secciones secundarias como fichas — abren
@@ -574,61 +576,56 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                 ),
               ),
             ),
-            // v23 (GUI simple · comparativa CalculaYa): teclado propio +
-            // fichas de montos + modo de vista del resultado como PISO
-            // FIJO — el «modo calculadora» del dueño.
-            AnimatedSize(
-              duration: kLayoutDur,
-              curve: kEaseVe,
-              alignment: Alignment.bottomCenter,
-              child: _keypad
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                      child: RepaintBoundary(
-                        child: VeCard(
-                          padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Fichas en UNA línea: 6 expandidas + «Limpiar»
-                              // natural al final — cada slot sobra aire.
-                              Row(children: [
-                                for (final v in const [1, 5, 10, 20, 50, 100])
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                                      child: VeChip(
-                                        expands: true,
-                                        dense: true,
-                                        onTap: () => _setFromAmount(v.toDouble(), from),
-                                        child: Text('$v'),
-                                      ),
-                                    ),
-                                  ),
-                                VeChip(
-                                  dense: true,
-                                  onTap: () => _setFromAmount(0, from),
-                                  child: const Text('Limpiar'),
-                                ),
-                              ]),
-                              const SizedBox(height: 8),
-                              VeKeypad(onKey: _padKey),
-                              const SizedBox(height: 8),
-                              VeSegmented<String>(
-                                value: numMode,
-                                onChanged: store.setNumMode,
-                                segments: const [
-                                  VeSegment(value: 'decimales', label: 'Decimales'),
-                                  VeSegment(value: 'redondeo', label: 'Redondear'),
-                                ],
+            // v24.1 (patrón calculadora): el teclado es PISO FIJO — SIEMPRE
+            // visible y SIEMPRE en el mismo lugar: lo único que sube o baja
+            // es el contenido de arriba, jamás el pad. Sin plegado: un
+            // calculador no esconde su teclado (los campos son de solo
+            // lectura y el pad es la única vía de entrada).
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: RepaintBoundary(
+                child: VeCard(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Fichas en UNA línea: 6 expandidas + «Limpiar»
+                      // natural al final — cada slot sobra aire.
+                      Row(children: [
+                        for (final v in const [1, 5, 10, 20, 50, 100])
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 2),
+                              child: VeChip(
+                                expands: true,
+                                dense: true,
+                                onTap: () => _setFromAmount(v.toDouble(), from),
+                                child: Text('$v'),
                               ),
-                            ],
+                            ),
                           ),
+                        VeChip(
+                          dense: true,
+                          onTap: () => _setFromAmount(0, from),
+                          child: const Text('Limpiar'),
                         ),
+                      ]),
+                      const SizedBox(height: 8),
+                      VeKeypad(onKey: _padKey),
+                      const SizedBox(height: 8),
+                      VeSegmented<String>(
+                        value: numMode,
+                        onChanged: store.setNumMode,
+                        segments: const [
+                          VeSegment(value: 'decimales', label: 'Decimales'),
+                          VeSegment(value: 'redondeo', label: 'Redondear'),
+                        ],
                       ),
-                    )
-                  : const SizedBox(width: double.infinity),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -678,11 +675,14 @@ class _FechaTasas extends ConsumerWidget {
 }
 
 class _DualInput extends ConsumerWidget {
-  const _DualInput({required this.fromCtrl, required this.toCtrl, required this.from, required this.to, required this.result, required this.plan, required this.ctx, required this.activeSourceId, required this.frescura, required this.hasOverride, required this.onFromInput, required this.onToInput, required this.onAdjust, required this.onSwap, required this.onFrom, required this.onTo, required this.onPickSource, required this.onClearOverride});
+  const _DualInput({required this.fromCtrl, required this.toCtrl, required this.from, required this.to, required this.result, required this.plan, required this.ctx, required this.driver, required this.activeSourceId, required this.frescura, required this.hasOverride, required this.onDriverTap, required this.onAdjust, required this.onSwap, required this.onFrom, required this.onTo, required this.onPickSource, required this.onClearOverride});
   final TextEditingController fromCtrl, toCtrl;
   final Currency from, to; final double result; final ConversionPlan? plan;
-  final RateContext ctx; final String activeSourceId, frescura; final bool hasOverride;
-  final ValueChanged<double> onFromInput, onToInput, onAdjust;
+  final RateContext ctx; final String driver, activeSourceId, frescura; final bool hasOverride;
+  /// v24.1 (patrón calculadora): los campos son de SOLO LECTURA — el toque
+  /// cambia el lado ACTIVO (el pad escribe donde el usuario tocó) y el
+  /// teclado del sistema jamás aparece.
+  final ValueChanged<String> onDriverTap; final ValueChanged<double> onAdjust;
   final VoidCallback onSwap; final ValueChanged<Currency> onFrom, onTo;
   final void Function(Currency c, String id) onPickSource; final VoidCallback onClearOverride;
 
@@ -710,10 +710,13 @@ class _DualInput extends ConsumerWidget {
   }
   Widget _montoRow(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // v24.1: el símbolo de la divisa del lado ACTIVO va en tinta plena —
+    // feedback de dónde escribirá el pad, sin abrir ningún teclado.
+    final activo = driver != 'to';
     return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-      Text(from.symbol, style: VeText.displayNum(24, color: scheme.onSurfaceVariant, weight: FontWeight.w600)),
+      Text(from.symbol, style: VeText.displayNum(24, color: activo ? scheme.onSurface : scheme.onSurfaceVariant, weight: FontWeight.w600)),
       const SizedBox(width: 8),
-      Expanded(child: MoneyField(controller: fromCtrl, onChanged: onFromInput, maxDecimals: 6, style: VeText.displayNum(34, color: scheme.onSurface, weight: FontWeight.w600), decoration: const InputDecoration(hintText: 'Monto', border: InputBorder.none, isCollapsed: true, contentPadding: EdgeInsets.symmetric(vertical: 6)))),
+      Expanded(child: MoneyField(controller: fromCtrl, readOnly: true, onTap: () => onDriverTap('from'), maxDecimals: 6, style: VeText.displayNum(34, color: scheme.onSurface, weight: FontWeight.w600), decoration: const InputDecoration(hintText: 'Monto', border: InputBorder.none, isCollapsed: true, contentPadding: EdgeInsets.symmetric(vertical: 6)))),
       const SizedBox(width: 8), CurrencySelect(value: from, onChanged: onFrom),
     ]);
   }
@@ -721,7 +724,7 @@ class _DualInput extends ConsumerWidget {
     final ok = plan != null && result > 0;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Expanded(child: MoneyField(controller: toCtrl, onChanged: onToInput, maxDecimals: 6, style: VeText.displayNum(40, color: ok ? scheme.onSurface : scheme.onSurfaceVariant), decoration: InputDecoration(hintText: 'Resultado', border: InputBorder.none, isCollapsed: true, contentPadding: const EdgeInsets.symmetric(vertical: 6), hintStyle: VeText.displayNum(40, color: scheme.onSurfaceVariant)))),
+        Expanded(child: MoneyField(controller: toCtrl, readOnly: true, onTap: () => onDriverTap('to'), maxDecimals: 6, style: VeText.displayNum(40, color: ok ? scheme.onSurface : scheme.onSurfaceVariant), decoration: InputDecoration(hintText: 'Resultado', border: InputBorder.none, isCollapsed: true, contentPadding: const EdgeInsets.symmetric(vertical: 6), hintStyle: VeText.displayNum(40, color: scheme.onSurfaceVariant)))),
         const SizedBox(width: 8), CurrencySelect(value: to, onChanged: onTo),
       ]),
       Padding(padding: const EdgeInsets.only(left: 4, top: 2), child: Text(ok ? '≈ ${fmtMoney(result, to)}' : 'sin tasa para este par', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: ok ? 12 : 10.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant))),

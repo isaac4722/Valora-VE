@@ -1762,6 +1762,8 @@ class MoneyField extends StatefulWidget {
     this.onSubmitted,
     this.textInputAction,
     this.suffix,
+    this.readOnly = false,
+    this.onTap,
   });
 
   /// Controlador externo (opcional): si no se pasa, se crea uno interno.
@@ -1783,6 +1785,15 @@ class MoneyField extends StatefulWidget {
   final ValueChanged<String>? onSubmitted;
   final TextInputAction? textInputAction;
   final Widget? suffix;
+
+  /// v24.1 (patrón calculadora §9.2): campo de SOLO LECTURA — el teclado
+  /// del sistema jamás aparece (en el teléfono el IME comprimía TODO el
+  /// layout: «si yo subo todo sube»). La única vía de entrada es el
+  /// VeKeypad, como en una calculadora de verdad.
+  final bool readOnly;
+
+  /// Toque sobre el campo (p. ej. cambiar el lado activo del conversor).
+  final VoidCallback? onTap;
 
   @override
   State<MoneyField> createState() => _MoneyFieldState();
@@ -1944,6 +1955,11 @@ class _MoneyFieldState extends State<MoneyField> {
       focusNode: widget.focusNode,
       autofocus: widget.autofocus,
       enabled: widget.enabled,
+      readOnly: widget.readOnly,
+      // v24.1: en readOnly el cursor solo se muestra si hay onTap —
+      // feedback del lado ACTIVO sin abrir el teclado del sistema.
+      showCursor: widget.readOnly ? true : null,
+      onTap: widget.onTap,
       textAlign: widget.textAlign,
       style: widget.style,
       textInputAction: widget.textInputAction,
