@@ -12,7 +12,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
@@ -21,17 +20,19 @@ import '../../room/room_controller.dart';
 import '../../room/room_transport.dart';
 import '../../widgets/ui.dart';
 import 'pin_emoji.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 const String kSalaVivaRoute = '/sala-viva';
 
-class SalaVivaScreen extends StatefulWidget {
+class SalaVivaScreen extends ConsumerStatefulWidget {
   const SalaVivaScreen({super.key});
 
   @override
-  State<SalaVivaScreen> createState() => _SalaVivaScreenState();
+  ConsumerState<SalaVivaScreen> createState() => _SalaVivaScreenState();
 }
 
-class _SalaVivaScreenState extends State<SalaVivaScreen> {
+class _SalaVivaScreenState extends ConsumerState<SalaVivaScreen> {
   RoomController? _watched;
 
   void _onRoomChanged() {
@@ -47,7 +48,7 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
   @override
   void initState() {
     super.initState();
-    final room = context.read<RoomController>();
+    final room = ref.read(roomControllerProvider);
     if (!room.connected && room.status != RoomStatus.connecting) {
       // Sin sala: nada que ver aquí.
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -67,7 +68,7 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
   }
 
   Future<void> _confirmLeave() async {
-    final room = context.read<RoomController>();
+    final room = ref.read(roomControllerProvider);
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -97,7 +98,7 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
   }
 
   Future<void> _renameDialog() async {
-    final room = context.read<RoomController>();
+    final room = ref.read(roomControllerProvider);
     final c = TextEditingController(text: room.roomName);
     final name = await showDialog<String>(
       context: context,
@@ -134,7 +135,7 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final room = context.watch<RoomController>();
+    final room = ref.watch(roomControllerProvider);
     final members = room.visibleMembers;
     final title = room.roomName.isNotEmpty
         ? room.roomName
@@ -175,13 +176,13 @@ class _SalaVivaScreenState extends State<SalaVivaScreen> {
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
+class _ErrorBanner extends ConsumerWidget {
   const _ErrorBanner({required this.msg});
 
   final String msg;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final sem = VeColors.of(context);
     final scheme = ShadTheme.of(context).colorScheme;
     return Padding(
@@ -217,11 +218,11 @@ class _ErrorBanner extends StatelessWidget {
 }
 
 /// Conectando… (la sala aparece cuando el hello/welcome termine).
-class _ConnectingCard extends StatelessWidget {
+class _ConnectingCard extends ConsumerWidget {
   const _ConnectingCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return VeCard(
       child: Row(
@@ -250,11 +251,11 @@ class _ConnectingCard extends StatelessWidget {
 }
 
 /// Aviso de observador (rol de solo lectura).
-class _ViewerNotice extends StatelessWidget {
+class _ViewerNotice extends ConsumerWidget {
   const _ViewerNotice();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -287,14 +288,14 @@ class _ViewerNotice extends StatelessWidget {
 }
 
 /// Barra de gobierno del anfitrión: renombrar y cerrar.
-class _AdminBar extends StatelessWidget {
+class _AdminBar extends ConsumerWidget {
   const _AdminBar({required this.onRename, required this.onClose});
 
   final VoidCallback onRename;
   final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -324,13 +325,13 @@ class _AdminBar extends StatelessWidget {
 
 /// Código + QR + modo: lo que se comparte para invitar (patrón InviteSheet:
 /// código mono con tracking amplio, «toca para copiar», QR centrado).
-class _CodigoQrCard extends StatelessWidget {
+class _CodigoQrCard extends ConsumerWidget {
   const _CodigoQrCard({required this.room});
 
   final RoomController room;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return VeCard(
       child: Column(
@@ -444,14 +445,14 @@ class _CodigoQrCard extends StatelessWidget {
 
 /// Miembros con roles (filas divididas del prototipo); el anfitrión
 /// administra (expulsar · editor/observador) desde el menú de cada fila.
-class _MiembrosCard extends StatelessWidget {
+class _MiembrosCard extends ConsumerWidget {
   const _MiembrosCard({required this.room, required this.members});
 
   final RoomController room;
   final List<RoomMember> members;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return VeCard(
       child: Column(
@@ -497,7 +498,7 @@ class _MiembrosCard extends StatelessWidget {
   }
 }
 
-class _MemberTile extends StatelessWidget {
+class _MemberTile extends ConsumerWidget {
   const _MemberTile({required this.room, required this.m, required this.isMe});
 
   final RoomController room;
@@ -505,7 +506,7 @@ class _MemberTile extends StatelessWidget {
   final bool isMe;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     final isHostRow = m.id == 'host';
     final canManage = room.canAdmin && !isHostRow && m.id != room.myId;

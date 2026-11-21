@@ -4,8 +4,8 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
@@ -14,6 +14,7 @@ import 'package:valorave/data/store.dart';
 import 'package:valorave/features/room/room_screen.dart';
 import 'package:valorave/widgets/ui.dart' show VeInput;
 import 'package:valorave/room/room_controller.dart';
+import 'package:valorave/providers/providers.dart';
 
 void main() {
   testWidgets('Sala: PushScreen con back, safe-area y modo Servidor visible', (
@@ -21,10 +22,10 @@ void main() {
   ) async {
     final store = AppStore.withData(const AppData());
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          ChangeNotifierProvider(create: (_) => RoomController(store)),
+      ProviderScope(
+        overrides: [
+          appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+          roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
         ],
         // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme.
         child: ShadApp.custom(
@@ -66,10 +67,10 @@ void main() {
     final store = AppStore.withData(const AppData());
     final ctrl = RoomController(store);
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          ChangeNotifierProvider.value(value: ctrl),
+      ProviderScope(
+        overrides: [
+          appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+          roomControllerProvider.overrideWith((ref) => ctrl, disposeNotifier: false),
         ],
         // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme.
         child: ShadApp.custom(

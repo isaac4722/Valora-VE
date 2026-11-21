@@ -13,8 +13,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
@@ -26,6 +24,8 @@ import '../../widgets/app_tour.dart';
 import '../../widgets/ui.dart';
 import 'command_palette.dart';
 import '../../widgets/app_router.dart' show kNavBarKey;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Ítems del ticker según modo: featured (protagonistas+EUR) / focus (orden
 /// usuario) / off (no se monta).
@@ -89,8 +89,8 @@ const double kWideShell = 700;
 
 /// ¿El brillo EFECTIVO es oscuro? (resuelve `system` contra la plataforma).
 /// Para pintar el icono del toggle de tema donde se necesite.
-bool veEffectiveDark(BuildContext context) {
-  final mode = context.watch<ThemeController>().mode;
+bool veEffectiveDark(WidgetRef ref) {
+  final mode = ref.watch(themeControllerProvider).mode;
   if (mode != ThemeMode.system) return mode == ThemeMode.dark;
   return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
       Brightness.dark;
@@ -99,9 +99,9 @@ bool veEffectiveDark(BuildContext context) {
 /// Alterna claro ↔ oscuro (TASK-35 · p2 · orden del dueño): vuelve el botón
 /// de tema de la cabecera. Resuelve el brillo EFECTIVO (system incluido) y
 /// fija el opuesto explícito — un toque hace lo que el ojo espera.
-void toggleVeTheme(BuildContext context) {
-  final theme = context.read<ThemeController>();
-  final prefs = context.read<SharedPreferences>();
+void toggleVeTheme(WidgetRef ref) {
+  final theme = ref.read(themeControllerProvider);
+  final prefs = ref.read(sharedPreferencesProvider);
   final platformDark =
       WidgetsBinding.instance.platformDispatcher.platformBrightness ==
           Brightness.dark;
@@ -113,7 +113,7 @@ void toggleVeTheme(BuildContext context) {
 
 /// Rutas con búsqueda propia donde el FAB móvil NO aparece (como el
 /// prototipo: lista · productos · análisis · historial).
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   const MainShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
@@ -146,34 +146,34 @@ class MainShell extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final int current = navigationShell.currentIndex;
     // Rate-health (§5): el banner se monta SIEMPRE encima del body y decide
     // solo su visibilidad (rateStale = se vio tablero OK hace >15 min).
-    final RatesPoller poller = context.watch<RatesPoller>();
+    final RatesPoller poller = ref.watch(ratesPollerProvider);
     // v22.0 (rendimiento): el shell solo observa los CAMBIOS que pinta —
     // antes watch<AppStore>() reconstruía TODO el shell (Scaffold, fondo
     // ambiental, tabs) en cada mutación del store: cada tap del carrito,
     // cada tecla del conversor, cada tick del poller. Ahora solo se
     // reconstruye cuando cambia el país, el modo offline o el CONTADOR del
     // carrito (los pantallazos se suscriben por su cuenta).
-    final String country = context.select<AppStore, String>(
-      (s) => s.settings.country,
+    final String country = ref.watch(
+      appStoreProvider.select((s) => s.settings.country),
     );
-    final bool chosenOffline = context.select<AppStore, bool>(
-      (s) => s.settings.offlineMode,
+    final bool chosenOffline = ref.watch(
+      appStoreProvider.select((s) => s.settings.offlineMode),
     );
-    final int cartCount = context.select<AppStore, int>(
-      (s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity),
+    final int cartCount = ref.watch(
+      appStoreProvider.select((s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity)),
     );
 
     // v19 (orden del dueño): la tasa MANUAL es una tasa personalizada, NO un
     // estado «sin conexión». Si la fuente activa del país es manual — o el
     // usuario eligió no consultar APIs — el banner de salud no aparece.
     final countryCur = CountryX.from(country).currency;
-    final sourceId = context.select<AppStore, String>(
-      (s) => s.sourceFor(countryCur),
+    final sourceId = ref.watch(
+      appStoreProvider.select((s) => s.sourceFor(countryCur)),
     );
     final manualActive =
         RateSource.of(sourceId)?.category == SourceCategory.manual;
@@ -347,7 +347,7 @@ const List<_SideItem> _sideLibro = [
 
 /// Sidebar de 224 px del prototipo (App.tsx): marca, búsqueda ⌘K, navegación
 /// con indicador de tinta, sección «Libro» y pie con las tasas del país.
-class _VeSidebar extends StatelessWidget {
+class _VeSidebar extends ConsumerWidget {
   const _VeSidebar({required this.current, required this.onBranch});
 
   /// Branch activo del shell (0–6) o −1 si la ruta está fuera (Tickets).
@@ -357,7 +357,7 @@ class _VeSidebar extends StatelessWidget {
   final ValueChanged<int> onBranch;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return Container(
       width: 224,
@@ -410,7 +410,7 @@ class _VeSidebar extends StatelessWidget {
                   _SideNavButton(
                     item: item,
                     active: current == item.branch,
-                    badge: item.branch == 2 ? _cartCount(context) : 0,
+                    badge: item.branch == 2 ? _cartCount(ref) : 0,
                     onTap: () => onBranch(item.branch!),
                   ),
                 Padding(
@@ -446,11 +446,12 @@ class _VeSidebar extends StatelessWidget {
     );
   }
 
-  int _cartCount(BuildContext context) {
+  int _cartCount(WidgetRef ref) {
     // v22.0: select del CONTADOR — el sidebar no se reconstruye con el
     // store entero, solo cuando cambia la cantidad visible del badge.
-    return context.select<AppStore, int>(
-      (s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity),
+    return ref.watch(
+      appStoreProvider.select(
+          (s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity)),
     );
   }
 
@@ -464,30 +465,30 @@ class _VeSidebar extends StatelessWidget {
 
 /// Toggle de tema del sidebar (escritorio): sol/luna según el brillo
 /// efectivo; un toque cambia al opuesto (mismo interruptor de Inicio).
-class _SidebarThemeToggle extends StatelessWidget {
+class _SidebarThemeToggle extends ConsumerWidget {
   const _SidebarThemeToggle();
 
   @override
-  Widget build(BuildContext context) {
-    final bool dark = veEffectiveDark(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool dark = veEffectiveDark(ref);
     return VeIconBtn(
       icon: dark ? LucideIcons.sun : LucideIcons.moon,
       label: dark ? 'Tema claro' : 'Tema oscuro',
       size: 28,
       iconSize: 14,
-      onTap: () => toggleVeTheme(context),
+      onTap: () => toggleVeTheme(ref),
     );
   }
 }
 
 /// Logo del prototipo (Onboarding.tsx): rombo de tinta con núcleo de fondo.
-class VeLogo extends StatelessWidget {
+class VeLogo extends ConsumerWidget {
   const VeLogo({super.key, this.size = 22});
 
   final double size;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     final side = size * 34 / 48;
     return SizedBox(
@@ -521,13 +522,13 @@ class VeLogo extends StatelessWidget {
   }
 }
 
-class _SidebarSearch extends StatelessWidget {
+class _SidebarSearch extends ConsumerWidget {
   const _SidebarSearch({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
@@ -564,7 +565,7 @@ class _SidebarSearch extends StatelessWidget {
   }
 }
 
-class _SideNavButton extends StatelessWidget {
+class _SideNavButton extends ConsumerWidget {
   const _SideNavButton({
     required this.item,
     required this.active,
@@ -578,7 +579,7 @@ class _SideNavButton extends StatelessWidget {
   final int badge;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
 
     return GestureDetector(
@@ -651,15 +652,15 @@ class _SideNavButton extends StatelessWidget {
 }
 
 /// Pie del sidebar: dos tasas del país (tabular) + punto en vivo.
-class _SidebarRates extends StatelessWidget {
+class _SidebarRates extends ConsumerWidget {
   const _SidebarRates();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
-    final store = context.watch<AppStore>();
-    final poller = context.watch<RatesPoller>();
+    final store = ref.watch(appStoreProvider);
+    final poller = ref.watch(ratesPollerProvider);
     final items = tickerItems(store).take(2).toList();
 
     return Container(
@@ -741,7 +742,7 @@ class _TabSpec {
 /// Barra inferior móvil del prototipo: 5 pestañas planas, icono 20 + label
 /// 10.5, activo en tinta / inactivo en faint, badge del carrito sobre el
 /// icono. Altura flexible por accesibilidad (fix a11y heredado).
-class _MobileTabs extends StatelessWidget {
+class _MobileTabs extends ConsumerWidget {
   const _MobileTabs({
     required this.current,
     required this.cartCount,
@@ -753,7 +754,7 @@ class _MobileTabs extends StatelessWidget {
   final ValueChanged<int> onTab;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     final bool dark = ShadTheme.of(context).brightness == Brightness.dark;
     final Color faint = dark ? VeColors.faintDark : VeColors.faintLight;
@@ -786,7 +787,7 @@ class _MobileTabs extends StatelessWidget {
   }
 }
 
-class _TabButton extends StatelessWidget {
+class _TabButton extends ConsumerWidget {
   const _TabButton({
     required this.spec,
     required this.active,
@@ -804,7 +805,7 @@ class _TabButton extends StatelessWidget {
   final int badge;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -904,14 +905,14 @@ class _TabButton extends StatelessWidget {
 /// arranque del shell, tras la bienvenida o en la primera apertura tras la
 /// actualización. Replay manual en Ajustes → Tutorial. Widget de cero
 /// píxeles; tolerante sin `Provider<SharedPreferences>` (tests/previews).
-class _TourTrigger extends StatefulWidget {
+class _TourTrigger extends ConsumerStatefulWidget {
   const _TourTrigger();
 
   @override
-  State<_TourTrigger> createState() => _TourTriggerState();
+  ConsumerState<_TourTrigger> createState() => _TourTriggerState();
 }
 
-class _TourTriggerState extends State<_TourTrigger> {
+class _TourTriggerState extends ConsumerState<_TourTrigger> {
   @override
   void initState() {
     super.initState();
@@ -919,7 +920,7 @@ class _TourTriggerState extends State<_TourTrigger> {
     // segmento se pueden medir.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      maybeRunTourOnce(context);
+      maybeRunTourOnce(context, ref);
     });
   }
 
@@ -930,10 +931,10 @@ class _TourTriggerState extends State<_TourTrigger> {
 /// Cinta solo-Inicio con las fuentes del tablero vivo. Sin datos NO hace
 /// shrink aquí: el placeholder anti-CLS vive dentro de RateTicker (misma
 /// altura, «Cargando cotizaciones…») para que la cinta no salte el layout.
-class _HomeTicker extends StatelessWidget {
+class _HomeTicker extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     return RateTicker(
       items: tickerItems(store),
       mode: store.settings.tickerMode,

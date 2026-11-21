@@ -3,8 +3,8 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:valorave/core/models.dart';
@@ -14,6 +14,7 @@ import 'package:valorave/data/store.dart';
 import 'package:valorave/features/converter/converter_screen.dart';
 import 'package:valorave/widgets/app_tips.dart';
 import 'package:valorave/widgets/app_tour.dart' show kTourDoneKey;
+import 'package:valorave/providers/providers.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -81,10 +82,10 @@ void main() {
       // TASK-34 (p6): el Conversor usa el kit «Ve» (shadcn_ui) — necesita
       // ShadTheme en el árbol, como el ShadApp.custom real de main.dart.
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: store),
-            Provider<SharedPreferences>.value(value: prefs),
+        ProviderScope(
+          overrides: [
+            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+            sharedPreferencesProvider.overrideWithValue(prefs),
           ],
           child: ShadApp.custom(
             theme: ShadThemeVe.light(),
@@ -123,10 +124,10 @@ void main() {
       expect(find.text('Escribe en cualquiera de los dos'), findsNothing);
       // Re-montar la pantalla NO vuelve a mostrarlo (id ya visto).
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: store),
-            Provider<SharedPreferences>.value(value: prefs),
+        ProviderScope(
+          overrides: [
+            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+            sharedPreferencesProvider.overrideWithValue(prefs),
           ],
           child: ShadApp.custom(
             theme: ShadThemeVe.light(),
@@ -149,8 +150,8 @@ void main() {
     ) async {
       final store = AppStore.withData(const AppData());
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [ChangeNotifierProvider.value(value: store)],
+        ProviderScope(
+          overrides: [appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),],
           child: ShadApp.custom(
             theme: ShadThemeVe.light(),
             darkTheme: ShadThemeVe.dark(),

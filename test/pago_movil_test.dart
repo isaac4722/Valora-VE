@@ -9,9 +9,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show rootBundle, FontLoader, ByteData;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/data/backup.dart';
@@ -27,6 +27,7 @@ import 'package:valorave/state/app_state.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show ShadApp;
 import 'package:valorave/core/shad_theme.dart';
 import 'package:valorave/core/theme.dart';
+import 'package:valorave/providers/providers.dart';
 
 Future<void> main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -274,10 +275,10 @@ Future<void> main() async {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: store),
-            ChangeNotifierProvider(create: (_) => ThemeController()),
+        ProviderScope(
+          overrides: [
+            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
           ],
           child: ShadApp.custom(
             theme: ShadThemeVe.light(),
@@ -372,11 +373,11 @@ Future<void> main() async {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: store),
-            ChangeNotifierProvider(create: (_) => ThemeController()),
-            ChangeNotifierProvider.value(value: poller),
+        ProviderScope(
+          overrides: [
+            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+            ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
           ],
           child: ShadApp.custom(
             theme: ShadThemeVe.light(),

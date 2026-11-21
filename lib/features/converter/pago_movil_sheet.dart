@@ -7,15 +7,15 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
-import '../../data/store.dart';
 import '../../widgets/ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Mensaje de cobro por Pago Móvil: monto es-VE + datos de la cuenta.
 /// Texto plano, sin marcas — lo pega cualquier chat.
@@ -31,9 +31,10 @@ String pagoMovilMessage(double montoBs, PayAccount a) {
 /// Abre la hoja de Pago Móvil con [montoBs] ya convertido.
 Future<void> showPagoMovilSheet(
   BuildContext context, {
+  required WidgetRef ref,
   required double montoBs,
 }) async {
-  final store = context.read<AppStore>();
+  final store = ref.read(appStoreProvider);
   final accounts = store.data.accounts;
 
   // v23.3 (pez 2-a P0-1): chrome del kit (showVeSheet — radio 14, asa,
@@ -46,17 +47,17 @@ Future<void> showPagoMovilSheet(
   );
 }
 
-class _PagoMovilSheet extends StatefulWidget {
+class _PagoMovilSheet extends ConsumerStatefulWidget {
   const _PagoMovilSheet({required this.montoBs, required this.accounts});
 
   final double montoBs;
   final List<PayAccount> accounts;
 
   @override
-  State<_PagoMovilSheet> createState() => _PagoMovilSheetState();
+  ConsumerState<_PagoMovilSheet> createState() => _PagoMovilSheetState();
 }
 
-class _PagoMovilSheetState extends State<_PagoMovilSheet> {
+class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
   int _sel = 0;
 
   @override

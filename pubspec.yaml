@@ -20,8 +20,10 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # ── Estado / navegación ──────────────────────────────────────────────────
-  provider: ^6.1.5                  # estado + DI (decisión cerrada del dueño)
-  nested: ^1.0.0                    # (transitivo de provider) tipado de listas de providers
+  flutter_riverpod: ^3.5.0          # estado + DI (patrón CalculaYa: notifiers
+                                    # manuales, sin codegen — v24; el puente
+                                    # legacy ChangeNotifierProvider mantiene
+                                    # AppStore/RatesPoller/RoomController)
   go_router: ^16.3.0                # shell 8 rutas + ramas stateful (GUI dp4)
   flutter_web_plugins:              # deep link web (v20.3): usePathUrlStrategy —
     sdk: flutter                    # ya venía transitivo por go_router, mismo lock

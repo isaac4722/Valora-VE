@@ -21,13 +21,14 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/currencies.dart';
 import '../data/store.dart';
 import 'app_tour.dart' show TourKeys, isTourDone, tourRunning;
 import 'coach_mark.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Preferencias del motor.
 const String kTipPrefix = 'valorave.tip.';
@@ -150,6 +151,7 @@ bool isTipShown(SharedPreferences prefs, String id) =>
 /// propios (p. ej. la Sala Viva al conectarse).
 Future<bool> maybeShowTipOnce(
   BuildContext context, {
+  required WidgetRef ref,
   required String id,
   required String title,
   required String body,
@@ -159,8 +161,10 @@ Future<bool> maybeShowTipOnce(
 }) async {
   final SharedPreferences prefs;
   try {
-    prefs = context.read<SharedPreferences>();
-  } on ProviderNotFoundException {
+    prefs = ref.read(sharedPreferencesProvider);
+  } catch (_) {
+    // Harness parcial sin override de prefs (mismo trato que el
+    // ProviderNotFoundException del mundo provider): tip no-op.
     return false;
   }
   if (tourRunning || _tipRunning) return false;
@@ -199,13 +203,19 @@ bool _tipRunning = false;
 /// Punto de entrada por pantalla: evalúa las reglas del [scope] contra el
 /// estado vivo y muestra a lo sumo EL PRIMER tip que aplique. Post-frame de
 /// cada pantalla (TipsTrigger) — barato cuando nada aplica.
-Future<void> runTipsForScope(BuildContext context, String scope) async {
+Future<void> runTipsForScope(
+  BuildContext context,
+  WidgetRef ref,
+  String scope,
+) async {
   final SharedPreferences prefs;
   final AppStore store;
   try {
-    prefs = context.read<SharedPreferences>();
-    store = context.read<AppStore>();
-  } on ProviderNotFoundException {
+    prefs = ref.read(sharedPreferencesProvider);
+    store = ref.read(appStoreProvider);
+  } catch (_) {
+    // Harness parcial sin override de prefs (mismo trato que el
+    // ProviderNotFoundException del mundo provider): no-op.
     return;
   }
   if (tourRunning || _tipRunning) return;
@@ -216,6 +226,7 @@ Future<void> runTipsForScope(BuildContext context, String scope) async {
     if (!tip.when(store)) continue;
     await maybeShowTipOnce(
       context,
+      ref: ref,
       id: tip.id,
       title: tip.title,
       body: tip.body,
@@ -228,21 +239,21 @@ Future<void> runTipsForScope(BuildContext context, String scope) async {
 
 /// Widget de cero píxeles que dispara la evaluación del scope tras el
 /// primer frame de la pantalla que lo monta (igual que _TourTrigger).
-class TipsTrigger extends StatefulWidget {
+class TipsTrigger extends ConsumerStatefulWidget {
   const TipsTrigger({super.key, required this.scope});
 
   final String scope;
 
   @override
-  State<TipsTrigger> createState() => _TipsTriggerState();
+  ConsumerState<TipsTrigger> createState() => _TipsTriggerState();
 }
 
-class _TipsTriggerState extends State<TipsTrigger> {
+class _TipsTriggerState extends ConsumerState<TipsTrigger> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) runTipsForScope(context, widget.scope);
+      if (mounted) runTipsForScope(context, ref, widget.scope);
     });
   }
 

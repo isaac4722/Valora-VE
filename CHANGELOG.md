@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.16.0-beta+49 · v24.0a — Riverpod como estado (patrón CalculaYa), provider fuera
+
+Orden del dueño: «usa riverpod para manejar los estados como lo hace
+CalculaYa». flutter_riverpod **3.5.0** (la misma línea mayor que la app de
+referencia, confirmada por REA de su APK): notifiers manuales, sin codegen.
+
+- **`lib/providers/` nueva (patrón CalculaYa)**:
+  `sharedPreferencesProvider` (fail-fast: se sobreescribe en main — el
+  assert textual de CalculaYa), `appStoreProvider`, `themeControllerProvider`
+  (override con instancia hidratada antes del primer frame, offline-first
+  intacto), `notificationsProvider`, `connectivityProvider`,
+  `alertsProvider`, `ratesPollerProvider` y `roomControllerProvider`
+  (nacen solos bajo demanda, el `RatesNotifier`/`ratesProvider` de CalculaYa
+  en dialecto ValoraVE). Puente legacy `ChangeNotifierProvider` (riverpod 3)
+  mantiene AppStore/RatesPoller/RoomController tal cual: la REGLA DE ORO de
+  v23.0e sigue — cero cambios en el core de persistencia.
+- **main()**: `runApp(ProviderScope(overrides: [...]))` — lo que hidrata
+  antes del primer frame entra por overrides (igual que CalculaYa), lo
+  demás nace solo. `appProviders()` (mundo provider) retirado.
+- **UI**: 29 archivos migrados a `ConsumerWidget`/`ConsumerStatefulWidget`;
+  114 `context.watch/read` → `ref.watch/read(xProvider)`; los 11 `select`
+  de perf conservados como `ref.watch(x.select(...))` (mismo contrato de
+  rebuild mínimo en el shell). Funciones de hoja top-level
+  (showRateSheet/showManualRateEditor/showNotificationCenter/showPagoMovilSheet/
+  toggleVeTheme/veEffectiveDark/tips/tour) reciben `WidgetRef` — el mismo
+  patrón de CalculaYa con providers como valor de primera clase.
+- **Tests**: 12 harnesses `MultiProvider` → `ProviderScope(overrides:)` +
+  visual gate; tips/tour tolerantes a harness parcial (el ProviderException
+  de riverpod ocupa el lugar del viejo ProviderNotFoundException).
+- **pubspec**: `provider` y `nested` FUERA (cero referencias en el árbol).
+
+Gates: analyze 0 · 318/318 · auditoría VERDE.
+
 ## 1.15.0-beta+48 · v23.3a — cierre H2 de la revisión EGM: avisos suaves simétricos en el alta de cuentas
 
 El parche `0002-fix-pago-movil` (turno v23.0h) quedó fuera de la cadena

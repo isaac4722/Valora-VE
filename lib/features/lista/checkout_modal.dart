@@ -26,19 +26,17 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:provider/provider.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
-import '../../room/room_controller.dart';
-import '../../services/alerts.dart';
-import '../../services/notifications.dart';
 import '../../services/photo_compress.dart';
 import '../../widgets/ui.dart';
 import 'item_editor.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Abre el modal de checkout (sheet Ve). Devuelve true si la compra se guardó.
 Future<void> showCheckoutSheet(BuildContext context) async {
@@ -138,14 +136,14 @@ Purchase buildPurchase({
 String photoToDataUrl(List<int> bytes) =>
     'data:image/jpeg;base64,${base64Encode(bytes)}';
 
-class CheckoutModal extends StatefulWidget {
+class CheckoutModal extends ConsumerStatefulWidget {
   const CheckoutModal({super.key});
 
   @override
-  State<CheckoutModal> createState() => CheckoutModalState();
+  ConsumerState<CheckoutModal> createState() => CheckoutModalState();
 }
 
-class CheckoutModalState extends State<CheckoutModal> {
+class CheckoutModalState extends ConsumerState<CheckoutModal> {
   // Snapshot UNA vez (read, no watch): mutar el store al guardar no debe
   // reconstruir el modal con la lista ya vacía.
   late final AppStore _store;
@@ -172,7 +170,7 @@ class CheckoutModalState extends State<CheckoutModal> {
   @override
   void initState() {
     super.initState();
-    _store = context.read<AppStore>();
+    _store = ref.read(appStoreProvider);
     _cart = List<CartItem>.from(_store.cart);
     _ctx = _store.contextOf(module: RateModule.calculator);
     // Default multitienda ON si algún ítem ya trae tienda asignada.
@@ -340,8 +338,8 @@ class CheckoutModalState extends State<CheckoutModal> {
             ?.latestRecord;
         _store.recordPurchaseItemOnProduct(pid, purchaseItem, store: itemStore);
         try {
-          context.read<AlertEngine>().checkProductRise(
-            notifs: context.read<NotificationsService>(),
+          ref.read(alertsProvider).checkProductRise(
+            notifs: ref.read(notificationsProvider),
             persist: (kind, title, body) =>
                 _store.pushNotification(kind: kind, title: title, body: body),
             productId: pid,
@@ -414,7 +412,7 @@ class CheckoutModalState extends State<CheckoutModal> {
     final ok = await _save();
     if (!mounted || !ok) return;
     try {
-      await context.read<RoomController>().closeAfterPurchase();
+      await ref.read(roomControllerProvider).closeAfterPurchase();
     } catch (_) {}
     if (mounted) {
       Navigator.of(context).pop(true);
@@ -713,7 +711,7 @@ class CheckoutModalState extends State<CheckoutModal> {
 /// moneda del cálculo (vía ctx.plan: arista directa, puente EUR o vía USD).
 /// El vuelto sale en la moneda del cálculo y, si se pide, desglosado por
 /// divisa. Sin tasa para una divisa → mensaje honesto (no inventa números).
-class _Vuelto extends StatefulWidget {
+class _Vuelto extends ConsumerStatefulWidget {
   const _Vuelto({
     required this.ctx,
     required this.totals,
@@ -727,10 +725,10 @@ class _Vuelto extends StatefulWidget {
   final double totalInCalc;
 
   @override
-  State<_Vuelto> createState() => _VueltoState();
+  ConsumerState<_Vuelto> createState() => _VueltoState();
 }
 
-class _VueltoState extends State<_Vuelto> {
+class _VueltoState extends ConsumerState<_Vuelto> {
   final List<TextEditingController> _ctrls = [TextEditingController()];
   final List<Currency> _currencies = [Currency.ves];
   bool _breakdown = false;
@@ -922,7 +920,7 @@ class _VueltoState extends State<_Vuelto> {
 ///
 /// Vive dentro del checkout y también en su propio sheet desde la barra
 /// inferior de la Lista (showVeSheet «Dividir la cuenta»).
-class DividirCuentaPanel extends StatefulWidget {
+class DividirCuentaPanel extends ConsumerStatefulWidget {
   const DividirCuentaPanel({
     super.key,
     required this.totalUsd,
@@ -935,10 +933,10 @@ class DividirCuentaPanel extends StatefulWidget {
   final Currency calcCur;
 
   @override
-  State<DividirCuentaPanel> createState() => _DividirCuentaPanelState();
+  ConsumerState<DividirCuentaPanel> createState() => _DividirCuentaPanelState();
 }
 
-class _DividirCuentaPanelState extends State<DividirCuentaPanel> {
+class _DividirCuentaPanelState extends ConsumerState<DividirCuentaPanel> {
   int _people = 2;
   int _tipPct = 0;
   bool _tipIncluded = false;
@@ -1136,7 +1134,7 @@ class _DividirCuentaPanelState extends State<DividirCuentaPanel> {
 
 /// ─── Cerrar compra (requisito G) ────────────────────────────────────────────
 /// Aviso ««Arroz» ya existe en `tienda`» con Vincular / Crear nuevo (H).
-class _MatchRow extends StatelessWidget {
+class _MatchRow extends ConsumerWidget {
   const _MatchRow({
     required this.item,
     required this.match,
@@ -1152,7 +1150,7 @@ class _MatchRow extends StatelessWidget {
   final VoidCallback onCreate;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final VeInk sem = VeColors.of(context);
     final where = match.latestRecord?.store ?? 'tu catálogo';

@@ -10,7 +10,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/data/store.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -22,6 +21,8 @@ import 'package:valorave/features/room/pin_emoji.dart';
 import 'package:valorave/features/room/room_screen.dart';
 import 'package:valorave/room/room_controller.dart';
 import 'package:valorave/room/room_transport.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Enlace falso: implementa el SEAM tal cual — el controlador no sabe que
 /// no hay radio de por medio.
@@ -417,8 +418,8 @@ void main() {
       // los anuncios entran por el seam.
       room.setMode(RoomMode.servidor);
       await tester.pumpWidget(
-        ChangeNotifierProvider<RoomController>.value(
-          value: room,
+        ProviderScope(
+          overrides: [roomControllerProvider.overrideWith((ref) => room, disposeNotifier: false)],
           // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme
           // que los widgets Ve (VeTitle/VePanelCard) de la sala exigen.
           child: ShadApp.custom(
@@ -502,8 +503,8 @@ void main() {
       final room = RoomController(store);
       room.setMode(RoomMode.servidor);
       await tester.pumpWidget(
-        ChangeNotifierProvider<RoomController>.value(
-          value: room,
+        ProviderScope(
+          overrides: [roomControllerProvider.overrideWith((ref) => room, disposeNotifier: false)],
           // Mismo patrón de main.dart: ShadApp.custom provee el ShadTheme
           // que los widgets Ve (VeTitle/VePanelCard) de la sala exigen.
           child: ShadApp.custom(

@@ -7,20 +7,20 @@
 part of 'settings_screen.dart';
 
 /// Sección de Ajustes: lista de cuentas + alta en hoja + candado biométrico.
-class CuentasPagoMovil extends StatefulWidget {
+class CuentasPagoMovil extends ConsumerStatefulWidget {
   const CuentasPagoMovil({super.key});
 
   @override
-  State<CuentasPagoMovil> createState() => _CuentasPagoMovilState();
+  ConsumerState<CuentasPagoMovil> createState() => _CuentasPagoMovilState();
 }
 
-class _CuentasPagoMovilState extends State<CuentasPagoMovil> {
+class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
   /// Candado vivo: false hasta que la huella (si está pedida) abra.
   bool _abierta = false;
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     // Como main.dart (§12): el servicio se instancia aquí — no es estado,
     // es un puente a local_auth.
@@ -297,14 +297,14 @@ class _CuentasPagoMovilState extends State<CuentasPagoMovil> {
 }
 
 /// Fila de cuenta: banco + tipo, número (monoespaciada), CI y teléfono.
-class _AccountTile extends StatelessWidget {
+class _AccountTile extends ConsumerWidget {
   const _AccountTile({required this.account});
 
   final PayAccount account;
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),

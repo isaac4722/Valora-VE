@@ -4,8 +4,8 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:valorave/core/currencies.dart';
@@ -18,6 +18,7 @@ import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
 import 'package:valorave/widgets/rate_sheet.dart';
+import 'package:valorave/providers/providers.dart';
 
 AppStore _storeConTablero() {
   final store = AppStore.withData(const AppData());
@@ -61,16 +62,14 @@ void main() {
     // TASK-34 (p5): el Inicio usa el kit «Ve» (shadcn_ui) — necesita
     // ShadTheme en el árbol, como el ShadApp.custom real de main.dart.
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          ChangeNotifierProvider.value(value: poller),
+      ProviderScope(
+        overrides: [
+          appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+          ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
           // TASK-35 (p2): la cabecera de Inicio observa el tema (toggle).
-          ChangeNotifierProvider<ThemeController>.value(
-            value: ThemeController(),
-          ),
+          themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
           // v19.4: los widgets de Inicio leen sus prefs (como la app).
-          Provider<SharedPreferences>.value(value: prefs),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: ShadApp.custom(
           theme: ShadThemeVe.light(),
@@ -112,16 +111,14 @@ void main() {
     final poller = await makePoller(store);
     // TASK-34 (p5): mismo shell ShadApp del main.dart real (kit «Ve»).
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          ChangeNotifierProvider.value(value: poller),
+      ProviderScope(
+        overrides: [
+          appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+          ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
           // TASK-35 (p2): la cabecera de Inicio observa el tema (toggle).
-          ChangeNotifierProvider<ThemeController>.value(
-            value: ThemeController(),
-          ),
+          themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
           // v19.4: los widgets de Inicio leen sus prefs (como la app).
-          Provider<SharedPreferences>.value(value: prefs),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: ShadApp.custom(
           theme: ShadThemeVe.light(),

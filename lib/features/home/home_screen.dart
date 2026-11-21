@@ -15,7 +15,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show LucideIcons;
 
 import '../../core/analytics.dart' as an;
@@ -35,13 +34,15 @@ import '../shell/command_palette.dart' show showCommandPalette;
 import '../shell/main_shell.dart' show toggleVeTheme, veEffectiveDark;
 import '../shell/notifs_center.dart' show showNotificationCenter;
 import 'app_widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final poller = context.watch<RatesPoller>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final poller = ref.watch(ratesPollerProvider);
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -86,14 +87,14 @@ class HomeScreen extends StatelessWidget {
 /// B3 resume a la vista; lo cotidiano-ocasional (alertas, tiendas,
 /// registros, herramientas, widgets) vive tras «Ver todo». RESUMIR SIN
 /// QUITAR: mismas secciones, mismo orden, un toque de distancia.
-class _HomeSections extends StatefulWidget {
+class _HomeSections extends ConsumerStatefulWidget {
   const _HomeSections();
 
   @override
-  State<_HomeSections> createState() => _HomeSectionsState();
+  ConsumerState<_HomeSections> createState() => _HomeSectionsState();
 }
 
-class _HomeSectionsState extends State<_HomeSections> {
+class _HomeSectionsState extends ConsumerState<_HomeSections> {
   bool _todo = false;
 
   @override
@@ -178,7 +179,7 @@ class _HomeSectionsState extends State<_HomeSections> {
 /// eyebrow caps 10.5 px con la acción de texto a la derecha. Reemplaza a
 /// [SectionTitle] en las pantallas evolucionadas conservando el texto en
 /// MAYÚSCULAS que los tests y el tour esperan ver.
-class _SectionEyebrow extends StatelessWidget {
+class _SectionEyebrow extends ConsumerWidget {
   const _SectionEyebrow(
     this.title, {
     this.actionLabel,
@@ -193,7 +194,7 @@ class _SectionEyebrow extends StatelessWidget {
   final String? hint;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return VeEyebrow(
       hint: hint,
       right: (actionLabel == null || onAction == null)
@@ -212,11 +213,11 @@ class _SectionEyebrow extends StatelessWidget {
 /// Tarjeta «+» al pie del Inicio: la puerta a los App Widgets — los de
 /// la PANTALLA DE INICIO de Android (v19.6). Ya no hay nada configurable
 /// adentro: la galería muestra previews fieles y pide el pin al launcher.
-class _AppWidgetsCard extends StatelessWidget {
+class _AppWidgetsCard extends ConsumerWidget {
   const _AppWidgetsCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(top: 22, bottom: 6),
@@ -276,15 +277,15 @@ class _AppWidgetsCard extends StatelessWidget {
   }
 }
 
-class _Hero extends StatefulWidget {
+class _Hero extends ConsumerStatefulWidget {
   const _Hero({required this.poller});
   final RatesPoller poller;
 
   @override
-  State<_Hero> createState() => _HeroState();
+  ConsumerState<_Hero> createState() => _HeroState();
 }
 
-class _HeroState extends State<_Hero> {
+class _HeroState extends ConsumerState<_Hero> {
   Timer? _clock;
   DateTime _now = DateTime.now();
 
@@ -325,7 +326,7 @@ class _HeroState extends State<_Hero> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
     final now = _now;
     // Hora 24 h es-VE junto a la fecha (HH:mm, cero dependencias de locale).
     final hhmm =
@@ -422,7 +423,7 @@ class _HeroState extends State<_Hero> {
             icon: LucideIcons.bell,
             label: 'Alertas',
             dot: hayNoLeidas,
-            onTap: () => showNotificationCenter(context),
+            onTap: () => showNotificationCenter(context, ref),
           ),
           const SizedBox(width: 8),
           VeIconBtn(
@@ -432,11 +433,11 @@ class _HeroState extends State<_Hero> {
           ),
           const SizedBox(width: 8),
           VeIconBtn(
-            icon: veEffectiveDark(context)
+            icon: veEffectiveDark(ref)
                 ? LucideIcons.sun
                 : LucideIcons.moon,
-            label: veEffectiveDark(context) ? 'Tema claro' : 'Tema oscuro',
-            onTap: () => toggleVeTheme(context),
+            label: veEffectiveDark(ref) ? 'Tema claro' : 'Tema oscuro',
+            onTap: () => toggleVeTheme(ref),
           ),
           if (movil) ...[
             const SizedBox(width: 8),
@@ -457,13 +458,13 @@ class _HeroState extends State<_Hero> {
 /// con flash al cambiar (VeFlash), chispa de la serie real a la derecha,
 /// botón copiar y badges de categoría/fuente, brecha y vs-ayer.
 /// Usa la fuente VES activa del tablero vivo (nunca demo).
-class _RateHero extends StatelessWidget {
+class _RateHero extends ConsumerWidget {
   const _RateHero();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
 
     // Fuente VES activa del tablero vivo; si no hay datos, nada (honesto).
     final activeId = store.sourceFor(Currency.ves);
@@ -723,12 +724,12 @@ class _RateHero extends StatelessWidget {
 /// Barras de 7 días de la fuente VES activa (patrón dp6 → prototipo p5):
 /// honesta, solo aparece con ≥ 2 snapshots guardados; una barra por día con
 /// su inicial [L·M·X·J·V·S·D] y «Ayer» como referencia en el encabezado.
-class _WeekSpark extends StatelessWidget {
+class _WeekSpark extends ConsumerWidget {
   const _WeekSpark();
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     final activeId = store.sourceFor(Currency.ves);
     if (activeId.isEmpty) return const SizedBox.shrink();
@@ -797,13 +798,13 @@ class _WeekSpark extends StatelessWidget {
 /// con el color de categoría establecido. La fila Manual del país siempre
 /// está visible: el lápiz (o el toque, si no hay valor) abre el editor
 /// INLINE — la tasa manual se fija desde aquí, sin ir a Ajustes.
-class _CotizacionPrincipal extends StatelessWidget {
+class _CotizacionPrincipal extends ConsumerWidget {
   const _CotizacionPrincipal();
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
-    final poller = context.watch<RatesPoller>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
+    final poller = ref.watch(ratesPollerProvider);
     final scheme = Theme.of(context).colorScheme;
     final country = CountryX.from(store.settings.country);
     final ctx = store.contextOf();
@@ -826,7 +827,7 @@ class _CotizacionPrincipal extends StatelessWidget {
               'Modo offline activo',
               hint: 'Todo corre en tu teléfono. Pega una tasa o desactiva el modo offline.',
               actionLabel: 'Tasa manual',
-              onAction: () => _editManual(context, store, manualId),
+              onAction: () => _editManual(context, ref, store, manualId),
             )
           else if (poller.networkBlocked || poller.offlineNet)
             // Sin red (señal viva v17.8) o red bloqueada SIN datos guardados:
@@ -843,7 +844,7 @@ class _CotizacionPrincipal extends StatelessWidget {
               actionLabel: poller.loading ? 'Consultando…' : 'Reintentar',
               onAction: poller.loading ? null : () => poller.retryNow(),
               secondaryLabel: 'Tasa manual',
-              onSecondary: () => _editManual(context, store, manualId),
+              onSecondary: () => _editManual(context, ref, store, manualId),
             )
           else
             // PRIMERA CARGA: spinner, cero iconografía de red.
@@ -851,7 +852,7 @@ class _CotizacionPrincipal extends StatelessWidget {
               'Buscando tasas…',
               hint: 'Primera carga… o pega una tasa manual ya.',
               actionLabel: 'Tasa manual',
-              onAction: () => _editManual(context, store, manualId),
+              onAction: () => _editManual(context, ref, store, manualId),
             )
         else
           VeCard(
@@ -865,7 +866,7 @@ class _CotizacionPrincipal extends StatelessWidget {
                   Currency.usd,
                   hint: '1 USD = X',
                 ),
-                ..._groupRows(context, store, ctx, [
+                ..._groupRows(context, ref, store, ctx, [
                   Currency.ves,
                   Currency.cop,
                   Currency.brl,
@@ -904,7 +905,7 @@ class _CotizacionPrincipal extends StatelessWidget {
                   Currency.eur,
                 ], country.currency).isNotEmpty) ...<Widget>[
                   const RateGroupHeader(Currency.eur, hint: '1 EUR = X'),
-                  ..._groupRows(context, store, ctx, const [
+                  ..._groupRows(context, ref, store, ctx, const [
                     Currency.eur,
                   ], country.currency),
                 ],
@@ -936,6 +937,7 @@ class _CotizacionPrincipal extends StatelessWidget {
 
   List<Widget> _groupRows(
     BuildContext context,
+    WidgetRef ref,
     AppStore store,
     RateContext ctx,
     List<Currency> currencies,
@@ -953,13 +955,13 @@ class _CotizacionPrincipal extends StatelessWidget {
           onTap: () {
             if (ctx.rate(s.id) <= 0) {
               // Manual sin valor: el editor ES la activación.
-              _editManual(context, store, s.id);
+              _editManual(context, ref, store, s.id);
               return;
             }
             store.setRateSource(s.currency, s.id);
           },
           onEdit: s.category == SourceCategory.manual
-              ? () => _editManual(context, store, s.id)
+              ? () => _editManual(context, ref, store, s.id)
               : null,
         ),
     ];
@@ -968,12 +970,13 @@ class _CotizacionPrincipal extends StatelessWidget {
   /// Editor manual inline: guarda y ACTIVA la fuente del país.
   Future<void> _editManual(
     BuildContext context,
+    WidgetRef ref,
     AppStore store,
     String sourceId,
   ) async {
     final s = RateSource.of(sourceId);
     if (s == null) return;
-    final saved = await showManualRateEditor(context, sourceId: sourceId);
+    final saved = await showManualRateEditor(context, ref: ref, sourceId: sourceId);
     if (saved && context.mounted) {
       store.setRateSource(s.currency, s.id);
     }
@@ -983,7 +986,7 @@ class _CotizacionPrincipal extends StatelessWidget {
 /// Fila de tasa propia (v23): sello manual (violeta) + nombre + GapChip de
 /// brecha vs BCV + valor tabular a la derecha; seleccionada invierte la
 /// tinta como las filas de fuente. Mismo ritmo vertical que RateTile.
-class _CustomRateRow extends StatelessWidget {
+class _CustomRateRow extends ConsumerWidget {
   const _CustomRateRow({
     required this.rate,
     required this.bcv,
@@ -997,7 +1000,7 @@ class _CustomRateRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final gap = bcv > 0 ? (rate.bsPerUsd / bcv - 1) * 100 : null;
@@ -1060,12 +1063,12 @@ class _CustomRateRow extends StatelessWidget {
 /// tasa activa y tinte por categoría. Tap → HOJA DE FUENTES de esa divisa
 /// (nueva: radio de fuente con monto «1 {base} = X»; la manual lleva a
 /// Ajustes). «Ir al conversor» queda en el encabezado de la sección.
-class _DivisasFoco extends StatelessWidget {
+class _DivisasFoco extends ConsumerWidget {
   const _DivisasFoco();
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final ctx = store.contextOf();
 
     final list = CurrencyX.focus.toList(growable: false);
@@ -1114,15 +1117,15 @@ class _DivisasFoco extends StatelessWidget {
   }
 }
 
-class _MiniCard extends StatelessWidget {
+class _MiniCard extends ConsumerWidget {
   const _MiniCard({required this.currency, required this.rate});
 
   final Currency currency;
   final double rate;
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final s = RateSource.of(store.sourceFor(currency));
     final VeInk sem = VeColors.of(context);
     final Color catInk = switch (s?.category ?? SourceCategory.official) {
@@ -1138,7 +1141,7 @@ class _MiniCard extends StatelessWidget {
       value: rate > 0 ? fmtRate(rate) : '—',
       ink: rate > 0 ? catInk : null,
       leading: Flag(currency, size: 14),
-      onTap: () => _openCurrencySources(context, currency),
+      onTap: () => _openCurrencySources(context, ref, currency),
     );
   }
 }
@@ -1147,10 +1150,15 @@ class _MiniCard extends StatelessWidget {
 /// toda la app — filas [Bandera][Nombre][Precio + símbolo] con color de
 /// categoría y Manual editable INLINE (antes era una lista plana sin
 /// banderas que mandaba la manual a Ajustes).
-Future<void> _openCurrencySources(BuildContext context, Currency c) async {
-  final store = context.read<AppStore>();
+Future<void> _openCurrencySources(
+  BuildContext context,
+  WidgetRef ref,
+  Currency c,
+) async {
+  final store = ref.read(appStoreProvider);
   await showRateSheet(
     context,
+    ref: ref,
     currency: c,
     ctx: store.contextOf(),
     currentId: store.sourceFor(c),
@@ -1159,12 +1167,12 @@ Future<void> _openCurrencySources(BuildContext context, Currency c) async {
   );
 }
 
-class _AlertasPrecios extends StatelessWidget {
+class _AlertasPrecios extends ConsumerWidget {
   const _AlertasPrecios();
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     final targets =
         store.products
@@ -1241,12 +1249,12 @@ class _AlertasPrecios extends StatelessWidget {
   }
 }
 
-class _ResumenMes extends StatelessWidget {
+class _ResumenMes extends ConsumerWidget {
   const _ResumenMes();
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     final now = DateTime.now();
     // v17.8: el resumen se alimenta de las COMPRAS de Lista (automático,
@@ -1380,12 +1388,12 @@ class _ResumenMes extends StatelessWidget {
   }
 }
 
-class _TusTiendas extends StatelessWidget {
+class _TusTiendas extends ConsumerWidget {
   const _TusTiendas();
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final stats = an.storeStats(store.purchases).take(4).toList();
     if (stats.isEmpty) return const SizedBox.shrink();
 
@@ -1434,8 +1442,9 @@ void showStoreSheet(BuildContext context, String storeName) {
   showVeSheet(
     context: context,
     title: storeName.isEmpty ? 'Sin tienda' : storeName,
-    builder: (ctx) {
-      final store = ctx.watch<AppStore>();
+    builder: (ctx) => Consumer(
+      builder: (ctx, ref, _) {
+      final store = ref.watch(appStoreProvider);
       final scheme = Theme.of(ctx).colorScheme;
       final stats = an.storeStats(store.purchases);
       final stat = stats.where((s) => s.store == storeName).firstOrNull;
@@ -1530,16 +1539,17 @@ void showStoreSheet(BuildContext context, String storeName) {
           ],
         ],
       );
-    },
+      },
+    ),
   );
 }
 
-class _RegistrosRecientes extends StatelessWidget {
+class _RegistrosRecientes extends ConsumerWidget {
   const _RegistrosRecientes();
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     const take = 3;
     final recents = <String>[];
     for (final p in store.purchases.take(take)) {
@@ -1572,11 +1582,11 @@ class _RegistrosRecientes extends StatelessWidget {
   }
 }
 
-class _Herramientas extends StatelessWidget {
+class _Herramientas extends ConsumerWidget {
   const _Herramientas();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1616,14 +1626,14 @@ class _Herramientas extends StatelessWidget {
   }
 }
 
-class _Tool extends StatelessWidget {
+class _Tool extends ConsumerWidget {
   const _Tool({required this.icon, required this.label, required this.onTap});
   final IconData icon;
   final String label;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     // Tile del prototipo: VeCard tocable con icono en cajita muted.
     return VeCard(

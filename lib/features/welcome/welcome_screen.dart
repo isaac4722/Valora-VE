@@ -13,7 +13,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
@@ -21,15 +20,17 @@ import '../../core/shad_theme.dart' show kShadRadius;
 import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../widgets/ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
-class WelcomeScreen extends StatefulWidget {
+class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
 
   @override
-  State<WelcomeScreen> createState() => _WelcomeScreenState();
+  ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen> {
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   final PageController _page = PageController();
   int _index = 0;
   Country _country = Country.VE;
@@ -57,7 +58,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -151,11 +152,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 }
 
 /// ─── Slide 1 · Marca ─────────────────────────────────────────────────────────
-class _SlideMarca extends StatelessWidget {
+class _SlideMarca extends ConsumerWidget {
   const _SlideMarca();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     // Scroll + centrado (patrón de los slides 2-4): en landscape o con
     // textScale >=1.5 el contenido superaba el viewport fijo del PageView
@@ -236,12 +237,12 @@ class _SlideMarca extends StatelessWidget {
 }
 
 /// Banderita grande con el código debajo (slide 1).
-class _FlagPill extends StatelessWidget {
+class _FlagPill extends ConsumerWidget {
   const _FlagPill({required this.currency});
   final Currency currency;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -266,13 +267,13 @@ class _FlagPill extends StatelessWidget {
 /// Marca del prototipo web: rombo (cuadrado rotado 45° con esquinas
 /// redondeadas) en tinta fg con el círculo del fondo al centro — el mismo
 /// gesto del `<svg>` del Onboarding, pintado en Flutter.
-class _VeLogo extends StatelessWidget {
+class _VeLogo extends ConsumerWidget {
   const _VeLogo({this.size = 40});
 
   final double size;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final shad = ShadTheme.of(context).colorScheme;
     return CustomPaint(
       size: Size.square(size),
@@ -315,11 +316,11 @@ class _VeLogoPainter extends CustomPainter {
 }
 
 /// ─── Slide 2 · Lo que hace ───────────────────────────────────────────────────
-class _SlideQueHace extends StatelessWidget {
+class _SlideQueHace extends ConsumerWidget {
   const _SlideQueHace();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final sem = VeColors.of(context);
     // Centrado vertical (v19.10): mismo patrón del slide 1 — el
@@ -380,11 +381,11 @@ class _SlideQueHace extends StatelessWidget {
 }
 
 /// ─── Slide 3 · Datos tuyos ───────────────────────────────────────────────────
-class _SlideDatos extends StatelessWidget {
+class _SlideDatos extends ConsumerWidget {
   const _SlideDatos();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     // Centrado vertical (v19.10): mismo patrón del slide 1 — el
     // contenido respira centrado y con textScale alto sigue habiendo
@@ -476,14 +477,14 @@ class _SlideDatos extends StatelessWidget {
 }
 
 /// ─── Slide 4 · País (banderas reales) + Comenzar ─────────────────────────────
-class _SlidePais extends StatelessWidget {
+class _SlidePais extends ConsumerWidget {
   const _SlidePais({required this.country, required this.onPickCountry});
 
   final Country country;
   final ValueChanged<Country> onPickCountry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     // Centrado vertical (v19.10): mismo patrón del slide 1 — el
     // contenido respira centrado y con textScale alto sigue habiendo
@@ -543,7 +544,7 @@ class _SlidePais extends StatelessWidget {
 }
 
 /// Puntos de posición tocables (4 slides).
-class _Dots extends StatelessWidget {
+class _Dots extends ConsumerWidget {
   const _Dots({required this.count, required this.index, required this.onTap});
 
   final int count;
@@ -551,7 +552,7 @@ class _Dots extends StatelessWidget {
   final ValueChanged<int> onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -582,7 +583,7 @@ class _Dots extends StatelessWidget {
 }
 
 /// Chip compacto de país (bandera real).
-class _CountryChip extends StatelessWidget {
+class _CountryChip extends ConsumerWidget {
   const _CountryChip({
     required this.country,
     required this.selected,
@@ -594,7 +595,7 @@ class _CountryChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final shad = ShadTheme.of(context).colorScheme;
     final bool dark = Theme.of(context).brightness == Brightness.dark;
@@ -650,7 +651,7 @@ class _CountryChip extends StatelessWidget {
   }
 }
 
-class _WelcomeBullet extends StatelessWidget {
+class _WelcomeBullet extends ConsumerWidget {
   const _WelcomeBullet({
     required this.icon,
     required this.color,
@@ -664,7 +665,7 @@ class _WelcomeBullet extends StatelessWidget {
   final String body;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final shad = ShadTheme.of(context).colorScheme;
     // TASK-34 p11: cromática VeCard — superficie card, borde --line, radio 10.

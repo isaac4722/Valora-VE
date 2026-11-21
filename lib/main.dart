@@ -13,9 +13,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
@@ -24,6 +24,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'core/shad_theme.dart';
 import 'core/theme.dart';
 import 'data/store.dart';
+import 'providers/providers.dart';
 import 'services/biometric.dart';
 import 'services/connectivity.dart';
 import 'services/deep_link.dart';
@@ -93,20 +94,23 @@ Future<void> main({String? documentsDir}) async {
     // workmanager puede fallar en tests/emuladores sin servicios de Google.
   }
   runApp(
-    MultiProvider(
-      providers: appProviders(
-        store: store,
-        theme: theme,
-        notifs: notifs,
-        prefs: prefs,
-        connectivity: connectivity,
-      ),
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+        themeControllerProvider.overrideWith(
+          (ref) => theme,
+          disposeNotifier: false,
+        ),
+        notificationsProvider.overrideWith((ref) => notifs),
+        connectivityProvider.overrideWithValue(connectivity),
+      ],
       child: ValoraApp(store: store),
     ),
   );
 }
 
-class ValoraApp extends StatefulWidget {
+class ValoraApp extends ConsumerStatefulWidget {
   const ValoraApp({super.key, required this.store});
 
   /// El mismo store que vive en los providers: el router lo necesita como
@@ -114,10 +118,11 @@ class ValoraApp extends StatefulWidget {
   final AppStore store;
 
   @override
-  State<ValoraApp> createState() => _ValoraAppState();
+  ConsumerState<ValoraApp> createState() => _ValoraAppState();
 }
 
-class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
+class _ValoraAppState extends ConsumerState<ValoraApp>
+    with WidgetsBindingObserver {
   /// Router ÚNICO por sesión (ver contrato en app_router.dart): crearlo
   /// dentro de build() reiniciaba la navegación en cada mutación del store
   /// y atrapaba al usuario en la pantalla de bienvenida.
@@ -144,7 +149,7 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
     // Primer refresco tras el primer frame (no bloquea LCP).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final poller = context.read<RatesPoller>();
+      final poller = ref.read(ratesPollerProvider);
       poller.refreshNow();
       poller.startAuto();
     });
@@ -173,7 +178,7 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final poller = context.read<RatesPoller>();
+    final poller = ref.read(ratesPollerProvider);
     if (state == AppLifecycleState.resumed) {
       poller.markActive();
       poller.refreshNow();
@@ -183,7 +188,7 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
       // v23.3 (pez 2-b P2-7): última ventana del proceso — se apaga el
       // ciclo y se empuja a disco el persist pendiente antes del kill.
       poller.stopAuto();
-      unawaited(context.read<AppStore>().flushAll());
+      unawaited(ref.read(appStoreProvider).flushAll());
     }
   }
 
@@ -198,7 +203,7 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
     // Puerta biométrica (17.7): mientras está cerrada no se monta el árbol
     // de navegación — la marca sí, con reintento. Sin lock → directo.
     if (_locked) {
-      final theme = context.watch<ThemeController>();
+      final theme = ref.watch(themeControllerProvider);
       return DynamicColorBuilder(
         builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
           // TASK-34 (p4): ShadApp.custom + MaterialApp — el tipo default
@@ -248,7 +253,7 @@ class _ValoraAppState extends State<ValoraApp> with WidgetsBindingObserver {
     // MaterialApp en cada mutación (60 s de poller, cada tap) y, con el
     // router creado en build, fabricaba un GoRouter nuevo por ciclo.
     // Las pantallas se suscriben al store individualmente.
-    final theme = context.watch<ThemeController>();
+    final theme = ref.watch(themeControllerProvider);
     // Material You (dp6 · mejora 2): DynamicColorBuilder no exige canal —
     // sin plataforma devuelve null y el tema queda 100 % de marca.
     return DynamicColorBuilder(

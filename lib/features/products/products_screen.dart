@@ -16,7 +16,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/fmt.dart';
@@ -27,6 +26,8 @@ import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/ui.dart';
 import '../../widgets/export_sheet.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 const int kPageSize = 20;
 
@@ -73,14 +74,14 @@ DateTime? parseCsvDate(String raw) {
   return DateTime(year, month, day);
 }
 
-class ProductsScreen extends StatefulWidget {
+class ProductsScreen extends ConsumerStatefulWidget {
   const ProductsScreen({super.key});
 
   @override
-  State<ProductsScreen> createState() => _ProductsScreenState();
+  ConsumerState<ProductsScreen> createState() => _ProductsScreenState();
 }
 
-class _ProductsScreenState extends State<ProductsScreen> {
+class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   String _query = '';
   final _searchCtrl = TextEditingController();
   ProductCategory? _cat;
@@ -98,7 +99,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   /// producto ya existe abre su FICHA (product_sheet); si no, abre el ALTA
   /// con el código prellenado y primer precio en un paso.
   Future<void> _scanCode() async {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final code = await scanBarcode(context);
     if (code == null || !mounted) return;
 
@@ -126,7 +127,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final store = context.read<AppStore>();
+      final store = ref.read(appStoreProvider);
       if (store.products.isEmpty && store.data.stores.isEmpty) {
         // Semilla canasta: 21 productos si el libro está vacío (§13 Fase A).
         _seedCatalog(store);
@@ -175,7 +176,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     final list = _filtered(store);
     final pages = (list.length / kPageSize).ceil().clamp(1, 9999);
@@ -502,14 +503,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
 /// Dos líneas: nombre 14 w500 + «N tiendas · última hace X» · precio 16
 /// semibold tabular a la derecha · sparkline (tono por tendencia) + VeBadge
 /// de estado (Meta OK pos · Sube neg · Baja pos · Estable/Sin dato neutral).
-class _ProductRow extends StatelessWidget {
+class _ProductRow extends ConsumerWidget {
   const _ProductRow({required this.product, required this.onTap});
 
   final Product product;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final shad = ShadTheme.of(context);
     final scheme = shad.colorScheme;
     final st = productStatus(product);

@@ -11,7 +11,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/theme.dart';
@@ -22,15 +21,17 @@ import '../../widgets/ui.dart';
 import '../scanner/scanner_screen.dart';
 import 'join_sheet.dart';
 import 'pin_emoji.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
-class RoomScreen extends StatefulWidget {
+class RoomScreen extends ConsumerStatefulWidget {
   const RoomScreen({super.key});
 
   @override
-  State<RoomScreen> createState() => _RoomScreenState();
+  ConsumerState<RoomScreen> createState() => _RoomScreenState();
 }
 
-class _RoomScreenState extends State<RoomScreen> {
+class _RoomScreenState extends ConsumerState<RoomScreen> {
   late final TextEditingController _roomNameCtrl;
   late final TextEditingController _hostNameCtrl;
   String? _busyError;
@@ -45,7 +46,7 @@ class _RoomScreenState extends State<RoomScreen> {
   @override
   void initState() {
     super.initState();
-    final room = context.read<RoomController>();
+    final room = ref.read(roomControllerProvider);
     _roomNameCtrl = TextEditingController(text: room.roomName);
     _hostNameCtrl = TextEditingController(text: room.myName);
     // Deep link (QR externo escaneado con la cámara): si hay invitación
@@ -76,7 +77,7 @@ class _RoomScreenState extends State<RoomScreen> {
       return;
     }
     // En sala: a la Lista (el strip «En sala» lleva a la Sala Viva).
-    if (context.read<RoomController>().connected) {
+    if (ref.read(roomControllerProvider).connected) {
       showToast(
         context,
         'En sala · la lista se sincroniza',
@@ -88,7 +89,7 @@ class _RoomScreenState extends State<RoomScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final room = context.watch<RoomController>();
+    final room = ref.watch(roomControllerProvider);
     final busy = room.status == RoomStatus.connecting || _creating;
 
     return PushScreen(
@@ -150,13 +151,13 @@ class _RoomScreenState extends State<RoomScreen> {
 }
 
 /// Banner cuando YA hay sala activa: directo a la Sala Viva.
-class _EnSalaBanner extends StatelessWidget {
+class _EnSalaBanner extends ConsumerWidget {
   const _EnSalaBanner({required this.room});
 
   final RoomController room;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     final title = room.roomName.isNotEmpty
         ? room.roomName
@@ -194,13 +195,13 @@ class _EnSalaBanner extends StatelessWidget {
   }
 }
 
-class _ErrorBanner extends StatelessWidget {
+class _ErrorBanner extends ConsumerWidget {
   const _ErrorBanner({required this.msg});
 
   final String msg;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final sem = VeColors.of(context);
     final scheme = ShadTheme.of(context).colorScheme;
     return Container(
@@ -233,12 +234,12 @@ class _ErrorBanner extends StatelessWidget {
 }
 
 /// Conectando… con cancelar (como el resto de la app, en Ve).
-class _ConnectingCard extends StatelessWidget {
+class _ConnectingCard extends ConsumerWidget {
   const _ConnectingCard();
 
   @override
-  Widget build(BuildContext context) {
-    final room = context.watch<RoomController>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final room = ref.watch(roomControllerProvider);
     final scheme = ShadTheme.of(context).colorScheme;
     return VeCard(
       child: Row(
@@ -274,13 +275,13 @@ class _ConnectingCard extends StatelessWidget {
 
 /// TRES modos P2P + servidor, cada uno con SU tecnología — nada de internet.
 /// Filas divididas en VeGroup; la activa lleva el check a la derecha.
-class _ModePicker extends StatelessWidget {
+class _ModePicker extends ConsumerWidget {
   const _ModePicker({required this.room});
 
   final RoomController room;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return VeCard(
       child: Column(
@@ -337,7 +338,7 @@ class _ModePicker extends StatelessWidget {
 
 /// Puerta única de unirse (v19.8): la hoja JoinSheet hace el flujo completo
 /// (modo · nombre · código · PIN). Aquí solo el atajo: botón grande + escanear.
-class _JoinEntryCard extends StatelessWidget {
+class _JoinEntryCard extends ConsumerWidget {
   const _JoinEntryCard({required this.room, required this.busy});
 
   final RoomController room;
@@ -358,7 +359,7 @@ class _JoinEntryCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return VeCard(
       child: Column(
@@ -414,7 +415,7 @@ typedef _RoomAction = Future<void> Function(Future<String?> Function() action);
 
 /// Fila de una sala avistada (escaneo o búsqueda): modo · nombre · código
 /// y anfitrión. Tap → hoja de unirse prellenada (pregunta nombre y PIN).
-class _RoomAdTile extends StatelessWidget {
+class _RoomAdTile extends ConsumerWidget {
   const _RoomAdTile({required this.ad, required this.busy, required this.onTap});
 
   final RoomAd ad;
@@ -422,7 +423,7 @@ class _RoomAdTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return VeRow(
       label: Text(ad.label),
@@ -444,7 +445,7 @@ class _RoomAdTile extends StatelessWidget {
   }
 }
 
-class _CreateCard extends StatefulWidget {
+class _CreateCard extends ConsumerStatefulWidget {
   const _CreateCard({
     required this.room,
     required this.roomNameCtrl,
@@ -464,10 +465,10 @@ class _CreateCard extends StatefulWidget {
   final ValueChanged<bool> onCreating;
 
   @override
-  State<_CreateCard> createState() => _CreateCardState();
+  ConsumerState<_CreateCard> createState() => _CreateCardState();
 }
 
-class _CreateCardState extends State<_CreateCard> {
+class _CreateCardState extends ConsumerState<_CreateCard> {
   late final TextEditingController _searchCtrl;
 
   /// El escaneo se arranca UNA vez por búsqueda: cada arranque limpia la
@@ -671,7 +672,7 @@ class _CreateCardState extends State<_CreateCard> {
 }
 
 /// Fila etiqueta + subtítulo + interruptor Ve (patrón Ajustes).
-class _ToggleRow extends StatelessWidget {
+class _ToggleRow extends ConsumerWidget {
   const _ToggleRow({
     required this.label,
     required this.sub,
@@ -685,7 +686,7 @@ class _ToggleRow extends StatelessWidget {
   final ValueChanged<bool> onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return Semantics(
       label: label,
@@ -727,17 +728,17 @@ class _ToggleRow extends StatelessWidget {
   }
 }
 
-class _ScanCard extends StatefulWidget {
+class _ScanCard extends ConsumerStatefulWidget {
   const _ScanCard({required this.room, required this.busy});
 
   final RoomController room;
   final bool busy;
 
   @override
-  State<_ScanCard> createState() => _ScanCardState();
+  ConsumerState<_ScanCard> createState() => _ScanCardState();
 }
 
-class _ScanCardState extends State<_ScanCard> {
+class _ScanCardState extends ConsumerState<_ScanCard> {
   @override
   void dispose() {
     // Al salir del lobby, el escaneo muere (no gasta batería de regalo).
@@ -749,7 +750,7 @@ class _ScanCardState extends State<_ScanCard> {
 
   @override
   Widget build(BuildContext context) {
-    final room = context.watch<RoomController>();
+    final room = ref.watch(roomControllerProvider);
     final scheme = ShadTheme.of(context).colorScheme;
     return VeCard(
       child: Column(
@@ -847,16 +848,16 @@ class _ScanCardState extends State<_ScanCard> {
 /// Config del relay socket.io del usuario: URL host:puerto, token opcional,
 /// probar conexión y guía mínima del server.js de referencia. El modo NO se
 /// elimina: quien tenga su servidor lo usa con o sin internet.
-class _ServerCard extends StatefulWidget {
+class _ServerCard extends ConsumerStatefulWidget {
   const _ServerCard({required this.room});
 
   final RoomController room;
 
   @override
-  State<_ServerCard> createState() => _ServerCardState();
+  ConsumerState<_ServerCard> createState() => _ServerCardState();
 }
 
-class _ServerCardState extends State<_ServerCard> {
+class _ServerCardState extends ConsumerState<_ServerCard> {
   late final TextEditingController _addr = TextEditingController(
     text: widget.room.serverAddress,
   );

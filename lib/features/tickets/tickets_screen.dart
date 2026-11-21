@@ -14,7 +14,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
@@ -27,17 +26,19 @@ import '../../services/photo_compress.dart';
 import '../../services/sharing.dart';
 import '../../widgets/ui.dart';
 import '../lista/checkout_modal.dart' show photoToDataUrl;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Extrae los bytes de un data URL 'data:image/...;base64,…' (o base64
 /// crudo). Devuelve null si no se puede decodificar — la celda muestra el
 /// estado «imagen rota» en vez de romper la grilla.
 
-class TicketsScreen extends StatelessWidget {
+class TicketsScreen extends ConsumerWidget {
   const TicketsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final shad = ShadTheme.of(context).colorScheme;
     final withPhoto =
         store.purchases
@@ -263,13 +264,13 @@ class TicketsScreen extends StatelessWidget {
 
 /// Estado vacío punteado del prototipo: con compras → CTA directo a
 /// adjuntar; sin compras → ir a la lista para cerrar la primera.
-class _NoTicketsYet extends StatelessWidget {
+class _NoTicketsYet extends ConsumerWidget {
   const _NoTicketsYet({this.onAdd});
 
   final VoidCallback? onAdd;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return VeEmpty(
       icon: LucideIcons.images,
       title: 'Sin tickets todavía',
@@ -295,17 +296,17 @@ class _NoTicketsYet extends StatelessWidget {
 /// Tarjeta del prototipo: imagen 4:3 (placeholder con degradado sutil e
 /// icono receipt si no hay foto) + tienda semibold + fecha · total tabular.
 /// El borde sube a line-strong al pasar el cursor (escritorio).
-class _TicketCard extends StatefulWidget {
+class _TicketCard extends ConsumerStatefulWidget {
   const _TicketCard({required this.purchase, required this.onTap});
 
   final Purchase purchase;
   final VoidCallback onTap;
 
   @override
-  State<_TicketCard> createState() => _TicketCardState();
+  ConsumerState<_TicketCard> createState() => _TicketCardState();
 }
 
-class _TicketCardState extends State<_TicketCard> {
+class _TicketCardState extends ConsumerState<_TicketCard> {
   bool _hover = false;
 
   /// Caché de la carga (data URL o archivo): el hover re-dispara build y un
@@ -437,13 +438,13 @@ class _TicketCardState extends State<_TicketCard> {
 }
 
 /// Tile punteado «Agregar» del prototipo (misma altura que las tarjetas).
-class _AddTile extends StatelessWidget {
+class _AddTile extends ConsumerWidget {
   const _AddTile({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final shad = ShadTheme.of(context).colorScheme;
     return Semantics(
       button: true,
@@ -559,17 +560,17 @@ class _DashedAddPainter extends BoxPainter {
 /// Visor a pantalla completa: fondo tinta, zoom 8×, barra con fecha/tienda y
 /// acciones (compartir imagen · quitar foto de la compra). Quitar NO borra
 /// la compra: solo el adjunto, con confirmación.
-class _TicketViewer extends StatefulWidget {
+class _TicketViewer extends ConsumerStatefulWidget {
   const _TicketViewer({required this.store, required this.purchase});
 
   final AppStore store;
   final Purchase purchase;
 
   @override
-  State<_TicketViewer> createState() => _TicketViewerState();
+  ConsumerState<_TicketViewer> createState() => _TicketViewerState();
 }
 
-class _TicketViewerState extends State<_TicketViewer> {
+class _TicketViewerState extends ConsumerState<_TicketViewer> {
   bool _removed = false;
   Uint8List? _bytes;
 
@@ -767,13 +768,13 @@ class _TicketViewerState extends State<_TicketViewer> {
 /// Subtítulo de la galería: nº de fotos + peso total. Las fotos-archivo se
 /// miden con su tamaño REAL en disco; las data URLs legadas se estiman
 /// (length × 0.75 ≈ bytes crudos del base64).
-class _GallerySubtitle extends StatelessWidget {
+class _GallerySubtitle extends ConsumerWidget {
   const _GallerySubtitle({required this.withPhoto});
 
   final List<Purchase> withPhoto;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final n = withPhoto.length;
     return FutureBuilder<int>(
       future: _totalBytes(),

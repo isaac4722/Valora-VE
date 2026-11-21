@@ -4,7 +4,7 @@
 /// sus imports.
 part of 'converter_screen.dart';
 
-class _Recientes extends StatefulWidget {
+class _Recientes extends ConsumerStatefulWidget {
   const _Recientes({
     required this.from,
     required this.to,
@@ -22,10 +22,10 @@ class _Recientes extends StatefulWidget {
   final void Function(RecentConversion r)? onRestore;
 
   @override
-  State<_Recientes> createState() => _RecientesState();
+  ConsumerState<_Recientes> createState() => _RecientesState();
 }
 
-class _RecientesState extends State<_Recientes> {
+class _RecientesState extends ConsumerState<_Recientes> {
   String? _lastPushedKey;
 
   @override
@@ -49,7 +49,7 @@ class _RecientesState extends State<_Recientes> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<AppStore>().pushRecentConversion(
+      ref.read(appStoreProvider).pushRecentConversion(
             widget.amount,
             widget.from,
             widget.to,
@@ -60,8 +60,8 @@ class _RecientesState extends State<_Recientes> {
   @override
   Widget build(BuildContext context) {
     // PERF: Selector -> solo rebuild si cambia la lista de recientes
-    final recents = context.select<AppStore, List<RecentConversion>>(
-      (s) => s.readRecentConversions(),
+    final recents = ref.watch(
+      appStoreProvider.select((s) => s.readRecentConversions()),
     );
 
     if (recents.isEmpty) return const SizedBox.shrink();
@@ -72,7 +72,7 @@ class _RecientesState extends State<_Recientes> {
         _SectionEyebrow(
           'Recientes',
           actionLabel: 'Vaciar',
-          onAction: context.read<AppStore>().clearRecentConversions,
+          onAction: ref.read(appStoreProvider).clearRecentConversions,
         ),
         VeGroup(
           children: [
@@ -110,12 +110,12 @@ class _RecientesState extends State<_Recientes> {
   }
 }
 
-class _Notas extends StatelessWidget {
+class _Notas extends ConsumerWidget {
   const _Notas({required this.ctrl});
   final TextEditingController ctrl;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -124,7 +124,7 @@ class _Notas extends StatelessWidget {
           actionLabel: 'Limpiar',
           onAction: () {
             ctrl.clear();
-            context.read<AppStore>().writeConversionNotes('');
+            ref.read(appStoreProvider).writeConversionNotes('');
           },
         ),
         RepaintBoundary(
@@ -149,7 +149,7 @@ class _Notas extends StatelessWidget {
 /// REQ 4 — Calendario histórico REAL: rejilla mensual con los días que
 /// tienen snapshot guardado para las fuentes del par. Solo esos días son
 /// tocables; hoy lleva borde; el día elegido va relleno.
-class _CalendarioHistorico extends StatefulWidget {
+class _CalendarioHistorico extends ConsumerStatefulWidget {
   const _CalendarioHistorico({
     required this.days,
     required this.sourceLabel,
@@ -163,10 +163,10 @@ class _CalendarioHistorico extends StatefulWidget {
   final Future<Set<String>>? futureDays;
 
   @override
-  State<_CalendarioHistorico> createState() => _CalendarioHistoricoState();
+  ConsumerState<_CalendarioHistorico> createState() => _CalendarioHistoricoState();
 }
 
-class _CalendarioHistoricoState extends State<_CalendarioHistorico> {
+class _CalendarioHistoricoState extends ConsumerState<_CalendarioHistorico> {
   late DateTime _month;
   late Set<String> _days;
   bool _remotosPendientes = false;

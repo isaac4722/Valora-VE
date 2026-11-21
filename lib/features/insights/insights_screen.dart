@@ -9,7 +9,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/analytics.dart' as an;
@@ -19,21 +18,22 @@ import '../../core/shad_theme.dart' show kShadControlRadius;
 import '../../core/theme.dart';
 import '../../data/history_api.dart';
 import '../../data/rate_history.dart';
-import '../../data/store.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/export_sheet.dart';
 import '../../widgets/ui.dart';
 import 'insights_panels.dart';
 import 'insights_utils.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
-class InsightsScreen extends StatefulWidget {
+class InsightsScreen extends ConsumerStatefulWidget {
   const InsightsScreen({super.key});
 
   @override
-  State<InsightsScreen> createState() => _InsightsScreenState();
+  ConsumerState<InsightsScreen> createState() => _InsightsScreenState();
 }
 
-class _InsightsScreenState extends State<InsightsScreen> {
+class _InsightsScreenState extends ConsumerState<InsightsScreen> {
   int _anchor =
       0; // 0 divisas · 1 inflación · 2 productos · 3 canasta · 4 gastos · 5 tasa
   int _days = 30; // 1 M · 6 M · 1 Año · Máximo (3650 = todo lo que haya)
@@ -168,7 +168,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
 /// Tab de ancla: icono + etiqueta en columna, fondo píldora cuando activo
 /// (el segmented-control de la web, táctil).
-class _AnchorTab extends StatelessWidget {
+class _AnchorTab extends ConsumerWidget {
   const _AnchorTab({
     required this.icon,
     required this.label,
@@ -182,7 +182,7 @@ class _AnchorTab extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final shad = ShadTheme.of(context).colorScheme;
     final scheme = Theme.of(context).colorScheme;
     final bool dark = Theme.of(context).brightness == Brightness.dark;
@@ -256,15 +256,15 @@ class _AnchorTab extends StatelessWidget {
 /// Ancla 1: KPIs (brecha + tasas) + gráfica interactiva con trackball por
 /// día + panel del día en 3 columnas + exportación unificada + lookup por
 /// fecha.
-class _DivisasAnchor extends StatefulWidget {
+class _DivisasAnchor extends ConsumerStatefulWidget {
   const _DivisasAnchor({required this.days});
   final int days;
 
   @override
-  State<_DivisasAnchor> createState() => _DivisasAnchorState();
+  ConsumerState<_DivisasAnchor> createState() => _DivisasAnchorState();
 }
 
-class _DivisasAnchorState extends State<_DivisasAnchor> {
+class _DivisasAnchorState extends ConsumerState<_DivisasAnchor> {
   List<HistPoint>? _bcv;
   List<HistPoint>? _parallel;
   String? _error;
@@ -303,7 +303,7 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
     } catch (e) {
       if (!mounted) return;
       // Fallback honesto: snapshots locales (hasta 180 días reales).
-      final store = context.read<AppStore>();
+      final store = ref.read(appStoreProvider);
       final localB = snapshotSeries(store.snapshots, 'ves-bcv', widget.days);
       final localP = snapshotSeries(
         store.snapshots,
@@ -354,7 +354,7 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final ink = VeColors.of(context);
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
     final ctx = store.contextOf();
     final gap = ctx.gapPct();
     final bcv = _bcv ?? const <HistPoint>[];
@@ -528,7 +528,7 @@ class _DivisasAnchorState extends State<_DivisasAnchor> {
 /// Panel del día tocado en la gráfica de brecha, en 3 columnas como las
 /// stat-rows de la web: BCV · Paralelo · Brecha % de ESE día (paralelo/BCV
 /// − 1, solo con ambas tasas > 0). Sin tap: último día.
-class _DayPanel extends StatelessWidget {
+class _DayPanel extends ConsumerWidget {
   const _DayPanel({
     required this.bcv,
     required this.parallel,
@@ -540,7 +540,7 @@ class _DayPanel extends StatelessWidget {
   final int? index;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final ink = VeColors.of(context);
     if (bcv.isEmpty) return const SizedBox.shrink();
@@ -673,14 +673,14 @@ class _DayPanel extends StatelessWidget {
   }
 }
 
-class _LookupFecha extends StatefulWidget {
+class _LookupFecha extends ConsumerStatefulWidget {
   const _LookupFecha();
 
   @override
-  State<_LookupFecha> createState() => _LookupFechaState();
+  ConsumerState<_LookupFecha> createState() => _LookupFechaState();
 }
 
-class _LookupFechaState extends State<_LookupFecha> {
+class _LookupFechaState extends ConsumerState<_LookupFecha> {
   DateTime _date = DateTime.now().subtract(const Duration(days: 1));
   double? _rateB;
   double? _rateP;
@@ -710,7 +710,7 @@ class _LookupFechaState extends State<_LookupFecha> {
                 locale: const Locale('es'),
               );
               if (d == null || !context.mounted) return;
-              final store = context.read<AppStore>();
+              final store = ref.read(appStoreProvider);
               final day = SnapshotPoint.dayKey(d);
               final b = store.snapshots
                   .where((p) => p.sourceId == 'ves-bcv' && p.day == day)
@@ -816,15 +816,15 @@ class _LookupFechaState extends State<_LookupFecha> {
 
 /// Ancla 2: inflación personal (canasta ponderada por costo + promedio simple
 /// de todos los productos) + serie de costo de la canasta + devaluación BCV.
-class _InflacionAnchor extends StatelessWidget {
+class _InflacionAnchor extends ConsumerWidget {
   const _InflacionAnchor({required this.days, required this.onGoToBasket});
 
   final int days;
   final VoidCallback onGoToBasket;
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     final ink = VeColors.of(context);
 

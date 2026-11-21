@@ -36,7 +36,7 @@ class _SectionEyebrow extends StatelessWidget {
 /// COP: TRM · Mercado · Manual; EUR: sus aristas; USD: referencia). Cada fila
 /// muestra punto de categoría, nombre, detalle, tasa y marca la activa;
 /// tocar una fila la usa como fuente (mismo camino del selector de chips).
-class _ReferenciaFuentes extends StatelessWidget {
+class _ReferenciaFuentes extends ConsumerWidget {
   const _ReferenciaFuentes({
     required this.ctx,
     required this.from,
@@ -59,15 +59,15 @@ class _ReferenciaFuentes extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final sources = _buildSources();
     // v19.0 (orden del dueño): USD no aporta fuentes
     if (sources.isEmpty) return const SizedBox.shrink();
 
     // PERF: un solo select para todas las frescuras, no un watch por fila
-    final freshnessMap = context.select<AppStore, Map<String, String?>>((s) {
+    final freshnessMap = ref.watch(appStoreProvider.select((s) {
       return {for (final src in sources) src.id: s.board.sources[src.id] == null ? null : timeAgo(s.board.sources[src.id]!.updatedAt)};
-    });
+    }));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

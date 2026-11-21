@@ -10,15 +10,15 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/theme.dart';
-import '../../room/room_controller.dart';
 import '../../room/room_transport.dart'
     show RoomAd, RoomMode, RoomModeX, SalaInvite;
 import '../../widgets/ve/ve.dart';
 import 'pin_emoji.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Alfabeto del código de sala (RoomProtocol.newCode: 6 chars sin O/I).
 const String _kAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -38,17 +38,17 @@ Future<void> showJoinSheet(
   );
 }
 
-class _JoinSheet extends StatefulWidget {
+class _JoinSheet extends ConsumerStatefulWidget {
   const _JoinSheet({this.invite, this.ad});
 
   final SalaInvite? invite;
   final RoomAd? ad;
 
   @override
-  State<_JoinSheet> createState() => _JoinSheetState();
+  ConsumerState<_JoinSheet> createState() => _JoinSheetState();
 }
 
-class _JoinSheetState extends State<_JoinSheet> {
+class _JoinSheetState extends ConsumerState<_JoinSheet> {
   late final TextEditingController _nameCtrl;
   late final List<int> _codeIdx;
   String _pin = '';
@@ -70,7 +70,7 @@ class _JoinSheetState extends State<_JoinSheet> {
   @override
   void initState() {
     super.initState();
-    final room = context.read<RoomController>();
+    final room = ref.read(roomControllerProvider);
     _nameCtrl = TextEditingController(text: room.myName);
     final preset = widget.invite?.code ?? widget.ad?.code ?? '';
     _codeTouched = preset.length == 6;
@@ -93,7 +93,7 @@ class _JoinSheetState extends State<_JoinSheet> {
   }
 
   Future<void> _connect() async {
-    final room = context.read<RoomController>();
+    final room = ref.read(roomControllerProvider);
     FocusScope.of(context).unfocus();
     setState(() => _connecting = true);
     final err = await room.join(
@@ -142,7 +142,7 @@ class _JoinSheetState extends State<_JoinSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final room = context.watch<RoomController>();
+    final room = ref.watch(roomControllerProvider);
     final scheme = ShadTheme.of(context).colorScheme;
     final inv = widget.invite;
     final ad = widget.ad;
@@ -220,7 +220,7 @@ class _JoinSheetState extends State<_JoinSheet> {
             for (final m in RoomMode.values)
               VeChip(
                 active: room.mode == m,
-                onTap: () => context.read<RoomController>().setMode(m),
+                onTap: () => ref.read(roomControllerProvider).setMode(m),
                 child: Text(m.id == 'wifi' ? 'WiFi local' : m.label),
               ),
           ],
@@ -457,14 +457,14 @@ class _JoinSheetState extends State<_JoinSheet> {
 }
 
 /// Rótulo de paso (eyebrow caps con aire propio, como el prototipo).
-class _StepEyebrow extends StatelessWidget {
+class _StepEyebrow extends ConsumerWidget {
   const _StepEyebrow(this.text, {this.top = 0});
 
   final String text;
   final double top;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     return Padding(
       padding: EdgeInsets.only(top: top, bottom: 8),
@@ -482,7 +482,7 @@ class _StepEyebrow extends StatelessWidget {
 
 /// Columna de letra del código (JoinSheet del prototipo): botón ▲ arriba,
 /// celda mono 20 px sobre bg-subtle con bordes horizontales, botón ▼ abajo.
-class _LetterWheel extends StatelessWidget {
+class _LetterWheel extends ConsumerWidget {
   const _LetterWheel({
     required this.letter,
     required this.onUp,
@@ -494,7 +494,7 @@ class _LetterWheel extends StatelessWidget {
   final VoidCallback onDown;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
     final bool dark = ShadTheme.of(context).brightness == Brightness.dark;
     final Color lineStrong = dark

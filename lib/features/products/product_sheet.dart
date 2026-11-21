@@ -30,7 +30,6 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/analytics.dart' as an;
@@ -39,11 +38,11 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/store.dart';
-import '../../services/alerts.dart';
-import '../../services/notifications.dart';
 import '../scanner/scanner_screen.dart';
 import '../lista/item_editor.dart' show StoreAutocompleteField;
 import '../../widgets/ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Estado visual de un producto (mapa del prototipo Products.tsx):
 /// META OK→pos · Sube→neg · Baja→pos · Estable→neutral · Sin dato→neutral ·
@@ -231,16 +230,16 @@ String _storeOf(PriceRecord r) {
 
 // ═══════════════════════════ Ficha de producto ═════════════════════════════
 
-class ProductSheet extends StatefulWidget {
+class ProductSheet extends ConsumerStatefulWidget {
   const ProductSheet({super.key, required this.productId});
 
   final String productId;
 
   @override
-  State<ProductSheet> createState() => ProductSheetState();
+  ConsumerState<ProductSheet> createState() => ProductSheetState();
 }
 
-class ProductSheetState extends State<ProductSheet> {
+class ProductSheetState extends ConsumerState<ProductSheet> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _barcodeCtrl;
   late final TextEditingController _sizeCtrl;
@@ -282,14 +281,14 @@ class ProductSheetState extends State<ProductSheet> {
     _pres = p?.presentation ?? Presentation.unit;
   }
 
-  Product? _initialProduct() => context
-      .read<AppStore>()
+  Product? _initialProduct() => ref
+      .read(appStoreProvider)
       .products
       .where((x) => x.id == widget.productId)
       .firstOrNull;
 
-  Product? _currentProduct() => context
-      .read<AppStore>()
+  Product? _currentProduct() => ref
+      .read(appStoreProvider)
       .products
       .where((x) => x.id == widget.productId)
       .firstOrNull;
@@ -406,8 +405,8 @@ class ProductSheetState extends State<ProductSheet> {
     // Alerta de subida de precio (v17.5) + metas de producto (17.7 · el
     // mismo camino del 2º plano): engine + sistema + centro + metSince.
     try {
-      context.read<AlertEngine>().checkProductRise(
-        notifs: context.read<NotificationsService>(),
+      ref.read(alertsProvider).checkProductRise(
+        notifs: ref.read(notificationsProvider),
         persist: (kind, title, body) =>
             store.pushNotification(kind: kind, title: title, body: body),
         productId: p.id,
@@ -419,9 +418,9 @@ class ProductSheetState extends State<ProductSheet> {
       // Metas de precio (17.7 · price_targets): anuncia «bajo tu meta» por
       // el canal del sistema + centro y fija metSince — mismo camino que el
       // 2º plano de workmanager.
-      context.read<AlertEngine>().checkProductTargets(
+      ref.read(alertsProvider).checkProductTargets(
         store: store,
-        notifs: context.read<NotificationsService>(),
+        notifs: ref.read(notificationsProvider),
         persist: (kind, title, body) =>
             store.pushNotification(kind: kind, title: title, body: body),
       );
@@ -478,7 +477,7 @@ class ProductSheetState extends State<ProductSheet> {
   /// Pie: «Eliminar» (trash) — confirmación y cascada de canasta en store.
   /// El watcher de la ficha la cierra al no encontrar el producto.
   Future<void> askDelete() async {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final p = _currentProduct();
     if (p == null) return;
     await _confirmDelete(store, p);
@@ -487,7 +486,7 @@ class ProductSheetState extends State<ProductSheet> {
   /// Pie: «Agregar a la lista» con el precio vigente del libro (patrón del
   /// escáner). Sin precio → aviso honesto, no se agrega en $0.
   void addToCartAndClose() {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final p = _currentProduct();
     if (p == null) return;
     final last = p.latestRecord;
@@ -642,7 +641,7 @@ class ProductSheetState extends State<ProductSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
     final p = store.products.where((x) => x.id == widget.productId).firstOrNull;
 
     // Producto eliminado (desde la propia ficha) → cierra una sola vez.
@@ -1601,16 +1600,16 @@ class _ChartPoint {
 
 // ═══════════════════════════ Alta de producto ══════════════════════════════
 
-class NewProductSheet extends StatefulWidget {
+class NewProductSheet extends ConsumerStatefulWidget {
   const NewProductSheet({super.key, this.initialBarcode});
 
   final String? initialBarcode;
 
   @override
-  State<NewProductSheet> createState() => _NewProductSheetState();
+  ConsumerState<NewProductSheet> createState() => _NewProductSheetState();
 }
 
-class _NewProductSheetState extends State<NewProductSheet> {
+class _NewProductSheetState extends ConsumerState<NewProductSheet> {
   final _nameCtrl = TextEditingController();
   late final TextEditingController _barcodeCtrl = TextEditingController(
     text: widget.initialBarcode ?? '',
@@ -1638,7 +1637,7 @@ class _NewProductSheetState extends State<NewProductSheet> {
   Future<void> _scanIntoBarcode() async {
     final code = await scanBarcode(context);
     if (code == null || !mounted) return;
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final dupe = store.products.where((p) => p.barcode == code).firstOrNull;
     setState(() {
       _barcodeCtrl.text = code;
@@ -1650,7 +1649,7 @@ class _NewProductSheetState extends State<NewProductSheet> {
 
   /// Crea el producto (y su primer precio si se ingresó) en un paso.
   void create() {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       setState(() => _error = 'El nombre es obligatorio');

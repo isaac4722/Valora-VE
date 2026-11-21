@@ -8,7 +8,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/analytics.dart' as an;
@@ -22,12 +21,14 @@ import '../../data/store.dart';
 import '../../services/sharing.dart';
 import '../../widgets/ui.dart';
 import 'insights_utils.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 // ─────────────────────────── Widgets compartidos ───────────────────────────
 
 /// Tile compacto de KPI: etiqueta caps + número grande + sub. La fila de
 /// web dashboards: 2-3 datos que resumen el panel de arriba.
-class KpiTile extends StatelessWidget {
+class KpiTile extends ConsumerWidget {
   const KpiTile({
     super.key,
     required this.label,
@@ -44,7 +45,7 @@ class KpiTile extends StatelessWidget {
   final IconData? icon;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final shad = ShadTheme.of(context).colorScheme;
     final c = color ?? scheme.onSurface;
@@ -135,13 +136,13 @@ class KpiTile extends StatelessWidget {
 }
 
 /// Fila de 2-3 KPIs con el mismo alto (como los stat-rows de la web).
-class KpiRow extends StatelessWidget {
+class KpiRow extends ConsumerWidget {
   const KpiRow({super.key, required this.tiles});
 
   final List<Widget> tiles;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -158,7 +159,7 @@ class KpiRow extends StatelessWidget {
 
 /// Tarjeta-panel con cabecera consistente: título + acción a la derecha
 /// (el patrón de TODA tarjeta del dashboard — nada de títulos flotando).
-class PanelCard extends StatelessWidget {
+class PanelCard extends ConsumerWidget {
   const PanelCard({
     super.key,
     required this.title,
@@ -177,7 +178,7 @@ class PanelCard extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final shad = ShadTheme.of(context).colorScheme;
     // TASK-34 p9: cromática VeCard — la cabecera pasa de caps-primary al
@@ -236,7 +237,7 @@ class PanelCard extends StatelessWidget {
 
 /// Pista compacta para estados vacíos y mensajes honestos: una línea con
 /// ícono, no una tarjeta gigante que parece error.
-class InlineHint extends StatelessWidget {
+class InlineHint extends ConsumerWidget {
   const InlineHint(
     this.text, {
     super.key,
@@ -251,7 +252,7 @@ class InlineHint extends StatelessWidget {
   final VoidCallback? onAction;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -301,7 +302,7 @@ class InlineHint extends StatelessWidget {
 }
 
 /// Burbuja de tooltip firma: valor en displayNum + fecha es-VE abreviada.
-class TipBox extends StatelessWidget {
+class TipBox extends ConsumerWidget {
   const TipBox({
     super.key,
     required this.main,
@@ -316,7 +317,7 @@ class TipBox extends StatelessWidget {
   final Color fg;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
@@ -342,13 +343,13 @@ class TipBox extends StatelessWidget {
 // ───────────────────────── Ancla 3: Productos ───────────────────────────────
 
 /// Ancla 3: rankings de productos (en el rango) y tiendas.
-class ProductosAnchor extends StatelessWidget {
+class ProductosAnchor extends ConsumerWidget {
   const ProductosAnchor({super.key, required this.days});
   final int days;
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     final measured = <(Product, double)>[];
     for (final p in store.products) {
@@ -472,12 +473,12 @@ class ProductosAnchor extends StatelessWidget {
 
 /// Distribución del gasto por día de la semana (Lun→Dom) con el día fuerte
 /// señalado — el «ranking» honesto: total USD efectivo + nº de compras.
-class WeekdayRanking extends StatelessWidget {
+class WeekdayRanking extends ConsumerWidget {
   const WeekdayRanking({super.key, required this.purchases});
   final List<Purchase> purchases;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final rows = weekdaySpend(purchases);
     final maxTotal = rows.fold<double>(
@@ -552,12 +553,12 @@ class WeekdayRanking extends StatelessWidget {
 
 /// Gasto por divisa: lo pagado en CADA moneda (precio original de los ítems)
 /// con su equivalente USD — el orden del ranking es por USD (comparable).
-class CurrencyRanking extends StatelessWidget {
+class CurrencyRanking extends ConsumerWidget {
   const CurrencyRanking({super.key, required this.purchases});
   final List<Purchase> purchases;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final rows = currencySpend(purchases);
     if (rows.isEmpty) return const SizedBox.shrink();
@@ -601,12 +602,12 @@ class CurrencyRanking extends StatelessWidget {
 
 /// Ancla 4: canasta básica (CRUD) — vive aquí: la inflación personal del
 /// ancla Inflación se calcula con ESTA canasta.
-class CanastaAnchor extends StatelessWidget {
+class CanastaAnchor extends ConsumerWidget {
   const CanastaAnchor({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final cost = basketCostSeries(store.basket, store.products, days: 365);
     final lastCost = cost.isEmpty ? null : cost.last;
     return Column(
@@ -708,7 +709,7 @@ class CanastaAnchor extends StatelessWidget {
 }
 
 /// Stepper compacto −/n/+ con quitar por long-press en −.
-class _QtyStepper extends StatelessWidget {
+class _QtyStepper extends ConsumerWidget {
   const _QtyStepper({
     required this.qty,
     required this.onChanged,
@@ -720,7 +721,7 @@ class _QtyStepper extends StatelessWidget {
   final VoidCallback onRemove;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -775,13 +776,13 @@ class _QtyStepper extends StatelessWidget {
 /// las compras guardadas (cero carga manual, cero duplicar datos): total
 /// del rango + donut por tienda + barras por mes, con la cobertura real
 /// de datos siempre a la vista (§ honesto).
-class GastosAnchor extends StatelessWidget {
+class GastosAnchor extends ConsumerWidget {
   const GastosAnchor({super.key, required this.days});
   final int days;
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     final sem = VeColors.of(context);
     final now = DateTime.now();
@@ -889,15 +890,15 @@ class GastosAnchor extends StatelessWidget {
 
 /// Ancla 6: registros propios por fuente (selector MULTI-DIVISA: hasta 3
 /// fuentes superpuestas) + gráfica interactiva + tabla + export por columnas.
-class HistoricaAnchor extends StatefulWidget {
+class HistoricaAnchor extends ConsumerStatefulWidget {
   const HistoricaAnchor({super.key, required this.days});
   final int days;
 
   @override
-  State<HistoricaAnchor> createState() => _HistoricaAnchorState();
+  ConsumerState<HistoricaAnchor> createState() => _HistoricaAnchorState();
 }
 
-class _HistoricaAnchorState extends State<HistoricaAnchor> {
+class _HistoricaAnchorState extends ConsumerState<HistoricaAnchor> {
   /// Selección múltiple (historial multi-divisa, §9.7): hasta 3 fuentes.
   final Set<String> _selected = {};
 
@@ -927,7 +928,7 @@ class _HistoricaAnchorState extends State<HistoricaAnchor> {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     final ink = VeColors.of(context);
     final sources = _sources(store);
@@ -1153,7 +1154,7 @@ class _HistoricaAnchorState extends State<HistoricaAnchor> {
 /// (devaluación), verde=baja, intensidad = magnitud vs el día anterior con
 /// datos. Solo meses con datos (nunca media pantalla de cuadros vacíos).
 /// Encima del grid: día con mayor subida del período.
-class HeatmapCalendar extends StatelessWidget {
+class HeatmapCalendar extends ConsumerWidget {
   const HeatmapCalendar({super.key, required this.data});
 
   /// % diario (vs día anterior con datos) por 'YYYY-MM-DD'.
@@ -1162,7 +1163,7 @@ class HeatmapCalendar extends StatelessWidget {
   static const int _kMonths = 6;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final ink = VeColors.of(context);
     final byDay = {for (final e in data) e.day: e.pct};

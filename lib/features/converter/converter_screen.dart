@@ -14,7 +14,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart' show LucideIcons, ShadTheme;
 import 'package:share_plus/share_plus.dart';
 
@@ -25,7 +24,6 @@ import '../../core/theme.dart';
 import '../../data/history_api.dart';
 import '../../data/rate_history.dart';
 import '../../data/store.dart';
-import '../../state/app_state.dart' show RatesPoller;
 import '../../services/sharing.dart';
 import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
@@ -34,18 +32,20 @@ import '../../widgets/share_card.dart';
 import '../../widgets/export_sheet.dart';
 import '../../widgets/ui.dart';
 import 'pago_movil_sheet.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 part 'converter_reference.dart';
 part 'converter_history.dart';
 
-class ConverterScreen extends StatefulWidget {
+class ConverterScreen extends ConsumerStatefulWidget {
   const ConverterScreen({super.key});
 
   @override
-  State<ConverterScreen> createState() => _ConverterScreenState();
+  ConsumerState<ConverterScreen> createState() => _ConverterScreenState();
 }
 
-class _ConverterScreenState extends State<ConverterScreen> {
+class _ConverterScreenState extends ConsumerState<ConverterScreen> {
   /// BIDIRECCIONAL (v19, orden del dueño): los DOS campos se editan.
   final _fromCtrl = TextEditingController(text: '1');
   final _toCtrl = TextEditingController();
@@ -114,7 +114,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
   @override
   void initState() {
     super.initState();
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     _storeRef = store;
     _notesCtrl.text = store.readConversionNotes();
     _notesCtrl.addListener(_onNotesChanged);
@@ -155,8 +155,8 @@ class _ConverterScreenState extends State<ConverterScreen> {
   }
 
   Future<void> _loadHistoric(DateTime date) async {
-    final store = context.read<AppStore>();
-    final offlineNet = context.read<RatesPoller>().offlineNet;
+    final store = ref.read(appStoreProvider);
+    final offlineNet = ref.read(ratesPollerProvider).offlineNet;
     final base = store.contextOf(module: RateModule.converter);
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
@@ -246,7 +246,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
   bool _hasOverride(AppStore store, Currency c) => store.data.settings.rateSourcesByModule.containsKey(moduleRateKey(RateModule.converter.code, c.code));
 
   void _pickSource(Currency c, String id) {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final global = store.sourceFor(c);
     if (id == global) {
       store.setModuleRateSource(RateModule.converter, c, null);
@@ -256,7 +256,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
   }
 
   Future<Set<String>> _diasRemotos(List<String> ids) async {
-    if (context.read<RatesPoller>().offlineNet) return const <String>{};
+    if (ref.read(ratesPollerProvider).offlineNet) return const <String>{};
     final probes = <String>{ for (final id in ids) ...(id == 'ves-avg' ? const ['ves-bcv', 'ves-parallel'] : [id]) };
     final results = await Future.wait(probes.where((id) {
       final def = RateSource.of(id);
@@ -271,7 +271,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
   }
 
   Future<void> _openHistoricCalendar() async {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final ctx = store.contextOf(module: RateModule.converter);
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
@@ -293,7 +293,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
   }
 
   Future<Uint8List?> _renderCard() async {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final ctx = _context(store);
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
@@ -314,7 +314,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
   }
 
   Future<void> _shareCard() async {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final ctx = _context(store);
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
@@ -339,7 +339,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
   }
 
   void _copyResult() {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final ctx = _context(store);
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
@@ -385,13 +385,13 @@ class _ConverterScreenState extends State<ConverterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final fromCode = context.select<AppStore, String>((s) => s.data.converter.from);
-    final toCode = context.select<AppStore, String>((s) => s.data.converter.to);
-    final numMode = context.select<AppStore, String>((s) => s.settings.numMode);
+    final fromCode = ref.watch(appStoreProvider.select((s) => s.data.converter.from));
+    final toCode = ref.watch(appStoreProvider.select((s) => s.data.converter.to));
+    final numMode = ref.watch(appStoreProvider.select((s) => s.settings.numMode));
     final from = CurrencyX.from(fromCode);
     final to = CurrencyX.from(toCode);
 
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
     final ctx = _context(store);
     final plan = ctx.plan(from, to);
     final amount = _amountNowFor(ctx, from, to);
@@ -490,7 +490,11 @@ class _ConverterScreenState extends State<ConverterScreen> {
                               variant: VeBtnVariant.secondary,
                               icon: LucideIcons.smartphone,
                               enabled: result > 0,
-                              onPressed: () => showPagoMovilSheet(context, montoBs: result),
+                              onPressed: () => showPagoMovilSheet(
+                                context,
+                                ref: ref,
+                                montoBs: result,
+                              ),
                               child: const Text('Pago Móvil'),
                             ),
                           )
@@ -632,12 +636,12 @@ class _ConverterScreenState extends State<ConverterScreen> {
   }
 }
 
-class _FechaTasas extends StatelessWidget {
+class _FechaTasas extends ConsumerWidget {
   const _FechaTasas({required this.mode, required this.customDate, required this.loading, required this.sinDatos, required this.onMode, required this.onOpenCalendar});
   final String mode; final DateTime? customDate; final bool loading; final bool sinDatos;
   final ValueChanged<String> onMode; final VoidCallback onOpenCalendar;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ink = Theme.of(context).extension<VeInk>()!;
     final String periodo = switch (mode) {
       'yesterday' => 'de ayer', 'week' => 'de hace 7 días',
@@ -672,7 +676,7 @@ class _FechaTasas extends StatelessWidget {
   }
 }
 
-class _DualInput extends StatelessWidget {
+class _DualInput extends ConsumerWidget {
   const _DualInput({required this.fromCtrl, required this.toCtrl, required this.from, required this.to, required this.result, required this.plan, required this.ctx, required this.activeSourceId, required this.frescura, required this.hasOverride, required this.onFromInput, required this.onToInput, required this.onAdjust, required this.onSwap, required this.onFrom, required this.onTo, required this.onPickSource, required this.onClearOverride});
   final TextEditingController fromCtrl, toCtrl;
   final Currency from, to; final double result; final ConversionPlan? plan;
@@ -681,12 +685,12 @@ class _DualInput extends StatelessWidget {
   final VoidCallback onSwap; final ValueChanged<Currency> onFrom, onTo;
   final void Function(Currency c, String id) onPickSource; final VoidCallback onClearOverride;
 
-  Widget _fuenteLine(BuildContext ctx2, ColorScheme scheme) {
+  Widget _fuenteLine(BuildContext ctx2, WidgetRef ref, ColorScheme scheme) {
     final src = RateSource.of(activeSourceId);
     final label = convSourceNames[activeSourceId] ?? src?.label ?? activeSourceId;
     return Row(children: [
       Expanded(child: InkWell(
-        onTap: () => _openSourcesSheet(ctx2), borderRadius: BorderRadius.circular(10),
+        onTap: () => _openSourcesSheet(ctx2, ref), borderRadius: BorderRadius.circular(10),
         child: Padding(padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4), child: Row(children: [
           if (src != null) ...[SourceSeal(src.category), const SizedBox(width: 8)],
           Expanded(child: Text.rich(TextSpan(text: label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurface), children: [TextSpan(text: ' · $frescura', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant))]), maxLines: 1, overflow: TextOverflow.ellipsis)),
@@ -696,8 +700,8 @@ class _DualInput extends StatelessWidget {
       if (hasOverride) VeBtn(variant: VeBtnVariant.ghost, size: VeBtnSize.sm, onPressed: onClearOverride, child: const Text('Seguir global')),
     ]);
   }
-  Future<void> _openSourcesSheet(BuildContext context) async {
-    await showRateSheet(context, currency: from, ctx: ctx, currentId: activeSourceId, onPick: (id) => onPickSource(from, id));
+  Future<void> _openSourcesSheet(BuildContext context, WidgetRef ref) async {
+    await showRateSheet(context, ref: ref, currency: from, ctx: ctx, currentId: activeSourceId, onPick: (id) => onPickSource(from, id));
   }
   double _fromValueOf(double result, ConversionPlan? plan) {
     final rate = plan?.rate ?? 0;
@@ -723,12 +727,12 @@ class _DualInput extends StatelessWidget {
     ]);
   }
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return VeCard(
       padding: const EdgeInsets.all(12),
       child: Column(children: [
-        _fuenteLine(context, scheme), const Divider(height: 12), _montoRow(context),
+        _fuenteLine(context, ref, scheme), const Divider(height: 12), _montoRow(context),
         Padding(
           // v23.3 (pez 2-a P1-1): fila del swap a 44 — el botón insignia de
           // la pantalla tenía 32×32 de pista.
@@ -775,13 +779,13 @@ class _DualInput extends StatelessWidget {
   }
 }
 
-class _SwapBtn extends StatefulWidget {
+class _SwapBtn extends ConsumerStatefulWidget {
   const _SwapBtn({required this.onTap});
   final VoidCallback onTap;
   @override
-  State<_SwapBtn> createState() => _SwapBtnState();
+  ConsumerState<_SwapBtn> createState() => _SwapBtnState();
 }
-class _SwapBtnState extends State<_SwapBtn> {
+class _SwapBtnState extends ConsumerState<_SwapBtn> {
   double _turns = 0;
   @override
   Widget build(BuildContext context) {

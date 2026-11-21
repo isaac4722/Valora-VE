@@ -10,18 +10,18 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/models.dart';
 import '../../core/theme.dart';
-import '../../data/store.dart';
 import '../../core/fmt.dart';
 import '../../widgets/ve/ve.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Abre el centro de avisos (hoja «Ve» del prototipo, con techo).
-void showNotificationCenter(BuildContext context) {
-  final store = context.read<AppStore>();
+void showNotificationCenter(BuildContext context, WidgetRef ref) {
+  final store = ref.read(appStoreProvider);
   showVeSheet<void>(
     context: context,
     title: 'Alertas · ${store.notifs.length}',
@@ -44,10 +44,10 @@ void showNotificationCenter(BuildContext context) {
 
 /// Acciones compactas del título: «Leídas» y «Limpiar» (ghost sm), como
 /// los enlaces de texto del diseño anterior pero en lenguaje Ve.
-class _AlertsTrailing extends StatelessWidget {
+class _AlertsTrailing extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final unread = store.notifs.where((n) => !n.read).length;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -74,12 +74,12 @@ class _AlertsTrailing extends StatelessWidget {
 
 /// Cuerpo scrolleable del centro de avisos: filas divididas por borde con
 /// chip de icono por tono (patrón AlertsSheet del prototipo).
-class NotificationCenterBody extends StatelessWidget {
+class NotificationCenterBody extends ConsumerWidget {
   const NotificationCenterBody({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final items = store.notifs;
 
     if (items.isEmpty) {
@@ -115,7 +115,7 @@ class NotificationCenterBody extends StatelessWidget {
   }
 }
 
-class _NotifRow extends StatelessWidget {
+class _NotifRow extends ConsumerWidget {
   const _NotifRow({required this.n});
 
   final NotificationItem n;
@@ -145,8 +145,8 @@ class _NotifRow extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.read<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.read(appStoreProvider);
     final scheme = ShadTheme.of(context).colorScheme;
     final (icon, tone) = _icon(n.kind);
 

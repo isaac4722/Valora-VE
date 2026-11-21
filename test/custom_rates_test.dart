@@ -6,9 +6,9 @@ library;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valorave/core/currencies.dart';
 import 'package:valorave/core/models.dart';
@@ -21,6 +21,7 @@ import 'package:valorave/features/home/home_screen.dart';
 import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
+import 'package:valorave/providers/providers.dart';
 
 AppData _conRates(List<CustomRate> rates) =>
     AppData(customRates: rates, settings: const Settings(onboarded: true));
@@ -163,11 +164,11 @@ void main() {
 
     Future<void> pumpHome(WidgetTester tester) async {
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: store),
-            ChangeNotifierProvider(create: (_) => ThemeController()),
-            ChangeNotifierProvider.value(value: poller),
+        ProviderScope(
+          overrides: [
+            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+            ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
           ],
           // Mismo shell que la app (main.dart): ShadTheme arriba del
           // MaterialApp — la GUI «Ve» lo exige.

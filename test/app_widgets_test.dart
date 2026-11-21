@@ -7,8 +7,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:valorave/core/models.dart';
@@ -20,6 +20,7 @@ import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
 import 'package:valorave/widgets/app_router.dart';
 import 'package:valorave/widgets/app_tour.dart' show kTourDoneKey;
+import 'package:valorave/providers/providers.dart';
 
 Purchase _compra(int i) => Purchase(
   id: 'c$i',
@@ -92,16 +93,14 @@ void main() {
   Future<void> pumpHome(WidgetTester tester) async {
     final router = buildRouter(store: store);
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
+      ProviderScope(
+        overrides: [
+          appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
           // TASK-35 (p2): la cabecera de Inicio y el sidebar observan el
           // tema (toggle claro/oscuro) — como appProviders en producción.
-          ChangeNotifierProvider<ThemeController>.value(
-            value: ThemeController(),
-          ),
-          Provider<SharedPreferences>.value(value: prefs),
-          ChangeNotifierProvider.value(value: poller),
+          themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
         ],
         // La app real arranca bajo ShadApp.custom + MaterialApp.router
         // (main.dart · TASK-34 p4): ShadTheme arriba, Material de verdad.

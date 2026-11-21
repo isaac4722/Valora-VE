@@ -5,15 +5,15 @@
 part of 'settings_screen.dart';
 
 /// Ancla alertas: permiso + picos + metas de tasa + brecha + daily.
-class _Alertas extends StatefulWidget {
+class _Alertas extends ConsumerStatefulWidget {
   const _Alertas({required this.store});
   final AppStore store;
 
   @override
-  State<_Alertas> createState() => _AlertasState();
+  ConsumerState<_Alertas> createState() => _AlertasState();
 }
 
-class _AlertasState extends State<_Alertas> {
+class _AlertasState extends ConsumerState<_Alertas> {
   bool _granted = false;
 
   @override
@@ -23,7 +23,7 @@ class _AlertasState extends State<_Alertas> {
   }
 
   Future<void> _checkPermission() async {
-    final notifs = context.read<NotificationsService>();
+    final notifs = ref.read(notificationsProvider);
     final ok = await notifs.areEnabled();
     if (mounted) setState(() => _granted = ok);
   }
@@ -31,8 +31,8 @@ class _AlertasState extends State<_Alertas> {
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
-    final alerts = context.read<AlertEngine>();
-    final notifs = context.read<NotificationsService>();
+    final alerts = ref.read(alertsProvider);
+    final notifs = ref.read(notificationsProvider);
     final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,7 +254,7 @@ class _AlertasState extends State<_Alertas> {
                   // falta y dispara por flutter_local_notifications (canal
                   // General), además de escribir en el centro interno.
                   onPressed: () async {
-                    final notifs = context.read<NotificationsService>();
+                    final notifs = ref.read(notificationsProvider);
                     var granted = await notifs.areEnabled();
                     if (!granted) granted = await notifs.requestPermission();
                     final String body = granted

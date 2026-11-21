@@ -14,7 +14,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:provider/provider.dart';
 
 import '../../core/fmt.dart';
 import '../../core/models.dart';
@@ -24,6 +23,8 @@ import '../../data/store.dart';
 import '../../services/sharing.dart';
 import '../../widgets/export_sheet.dart';
 import '../../widgets/ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 // Tinta del papel: ES el token de marca primaryLight (una sola verdad en
 // core/theme.dart) — antes un duplicado crudo Color(0xFF22354E) que podía
@@ -32,14 +33,14 @@ const kInkAccent = VeColors.primaryLight;
 // v17.8: kInkPos/kInkNeg se retiraron con la constancia de finanzas (la
 // constancia ahora es solo de compras); se conservan en el historial git.
 
-class StatementScreen extends StatefulWidget {
+class StatementScreen extends ConsumerStatefulWidget {
   const StatementScreen({super.key});
 
   @override
-  State<StatementScreen> createState() => _StatementScreenState();
+  ConsumerState<StatementScreen> createState() => _StatementScreenState();
 }
 
-class _StatementScreenState extends State<StatementScreen> {
+class _StatementScreenState extends ConsumerState<StatementScreen> {
   int _scope = 0; // 0 mensual · 1 trimestral · 2 anual
   int _offset = 0; // hacia atrás desde hoy
 
@@ -80,7 +81,7 @@ class _StatementScreenState extends State<StatementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     final range = _range;
     final purchases = store.purchases
@@ -503,7 +504,7 @@ class _StatementScreenState extends State<StatementScreen> {
 /// El MISMO widget sirve de preview en pantalla Y de fuente del PNG
 /// off-stage: una sola definición, cero deriva visual entre lo que se ve
 /// y lo que se comparte.
-class StatementDoc extends StatelessWidget {
+class StatementDoc extends ConsumerWidget {
   const StatementDoc({
     super.key,
     required this.label,
@@ -516,7 +517,7 @@ class StatementDoc extends StatelessWidget {
   final List<Purchase> purchases;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final totalBs = purchases.fold<double>(0, (a, p) => a + p.totalBS);
     final byStore = <String, double>{};
@@ -632,7 +633,7 @@ class StatementDoc extends StatelessWidget {
 }
 
 /// Fila asiento del documento (rótulo · línea punteada · cifra).
-class StatementRow extends StatelessWidget {
+class StatementRow extends ConsumerWidget {
   const StatementRow({
     super.key,
     required this.label,
@@ -647,7 +648,7 @@ class StatementRow extends StatelessWidget {
   final bool big;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -681,11 +682,11 @@ class StatementRow extends StatelessWidget {
 }
 
 /// Línea punteada del documento.
-class LedgerLine extends StatelessWidget {
+class LedgerLine extends ConsumerWidget {
   const LedgerLine({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return LayoutBuilder(
       builder: (context, c) {
         final count = (c.maxWidth / 5).floor().clamp(0, 60);

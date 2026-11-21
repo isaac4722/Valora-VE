@@ -14,13 +14,14 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../core/currencies.dart';
 import '../core/fmt.dart';
 import '../core/theme.dart';
 import '../data/store.dart';
 import 'ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Tinta de categoría (colores establecidos de la app).
 Color categoryInk(BuildContext context, SourceCategory cat) {
@@ -35,7 +36,7 @@ Color categoryInk(BuildContext context, SourceCategory cat) {
 
 /// Fila de tasa: [Bandera] [Nombre + detalle] [Precio + símbolo], fondo con
 /// el color de categoría y estado «activa» (borde + check).
-class RateTile extends StatelessWidget {
+class RateTile extends ConsumerWidget {
   const RateTile({
     super.key,
     required this.sourceId,
@@ -62,7 +63,7 @@ class RateTile extends StatelessWidget {
   final bool showFlag;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final s = RateSource.of(sourceId);
     if (s == null) return const SizedBox.shrink();
@@ -233,7 +234,7 @@ class RateTile extends StatelessWidget {
 }
 
 /// Encabezado de grupo de la lista de cotización: bandera + código + regla.
-class RateGroupHeader extends StatelessWidget {
+class RateGroupHeader extends ConsumerWidget {
   const RateGroupHeader(this.currency, {super.key, this.hint});
 
   final Currency currency;
@@ -242,7 +243,7 @@ class RateGroupHeader extends StatelessWidget {
   final String? hint;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(top: 12, bottom: 6, left: 10, right: 10),
@@ -284,13 +285,14 @@ class RateGroupHeader extends StatelessWidget {
 /// al guardar queda ACTIVA. [onPick] recibe el id elegido (y la hoja cierra).
 Future<void> showRateSheet(
   BuildContext context, {
+  required WidgetRef ref,
   required Currency currency,
   required RateContext ctx,
   required String currentId,
   required ValueChanged<String> onPick,
   String? title,
 }) async {
-  final store = context.read<AppStore>();
+  final store = ref.read(appStoreProvider);
   final sources = RateSource.sourcesFor(currency);
   // v23.3 (pez 2-a P0-1): chrome unificado del kit — showVeHalfSheet
   // (radio 14, asa, cabecera 48 + ✕, cuerpo con el controlador de la hoja).
@@ -315,6 +317,7 @@ Future<void> showRateSheet(
                 // Manual sin valor: el editor ES la selección.
                 final saved = await showManualRateEditor(
                   sheetCtx,
+                  ref: ref,
                   sourceId: s.id,
                 );
                 if (saved && sheetCtx.mounted) {
@@ -328,6 +331,7 @@ Future<void> showRateSheet(
                 ? () async {
                     final saved = await showManualRateEditor(
                       sheetCtx,
+                      ref: ref,
                       sourceId: s.id,
                     );
                     if (saved && sheetCtx.mounted) {
@@ -352,11 +356,12 @@ String? _freshnessOf(AppStore store, String id) {
 /// de miles en vivo + guardar/limpiar. Devuelve true si se guardó un valor.
 Future<bool> showManualRateEditor(
   BuildContext context, {
+  required WidgetRef ref,
   required String sourceId,
 }) async {
   final s = RateSource.of(sourceId);
   if (s == null) return false;
-  final store = context.read<AppStore>();
+  final store = ref.read(appStoreProvider);
   final current = store.data.manualRates[sourceId];
 
   final saved = await showDialog<bool>(
@@ -368,22 +373,22 @@ Future<bool> showManualRateEditor(
   return (store.data.manualRates[sourceId] ?? 0) > 0;
 }
 
-class _ManualRateDialog extends StatefulWidget {
+class _ManualRateDialog extends ConsumerStatefulWidget {
   const _ManualRateDialog({required this.sourceId, this.initial});
 
   final String sourceId;
   final double? initial;
 
   @override
-  State<_ManualRateDialog> createState() => _ManualRateDialogState();
+  ConsumerState<_ManualRateDialog> createState() => _ManualRateDialogState();
 }
 
-class _ManualRateDialogState extends State<_ManualRateDialog> {
+class _ManualRateDialogState extends ConsumerState<_ManualRateDialog> {
   late double _value = widget.initial ?? 0;
 
   @override
   Widget build(BuildContext context) {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final s = RateSource.of(widget.sourceId)!;
     return AlertDialog(
       title: Text('Tasa manual ${s.currency.code}'),

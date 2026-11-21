@@ -11,9 +11,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
@@ -32,6 +32,7 @@ import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
 import 'package:valorave/widgets/app_tour.dart' show kTourDoneKey;
+import 'package:valorave/providers/providers.dart';
 
 /// Carga las fuentes reales (Inter · SpaceGrotesk · JetBrains · Lucide ·
 /// MaterialIcons) para que los goldens no salgan en Ahem.
@@ -274,13 +275,13 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          ChangeNotifierProvider(create: (_) => ThemeController()),
-          ChangeNotifierProvider.value(value: poller),
-          Provider<SharedPreferences>.value(value: prefs),
-          ChangeNotifierProvider(create: (_) => RoomController(store)),
+      ProviderScope(
+        overrides: [
+          appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+          themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+          ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
         ],
         child: ShadApp.custom(
           theme: ShadThemeVe.light(),

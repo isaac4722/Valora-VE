@@ -16,14 +16,14 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
-import '../../data/store.dart';
 import '../../widgets/ui.dart' show showToast;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Un resultado del palette: a dónde ir y cómo pintarse.
 class _Hit {
@@ -98,14 +98,14 @@ Future<void> showCommandPalette(BuildContext context) {
   );
 }
 
-class _CommandPalette extends StatefulWidget {
+class _CommandPalette extends ConsumerStatefulWidget {
   const _CommandPalette();
 
   @override
-  State<_CommandPalette> createState() => _CommandPaletteState();
+  ConsumerState<_CommandPalette> createState() => _CommandPaletteState();
 }
 
-class _CommandPaletteState extends State<_CommandPalette> {
+class _CommandPaletteState extends ConsumerState<_CommandPalette> {
   final TextEditingController _q = TextEditingController();
   final ScrollController _scroll = ScrollController();
   String _query = '';
@@ -147,7 +147,7 @@ class _CommandPaletteState extends State<_CommandPalette> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final shad = ShadTheme.of(context).colorScheme;
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
     final width = MediaQuery.sizeOf(context).width;
     final paletteWidth = (width - 32).clamp(0, 620).toDouble();
     final String q = fold(_query.trim().toLowerCase());
@@ -426,7 +426,7 @@ class _CommandPaletteState extends State<_CommandPalette> {
 
 /// Fila de resultado del palette: icono en caja muted, título + sub, marca
 /// de teclado con la tinta de acción y chevron al pasar.
-class _PaletteRow extends StatelessWidget {
+class _PaletteRow extends ConsumerWidget {
   const _PaletteRow({
     required this.hit,
     required this.marked,
@@ -440,7 +440,7 @@ class _PaletteRow extends StatelessWidget {
   final String? groupLabel;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final shad = ShadTheme.of(context).colorScheme;
     return Column(
@@ -549,7 +549,7 @@ class _PaletteRow extends StatelessWidget {
 }
 
 /// Chip de tecla estilo Linear: cajita muted con la tecla dentro.
-class _KeyHint extends StatelessWidget {
+class _KeyHint extends ConsumerWidget {
   const _KeyHint({required this.scheme, required this.child, this.onTap});
 
   final ColorScheme scheme;
@@ -557,7 +557,7 @@ class _KeyHint extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final box = Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
       decoration: BoxDecoration(

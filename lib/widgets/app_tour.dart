@@ -19,12 +19,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/currencies.dart';
 import 'app_router.dart' show kNavBarKey;
 import 'coach_mark.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Clave de la preferencia «ya vi el tour completo».
 const String kTourDoneKey = 'valorave.tour-done';
@@ -282,11 +283,13 @@ Future<void> markTourDone(SharedPreferences prefs) =>
 /// Dispara el tour UNA vez por instalación (marca antes de mostrar: si algo
 /// interrumpe, no vuelve a molestar). Tolerante: sin Provider de prefs
 /// (tests/previews) es no-op.
-Future<void> maybeRunTourOnce(BuildContext context) async {
+Future<void> maybeRunTourOnce(BuildContext context, WidgetRef ref) async {
   final SharedPreferences prefs;
   try {
-    prefs = context.read<SharedPreferences>();
-  } on ProviderNotFoundException {
+    prefs = ref.read(sharedPreferencesProvider);
+  } catch (_) {
+    // Harness parcial sin override de prefs (mismo trato que el
+    // ProviderNotFoundException del mundo provider): no-op.
     return;
   }
   if (isTourDone(prefs)) return;

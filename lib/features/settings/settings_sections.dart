@@ -5,12 +5,12 @@
 part of 'settings_screen.dart';
 
 /// Ancla país: protagonista + foco 6 + orden subir/bajar/reset.
-class _Pais extends StatelessWidget {
+class _Pais extends ConsumerWidget {
   const _Pais({required this.store});
   final AppStore store;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final country = CountryX.from(store.settings.country);
     final order = CurrencyX.focusOrder(store.settings.currencyOrder);
@@ -139,12 +139,12 @@ class _Pais extends StatelessWidget {
 }
 
 /// Ancla personalización: ticker modo/tamaño/velocidad con preview.
-class _Personalizacion extends StatelessWidget {
+class _Personalizacion extends ConsumerWidget {
   const _Personalizacion({required this.store});
   final AppStore store;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,12 +242,12 @@ class _Personalizacion extends StatelessWidget {
 }
 
 /// Ancla monedas: fuente global + por módulo + manuales + salud.
-class _Monedas extends StatelessWidget {
+class _Monedas extends ConsumerWidget {
   const _Monedas({required this.store});
   final AppStore store;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final ctx = store.contextOf();
     return Column(
@@ -336,13 +336,13 @@ class _Monedas extends StatelessWidget {
   }
 }
 
-class _ModuleSource extends StatelessWidget {
+class _ModuleSource extends ConsumerWidget {
   const _ModuleSource({required this.store, required this.module});
   final AppStore store;
   final RateModule module;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final label = switch (module) {
       RateModule.converter => 'Conversor',
       RateModule.calculator => 'Lista',
@@ -389,12 +389,12 @@ class _ModuleSource extends StatelessWidget {
 /// [categoría] [nombre + valor] [lápiz] que abre el editor compartido
 /// (MoneyField con miles en vivo) — el ancho fijo de 120 px desbordaba en
 /// pantallas angostas y el texto se salía.
-class _ManualRates extends StatelessWidget {
+class _ManualRates extends ConsumerWidget {
   const _ManualRates();
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     return Column(
       children: [
         for (final id in [
@@ -409,13 +409,13 @@ class _ManualRates extends StatelessWidget {
   }
 }
 
-class _ManualField extends StatelessWidget {
+class _ManualField extends ConsumerWidget {
   const _ManualField({required this.store, required this.sourceId});
   final AppStore store;
   final String sourceId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final s = RateSource.of(sourceId)!;
     final value = store.data.manualRates[sourceId];
@@ -423,7 +423,7 @@ class _ManualField extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: InkWell(
-        onTap: () => showManualRateEditor(context, sourceId: sourceId),
+        onTap: () => showManualRateEditor(context, ref: ref, sourceId: sourceId),
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
@@ -474,7 +474,7 @@ class _ManualField extends StatelessWidget {
 /// v23 · Editor de tasas propias con nombre (máx 8): lista con borrar y
 /// alta en hoja modal (nombre + Bs/USD). Al tocar una tasa en Inicio se
 /// APLICA como fuente manual — aquí solo vive la gestión.
-class _CustomRates extends StatelessWidget {
+class _CustomRates extends ConsumerWidget {
   const _CustomRates();
 
   Future<void> _abrirAlta(BuildContext context, AppStore store) async {
@@ -557,8 +557,8 @@ class _CustomRates extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     final rates = store.data.customRates;
     return Column(
@@ -643,13 +643,13 @@ class _CustomRates extends StatelessWidget {
 }
 
 /// Ancla apariencia.
-class _Apariencia extends StatelessWidget {
+class _Apariencia extends ConsumerWidget {
   const _Apariencia();
 
   @override
-  Widget build(BuildContext context) {
-    final theme = context.watch<ThemeController>();
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = ref.watch(themeControllerProvider);
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,7 +667,7 @@ class _Apariencia extends StatelessWidget {
                 ThemePreviewRow(
                   value: theme.mode,
                   onChanged: (v) =>
-                      theme.setMode(v, context.read<SharedPreferences>()),
+                      theme.setMode(v, ref.read(sharedPreferencesProvider)),
                 ),
                 // Material You (dp6 · mejora 2): opt-in. Solo tiñe acciones y
                 // selección; superficies y semántica de dinero siguen de marca.
@@ -676,7 +676,7 @@ class _Apariencia extends StatelessWidget {
                   value: theme.dynamicColor,
                   onChanged: (v) => theme.setDynamicColor(
                     v,
-                    context.read<SharedPreferences>(),
+                    ref.read(sharedPreferencesProvider),
                   ),
                   title: const Text(
                     'Color dinámico del sistema (Material You)',
@@ -738,7 +738,7 @@ class _Apariencia extends StatelessWidget {
 /// mock diminuto del tema con los tokens REALES (bg, card, border, primary,
 /// muted): el usuario ve los dos temas de la app antes de elegir. La
 /// seleccionada lleva borde primario al 45 % y un check en la esquina.
-class ThemePreviewRow extends StatelessWidget {
+class ThemePreviewRow extends ConsumerWidget {
   const ThemePreviewRow({
     super.key,
     required this.value,
@@ -749,7 +749,7 @@ class ThemePreviewRow extends StatelessWidget {
   final ValueChanged<ThemeMode> onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
         for (final (ThemeMode mode, String label, bool claro) in const [
@@ -773,7 +773,7 @@ class ThemePreviewRow extends StatelessWidget {
   }
 }
 
-class _ThemePreviewCard extends StatelessWidget {
+class _ThemePreviewCard extends ConsumerWidget {
   const _ThemePreviewCard({
     required this.label,
     required this.claro,
@@ -789,7 +789,7 @@ class _ThemePreviewCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     // Tokens reales del tema que representa la tarjeta.
     final Color bg = claro ? VeColors.bgLight : VeColors.bgDark;
@@ -921,14 +921,14 @@ class _ThemePreviewCard extends StatelessWidget {
 /// Diagnóstico de fuentes (dp6 · mejora 8): consulta cada región en vivo y
 /// mide latencia y fuentes obtenidas. El data layer (diagnoseRegions) ya
 /// vivía en board.dart — aquí solo la vista honesta.
-class _Diagnostico extends StatefulWidget {
+class _Diagnostico extends ConsumerStatefulWidget {
   const _Diagnostico();
 
   @override
-  State<_Diagnostico> createState() => _DiagnosticoState();
+  ConsumerState<_Diagnostico> createState() => _DiagnosticoState();
 }
 
-class _DiagnosticoState extends State<_Diagnostico> {
+class _DiagnosticoState extends ConsumerState<_Diagnostico> {
   bool _running = false;
   List<RegionHealth>? _result;
 
@@ -1045,11 +1045,11 @@ class _DiagnosticoState extends State<_Diagnostico> {
 /// fallos del worker en 2º plano y eventos de la Sala Viva. PRIVACIDAD: el
 /// buffer vive SOLO en la memoria del teléfono (rotación 500) — no hay
 /// envío a ningún servidor, coherente con «Tus datos viven en tu teléfono».
-class _Registros extends StatelessWidget {
+class _Registros extends ConsumerWidget {
   const _Registros();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

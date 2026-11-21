@@ -19,7 +19,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/analytics.dart' as an;
@@ -40,15 +39,17 @@ import 'checkout_modal.dart';
 import 'item_editor.dart';
 import 'roi_scanner.dart';
 import '../room/room_sheet.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
-class ListaScreen extends StatefulWidget {
+class ListaScreen extends ConsumerStatefulWidget {
   const ListaScreen({super.key});
 
   @override
-  State<ListaScreen> createState() => _ListaScreenState();
+  ConsumerState<ListaScreen> createState() => _ListaScreenState();
 }
 
-class _ListaScreenState extends State<ListaScreen> {
+class _ListaScreenState extends ConsumerState<ListaScreen> {
   final _nameCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
   final _qtyCtrl = TextEditingController(text: '1');
@@ -73,7 +74,7 @@ class _ListaScreenState extends State<ListaScreen> {
       if (!mounted) return;
       if (scanRequest.value) {
         scanRequest.value = false;
-        _scanItem(context.read<AppStore>());
+        _scanItem(ref.read(appStoreProvider));
       }
     });
     scanRequest.addListener(_onScanRequest);
@@ -82,7 +83,7 @@ class _ListaScreenState extends State<ListaScreen> {
   void _onScanRequest() {
     if (!mounted || !scanRequest.value) return;
     scanRequest.value = false;
-    _scanItem(context.read<AppStore>());
+    _scanItem(ref.read(appStoreProvider));
   }
 
   @override
@@ -345,7 +346,7 @@ class _ListaScreenState extends State<ListaScreen> {
 
   /// Sala: conectado → pantalla de la sala; sin sala → crear/unirse.
   void _openRoom(BuildContext context) {
-    final room = context.read<RoomController>();
+    final room = ref.read(roomControllerProvider);
     if (room.connected) {
       context.push('/sala-viva');
     } else {
@@ -374,9 +375,9 @@ class _ListaScreenState extends State<ListaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
-    final room = context.watch<RoomController>();
+    final room = ref.watch(roomControllerProvider);
     final ctx = store.contextOf(module: RateModule.calculator);
     final calcCur = CurrencyX.from(store.settings.calcCurrency);
     final totals = cartTotals(store.cart, ctx);
@@ -981,7 +982,7 @@ class _ListaScreenState extends State<ListaScreen> {
   /// Totales actuales del carrito (recalculados para el render off-stage:
   /// el PNG se genera desde el estado vivo, no desde el último build).
   ({double usd, Map<Currency, double> byCurrency, int units}) _totalsOf() {
-    final store = context.read<AppStore>();
+    final store = ref.read(appStoreProvider);
     final ctx = store.contextOf(module: RateModule.calculator);
     return cartTotals(store.cart, ctx);
   }
@@ -1039,14 +1040,14 @@ class _ListaScreenState extends State<ListaScreen> {
 /// (RateModule.calculator — el override por módulo §9.3; sin override cae a
 /// la global, cuyo default es la oficial). Cambia con setModuleRateSource
 /// para no alterar el Conversor ni las fichas de producto.
-class _FuenteChip extends StatelessWidget {
+class _FuenteChip extends ConsumerWidget {
   const _FuenteChip({required this.store, required this.currency});
 
   final AppStore store;
   final Currency currency;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final currentId = store.sourceFor(currency, module: RateModule.calculator);
     final current = RateSource.of(currentId);
@@ -1054,6 +1055,7 @@ class _FuenteChip extends StatelessWidget {
       onTap: () async {
         await showRateSheet(
           context,
+          ref: ref,
           currency: currency,
           ctx: store.contextOf(module: RateModule.calculator),
           currentId: currentId,
@@ -1104,13 +1106,13 @@ class _FuenteChip extends StatelessWidget {
 /// ─── Documento de Totales (v18.0: público y reutilizable) ──────────────────
 /// El MISMO widget sirve de preview en la tarjeta de Totales Y de fuente del
 /// PNG off-stage: lo que se ve es lo que se comparte.
-class TotalsDoc extends StatelessWidget {
+class TotalsDoc extends ConsumerWidget {
   const TotalsDoc({super.key, required this.totals});
 
   final ({double usd, Map<Currency, double> byCurrency, int units}) totals;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       color: scheme.surface,
@@ -1159,13 +1161,13 @@ class TotalsDoc extends StatelessWidget {
   }
 }
 
-class _TotalsRow extends StatelessWidget {
+class _TotalsRow extends ConsumerWidget {
   const _TotalsRow({required this.text, required this.code});
   final String text;
   final Currency code;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -1184,7 +1186,7 @@ class _TotalsRow extends StatelessWidget {
 /// (tienda · precio c/u · peso · quién lo marcó) + stepper −/+ + total
 /// tabular a la derecha. Fondo subtle/50 en comprados; tocar el cuerpo abre
 /// la hoja de edición; «Quitar» vive en esa hoja.
-class _CartRow extends StatelessWidget {
+class _CartRow extends ConsumerWidget {
   const _CartRow({
     required this.item,
     required this.ctx,
@@ -1202,7 +1204,7 @@ class _CartRow extends StatelessWidget {
   final VoidCallback onEdit;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final shad = ShadTheme.of(context);
     final scheme = shad.colorScheme;
     final c = CurrencyX.from(item.currency);
@@ -1327,7 +1329,7 @@ class _CartRow extends StatelessWidget {
 ///   no el Wrap suelto de textos que había antes.
 /// Tocar el cuerpo abre el editor del presupuesto; las pills abren sus
 /// propias hojas (moneda / fuente).
-class _PanelPresupuesto extends StatelessWidget {
+class _PanelPresupuesto extends ConsumerWidget {
   const _PanelPresupuesto({
     required this.store,
     required this.ctx,
@@ -1343,7 +1345,7 @@ class _PanelPresupuesto extends StatelessWidget {
   final ValueChanged<Currency> onCalcCurrency;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final shad = ShadTheme.of(context);
     final scheme = shad.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
@@ -1543,16 +1545,16 @@ class _PanelPresupuesto extends StatelessWidget {
 /// elige y queda fija aunque aún no haya monto — bug del dueño). Cambiar la
 /// divisa conserva el monto vigente (o el tecleado si hay): setBudget ya
 /// NUNCA resetea la moneda.
-class _BudgetSheet extends StatefulWidget {
+class _BudgetSheet extends ConsumerStatefulWidget {
   const _BudgetSheet({required this.store});
 
   final AppStore store;
 
   @override
-  State<_BudgetSheet> createState() => _BudgetSheetState();
+  ConsumerState<_BudgetSheet> createState() => _BudgetSheetState();
 }
 
-class _BudgetSheetState extends State<_BudgetSheet> {
+class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
   final _ctrl = TextEditingController();
   late Currency _cur;
 
@@ -1736,13 +1738,13 @@ class _BudgetSheetState extends State<_BudgetSheet> {
 /// ─── Cabecera de sala activa (v18.0 · prototipo: sala en vivo) ──────────────
 /// Badge «En vivo» + código en mono + avatares superpuestos de los miembros
 /// (con punto de presencia) → abre la Sala Viva.
-class _RoomHeader extends StatelessWidget {
+class _RoomHeader extends ConsumerWidget {
   const _RoomHeader({required this.room});
 
   final RoomController room;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (!room.connected) return const SizedBox.shrink();
     final shad = ShadTheme.of(context);
     final scheme = shad.colorScheme;
@@ -1873,16 +1875,16 @@ class _RoomHeader extends StatelessWidget {
 }
 
 /// ─── Picker «Elegir de mis productos» (prototipo PickSheet) ─────────────────
-class _ProductPicker extends StatefulWidget {
+class _ProductPicker extends ConsumerStatefulWidget {
   const _ProductPicker({required this.store});
 
   final AppStore store;
 
   @override
-  State<_ProductPicker> createState() => _ProductPickerState();
+  ConsumerState<_ProductPicker> createState() => _ProductPickerState();
 }
 
-class _ProductPickerState extends State<_ProductPicker> {
+class _ProductPickerState extends ConsumerState<_ProductPicker> {
   final _qCtrl = TextEditingController();
 
   @override
@@ -1973,15 +1975,15 @@ class _ProductPickerState extends State<_ProductPicker> {
   }
 }
 
-class _Plantillas extends StatelessWidget {
+class _Plantillas extends ConsumerWidget {
   const _Plantillas({required this.anchorKey});
 
   /// Ancla de scroll del chip «Plantillas» de la cabecera.
   final GlobalKey anchorKey;
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     return KeyedSubtree(
       key: anchorKey,
       child: Column(

@@ -20,11 +20,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:provider/provider.dart';
 
 import '../../core/fmt.dart';
-import '../../data/store.dart';
 import '../../widgets/ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Canal nativo de App Widgets (MainActivity.kt · pin en el launcher).
 const MethodChannel _kPinChannel = MethodChannel('valorave/widgets');
@@ -73,13 +73,13 @@ Future<void> showAppWidgetGallery(BuildContext context) {
   );
 }
 
-class _AppWidgetsSheet extends StatelessWidget {
+class _AppWidgetsSheet extends ConsumerWidget {
   const _AppWidgetsSheet();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
 
     // Tasas vivas del tablero — la preview muestra lo que el widget va a
     // pintar; sin datos, guiones honestos (igual que el widget nativo).
@@ -180,14 +180,14 @@ class _AppWidgetsSheet extends StatelessWidget {
 
 /// Una entrada de la galería: título + botón de añadir, descripción y
 /// la preview fiel del widget (diseño del nativo, cifras del tablero).
-class _GalleryEntry extends StatelessWidget {
+class _GalleryEntry extends ConsumerWidget {
   const _GalleryEntry({required this.spec, required this.hora});
 
   final _AppWidgetSpec spec;
   final String hora;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -265,7 +265,7 @@ class _GalleryEntry extends StatelessWidget {
 /// Preview fiel del widget nativo (bucket NORMAL del BcvWidgetProvider):
 /// mismo fondo, borde, radios, colores y jerarquía de los layouts en
 /// res/layout/widget_*.xml — lo que se ve aquí es lo que queda allá.
-class _AppWidgetPreview extends StatelessWidget {
+class _AppWidgetPreview extends ConsumerWidget {
   const _AppWidgetPreview({
     required this.badge,
     required this.hero,
@@ -279,7 +279,7 @@ class _AppWidgetPreview extends StatelessWidget {
   final String hora;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),

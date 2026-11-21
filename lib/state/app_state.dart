@@ -1,15 +1,14 @@
 /// ─── Estado de la app: store + tema + ciclo de tasas ────────────────────────
-/// Provider como DI (decisión cerrada). AppStore hidrata Hive al arrancar;
-/// RatesPoller consulta las 4 regiones cada 60 s (autoRefresh) con apagado
-/// idle tras 10 min en background, y alimenta snapshots 180 días.
+/// Riverpod como DI (patrón CalculaYa — los proveedores viven en
+/// lib/providers/). AppStore hidrata Hive al arrancar; RatesPoller consulta
+/// las 4 regiones cada 60 s (autoRefresh) con apagado idle tras 10 min en
+/// background, y alimenta snapshots 180 días.
 library;
 
 import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:nested/nested.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/models.dart';
@@ -17,7 +16,6 @@ import '../data/board.dart';
 import '../data/rate_history.dart';
 import '../data/sse_stream.dart';
 import '../data/store.dart';
-import '../room/room_controller.dart';
 import '../services/alerts.dart';
 import '../services/connectivity.dart';
 import '../services/ve_log.dart';
@@ -431,31 +429,4 @@ class RatesPoller extends ChangeNotifier {
     _stopSse();
     super.dispose();
   }
-}
-
-/// Raíz de proveedores de la app.
-List<SingleChildWidget> appProviders({
-  required AppStore store,
-  required ThemeController theme,
-  required NotificationsService notifs,
-  required SharedPreferences prefs,
-  ConnectivityService? connectivity,
-}) {
-  final alerts = AlertEngine(prefs);
-  return [
-    ChangeNotifierProvider.value(value: store),
-    ChangeNotifierProvider.value(value: theme),
-    Provider.value(value: notifs),
-    Provider<SharedPreferences>.value(value: prefs),
-    if (connectivity != null)
-      Provider<ConnectivityService>.value(value: connectivity),
-    ChangeNotifierProvider(
-      create: (_) =>
-          RatesPoller(store, notifs, alerts, connectivity: connectivity),
-    ),
-    Provider<AlertEngine>.value(value: alerts),
-    // v18.0 · Sala Viva: controlador de APLICACIÓN — la Lista, la
-    // configuración de sala y la Sala Viva comparten el MISMO estado.
-    ChangeNotifierProvider(create: (_) => RoomController(store)),
-  ];
 }

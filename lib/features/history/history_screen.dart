@@ -15,7 +15,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -28,17 +27,19 @@ import '../../services/ticket_files.dart';
 import '../../widgets/export_sheet.dart';
 import '../../widgets/ui.dart';
 import '../statement/statement_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 const List<String> kPeriods = ['Todo', '7d', '30d', '90d', '365d'];
 
-class HistoryScreen extends StatefulWidget {
+class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
 
   @override
-  State<HistoryScreen> createState() => _HistoryScreenState();
+  ConsumerState<HistoryScreen> createState() => _HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> {
+class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   String _period = 'Todo';
   String? _storeFilter;
   String _search = '';
@@ -84,7 +85,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+    final store = ref.watch(appStoreProvider);
     final filtered = _filtered(store);
     final pages = (filtered.length / 20).ceil().clamp(1, 9999);
     final cur = _page.clamp(0, pages - 1);
@@ -577,13 +578,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
 /// eyebrow fecha + 32 px tabular + equivalente Bs), renglones en grupo
 /// dividido — con grupo de tienda cuando la compra es multitienda — y la
 /// miniatura del ticket que abre el visor con zoom.
-class _DetailBody extends StatelessWidget {
+class _DetailBody extends ConsumerWidget {
   const _DetailBody({required this.purchase});
 
   final Purchase purchase;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = ShadTheme.of(context).colorScheme;
 
     return Column(

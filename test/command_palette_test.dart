@@ -13,9 +13,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/core/shad_theme.dart';
@@ -28,6 +28,7 @@ import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
 import 'package:valorave/widgets/app_tour.dart' show kTourDoneKey;
+import 'package:valorave/providers/providers.dart';
 
 /// Store con un producto y una compra para los grupos de datos.
 AppStore _storeConDatos() {
@@ -93,12 +94,12 @@ GoRouter _router() => GoRouter(
 );
 
 Widget _host(AppStore store) {
-  return MultiProvider(
-    providers: [
-      ChangeNotifierProvider.value(value: store),
-      ChangeNotifierProvider(create: (_) => ThemeController()),
-      Provider<NotificationsService>.value(value: NotificationsService()),
-      ChangeNotifierProvider(create: (_) => RoomController(store)),
+  return ProviderScope(
+    overrides: [
+      appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+      themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+      notificationsProvider.overrideWith((ref) => NotificationsService()),
+      roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
     ],
     // Mismo patrón de main.dart (TASK-34 p4): ShadApp.custom envuelve al
     // MaterialApp.router para que los overlays (palette, sheets) hereden
@@ -230,13 +231,13 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          ChangeNotifierProvider(create: (_) => ThemeController()),
-          ChangeNotifierProvider.value(value: poller),
-          Provider<SharedPreferences>.value(value: prefs),
-          ChangeNotifierProvider(create: (_) => RoomController(store)),
+      ProviderScope(
+        overrides: [
+          appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+          themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+          ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
         ],
         child: ShadApp.custom(
           theme: ShadThemeVe.light(),

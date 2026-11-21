@@ -9,8 +9,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle, FontLoader, ByteData;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
@@ -26,6 +26,7 @@ import 'package:valorave/widgets/app_tour.dart' show kTourDoneKey;
 import 'package:valorave/widgets/ve/ve.dart' show showVeSheet;
 import 'package:valorave/features/welcome/welcome_screen.dart';
 import 'package:valorave/room/room_controller.dart';
+import 'package:valorave/providers/providers.dart';
 
 Future<void> main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -67,18 +68,15 @@ Future<void> main() async {
 
   Widget host(AppStore store, ThemeController theme, SharedPreferences prefs) {
     final router = buildRouter(store: store);
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: store),
-        ChangeNotifierProvider<ThemeController>.value(value: theme),
-        ChangeNotifierProvider(
-          create: (_) => RatesPoller(
-            store,
-            NotificationsService(),
-            AlertEngine(prefs),
-          ),
+    return ProviderScope(
+      overrides: [
+        appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+        themeControllerProvider.overrideWith((ref) => theme, disposeNotifier: false),
+        ratesPollerProvider.overrideWith(
+          (ref) => RatesPoller(store, NotificationsService(), AlertEngine(prefs)),
+          disposeNotifier: false,
         ),
-        Provider<SharedPreferences>.value(value: prefs),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
       child: ShadApp.custom(
         theme: ShadThemeVe.light(),
@@ -195,11 +193,11 @@ Future<void> main() async {
 
     // Host mínimo: un botón que abre una hoja Ve con contenido ENORME.
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          ChangeNotifierProvider<ThemeController>.value(value: theme),
-          Provider<SharedPreferences>.value(value: prefs),
+      ProviderScope(
+        overrides: [
+          appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+          themeControllerProvider.overrideWith((ref) => theme, disposeNotifier: false),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: ShadApp.custom(
           theme: ShadThemeVe.light(),
@@ -288,21 +286,18 @@ Future<void> main() async {
 
       final router = buildRouter(store: store);
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: store),
-            ChangeNotifierProvider<ThemeController>.value(value: theme),
-            ChangeNotifierProvider(
-              create: (_) => RatesPoller(
-                store,
-                NotificationsService(),
-                AlertEngine(prefs),
-              ),
+        ProviderScope(
+          overrides: [
+            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+            themeControllerProvider.overrideWith((ref) => theme, disposeNotifier: false),
+            ratesPollerProvider.overrideWith(
+              (ref) => RatesPoller(store, NotificationsService(), AlertEngine(prefs)),
+              disposeNotifier: false,
             ),
             // v18.0 · Sala Viva: la Lista y /sala comparten el controlador
             // de aplicación — sin él la auditoría no puede navegar a /lista.
-            ChangeNotifierProvider(create: (_) => RoomController(store)),
-            Provider<SharedPreferences>.value(value: prefs),
+            roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
+            sharedPreferencesProvider.overrideWithValue(prefs),
           ],
           child: ShadApp.custom(
             theme: ShadThemeVe.light(),
@@ -350,11 +345,11 @@ Future<void> main() async {
 
     final router = buildRouter(store: store);
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: store),
-          ChangeNotifierProvider<ThemeController>.value(value: theme),
-          Provider<SharedPreferences>.value(value: prefs),
+      ProviderScope(
+        overrides: [
+          appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+          themeControllerProvider.overrideWith((ref) => theme, disposeNotifier: false),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: ShadApp.custom(
           theme: ShadThemeVe.light(),

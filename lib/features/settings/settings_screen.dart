@@ -9,10 +9,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:provider/provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../core/currencies.dart';
@@ -23,20 +21,19 @@ import '../../core/theme.dart';
 import '../../data/backup.dart';
 import '../../data/board.dart';
 import '../../data/store.dart';
-import '../../services/alerts.dart';
 import '../../services/biometric.dart';
-import '../../services/notifications.dart';
 import '../../services/sharing.dart';
 import '../../services/ticket_files.dart';
 import '../../services/ve_log.dart';
 import 'package:talker_flutter/talker_flutter.dart';
 import '../../widgets/export_sheet.dart';
-import '../../state/app_state.dart';
 import '../../widgets/app_tour.dart';
 import '../../widgets/rate_sheet.dart';
 import '../../widgets/ui.dart';
 import '../../core/banks_ve.dart';
 import '../../core/version.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:valorave/providers/providers.dart';
 
 // v18.0: la versión visible vive en core/version.dart (fuente única — la
 // usan las constancias PNG/PDF y los totales compartidos). Se re-exporta
@@ -48,12 +45,12 @@ part 'settings_alertas.dart';
 part 'settings_system.dart';
 part 'cuentas_pago_movil.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final store = context.watch<AppStore>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -89,13 +86,13 @@ class SettingsScreen extends StatelessWidget {
 /// Tarjeta de sección de Ajustes con la cromática Ve del prototipo
 /// (TASK-34 p10): superficie shad, borde --line, radius 10 — sin elevación
 /// Material. Sustituye a las `Card` de Material 3 en toda la pantalla.
-class _VeSettingsCard extends StatelessWidget {
+class _VeSettingsCard extends ConsumerWidget {
   const _VeSettingsCard({required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final shad = ShadTheme.of(context).colorScheme;
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -117,7 +114,7 @@ class _VeSettingsCard extends StatelessWidget {
 
 /// Datos y conexión (v17.2): modo offline total + cada cuánto se consultan
 /// las APIs. Todo vive en Settings (store) y el poller lo lee en vivo.
-class _DatosConexion extends StatelessWidget {
+class _DatosConexion extends ConsumerWidget {
   const _DatosConexion({required this.store});
   final AppStore store;
 
@@ -130,10 +127,10 @@ class _DatosConexion extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final s = store.settings;
-    final poller = context.read<RatesPoller>();
+    final poller = ref.read(ratesPollerProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

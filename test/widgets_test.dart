@@ -5,9 +5,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter/services.dart' show rootBundle, FontLoader, ByteData;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valorave/core/currencies.dart';
 import 'package:valorave/core/models.dart';
@@ -33,6 +33,7 @@ import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
 import 'package:valorave/widgets/ui.dart';
+import 'package:valorave/providers/providers.dart';
 
 /// Store ligero para widget tests (sin Hive: FakeAsync no hace file IO).
 AppStore _pumpedStore(WidgetTester tester, {String dir = 'w'}) {
@@ -58,19 +59,19 @@ Widget _wrap(
   required AppStore store,
   ThemeMode mode = ThemeMode.light,
 }) {
-  return MultiProvider(
-    providers: [
-      ChangeNotifierProvider.value(value: store),
-      ChangeNotifierProvider(create: (_) => ThemeController()),
-      ChangeNotifierProvider(create: (_) => _poller),
-      Provider<AlertEngine>.value(value: _alerts),
-      Provider<NotificationsService>.value(value: _notifs),
+  return ProviderScope(
+    overrides: [
+      appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+      themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+      ratesPollerProvider.overrideWith((ref) => _poller, disposeNotifier: false),
+      alertsProvider.overrideWith((ref) => _alerts),
+      notificationsProvider.overrideWith((ref) => _notifs),
       // v19.4: el Inicio lee las prefs de widgets (como appProviders en
       // la app real — siempre están).
-      Provider<SharedPreferences>.value(value: _prefs),
+      sharedPreferencesProvider.overrideWithValue(_prefs),
       // v18.0 · Sala Viva: controlador de sala a nivel app (como en
       // appProviders) — la Lista y la sala lo comparten.
-      ChangeNotifierProvider(create: (_) => RoomController(store)),
+      roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
     ],
     // TASK-34 (p5+p6): Inicio y Conversor usan el kit «Ve» (shadcn_ui
     // real), que necesita ShadTheme en el árbol — como en la app
@@ -292,12 +293,12 @@ Future<void> main() async {
         ],
       );
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: store),
-            ChangeNotifierProvider(create: (_) => ThemeController()),
-            ChangeNotifierProvider.value(value: _poller),
-            Provider<SharedPreferences>.value(value: _prefs),
+        ProviderScope(
+          overrides: [
+            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+            ratesPollerProvider.overrideWith((ref) => _poller, disposeNotifier: false),
+            sharedPreferencesProvider.overrideWithValue(_prefs),
           ],
           child: ShadApp.custom(
             theme: ShadThemeVe.light(),
@@ -721,10 +722,10 @@ Future<void> main() async {
       );
       await tester.pumpWidget(
         _wrap(
-          Builder(
-            builder: (context) => Center(
+          Consumer(
+            builder: (context, ref, _) => Center(
               child: ElevatedButton(
-                onPressed: () => showNotificationCenter(context),
+                onPressed: () => showNotificationCenter(context, ref),
                 child: const Text('abrir'),
               ),
             ),
@@ -818,14 +819,14 @@ Future<void> main() async {
         ],
       );
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: store),
-            ChangeNotifierProvider(create: (_) => ThemeController()),
-            ChangeNotifierProvider.value(value: _poller),
-            Provider<SharedPreferences>.value(value: _prefs),
+        ProviderScope(
+          overrides: [
+            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+            ratesPollerProvider.overrideWith((ref) => _poller, disposeNotifier: false),
+            sharedPreferencesProvider.overrideWithValue(_prefs),
             // v18.0: la Lista lee el controlador de sala del árbol.
-            ChangeNotifierProvider(create: (_) => RoomController(store)),
+            roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
           ],
           child: ShadApp.custom(
             theme: ShadThemeVe.light(),
@@ -1025,14 +1026,14 @@ Future<void> main() async {
       );
       final router = buildRouter(store: store);
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: store),
-            ChangeNotifierProvider(create: (_) => ThemeController()),
-            ChangeNotifierProvider.value(value: _poller),
-            Provider<SharedPreferences>.value(value: prefs),
+        ProviderScope(
+          overrides: [
+            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
+            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+            ratesPollerProvider.overrideWith((ref) => _poller, disposeNotifier: false),
+            sharedPreferencesProvider.overrideWithValue(prefs),
             // v18.0: el shell/Lista leen el controlador de sala del árbol.
-            ChangeNotifierProvider(create: (_) => RoomController(store)),
+            roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
           ],
           child: ShadApp.custom(
             theme: ShadThemeVe.light(),
