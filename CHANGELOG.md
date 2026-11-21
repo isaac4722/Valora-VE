@@ -1,5 +1,54 @@
 # Changelog
 
+## v24.1 — patrón calculadora cerrado + deep link web + pulido de posicionamiento (orden del dueño)
+
+Captura → corrección → recaptura sobre la v24.0d, con el encargo directo:
+«el conversor debe ser como tipo calculadora… si yo subo todo sube… hay
+elementos mal ubicados».
+
+- **Conversor = calculadora de verdad**: los dos campos de monto son de
+  SOLO LECTURA (`MoneyField.readOnly`) — el teclado del sistema JAMÁS
+  aparece (en el teléfono el IME comprimía todo el layout: «si yo subo,
+  todo sube»). La única vía de entrada es el VeKeypad, como una
+  calculadora; tocar un campo cambia el lado ACTIVO (símbolo de divisa en
+  tinta plena + cursor visible) y tocar el lado INACTIVO abre una entrada
+  NUEVA (no concatena sobre el valor pasivo).
+- **El pad es PISO FIJO permanente**: fuera el toggle «ocultar teclado» y
+  el AnimatedSize — el VeKeypad vive SIEMPRE abajo, SIEMPRE en el mismo
+  lugar; lo único que sube o baja es el contenido de arriba. El toggle ya
+  no tiene sentido: sin pad no habría vía de entrada.
+- **Deep link web arreglado (bug real desde v20.3)**: abrir/recargar
+  /conversor, /ajustes o /historial CAÍA EN INICIO. Diagnóstico con probes
+  de consola (boot → router → redirect): el histórico por defecto (hash)
+  reescribe la URL (/conversor → '/') durante el arranque del motor, antes
+  de que el router exista — Uri.base y defaultRouteName ya llegan tarde.
+  Fix: la ruta de entrada se CAPTURA en main() (primer renglón, `Uri.base`
+  todavía prístino), el router arranca con ella explícita +
+  `overridePlatformDefaultLocation` y el history.state de la sesión previa
+  se limpia en web/index.html. Verificado en vivo: /conversor /ajustes
+  /historial /analisis abren directo.
+- **Canal web que sirve builds frescos**: el preview server mandaba
+  `main.dart.js` con `max-age=3600` — tras cada rebuild los usuarios
+  navegaban hasta 1 h sobre el build VIEJO (y la auditoría con VLM leía
+  código desactualizado). Ahora `Cache-Control: no-cache` para todo
+  (main.dart.js no está fingerprinteado).
+- **Eje X del gráfico de Análisis con 4 anclas exactas**: los múltiplos de
+  intervalo de fl_chart no calzan con los extremos y fabricaban solapes al
+  borde («19/11 24/11» pegados). `baselineX: minX` ancla la rejilla de
+  títulos en las 4 anclas + filtro de anclas + `SideTitleFitInsideData`
+  (los de borde se meten dentro). Verificado en vivo: 09/10 · 24/10 ·
+  08/11 · 24/11.
+- **Welcome equilibrado**: el Wrap de divisas dejaba a ETH sola en una
+  segunda fila (7+1) — ahora rejilla 4+4 (VES USD EUR COP / BRL MXN USDT
+  ETH), un elemento mal ubicado a la vista.
+- **Inicio**: las barras de «Últimos 7 días» pasan de tinta fg (vigas
+  negras) al verde de marca con ancho adaptativo (18 px con 2-3 datos) y
+  esquinas 6; la chispa del héroe se muestra desde 3 puntos (con 2 era un
+  guion plano flotante).
+- **Test del conversor reescrito al patrón calculadora** (tap al campo +
+  teclas del pad, no enterText) y goldens regenerados (conversor, inicio
+  móvil y desktop).
+
 ## 1.16.0-beta+49 · v24.0d — polish impeccable + gate visual al día (iconos con tinta, tooltips de marca, techo fiel)
 
 Vuelta de polish sobre el Material 3 nuevo con auditoría visual VLM de las
