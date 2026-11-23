@@ -1220,12 +1220,16 @@ class VeSelect<T> extends StatelessWidget {
                     o.leading!,
                     const SizedBox(width: 8),
                   ],
-                  Text(
-                    o.label,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      color: scheme.foreground,
+                  Flexible(
+                    child: Text(
+                      o.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 13,
+                        color: scheme.foreground,
+                      ),
                     ),
                   ),
                 ],
