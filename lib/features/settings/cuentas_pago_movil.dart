@@ -187,7 +187,11 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
                     semantic: 'Banco',
                     options: [
                       for (final b in kVkBanks)
-                        VeSelectOption(value: b, label: b),
+                        VeSelectOption(
+                          value: b,
+                          label: b,
+                          leading: BankBadge(bank: b, size: 20),
+                        ),
                     ],
                     onChanged: (v) => setSheet(() => bank = v),
                   ),

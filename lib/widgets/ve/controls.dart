@@ -1124,9 +1124,17 @@ class VeField extends StatelessWidget {
 
 /// Opción de [VeSelect] (valor + etiqueta visible).
 class VeSelectOption<T> {
-  const VeSelectOption({required this.value, required this.label});
+  const VeSelectOption({
+    required this.value,
+    required this.label,
+    this.leading,
+  });
+
   final T value;
   final String label;
+
+  /// Icono/insignia opcional a la izquierda (v27.1: logos de banco).
+  final Widget? leading;
 }
 
 /// Select sobre `MenuAnchor` de Material 3 v25 «HOJA» (36 px · trigger
@@ -1155,12 +1163,21 @@ class VeSelect<T> extends StatelessWidget {
     final Color faint = dark ? VeColors.faintDark : VeColors.faintLight;
 
     String? selectedLabel;
+    Widget? selectedLeading;
     for (final o in options) {
-      if (o.value == value) selectedLabel = o.label;
+      if (o.value == value) {
+        selectedLabel = o.label;
+        selectedLeading = o.leading;
+      }
     }
 
-    Widget triggerRow(String text, {bool isPlaceholder = false}) => Row(
+    Widget triggerRow(
+      String text, {
+      bool isPlaceholder = false,
+      Widget? leading,
+    }) => Row(
       children: [
+        if (leading != null) ...[leading, const SizedBox(width: 8)],
         Expanded(
           child: Text(
             text,
@@ -1197,13 +1214,21 @@ class VeSelect<T> extends StatelessWidget {
           for (final o in options)
             MenuItemButton(
               onPressed: () => onChanged?.call(o.value),
-              child: Text(
-                o.label,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  color: scheme.foreground,
-                ),
+              child: Row(
+                children: [
+                  if (o.leading != null) ...[
+                    o.leading!,
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    o.label,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      color: scheme.foreground,
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -1230,7 +1255,7 @@ class VeSelect<T> extends StatelessWidget {
             radius: 999,
             child: selectedLabel == null
                 ? triggerRow(placeholder ?? 'Elegir…', isPlaceholder: true)
-                : triggerRow(selectedLabel),
+                : triggerRow(selectedLabel, leading: selectedLeading),
           ),
         ),
       ),
