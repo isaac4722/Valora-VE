@@ -161,8 +161,9 @@ class _RateCard extends ConsumerWidget {
     final double displayRate = e?.rate ?? manualRate;
     final DateTime updatedAt = e?.updatedAt ?? DateTime.now();
 
-    final bcv = store.board.sources['ves-bcv']?.rate;
-    final parallel = store.board.sources['ves-parallel']?.rate;
+    final bool isVe = country == Country.VE;
+    final bcv = isVe ? store.board.sources['ves-bcv']?.rate : null;
+    final parallel = isVe ? store.board.sources['ves-parallel']?.rate : null;
     final gap =
         (bcv != null && bcv > 0 && displayRate > 0 && activeId != 'ves-bcv')
         ? (displayRate / bcv - 1) * 100
