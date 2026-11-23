@@ -870,7 +870,9 @@ const Map<String, double> spikeSensitivities = {
 class Settings {
   final String country; // VE · CO · BR · MX · US (default VE)
   final bool autoRefresh;
-  final String tickerMode; // 'featured' | 'focus' | 'off' (solo Inicio)
+  // v26: tickerMode/tickerSize/tickerSpeed retirados con la cinta del
+  // Inicio (orden del dueño). Los respaldos viejos que aún traigan esas
+  // claves cargan igual — fromJson ignora lo que no conoce.
   final bool onboarded; // bienvenida + tutorial
   final String calcCurrency; // v10 moneda totales Lista (default VES)
   final bool spikeAlerts;
@@ -886,8 +888,6 @@ class Settings {
   final double? salaryVariable; // modo base: parte variable
   final double? salaryMin; // modo rango: mínimo
   final double? salaryMax; // modo rango: máximo
-  final String tickerSize; // v13 'compact' | 'normal' | 'large'
-  final int tickerSpeed; // v13 90 | 120 | 180 (segundos por vuelta)
   final List<String> currencyOrder; // v13 (vacío = canónico, se purga)
   final bool offlineMode; // v17.2: sin NINGUNA consulta a APIs (solo guardadas)
   final int pollMinutes; // v17.2: cada cuánto consulta la app las APIs (1..60)
@@ -904,7 +904,6 @@ class Settings {
     this.pollMinutes = 1,
     this.biometricLock = false,
     this.sseUrl = '',
-    this.tickerMode = 'featured',
     this.onboarded = false,
     this.calcCurrency = 'VES',
     this.spikeAlerts = false,
@@ -920,8 +919,6 @@ class Settings {
     this.salaryVariable,
     this.salaryMin,
     this.salaryMax,
-    this.tickerSize = 'normal',
-    this.tickerSpeed = 120,
     this.currencyOrder = const [],
     this.numMode = 'decimales',
     this.accountsBiometric = false,
@@ -936,7 +933,6 @@ class Settings {
       pollMinutes = 1,
       biometricLock = false,
       sseUrl = '',
-      tickerMode = 'featured',
       onboarded = false,
       calcCurrency = 'VES',
       spikeAlerts = false,
@@ -952,8 +948,6 @@ class Settings {
       salaryVariable = null,
       salaryMin = null,
       salaryMax = null,
-      tickerSize = 'normal',
-      tickerSpeed = 120,
       currencyOrder = const [],
       numMode = 'decimales',
       accountsBiometric = false;
@@ -963,7 +957,6 @@ class Settings {
     bool? autoRefresh,
     bool? offlineMode,
     int? pollMinutes,
-    String? tickerMode,
     bool? onboarded,
     String? calcCurrency,
     bool? spikeAlerts,
@@ -986,8 +979,6 @@ class Settings {
     bool clearSalaryMin = false,
     double? salaryMax,
     bool clearSalaryMax = false,
-    String? tickerSize,
-    int? tickerSpeed,
     List<String>? currencyOrder,
     bool? biometricLock,
     String? sseUrl,
@@ -998,7 +989,6 @@ class Settings {
     autoRefresh: autoRefresh ?? this.autoRefresh,
     offlineMode: offlineMode ?? this.offlineMode,
     pollMinutes: pollMinutes ?? this.pollMinutes,
-    tickerMode: tickerMode ?? this.tickerMode,
     onboarded: onboarded ?? this.onboarded,
     calcCurrency: calcCurrency ?? this.calcCurrency,
     spikeAlerts: spikeAlerts ?? this.spikeAlerts,
@@ -1018,8 +1008,6 @@ class Settings {
         : (salaryVariable ?? this.salaryVariable),
     salaryMin: clearSalaryMin ? null : (salaryMin ?? this.salaryMin),
     salaryMax: clearSalaryMax ? null : (salaryMax ?? this.salaryMax),
-    tickerSize: tickerSize ?? this.tickerSize,
-    tickerSpeed: tickerSpeed ?? this.tickerSpeed,
     currencyOrder: currencyOrder ?? this.currencyOrder,
     biometricLock: biometricLock ?? this.biometricLock,
     sseUrl: sseUrl ?? this.sseUrl,
@@ -1032,7 +1020,6 @@ class Settings {
     'autoRefresh': autoRefresh,
     'offlineMode': offlineMode,
     'pollMinutes': pollMinutes,
-    'tickerMode': tickerMode,
     'onboarded': onboarded,
     'calcCurrency': calcCurrency,
     'spikeAlerts': spikeAlerts,
@@ -1049,8 +1036,6 @@ class Settings {
       salaryMin,
       salaryMax,
     ),
-    'tickerSize': tickerSize,
-    'tickerSpeed': tickerSpeed,
     'currencyOrder': currencyOrder,
     'biometricLock': biometricLock,
     'sseUrl': sseUrl,
@@ -1118,11 +1103,6 @@ class Settings {
       pollMinutes: (iOf(j['pollMinutes'], 1)).clamp(1, 60),
       biometricLock: j['biometricLock'] == true,
       sseUrl: sOf(j['sseUrl'], '').trim(),
-      tickerMode: switch (sOf(j['tickerMode'], 'featured')) {
-        'focus' => 'focus',
-        'off' => 'off',
-        _ => 'featured',
-      },
       onboarded: j['onboarded'] == true,
       calcCurrency: sOf(j['calcCurrency'], 'VES').toUpperCase(),
       spikeAlerts: j['spikeAlerts'] == true,
@@ -1150,16 +1130,6 @@ class Settings {
           : null,
       salaryMin: salary['min'] != null ? dOf(salary['min']) : null,
       salaryMax: salary['max'] != null ? dOf(salary['max']) : null,
-      tickerSize: switch (sOf(j['tickerSize'], 'normal')) {
-        'compact' => 'compact',
-        'large' => 'large',
-        _ => 'normal',
-      },
-      tickerSpeed: switch (iOf(j['tickerSpeed'], 120)) {
-        90 => 90,
-        180 => 180,
-        _ => 120,
-      },
       currencyOrder: sListOf(j['currencyOrder']),
       numMode: sOf(j['numMode'], 'decimales') == 'redondeo'
           ? 'redondeo'

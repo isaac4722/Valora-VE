@@ -532,18 +532,19 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
         : 'Sin tasa disponible para este par';
     final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: scheme.surfaceContainerLowest,
-      body: VeEntry(
-        // v23.2 — patrón calculadora: el teclado es PISO FIJO abajo y la
-        // cifra queda siempre a la vista; el bloque superior solo hace
-        // scroll si un modo histórico lo estrena (en «Hoy» no hay scroll).
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: Column(
+    // v26 (orden del dueño · dispositivos nuevos): en HORIZONTAL el
+    // Conversor reparte la pantalla — cifras, fichas y secciones a la
+    // izquierda (scroll), acciones + teclado como PANEL fijo a la derecha
+    // (móvil girado, plegable abierto, escritorio). En VERTICAL nada cambia:
+    // el patrón calculadora de siempre (piso fijo, v24.1a CERRADO — no se
+    // re-arquitectura). La decisión se toma con LayoutBuilder: mide el
+    // espacio REAL de la pantalla (el sidebar del shell ancho ya descontó
+    // sus 224 px), no el de la ventana completa.
+
+    // Cuerpo scrollable: fecha/ruta + display dual + fichas + secciones.
+    final Widget cuerpo = SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const TipsTrigger(scope: 'conversor'),
@@ -808,22 +809,20 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                     ),
                   ],
                 ),
-              ),
-            ),
-            // v24.1 (patrón calculadora): el teclado es PISO FIJO — SIEMPRE
-            // visible y SIEMPRE en el mismo lugar: lo único que sube o baja
-            // es el contenido de arriba, jamás el pad. Sin plegado: un
-            // calculador no esconde su teclado (los campos son de solo
-            // lectura y el pad es la única vía de entrada).
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: RepaintBoundary(
-                child: VeCard(
-                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+              );
+
+    // v24.1 (patrón calculadora): el teclado es PISO FIJO — SIEMPRE visible
+    // y SIEMPRE en el mismo lugar: lo único que sube o baja es el contenido,
+    // jamás el pad. Sin plegado: un calculador no esconde su teclado (los
+    // campos son de solo lectura y el pad es la única vía de entrada).
+    // v26: este mismo bloque es el PANEL derecho en horizontal.
+    final Widget pisoCard = RepaintBoundary(
+      child: VeCard(
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                       // v25.1: acciones en el PISO — siempre visibles y
                       // tocables junto al pad, nunca tras el pliegue.
                       Row(
@@ -874,9 +873,47 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                     ],
                   ),
                 ),
-              ),
-            ),
-          ],
+              );
+
+    return Scaffold(
+      backgroundColor: scheme.surfaceContainerLowest,
+      body: VeEntry(
+        // v23.2 — patrón calculadora (vertical): piso fijo abajo y la cifra
+        // siempre a la vista; el bloque superior solo scrollea si un modo
+        // histórico lo estrena (en «Hoy» no hay scroll).
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool horizontal =
+                constraints.maxWidth > constraints.maxHeight &&
+                constraints.maxWidth >= 560;
+            if (!horizontal) {
+              return Column(
+                children: [
+                  Expanded(child: cuerpo),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                    child: pisoCard,
+                  ),
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: cuerpo),
+                // Panel del pad: ancho cómodo para 3 columnas de teclas
+                // grandes; scrollea SOLO si la ventana fuera más baja que
+                // el pad (paisajes muy comprimidos).
+                SizedBox(
+                  width: 340,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 8, 16, 10),
+                    child: SingleChildScrollView(child: pisoCard),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

@@ -64,7 +64,9 @@ class SettingsScreen extends ConsumerWidget {
             ),
             _Pais(store: store),
             _DatosConexion(store: store),
-            _Personalizacion(store: store),
+            // v26 (orden del dueño): FUERA la «Cinta de cotizaciones» y sus
+            // tres ajustes (modo/tamaño/velocidad) — la cinta del Inicio se
+            // retiró del shell y la configuración muere con ella.
             _Monedas(store: store),
             // v23: cuentas de cobro para compartir el Pago Móvil desde el
             // Conversor (comparativa CalculaYa).

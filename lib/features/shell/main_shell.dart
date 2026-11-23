@@ -5,9 +5,12 @@
 /// barra inferior de 5 pestañas plana (tinta activa / faint inactivo) y FAB
 /// de búsqueda flotante — oculto en las pantallas con búsqueda propia, como
 /// el original. El fondo ambiental (radiales + puntos) vive detrás de todo.
-/// Estado real intacto: ticker del tablero, banner de salud, campana del
-/// centro de notificaciones, badge del carrito y anclas del tour
+/// Estado real intacto: banner de salud, campana del centro de
+/// notificaciones, badge del carrito y anclas del tour
 /// (kNavBarKey · kHeaderActionsKey).
+/// v26 (orden del dueño): la CINTA de cotizaciones de Inicio SE RETIRA —
+/// las tasas ya viven en la Cotización y el papel gana su espacio; sus
+/// tres ajustes (modo/tamaño/velocidad) salieron con ella.
 library;
 
 import 'package:flutter/material.dart';
@@ -28,59 +31,42 @@ import 'package:valorave/providers/providers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:valorave/core/ve_theme.dart';
 
-/// Ítems del ticker según modo: featured (protagonistas+EUR) / focus (orden
-/// usuario) / off (no se monta).
+/// Ítems de tasas del PIE del sidebar (escritorio): fuentes protagonistas
+/// del país + arista EUR cuando el país es VE. (v26: la cinta del Inicio
+/// se retiró con sus modos — este listado alimenta solo las dos filas
+/// del pie del sidebar, siempre las mismas.)
 List<({Currency flag, String label, double value, String unit, bool isEur})>
 tickerItems(AppStore store) {
-  final ctx = store.contextOf();
   final b = store.board;
   final items =
       <
         ({Currency flag, String label, double value, String unit, bool isEur})
       >[];
 
-  final mode = store.settings.tickerMode;
-  if (mode == 'featured') {
-    // Fuentes protagonistas del país + arista EUR del país VE.
-    for (final id in CountryX.from(store.settings.country).featured) {
-      final s = RateSource.of(id);
-      final e = b.sources[id];
-      if (s == null || e == null) continue;
+  // Fuentes protagonistas del país + arista EUR del país VE.
+  for (final id in CountryX.from(store.settings.country).featured) {
+    final s = RateSource.of(id);
+    final e = b.sources[id];
+    if (s == null || e == null) continue;
+    items.add((
+      flag: s.currency,
+      label: convSourceNames[id] ?? s.label,
+      value: e.rate,
+      unit: s.currency == Currency.eur ? 'Bs/EUR' : 'Bs',
+      isEur: s.currency == Currency.eur,
+    ));
+  }
+  if (CountryX.from(store.settings.country) == Country.VE) {
+    final pair = b.sources['eur-ves-oficial'];
+    if (pair != null) {
       items.add((
-        flag: s.currency,
-        label: convSourceNames[id] ?? s.label,
-        value: e.rate,
-        unit: s.currency == Currency.eur ? 'Bs/EUR' : 'Bs',
-        isEur: s.currency == Currency.eur,
+        flag: Currency.eur,
+        label: 'Euro Oficial',
+        value: pair.rate,
+        unit: 'Bs',
+        isEur: true,
       ));
     }
-    if (CountryX.from(store.settings.country) == Country.VE) {
-      final pair = b.sources['eur-ves-oficial'];
-      if (pair != null) {
-        items.add((
-          flag: Currency.eur,
-          label: 'Euro Oficial',
-          value: pair.rate,
-          unit: 'Bs',
-          isEur: true,
-        ));
-      }
-    }
-    return items;
-  }
-  // focus: divisas del foco en su orden configurado, 1 USD = X de la divisa.
-  final order = CurrencyX.focusOrder(store.settings.currencyOrder);
-  for (final c in order) {
-    if (c == Currency.usd) continue;
-    final u = ctx.unitsPerUSD(c);
-    if (u == null || u <= 0) continue;
-    items.add((
-      flag: c,
-      label: c.code,
-      value: u,
-      unit: c == Currency.ves ? 'Bs' : 'USD',
-      isEur: c == Currency.eur,
-    ));
   }
   return items;
 }
@@ -182,10 +168,17 @@ class MainShell extends ConsumerWidget {
         RateSource.of(sourceId)?.category == SourceCategory.manual;
     final showHealth = !manualActive && !chosenOffline;
 
-    final bool wide = MediaQuery.sizeOf(context).width >= kWideShell;
+    final bool wide =
+        MediaQuery.sizeOf(context).width >= kWideShell &&
+        // v26 (dispositivos nuevos): en un móvil GIRADO el alto útil es
+        // corto (~320-430 px) — el sidebar de 224 px se comería el ancho
+        // del paisaje. Con pestañas inferiores el Conversor puede repartir
+        // cifras + teclado en dos paneles con espacio de verdad. El sidebar
+        // es para pantallas holgadas en AMBOS ejes: tablets, plegables
+        // abiertos y escritorio.
+        MediaQuery.sizeOf(context).height >= 500;
 
-    // Columna principal compartida: banner de salud + cinta (solo Inicio) +
-    // área de navegación.
+    // Columna principal compartida: banner de salud + área de navegación.
     final Widget mainColumn = Column(
       children: [
         AnimatedSize(
@@ -200,7 +193,6 @@ class MainShell extends ConsumerWidget {
                 )
               : const SizedBox(width: double.infinity),
         ),
-        if (current == 0) _HomeTicker(),
         const _TourTrigger(),
         // v20 (orden del dueño): la LUPA flotante móvil SE RETIRA — tapaba
         // contenido en pantallas que no la necesitan. La paleta ⌘K sigue
@@ -251,9 +243,11 @@ class MainShell extends ConsumerWidget {
           // v25 «HOJA»: fondo PLANO — fuera el ambiente (radiales/puntos),
           // la pantalla es una hoja de papel continua.
           body: SafeArea(
-            // Abajo lo resuelven la barra de tabs (móvil) o las
-            // propias pantallas (escritorio).
-            bottom: false,
+            // Abajo lo resuelven la barra de tabs (móvil) o — v26 — el
+            // propio SafeArea en modo ancho: en un móvil girado con
+            // sidebar la barra de gestos queda bajo el contenido, no
+            // encima. En escritorio el inset es 0 (no-op).
+            bottom: wide,
             child: content,
           ),
           bottomNavigationBar: wide
@@ -928,20 +922,4 @@ class _TourTriggerState extends ConsumerState<_TourTrigger> {
 
   @override
   Widget build(BuildContext context) => const SizedBox.shrink();
-}
-
-/// Cinta solo-Inicio con las fuentes del tablero vivo. Sin datos NO hace
-/// shrink aquí: el placeholder anti-CLS vive dentro de RateTicker (misma
-/// altura, «Cargando cotizaciones…») para que la cinta no salte el layout.
-class _HomeTicker extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final store = ref.watch(appStoreProvider);
-    return RateTicker(
-      items: tickerItems(store),
-      mode: store.settings.tickerMode,
-      size: store.settings.tickerSize,
-      speed: store.settings.tickerSpeed,
-    );
-  }
 }

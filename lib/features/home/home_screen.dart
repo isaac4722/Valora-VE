@@ -325,9 +325,9 @@ class _HeroState extends ConsumerState<_Hero> {
     final scheme = Theme.of(context).colorScheme;
     final store = ref.watch(appStoreProvider);
     final now = _now;
-    // Hora 24 h es-VE junto a la fecha (HH:mm, cero dependencias de locale).
-    final hhmm =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    // Hora viva del héroe: refresco cada 30 s (dispose correcto abajo).
+    // v26: ya NO pinta la fecha — solo alimenta saludo/frescura/vs-ayer
+    // (el reloj del teléfono ya dice qué día es).
     // «hace X» con el reloj real del cliente (fetchedAt del tablero);
     // se recalcula en cada rebuild (el poller notifica ~cada 60 s, cada
     // mutación del store y este timer de 30 s).
@@ -348,8 +348,10 @@ class _HeroState extends ConsumerState<_Hero> {
     // prototipo); en móvil la fila completa de 3 iconos.
     final bool movil = MediaQuery.sizeOf(context).width < 700;
 
-    // v25 «HOJA»: los iconos SUBEN a la línea de la fecha y el saludo queda
-    // con el ancho COMPLETO del papel (jamás truncado).
+    // v26 (orden del dueño): la línea de fecha/hora SE RETIRA — es un
+    // texto pequeño que el usuario ya sabe (el reloj del sistema está en
+    // la barra de estado). Los iconos de la cabecera quedan como primera
+    // línea, pegados a la derecha, y el saludo gana el ancho completo.
     final Widget iconos = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -389,33 +391,17 @@ class _HeroState extends ConsumerState<_Hero> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // v19 (orden del dueño): la fecha LARGA se retira — una sola
-              // línea corta «lun 15 sep · 14:30» como eyebrow del prototipo.
-              Expanded(
-                child: Text(
-                  '${kDias[now.weekday - 1].substring(0, 3)} ${now.day} ${kMeses[now.month - 1].substring(0, 3)} · $hhmm',
-                  style: VeText.labelCaps(
-                    10.5,
-                    color: scheme.onSurfaceVariant,
-                    weight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              iconos,
-            ],
-          ),
-          const SizedBox(height: 3),
-          // Saludo 22 px Space Grotesk (prototipo · sin nombre porque
-          // la app no pide datos personales) — ancho completo, sin recorte.
+          // Cabecera: solo acciones, a la derecha — cero ruido de fecha.
+          Align(alignment: Alignment.centerRight, child: iconos),
+          const SizedBox(height: 2),
+          // Saludo 24 px Space Grotesk (prototipo · sin nombre porque
+          // la app no pide datos personales) — el titular del papel.
           Text(
             saludo,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: VeText.displayNum(
-              22,
+              24,
               color: scheme.onSurface,
               weight: FontWeight.w600,
             ),

@@ -343,8 +343,6 @@ class AppStore extends ChangeNotifier {
         patched = s.copyWith(biometricLock: value == true);
       case 'sseUrl':
         patched = s.copyWith(sseUrl: '$value'.trim());
-      case 'tickerMode':
-        patched = s.copyWith(tickerMode: '$value');
       case 'onboarded':
         patched = s.copyWith(onboarded: value == true);
       case 'calcCurrency':
@@ -395,10 +393,6 @@ class AppStore extends ChangeNotifier {
             clearSalaryMax: m['max'] == null,
           );
         }
-      case 'tickerSize':
-        patched = s.copyWith(tickerSize: '$value');
-      case 'tickerSpeed':
-        patched = s.copyWith(tickerSpeed: (value as num).toInt());
       case 'currencyOrder':
         patched = s.copyWith(currencyOrder: (value as List).cast<String>());
       default:

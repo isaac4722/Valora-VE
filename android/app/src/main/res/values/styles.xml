@@ -11,8 +11,12 @@
          Flutter UI initializes, as well as behind your Flutter UI while its
          running.
 
-         This Theme is only used starting with V2 of Flutter's Android embedding. -->
+         v26 (orden del dueño): el fondo de la ventana ES el papel de la app
+         (#FAFAFA = bgLight exacto). Antes heredaba ?android:colorBackground
+         (blanco puro): al abrir el teclado y re-tamañarse la vista, la franja
+         expuesta entre el contenido y el teclado se pintaba blanca — el
+         «área blanca sobre el teclado» reportado por el dueño. -->
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:windowBackground">#FAFAFA</item>
     </style>
 </resources>

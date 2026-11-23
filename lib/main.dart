@@ -49,7 +49,23 @@ Future<void> main({String? documentsDir}) async {
   // de que el router exista; Uri.base y defaultRouteName ya llegan tarde.
   // La captura de la ruta de entrada se hace AQUÍ, primer renglón del boot,
   // y el router la usa como initialLocation (override de plataforma).
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  // v26 (orden del dueño · dispositivos nuevos): la app acompaña al
+  // dispositivo — vertical Y horizontal (móviles girados, plegables
+  // abiertos). El shell reserva las barras del sistema y el Conversor
+  // reparte cifras + teclado en dos paneles al girar. (Se excluye
+  // portraitDown: cámara arriba de los botones en la mayoría de los
+  // teléfonos.)
+  SystemChrome.setPreferredOrientations(const [
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
+  // v26 · «no se interrumpe la noche»: edge-to-edge — el papel pinta
+  // detrás de la barra de estado y de la barra de navegación (nada de
+  // franjas blancas ajenas al tema ni la franja del teclado que tapaba
+  // información); el contenido respeta notch y gestos con SafeArea. En
+  // web/tests la llamada es inofensiva (no-op del canal).
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   final store = AppStore();
   await store.hydrate(testDir: documentsDir);

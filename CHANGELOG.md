@@ -1,5 +1,57 @@
 # Changelog
 
+## v26 — dispositivos nuevos: vertical y horizontal + noche limpia (orden del dueño)
+
+«Configura todo para vertical y horizontal en los móviles nuevos
+(plegables), quita la cinta del Inicio y sus configuraciones, que no se
+interrumpe la noche ni los botones de navegación de Android, arregla el
+área blanca sobre el teclado, y quita textos pequeños que el usuario ya
+sabe (el día)». Evaluación del aplanado v25 pedido por el dueño: lo
+esencial SIGUE TODO (grupos USD/EUR de la Cotización, TUS TASAS con
+brecha, hints de sección, stats de tiendas, GASTO ACUMULADO, pie del
+Historial, Libro al pie) — nada faltaba; lo que salió fue ruido.
+
+- **Responsivo de verdad (móvil girado · plegable · tablet ·
+  escritorio)**: orientación desbloqueada (portraitUp + landscapeLeft/
+  Right; sin portraitDown por la cámara) y shell adaptativo por AMBOS
+  ejes: en un móvil girado (alto útil < 500 px) la barra de pestañas se
+  conserva — el sidebar de 224 px se comería el paisaje —; el sidebar es
+  para pantallas holgadas (≥ 700 px de ancho Y alto ≥ 500: tablets,
+  plegables abiertos, escritorio). El SafeArea del shell en modo ancho
+  consume el inset inferior: en un móvil girado la barra de gestos queda
+  DEBAJO del contenido, no encima.
+- **Conversor a DOS PANELES en horizontal**: LayoutBuilder decide con el
+  espacio real (el sidebar ya descontó sus px) — si el lienzo es más
+  ancho que alto (≥ 560 px), cifras/fichas/secciones a la izquierda
+  (scroll) y acciones + VeKeypad como PANEL fijo a la derecha (340 px;
+  scrollea solo en paisajes comprimidos). En VERTICAL el patrón
+  calculadora v24.1a queda INTACTO (piso fijo permanente — cerrado). El
+  pad funciona igual en su panel: teclas → campo activo.
+- **No se interrumpe la noche + fin del «área blanca sobre el
+  teclado»**: el fondo de la ventana Android pasa de blanco heredado a
+  los colores EXACTOS del tema (values: #FAFAFA papel · values-night:
+  #08080A grafito) — al abrir el teclado y re-tamañarse la vista, la
+  franja expuesta pinta la MISMA noche, no blanco puro. Edge-to-edge
+  (SystemUiMode.edgeToEdge): el papel pinta detrás de la barra de estado
+  y de la barra de navegación, sin franjas ajenas al tema; splash
+  alineado al papel/grafito exactos; corte de pantalla shortEdges
+  (notch y plegables también en horizontal).
+- **La cinta del Inicio SE RETIRA con todo su árbol** (no aportaba: las
+  tasas ya viven en la sección Cotización): fuera el RateTicker del
+  shell, fuera la sección «Personalización» de Ajustes (modo/tamaño/
+  velocidad) y fuera los campos tickerMode/tickerSize/tickerSpeed del
+  modelo. Los respaldos viejos que traigan esas claves cargan igual
+  (fromJson ignora lo extinto) — verificado por test de round-trip.
+- **El día ya lo sabe el usuario**: la línea «lun 24 nov · 14:30» sale
+  del héroe del Inicio (el reloj del sistema vive en la barra de
+  estado); el papel arranca con las acciones de cabecera a la derecha y
+  el saludo como titular, ahora a 24 px Space Grotesk.
+- Tests: **315/315** (nuevos: horizontal con pad-panel a la derecha y
+  teclas funcionando, cinta + configuración ausentes en Ajustes, fecha
+  fuera con saludo titular; reescrito el de fecha v19) · analyze 0 ·
+  auditoría de prohibiciones VERDE · web rebuilt y verificado en vivo a
+  390×844 y 844×390.
+
 ## v24.1 — patrón calculadora cerrado + deep link web + pulido de posicionamiento (orden del dueño)
 
 Captura → corrección → recaptura sobre la v24.0d, con el encargo directo:

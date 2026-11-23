@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Splash de marca ValoraVE: fondo claro del tema (#F7F8F9 = bgLight) + -->
+<!-- Splash de marca ValoraVE: fondo claro del tema (#FAFAFA = bgLight) + -->
 <!-- logo centrado. El bitmap vive en drawable-nodpi/splash_logo.png.     -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
-        <color android:color="#F7F8F9" />
+        <color android:color="#FAFAFA" />
     </item>
 
     <item

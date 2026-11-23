@@ -2,7 +2,8 @@
 /// Componentes firma: Stamp, ReadWindow, LedgerRow, RuleDouble, SourceSeal,
 /// TrendBadge, SectionTitle, PageHeader, EmptyState, CategoryIcon, StatCard,
 /// StoreAvatar, Flag, AnimatedNumber (odómetro), LiveDot, ChipTag,
-/// SegmentedChips, RateTicker configurable, RateHealthBanner.
+/// SegmentedChips, RateHealthBanner. (v26: RateTicker retirado con la
+/// cinta del Inicio por orden del dueño.)
 /// Motion: EASE [0.16,1,0.3,1] · tap 120 / state 200 / layout 300 / entrance
 /// 600 ms · TAP .96 · stagger 45 ms cap 350 · reducedMotion del sistema.
 library;
@@ -2079,161 +2080,10 @@ class RateHealthBanner extends StatelessWidget {
   }
 }
 
-/// Ticker de cotizaciones configurable (3 modos × 3 tamaños × 3 velocidades,
-/// solo Inicio — §9.0 RateTicker). Loop −50 %; anti-CLS «Cargando…».
-class RateTicker extends StatefulWidget {
-  const RateTicker({
-    super.key,
-    required this.items,
-    required this.mode,
-    required this.size,
-    required this.speed,
-  });
-
-  final List<
-    ({Currency flag, String label, double value, String unit, bool isEur})
-  >
-  items;
-  final String mode; // featured | focus | off
-  final String size; // compact | normal | large
-  final int speed; // 90 | 120 | 180
-
-  @override
-  State<RateTicker> createState() => _RateTickerState();
-}
-
-class _RateTickerState extends State<RateTicker>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 120),
-  )..repeat();
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Modo off = preferencia del usuario → no se monta (shrink). Sin datos →
-    // placeholder anti-CLS con la misma altura (delega en RateTicker).
-    // v22.0 (rendimiento): sin filas o en off la animación SE DETIENE —
-    // antes el controlador seguía marcando 60 fps en vacío (CPU/GPU
-    // encendidas sin nada que mover, caro en teléfonos humildes).
-    final bool debeGirar = widget.mode != 'off' && widget.items.isNotEmpty;
-    if (debeGirar) {
-      if (!_ctrl.isAnimating) _ctrl.repeat();
-    } else if (_ctrl.isAnimating) {
-      _ctrl.stop();
-    }
-    if (widget.mode == 'off') return const SizedBox.shrink();
-    if (widget.items.isEmpty) {
-      final double height = switch (widget.size) {
-        'compact' => 30.0,
-        'large' => 48.0,
-        _ => 38.0,
-      };
-      final bool dark = Theme.of(context).brightness == Brightness.dark;
-      return Container(
-        height: height,
-        color: (dark ? VeColors.mutedDark : VeColors.mutedLight).withValues(
-          alpha: 0.4,
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          'Cargando cotizaciones…',
-          style: TextStyle(
-            fontSize: 13.5,
-            color: dark ? VeColors.mutedFgDark : VeColors.mutedFgLight,
-          ),
-        ),
-      );
-    }
-    _ctrl.duration = Duration(seconds: widget.speed);
-    final (
-      double height,
-      double labelSize,
-      double valueSize,
-    ) = switch (widget.size) {
-      'compact' => (30.0, 11.0, 12.0),
-      'large' => (48.0, 14.5, 16.0),
-      _ => (38.0, 12.5, 13.5),
-    };
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    final row = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (int i = 0; i < widget.items.length; i++)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flag(widget.items[i].flag, size: 15),
-                const SizedBox(width: 6),
-                Text(
-                  widget.items[i].label,
-                  style: TextStyle(
-                    fontSize: labelSize,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  widget.items[i].isEur
-                      ? fmtEurRate(widget.items[i].value)
-                      : fmtRate(widget.items[i].value),
-                  style: VeText.displayNum(valueSize, color: scheme.onSurface),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  widget.items[i].unit,
-                  style: TextStyle(
-                    fontSize: labelSize - 1,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-
-    return Container(
-      height: height,
-      color:
-          (Theme.of(context).brightness == Brightness.dark
-                  ? VeColors.mutedDark
-                  : VeColors.mutedLight)
-              .withValues(alpha: 0.4),
-      child: AnimatedBuilder(
-        animation: _ctrl,
-        // v22.0 (rendimiento): RepaintBoundary alrededor de la fila móvil —
-        // cada frame solo recoloca la CAPA ya rasterizada (la cinta se
-        // repinta una vez, no en cada tick). Antes la traslación marcaba
-        // needsPaint hasta la frontera más cercana (el shell entero) 60
-        // veces por segundo: el martilleo nº1 del Inicio en devices viejos.
-        child: RepaintBoundary(
-          child: Row(mainAxisSize: MainAxisSize.min, children: [row, row]),
-        ),
-        builder: (context, child) => ClipRect(
-          child: FractionalTranslation(
-            translation: Offset(-_ctrl.value * 0.5, 0),
-            child: OverflowBox(
-              maxWidth: double.infinity,
-              alignment: Alignment.centerLeft,
-              child: child,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+// (v26 · orden del dueño) RateTicker — la cinta de cotizaciones del
+// Inicio — SE RETIRÓ: las tasas ya viven en la sección Cotización y el
+// papel gana ese alto para el contenido. Sus ajustes (modo/tamaño/
+// velocidad) y los campos del modelo viajaron con ella.
 
 /// Skeleton de papel: altura exacta anti-CLS (skeleton-paper).
 class SkeletonPaper extends StatelessWidget {

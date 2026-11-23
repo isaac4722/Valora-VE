@@ -41,7 +41,7 @@ los cambios quedan en outbox y salen al reconectar.
 ```bash
 flutter pub get
 flutter run                 # debug
-flutter test                # unit + widget (313 tests)
+flutter test                # unit + widget (315 tests)
 
 # release (requiere android/keystore.properties — ver example):
 flutter build apk --release --split-per-abi \

@@ -6,6 +6,8 @@ Máx ~10 líneas. Al cerrar el turno: las líneas bajan a `PROGRESS_WARM.md`
 justificaciones. Solo se AÑADE.
 Si no hay turno activo, el último cerrado está al final de `PROGRESS_WARM.md`.
 
+2026-11-24 · DONE · v26 dispositivos nuevos — vertical+horizontal: orientación libre, shell adaptativo (alto<500=pestañas; sidebar solo pantallas holgadas), Conversor DOS PANELES ≥560px (pad-panel derecho, vertical intacto v24.1a); cinta del Inicio fuera con TODO su árbol (RateTicker + «Personalización» de Ajustes + campos del modelo; respaldos viejos cargan); fecha del héroe fuera (saludo 24px titular); ventana Android día/noche EXACTA + edge-to-edge + cutout shortEdges (área blanca del teclado y noche interrumpida) · analyze 0 · 315/315 · auditoría VERDE · web verificado 390×844 y 844×390 · 7_PERSIST
+
 2026-10-02 · DOING · TASK-35 abre turno — GUI correcta: notch/SafeArea en todas las superficies, techo en menús/sheets, Sala al lenguaje Ve del prototipo, toggle de tema en cabecera · docs-news reintegrados a nivel contenido (AGENT.md + bitácoras canónicas + skills-lock) · gate n/a · 3_IMPLEMENT
 2026-11-20 · DONE · v23.0a textos al día — tour decía «Divisas»/«la lupa» y la pestaña es «Conversor» desde v22.0 (la lupa de CABEZA sigue viva: la retirada v20 fue del FAB); paleta ⌘K unificada · analyze 0 · 266/266 · 7_PERSIST
 2026-11-20 · DONE · v23.0b Inicio en 4 bloques — héroe+cotización+tu mes a la vista; alertas/tiendas/registros/herramientas/AppWidgets tras «TODO LO DEMÁS · Ver todo» (AnimatedSize, secciones fijas v19.6 intactas, tour anclas intactas) · analyze 0 · 266/266 · 7_PERSIST

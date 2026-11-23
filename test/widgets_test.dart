@@ -483,6 +483,80 @@ Future<void> main() async {
       expect(ficha('20'), findsOneWidget); // la ficha sigue; el campo no
     });
 
+    testWidgets('v26 horizontal: el pad pasa a PANEL derecho y todo cabe', (
+      tester,
+    ) async {
+      final store = _pumpedStore(tester, dir: 'w3h');
+      await _initServices(store);
+      store.setRateBoard(
+        RateBoard(
+          sources: {'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now())},
+        ),
+      );
+      // Par limpio USD → VES para leer el monto de origen sin ruido.
+      store.setConverterPair('usd', 'ves');
+      // v26 (dispositivos nuevos): móvil GIRADO (844×390) — el Conversor
+      // reparte la pantalla: cifras/fichas a la izquierda, acciones +
+      // teclado como PANEL fijo a la derecha, sin comerse el display.
+      tester.view.physicalSize = const Size(844, 390);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
+      await tester.pumpAndSettle();
+      expect(find.byType(VeKeypad), findsOneWidget);
+      // El pad vive a la DERECHA del título (panel lateral, no piso).
+      final pad = tester.getTopLeft(find.byType(VeKeypad));
+      final titulo = tester.getTopLeft(find.text('Conversor'));
+      expect(pad.dx, greaterThan(500));
+      expect(titulo.dx, lessThan(pad.dx));
+      // El display dual comparte fila con el panel (queda a la izquierda).
+      expect(tester.getTopLeft(find.text('Redondear')).dx, lessThan(pad.dx));
+      // Y el pad FUNCIONA en su nueva casa: teclas 2 + 4 → «124».
+      Finder tecla(String k) =>
+          find.descendant(of: find.byType(VeKeypad), matching: find.text(k));
+      await tester.tap(tecla('2'));
+      await tester.pump();
+      await tester.tap(tecla('4'));
+      await tester.pump();
+      expect(find.text('124'), findsWidgets);
+    });
+
+    testWidgets('v26: la cinta de cotizaciones y su configuración NO existen', (
+      tester,
+    ) async {
+      final store = _pumpedStore(tester, dir: 'w26c');
+      await _initServices(store);
+      store.setRateBoard(
+        RateBoard(
+          sources: {'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now())},
+        ),
+      );
+      // Ajustes enteros: la sección «Personalización» (modo/tamaño/
+      // velocidad de la cinta) desapareció con la cinta del Inicio.
+      await tester.pumpWidget(_wrap(const SettingsScreen(), store: store));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Cinta de cotizaciones'), findsNothing);
+      expect(find.text('PERSONALIZACIÓN'), findsNothing);
+      // El resto de las secciones sigue completo (evaluar, no borrar) —
+      // la lista es perezosa: se baja hasta cada una para construirla.
+      expect(find.text('Ajustes'), findsOneWidget);
+      expect(find.text('PAÍS'), findsOneWidget);
+      final lista = find.byType(Scrollable).first;
+      for (final seccion in [
+        'DATOS Y CONEXIÓN',
+        'MONEDAS Y TASAS',
+        'CUENTAS Y PAGO MÓVIL',
+      ]) {
+        await tester.scrollUntilVisible(
+          find.text(seccion),
+          300,
+          scrollable: lista,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(seccion), findsOneWidget);
+      }
+    });
+
     testWidgets('v23 numMode: Redondear entero + Decimales fiel + persiste', (
       tester,
     ) async {
@@ -942,8 +1016,8 @@ Future<void> main() async {
     });
   });
 
-  group('Home v19: fecha simple, sin saltos y manual no es offline', () {
-    testWidgets('fecha corta «lun 15 sep · HH:MM» sin fecha larga', (
+  group('Home v26: sin línea de fecha, sin saltos y manual no es offline', () {
+    testWidgets('v26: SIN fecha — el usuario ya sabe qué día es', (
       tester,
     ) async {
       final store = _pumpedStore(tester, dir: 'w11');
@@ -958,15 +1032,21 @@ Future<void> main() async {
       );
       await tester.pumpWidget(_wrap(const HomeScreen(), store: store));
       await tester.pumpAndSettle();
-      // La fecha larga («lunes, 15 de septiembre de 2026») ya NO existe.
+      // v26 (orden del dueño): ni la fecha larga ni la corta — el reloj del
+      // sistema ya las dice; el papel arranca con las acciones y el saludo.
       expect(find.textContaining(' de septiembre de '), findsNothing);
-      // El formato corto vive en UNA línea: «dia DD mes · HH:MM».
       expect(
-        find.textContaining(
-          RegExp(r'^[a-záéíóú]{3} \d{1,2} [a-z]{3} · \d{2}:\d{2}$'),
-        ),
+        find.textContaining(RegExp(r'^[a-záéíóú]{3} \d{1,2} [a-z]{3}')),
+        findsNothing,
+      );
+      // El saludo (titular del papel, 24 px Space Grotesk) sigue ahí.
+      expect(
+        find.textContaining(RegExp(r'^Buen(os días|as tardes|as noches)$')),
         findsOneWidget,
       );
+      // La cotización sigue a la vista — las tasas viven aquí, ya no en una
+      // cinta superior.
+      expect(find.text('COTIZACIÓN PRINCIPAL'), findsOneWidget);
     });
 
     testWidgets('tasa manual activa → SIN banner de salud (no es offline)', (

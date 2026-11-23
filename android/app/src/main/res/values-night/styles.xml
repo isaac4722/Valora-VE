@@ -11,8 +11,11 @@
          Flutter UI initializes, as well as behind your Flutter UI while its
          running.
 
-         This Theme is only used starting with V2 of Flutter's Android embedding. -->
+         v26 (orden del dueño): el fondo de la ventana ES el grafito de la
+         app (#08080A = bgDark exacto), no un negro genérico. Con la app en
+         oscuro, la franja que expone el teclado al abrirse pinta la MISMA
+         noche — nada de áreas blancas interrumpiendo. -->
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:windowBackground">#08080A</item>
     </style>
 </resources>

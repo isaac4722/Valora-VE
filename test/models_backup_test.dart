@@ -152,17 +152,28 @@ void main() {
           targetBcv: 200,
           salaryAmount: 130,
           salaryCurrency: 'USD',
-          tickerSize: 'large',
-          tickerSpeed: 90,
           currencyOrder: const ['EUR', 'USD'],
         );
         final back = Settings.fromJson(s.toJson());
         expect(back.country, 'CO');
         expect(back.targetBcv, 200);
         expect(back.salaryAmount, 130);
-        expect(back.tickerSize, 'large');
-        expect(back.tickerSpeed, 90);
         expect(back.currencyOrder, ['EUR', 'USD']);
+        // v26: los campos de la cinta (tickerMode/Size/Speed) fueron
+        // retirados — el JSON de un respaldo VIEJO que los traiga carga
+        // igual (fromJson los ignora) y el nuevo YA no los emite.
+        expect(s.toJson().containsKey('tickerMode'), isFalse);
+        expect(s.toJson().containsKey('tickerSize'), isFalse);
+        expect(s.toJson().containsKey('tickerSpeed'), isFalse);
+        expect(
+          Settings.fromJson(const {
+            'country': 'VE',
+            'tickerMode': 'off',
+            'tickerSize': 'large',
+            'tickerSpeed': 90,
+          }).country,
+          'VE',
+        );
       },
     );
 
