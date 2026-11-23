@@ -50,6 +50,10 @@
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher">
+        <!-- v26 (orden del dueño · plegables y notch): el papel puede pintar
+             hasta el borde del corte de pantalla; el contenido respeta el área
+             con SafeArea. shortEdges también aplica en horizontal, donde el
+             valor por defecto (default) esconde el borde con franja del sistema. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -59,11 +63,6 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
-            <!-- v26 (orden del dueño · plegables y notch): el papel puede
-                 pintar hasta el borde del corte de pantalla; el contenido
-                 respeta el área con SafeArea. shortEdges también aplica en
-                 horizontal, donde el valor por defecto (default) esconde el
-                 borde con franja del sistema. -->
             android:windowLayoutInDisplayCutoutMode="shortEdges">
             <!-- Specifies an Android theme to apply to this Activity as soon as
                  the Android process has started. This theme is visible to the user
