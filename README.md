@@ -14,7 +14,7 @@
 
 **ValoraVE** es una app Android nativa (Flutter/Dart puro) para saber
 cuánto vale tu dinero en Venezuela: tasas BCV y paralelo, conversor
-multi-divisa (USD · VES · EUR · COP · BRL · MXN), lista de compras
+multi-divisa (USD · VES · EUR · COP · BRL · MXN · USDT), lista de compras
 compartida en vivo, libro de precios por producto, gastos automáticos
 de tus compras y análisis de devaluación — todo **offline-first**, en tu
 teléfono.
@@ -22,13 +22,15 @@ teléfono.
 ## Módulos
 | Módulo | Qué hace |
 |---|---|
-| **Inicio** | tablero del país, resumen del mes con tus compras, tiendas, recientes; «Ver todo» despliega alertas/herramientas sin quitar nada; bloque «Libro» (Historial · Tickets · Ajustes) siempre visible; tasas propias con nombre y brecha vs BCV |
-| **Conversor** | teclado propio VeKeypad + fichas 1-100 + redondeo, puente USD + EUR visible, fecha histórica honesta, ruta del cálculo, notas, recientes y **Pago Móvil** compartible (cuentas propias) |
+| **Inicio** | la tasa del día con su fuente, cuatro acciones rápidas, tu mes y tu actividad reciente; la cotización completa vive en Tasas y los módulos secundarios en Más |
+| **Conversor** | teclado propio VeKeypad + fichas 1-100 + redondeo, precisión de 2/3/4 decimales, puente USD + EUR visible, fecha histórica honesta, notas, recientes y **Pago Móvil** compartible (cuentas propias) |
 | **Lista** | presupuesto, plantillas, vuelto, dividir la cuenta, checkout con foto de ticket, **sala en vivo** |
 | **Productos** | libro de precios con tiendas, sparklines, metas con aviso, CSV ⇄, escáner |
 | **Historial** | asientos por compra, filtros, CSV de compras, constancias |
 | **Análisis** | brecha BCV↔paralelo, devaluación, inflación personal, rankings, canasta, **gastos por tienda y por mes (auto, con tus compras)** |
-| **Ajustes** | país, cinta, fuentes por módulo, alertas, respaldos JSON, tema |
+| **Tasas** | cotización completa por divisa, tus tasas con nombre, edición manual y el estado de cada fuente |
+| **Más** | hub con buscador: Productos, Historial, Tickets, Sala Viva, Cuentas, Ajustes, Actualizaciones y Privacidad |
+| **Ajustes** | hub con General (país, decimales, conexión), Tasas, Cuentas de cobro, Apariencia y Datos (respaldo, registros, tutorial) |
 
 La sala en vivo tiene **tres transportes** con el mismo protocolo
 (`lista-sync`): un **servidor socket.io** que tú decides (viene en
@@ -41,7 +43,7 @@ los cambios quedan en outbox y salen al reconectar.
 ```bash
 flutter pub get
 flutter run                 # debug
-flutter test                # unit + widget (315 tests)
+flutter test                # unit + widget
 
 # release (requiere android/keystore.properties — ver example):
 flutter build apk --release --split-per-abi \

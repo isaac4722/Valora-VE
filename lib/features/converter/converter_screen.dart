@@ -365,7 +365,8 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
       to: to,
       inputAmount: amount,
       resultAmount: result,
-      rateLine: '1 ${from.code} = ${fmtRate(plan.rate)} ${to.code}',
+      rateLine:
+          '1 ${from.code} = ${fmtRatePrecise(plan.rate, store.settings.precision)} ${to.code}',
       sourceLabel: cat.isEmpty ? label : '$label · $cat',
       date: _dateMode == 'today'
           ? DateTime.now()
@@ -383,7 +384,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     if (plan == null || amount <= 0) return;
     final result = amount * plan.rate;
     final text =
-        '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} · 1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} — ValoraVE';
+        '${fmtMoneyPrecise(amount, from, store.settings.precision)} ${from.code} = ${fmtMoneyPrecise(result, to, store.settings.precision)} ${to.code} · 1 ${from.code} = ${fmtRatePrecise(plan.rate, store.settings.precision)} ${to.code} · ValoraVE';
     await showExportSheet(
       context,
       ExportSpec(
@@ -442,7 +443,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     final cat = src?.category.label ?? '';
     copiarAlPortapapeles(
       context,
-      '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} ${to.code} · 1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} ($label${cat.isEmpty ? '' : ' · $cat'}) · ValoraVE',
+      '${fmtMoneyPrecise(amount, from, store.settings.precision)} ${from.code} = ${fmtMoneyPrecise(result, to, store.settings.precision)} ${to.code} · 1 ${from.code} = ${fmtRatePrecise(plan.rate, store.settings.precision)} ${to.code} ($label${cat.isEmpty ? '' : ' · $cat'}) · ValoraVE',
       'Resultado copiado',
     );
   }
@@ -459,12 +460,16 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     // redondeo el RESULTADO se muestra entero; la línea «≈» de abajo y la
     // ruta del cálculo conservan la cifra exacta (honestidad §1.2).
     final round = _storeRef?.data.settings.numMode == 'redondeo';
+    final precision = _storeRef?.data.settings.precision ?? 2;
     final passiveTxt = passiveTo
         ? (result > 0
-              ? fmtNum(result, decimals: round ? 0 : smartDecimals(result, to))
+              ? fmtNum(
+                  result,
+                  decimals: round ? 0 : (to == Currency.cop ? 0 : precision),
+                )
               : '')
         : (amount > 0
-              ? fmtNum(amount, decimals: smartDecimals(amount, from))
+              ? fmtNum(amount, decimals: from == Currency.cop ? 0 : precision)
               : '');
     if (passiveTxt == _lastSyncedPassive) return;
     final ctrl = passiveTo ? _toCtrl : _fromCtrl;
@@ -505,6 +510,9 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     final numMode = ref.watch(
       appStoreProvider.select((s) => s.settings.numMode),
     );
+    final precision = ref.watch(
+      appStoreProvider.select((s) => s.settings.precision),
+    );
     final from = CurrencyX.from(fromCode);
     final to = CurrencyX.from(toCode);
 
@@ -528,7 +536,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
         : (when != null ? timeAgo(when) : 'sin fecha aún');
     final srcLabel = convSourceNames[primaryId] ?? src?.label ?? primaryId;
     final subTitulo = (plan != null && plan.rate > 0)
-        ? '$srcLabel · 1 ${from.code} = ${fmtRate(plan.rate)} ${to.code}'
+        ? '$srcLabel · 1 ${from.code} = ${fmtRatePrecise(plan.rate, precision)} ${to.code}'
         : 'Sin tasa disponible para este par';
     final scheme = Theme.of(context).colorScheme;
 
@@ -545,271 +553,250 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     final Widget cuerpo = SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const TipsTrigger(scope: 'conversor'),
-                    VeTitle(
-                      sub: Text(subTitulo),
-                      child: const Text('Conversor'),
-                    ),
-                    KeyedSubtree(
-                      key: TourKeys.convFecha,
-                      child: _FechaTasas(
-                        mode: _dateMode,
-                        customDate: _customDate,
-                        loading: _historicLoading,
-                        sinDatos:
-                            _historicRates != null &&
-                            !_historicLoading &&
-                            (plan == null || plan.rate <= 0),
-                        onMode: (m) {
-                          setState(() => _dateMode = m);
-                          _applyRateContext();
-                        },
-                        onOpenCalendar: _openHistoricCalendar,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const TipsTrigger(scope: 'conversor'),
+          VeTitle(sub: Text(subTitulo), child: const Text('Conversor')),
+          KeyedSubtree(
+            key: TourKeys.convFecha,
+            child: _FechaTasas(
+              mode: _dateMode,
+              customDate: _customDate,
+              loading: _historicLoading,
+              sinDatos:
+                  _historicRates != null &&
+                  !_historicLoading &&
+                  (plan == null || plan.rate <= 0),
+              onMode: (m) {
+                setState(() => _dateMode = m);
+                _applyRateContext();
+              },
+              onOpenCalendar: _openHistoricCalendar,
+            ),
+          ),
+          const SizedBox(height: 12),
+          KeyedSubtree(
+            key: TourKeys.convFuente,
+            child: RepaintBoundary(
+              child: _DualInput(
+                precision: precision,
+                fromCtrl: _fromCtrl,
+                toCtrl: _toCtrl,
+                from: from,
+                to: to,
+                result: result,
+                plan: plan,
+                ctx: ctx,
+                driver: _driver,
+                activeSourceId: primaryId,
+                frescura: frescura,
+                hasOverride: _hasOverride(store, from),
+                // v24.1 (patrón calculadora): tocar el lado
+                // INACTIVO abre una entrada NUEVA (el valor
+                // pasivo se sustituye, no se concatena); tocar
+                // el lado ya activo no borra lo tecleado.
+                onDriverTap: (d) => setState(() {
+                  if (_driver == d) return;
+                  _driver = d;
+                  _lastSyncedPassive = '';
+                  if (d == 'to') {
+                    _toTyped = 0;
+                    _toCtrl.text = '';
+                  } else {
+                    _fromTyped = 0;
+                    _fromCtrl.text = '';
+                  }
+                }),
+                onAdjust: (v) => setState(() {
+                  _fromTyped = v <= 0 ? 0 : v;
+                  _driver = 'from';
+                  _lastSyncedPassive = '';
+                  _fromCtrl.text = fmtNum(
+                    _fromTyped,
+                    decimals: smartDecimals(_fromTyped, from),
+                  );
+                }),
+                onSwap: () => _swapSides(store, from, to, plan, result),
+                onFrom: (c) => c == to
+                    ? _swapSides(store, from, to, plan, result)
+                    : store.setConverterPair(c.code, to.code),
+                onTo: (c) => c == from
+                    ? _swapSides(store, from, to, plan, result)
+                    : store.setConverterPair(from.code, c.code),
+                onPickSource: _pickSource,
+                onClearOverride: () =>
+                    store.setModuleRateSource(RateModule.converter, from, null),
+              ),
+            ),
+          ),
+          // v25.1: fichas de montos + modo de vista vuelven al
+          // SCROLL — el piso fijo queda SOLO con acciones + pad.
+          // Con todo dentro, el piso medía ~400 px y el campo
+          // resultado caía tras el pliegue del scroll (hit-test
+          // muerto a 390×844: el tap lo comía el clip del viewport).
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            // Fichas en UNA línea: 6 expandidas + «Limpiar»
+            // natural al final — cada slot sobra aire.
+            child: Row(
+              children: [
+                for (final v in const [1, 5, 10, 20, 50, 100])
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: VeChip(
+                        expands: true,
+                        dense: true,
+                        onTap: () => _setFromAmount(v.toDouble(), from),
+                        child: Text('$v'),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    KeyedSubtree(
-                      key: TourKeys.convFuente,
-                      child: RepaintBoundary(
-                        child: _DualInput(
-                          fromCtrl: _fromCtrl,
-                          toCtrl: _toCtrl,
+                  ),
+                VeChip(
+                  dense: true,
+                  onTap: () => _setFromAmount(0, from),
+                  child: const Text('Limpiar'),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: VeSegmented<String>(
+              value: numMode,
+              onChanged: store.setNumMode,
+              segments: const [
+                VeSegment(value: 'decimales', label: 'Decimales'),
+                VeSegment(value: 'redondeo', label: 'Redondear'),
+              ],
+            ),
+          ),
+          // v25.1: la fila de acciones se MUDÓ al piso fijo junto al
+          // pad (regresión de hit-test: el display v25 creció, la
+          // fila caía tras el pliegue y el teclado interceptaba el
+          // tap de «Pago Móvil»). v23.2: acciones al mínimo —
+          // iconos con etiqueta para el lector (Semantics) y texto
+          // solo donde la palabra es la marca del flujo.
+          // v23.2: secciones secundarias como fichas — abren
+          // half-sheets y NO compiten por el alto de la pantalla.
+          // 4 slots iguales: SIEMPRE una sola línea.
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: VeChip(
+                      dense: true,
+                      onTap: () => _showSeccion(
+                        'Referencia de fuentes',
+                        (c) => _ReferenciaFuentes(
+                          ctx: ctx,
                           from: from,
                           to: to,
-                          result: result,
-                          plan: plan,
-                          ctx: ctx,
-                          driver: _driver,
-                          activeSourceId: primaryId,
-                          frescura: frescura,
-                          hasOverride: _hasOverride(store, from),
-                          // v24.1 (patrón calculadora): tocar el lado
-                          // INACTIVO abre una entrada NUEVA (el valor
-                          // pasivo se sustituye, no se concatena); tocar
-                          // el lado ya activo no borra lo tecleado.
-                          onDriverTap: (d) => setState(() {
-                            if (_driver == d) return;
-                            _driver = d;
-                            _lastSyncedPassive = '';
-                            if (d == 'to') {
-                              _toTyped = 0;
-                              _toCtrl.text = '';
-                            } else {
-                              _fromTyped = 0;
-                              _fromCtrl.text = '';
-                            }
-                          }),
-                          onAdjust: (v) => setState(() {
-                            _fromTyped = v <= 0 ? 0 : v;
-                            _driver = 'from';
-                            _lastSyncedPassive = '';
-                            _fromCtrl.text = fmtNum(
-                              _fromTyped,
-                              decimals: smartDecimals(_fromTyped, from),
-                            );
-                          }),
-                          onSwap: () =>
-                              _swapSides(store, from, to, plan, result),
-                          onFrom: (c) => c == to
-                              ? _swapSides(store, from, to, plan, result)
-                              : store.setConverterPair(c.code, to.code),
-                          onTo: (c) => c == from
-                              ? _swapSides(store, from, to, plan, result)
-                              : store.setConverterPair(from.code, c.code),
-                          onPickSource: _pickSource,
-                          onClearOverride: () => store.setModuleRateSource(
-                            RateModule.converter,
-                            from,
-                            null,
-                          ),
+                          onPick: _pickSource,
                         ),
                       ),
-                    ),
-                    // v25.1: fichas de montos + modo de vista vuelven al
-                    // SCROLL — el piso fijo queda SOLO con acciones + pad.
-                    // Con todo dentro, el piso medía ~400 px y el campo
-                    // resultado caía tras el pliegue del scroll (hit-test
-                    // muerto a 390×844: el tap lo comía el clip del viewport).
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      // Fichas en UNA línea: 6 expandidas + «Limpiar»
-                      // natural al final — cada slot sobra aire.
-                      child: Row(
-                        children: [
-                          for (final v in const [1, 5, 10, 20, 50, 100])
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 2,
-                                ),
-                                child: VeChip(
-                                  expands: true,
-                                  dense: true,
-                                  onTap: () =>
-                                      _setFromAmount(v.toDouble(), from),
-                                  child: Text('$v'),
-                                ),
-                              ),
-                            ),
-                          VeChip(
-                            dense: true,
-                            onTap: () => _setFromAmount(0, from),
-                            child: const Text('Limpiar'),
-                          ),
-                        ],
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: const Text('Fuentes'),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: VeSegmented<String>(
-                        value: numMode,
-                        onChanged: store.setNumMode,
-                        segments: const [
-                          VeSegment(value: 'decimales', label: 'Decimales'),
-                          VeSegment(value: 'redondeo', label: 'Redondear'),
-                        ],
-                      ),
-                    ),
-                    // v25.1: la fila de acciones se MUDÓ al piso fijo junto al
-                    // pad (regresión de hit-test: el display v25 creció, la
-                    // fila caía tras el pliegue y el teclado interceptaba el
-                    // tap de «Pago Móvil»). v23.2: acciones al mínimo —
-                    // iconos con etiqueta para el lector (Semantics) y texto
-                    // solo donde la palabra es la marca del flujo.
-                    // v23.2: secciones secundarias como fichas — abren
-                    // half-sheets y NO compiten por el alto de la pantalla.
-                    // 4 slots iguales: SIEMPRE una sola línea.
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 2,
-                              ),
-                              child: VeChip(
-                                dense: true,
-                                onTap: () => _showSeccion(
-                                  'Referencia de fuentes',
-                                  (c) => _ReferenciaFuentes(
-                                    ctx: ctx,
-                                    from: from,
-                                    to: to,
-                                    onPick: _pickSource,
-                                  ),
-                                ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: const Text('Fuentes'),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 2,
-                              ),
-                              child: VeChip(
-                                dense: true,
-                                onTap: () => _showSeccion(
-                                  'Tabla de montos',
-                                  (c) => _TablaMontos(
-                                    ctx: ctx,
-                                    amount: amount,
-                                    from: from,
-                                    onAmount: (v) {
-                                      setState(() {
-                                        _fromTyped = v <= 0 ? 0 : v;
-                                        _driver = 'from';
-                                        _lastSyncedPassive = '';
-                                        _fromCtrl.text = fmtNum(
-                                          _fromTyped,
-                                          decimals: smartDecimals(
-                                            _fromTyped,
-                                            from,
-                                          ),
-                                        );
-                                      });
-                                      Navigator.pop(c);
-                                    },
-                                  ),
-                                ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: const Text('Tabla'),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 2,
-                              ),
-                              child: VeChip(
-                                dense: true,
-                                onTap: () => _showSeccion(
-                                  'Recientes',
-                                  (c) => _Recientes(
-                                    from: from,
-                                    to: to,
-                                    amount: amount,
-                                    result: result,
-                                    plan: plan,
-                                    onRestore: (r) {
-                                      final rf = CurrencyX.from(r.from);
-                                      if (from != rf ||
-                                          to != CurrencyX.from(r.to)) {
-                                        store.setConverterPair(r.from, r.to);
-                                      }
-                                      setState(() {
-                                        _fromTyped = r.amount;
-                                        _driver = 'from';
-                                        _lastSyncedPassive = '';
-                                        _fromCtrl.text = fmtNum(
-                                          r.amount,
-                                          decimals: smartDecimals(r.amount, rf),
-                                        );
-                                      });
-                                      Navigator.pop(c);
-                                    },
-                                  ),
-                                ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: const Text('Recientes'),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 2,
-                              ),
-                              child: VeChip(
-                                dense: true,
-                                onTap: () => _showSeccion(
-                                  'Notas',
-                                  (c) => _Notas(ctrl: _notesCtrl),
-                                ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: const Text('Notas'),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              );
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: VeChip(
+                      dense: true,
+                      onTap: () => _showSeccion(
+                        'Tabla de montos',
+                        (c) => _TablaMontos(
+                          ctx: ctx,
+                          amount: amount,
+                          from: from,
+                          onAmount: (v) {
+                            setState(() {
+                              _fromTyped = v <= 0 ? 0 : v;
+                              _driver = 'from';
+                              _lastSyncedPassive = '';
+                              _fromCtrl.text = fmtNum(
+                                _fromTyped,
+                                decimals: smartDecimals(_fromTyped, from),
+                              );
+                            });
+                            Navigator.pop(c);
+                          },
+                        ),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: const Text('Tabla'),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: VeChip(
+                      dense: true,
+                      onTap: () => _showSeccion(
+                        'Recientes',
+                        (c) => _Recientes(
+                          from: from,
+                          to: to,
+                          amount: amount,
+                          result: result,
+                          plan: plan,
+                          onRestore: (r) {
+                            final rf = CurrencyX.from(r.from);
+                            if (from != rf || to != CurrencyX.from(r.to)) {
+                              store.setConverterPair(r.from, r.to);
+                            }
+                            setState(() {
+                              _fromTyped = r.amount;
+                              _driver = 'from';
+                              _lastSyncedPassive = '';
+                              _fromCtrl.text = fmtNum(
+                                r.amount,
+                                decimals: smartDecimals(r.amount, rf),
+                              );
+                            });
+                            Navigator.pop(c);
+                          },
+                        ),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: const Text('Recientes'),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: VeChip(
+                      dense: true,
+                      onTap: () => _showSeccion(
+                        'Notas',
+                        (c) => _Notas(ctrl: _notesCtrl),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: const Text('Notas'),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
 
     // v24.1 (patrón calculadora): el teclado es PISO FIJO — SIEMPRE visible
     // y SIEMPRE en el mismo lugar: lo único que sube o baja es el contenido,
@@ -823,57 +810,57 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-                      // v25.1: acciones en el PISO — siempre visibles y
-                      // tocables junto al pad, nunca tras el pliegue.
-                      Row(
-                        children: [
-                          Semantics(
-                            label: 'Compartir resultado',
-                            child: VeBtn(
-                              size: VeBtnSize.lg,
-                              variant: VeBtnVariant.secondary,
-                              enabled: plan != null && result > 0,
-                              onPressed: _shareCard,
-                              child: const Icon(LucideIcons.share2, size: 16),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Semantics(
-                            label: 'Copiar resultado',
-                            child: VeBtn(
-                              size: VeBtnSize.lg,
-                              variant: VeBtnVariant.secondary,
-                              enabled: plan != null && result > 0,
-                              onPressed: _copyResult,
-                              child: const Icon(LucideIcons.copy, size: 16),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          if (to == Currency.ves)
-                            Expanded(
-                              child: VeBtn(
-                                size: VeBtnSize.lg,
-                                variant: VeBtnVariant.secondary,
-                                icon: LucideIcons.smartphone,
-                                enabled: result > 0,
-                                onPressed: () => showPagoMovilSheet(
-                                  context,
-                                  ref: ref,
-                                  montoBs: result,
-                                ),
-                                child: const Text('Pago Móvil'),
-                              ),
-                            )
-                          else
-                            const Spacer(),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      VeKeypad(onKey: _padKey),
-                    ],
+            // v25.1: acciones en el PISO — siempre visibles y
+            // tocables junto al pad, nunca tras el pliegue.
+            Row(
+              children: [
+                Semantics(
+                  label: 'Compartir resultado',
+                  child: VeBtn(
+                    size: VeBtnSize.lg,
+                    variant: VeBtnVariant.secondary,
+                    enabled: plan != null && result > 0,
+                    onPressed: _shareCard,
+                    child: const Icon(LucideIcons.share2, size: 16),
                   ),
                 ),
-              );
+                const SizedBox(width: 8),
+                Semantics(
+                  label: 'Copiar resultado',
+                  child: VeBtn(
+                    size: VeBtnSize.lg,
+                    variant: VeBtnVariant.secondary,
+                    enabled: plan != null && result > 0,
+                    onPressed: _copyResult,
+                    child: const Icon(LucideIcons.copy, size: 16),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (to == Currency.ves)
+                  Expanded(
+                    child: VeBtn(
+                      size: VeBtnSize.lg,
+                      variant: VeBtnVariant.secondary,
+                      icon: LucideIcons.smartphone,
+                      enabled: result > 0,
+                      onPressed: () => showPagoMovilSheet(
+                        context,
+                        ref: ref,
+                        montoBs: result,
+                      ),
+                      child: const Text('Pago Móvil'),
+                    ),
+                  )
+                else
+                  const Spacer(),
+              ],
+            ),
+            const SizedBox(height: 8),
+            VeKeypad(onKey: _padKey),
+          ],
+        ),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
@@ -1001,7 +988,7 @@ class _FechaTasas extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       sinDatos
-                          ? 'Sin datos ese día — elige otro en el calendario'
+                          ? 'Sin datos ese día. Elige otro en el calendario.'
                           : 'Tasa $periodo',
                       style: TextStyle(
                         fontSize: 12.5,
@@ -1047,8 +1034,10 @@ class _DualInput extends ConsumerWidget {
     required this.onTo,
     required this.onPickSource,
     required this.onClearOverride,
+    required this.precision,
   });
   final TextEditingController fromCtrl, toCtrl;
+  final int precision;
   final Currency from, to;
   final double result;
   final ConversionPlan? plan;
@@ -1225,7 +1214,9 @@ class _DualInput extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.only(left: 4, top: 2),
           child: Text(
-            ok ? '≈ ${fmtMoney(result, to)}' : 'sin tasa para este par',
+            ok
+                ? '≈ ${fmtMoneyPrecise(result, to, precision)}'
+                : 'sin tasa para este par',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(

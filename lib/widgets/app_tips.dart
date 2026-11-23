@@ -70,9 +70,8 @@ final List<TipRule> kTipRules = <TipRule>[
     anchor: TourKeys.cotizacion,
     title: 'Sin red, sin problema',
     body:
-        'Pega tu propia tasa: en «Cotización principal» toca la fila '
-        'Manual y escribe el valor. No necesitas ir a Ajustes y la app '
-        'calcula con ella al instante.',
+        'Pega tu propia tasa: en «Tasas» toca la fila Manual y escribe el '
+        'valor. No necesitas ir a Ajustes y la app calcula con ella al instante.',
     when: (s) => s.data.manualRates.isEmpty && s.snapshots.isNotEmpty,
   ),
   TipRule(
@@ -81,8 +80,8 @@ final List<TipRule> kTipRules = <TipRule>[
     anchor: TourKeys.convFecha,
     title: 'La tasa de otro día',
     body:
-        'Toca «Ayer» o «Elegir fecha» para calcular con la tasa REAL de '
-        'ese día, guardada en tu teléfono — útil para cuentas pasadas.',
+        'Toca «Ayer» o «Elegir fecha» para calcular con la tasa real de ese '
+        'día, guardada en tu teléfono. Útil para cuentas pasadas.',
     when: (s) => s.snapshots.length >= 2,
   ),
   TipRule(

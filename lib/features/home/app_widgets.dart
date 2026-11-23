@@ -61,16 +61,35 @@ class _AppWidgetSpec {
 /// Hoja de la galería de App Widgets (v19.6). El «+» del Inicio abre
 /// esta puerta; nada de esto se configura DENTRO de la app.
 Future<void> showAppWidgetGallery(BuildContext context) {
-  // v23.3 (pez 2-a P0-1): chrome del kit (7ª hoja cruda hallada al
-  // ejecutar la auditoría) — antes armaba SU PROPIO
-  // DraggableScrollableSheet dentro de un modal de radio 20 con cabecera
-  // ad-hoc. El chrome de showVeHalfSheet ya trae asa, cabecera 48 + ✕ y
-  // el acople scroll-arrastre.
-  return showVeHalfSheet<void>(
-    context: context,
-    title: 'App Widgets',
-    builder: (ctx) => const _AppWidgetsSheet(),
-  );
+  // v27: la galería es una PANTALLA — tres previews con su botón no caben
+  // bien en una hoja y el primer «Añadir» quedaba bajo el pliegue.
+  return Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => const AppWidgetsPage()));
+}
+
+/// Página de la galería de App Widgets (v27): las tres previews, el botón
+/// de añadir y la nota de resizing, con aire de verdad.
+class AppWidgetsPage extends StatelessWidget {
+  const AppWidgetsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: scheme.surfaceContainerLowest,
+      appBar: AppBar(
+        backgroundColor: scheme.surfaceContainerLowest,
+        foregroundColor: scheme.onSurface,
+        elevation: 0,
+        title: const Text('App Widgets'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        children: const [_AppWidgetsSheet()],
+      ),
+    );
+  }
 }
 
 class _AppWidgetsSheet extends ConsumerWidget {
@@ -153,7 +172,7 @@ class _AppWidgetsSheet extends ConsumerWidget {
             Expanded(
               child: Text(
                 'Se estiran: mantén presionado el widget en tu pantalla '
-                'de inicio y arrastra el marco — de 2×1 a 4×2, y el '
+                'de inicio y arrastra el marco de 2×1 a 4×2, y el '
                 'contenido se recompone solo.',
                 style: TextStyle(
                   fontSize: 11.5,

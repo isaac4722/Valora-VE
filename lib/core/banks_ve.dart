@@ -40,3 +40,59 @@ const List<String> kVkBanks = <String>[
   'N58 Banco',
   'Sofitasa',
 ];
+
+/// Color de marca de cada banco para su insignia original (v27). La clave
+/// es el nombre EXACTO de [kVkBanks]. No son logos oficiales: la insignia
+/// es un monograma pintado en Flutter sobre este color, para lectura rápida
+/// sin empaquetar activos de terceros.
+const Map<String, int> kBankBadgeColors = <String, int>{
+  '100% Banco': 0xFFB3261E,
+  'Banco Activo': 0xFF0B6FA4,
+  'Banco Agrícola de Venezuela': 0xFF2E7D32,
+  'Banco del Caroní': 0xFFD97706,
+  'Banco del Tesoro': 0xFF1E4E8C,
+  'Banco de Venezuela (BDV)': 0xFFC62828,
+  'Banco Digital de los Trabajadores': 0xFF1565C0,
+  'Banco Exterior': 0xFF0F4C81,
+  'Banco Internacional de Desarrollo (BID)': 0xFF1A5DAB,
+  'Banco Nacional de Crédito (BNC)': 0xFFB71C1C,
+  'Banco Plaza': 0xFF2E7D32,
+  'Banco Provincial (BBVA)': 0xFF0B4F8A,
+  'Banco Venezolano de Crédito': 0xFF1B7E4B,
+  'Bancamiga': 0xFFE07A1F,
+  'Bancaribe': 0xFF0E5A8A,
+  'Bancrecer': 0xFFB3261E,
+  'Banesco': 0xFFC62828,
+  'Banfanb': 0xFF2E7D32,
+  'Bangente': 0xFF0B6FA4,
+  'Banplus': 0xFF0F4C81,
+  'BFC Banco Fondo Común': 0xFF1E4E8C,
+  'DelSur Banco Universal': 0xFF2E7D32,
+  'Instituto Municipal de Crédito Popular (IMCP)': 0xFF0B4F8A,
+  'Mercantil': 0xFF0B4F8A,
+  'Mi Banco': 0xFF1565C0,
+  'N58 Banco': 0xFF1A5DAB,
+  'Sofitasa': 0xFF2E7D32,
+};
+
+/// Iniciales cortas para el fallback sin asset (nunca debería pasar con el
+/// catálogo completo, pero la UI no puede depender de un PNG).
+String bankInitials(String bank) {
+  final words = bank
+      .replaceAll(RegExp(r'\([^)]*\)'), '')
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty)
+      .toList();
+  if (words.isEmpty) return 'B';
+  final stop = {'de', 'del', 'la', 'los', 'las', 'el'};
+  final sig = words.where((w) => !stop.contains(w.toLowerCase())).toList();
+  final src = sig.isEmpty ? words : sig;
+  if (src.length == 1) {
+    return src.first.length <= 3
+        ? src.first.toUpperCase()
+        : src.first.substring(0, 3).toUpperCase();
+  }
+  // Siglas explícitas al inicio (BFC, N58, 100 %) se respetan.
+  if (RegExp(r'^[A-Z0-9%]{2,4}$').hasMatch(src.first)) return src.first;
+  return src.take(3).map((w) => w[0].toUpperCase()).join();
+}

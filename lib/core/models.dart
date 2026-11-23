@@ -895,6 +895,7 @@ class Settings {
   final String
   sseUrl; // 17.7: SSE en vivo opcional de un despliegue web ('' = off)
   final String numMode; // v23 'decimales' | 'redondeo' (vista del resultado)
+  final int precision; // v27 · precisión decimal 2..4 (REA CalculaYa)
   final bool accountsBiometric; // v23: huella para ver Cuentas y Pago Móvil
 
   const Settings({
@@ -921,6 +922,7 @@ class Settings {
     this.salaryMax,
     this.currencyOrder = const [],
     this.numMode = 'decimales',
+    this.precision = 2,
     this.accountsBiometric = false,
   });
 
@@ -950,6 +952,7 @@ class Settings {
       salaryMax = null,
       currencyOrder = const [],
       numMode = 'decimales',
+      precision = 2,
       accountsBiometric = false;
 
   Settings copyWith({
@@ -983,6 +986,7 @@ class Settings {
     bool? biometricLock,
     String? sseUrl,
     String? numMode,
+    int? precision,
     bool? accountsBiometric,
   }) => Settings(
     country: country ?? this.country,
@@ -1012,6 +1016,7 @@ class Settings {
     biometricLock: biometricLock ?? this.biometricLock,
     sseUrl: sseUrl ?? this.sseUrl,
     numMode: numMode ?? this.numMode,
+    precision: precision ?? this.precision,
     accountsBiometric: accountsBiometric ?? this.accountsBiometric,
   );
 
@@ -1040,6 +1045,7 @@ class Settings {
     'biometricLock': biometricLock,
     'sseUrl': sseUrl,
     'numMode': numMode,
+    'precision': precision,
     'accountsBiometric': accountsBiometric,
   };
 
@@ -1134,6 +1140,7 @@ class Settings {
       numMode: sOf(j['numMode'], 'decimales') == 'redondeo'
           ? 'redondeo'
           : 'decimales',
+      precision: (iOf(j['precision'], 2)).clamp(2, 4),
       accountsBiometric: j['accountsBiometric'] == true,
     );
   }
@@ -1323,9 +1330,10 @@ class CustomRate {
 }
 
 /// Cuenta bancaria propia para compartir el cobro por Pago Móvil (v23 ·
-/// comparativa CalculaYa): banco, tipo, número, CI y teléfono. Dato
-/// SENSIBLE: vive SOLO en el teléfono (allowBackup=false desde v20.4) y
-/// puede blindarse con huella (Ajustes → Cuentas y Pago Móvil).
+/// comparativa CalculaYa): banco, tipo, número, CI y teléfono. v27: alias
+/// («Cuenta principal») y marca de cuenta predeterminada, igual que el
+/// sistema de cuentas de CalculaYa. Dato SENSIBLE: vive SOLO en el teléfono
+/// (allowBackup=false desde v20.4) y puede blindarse con huella.
 class PayAccount {
   const PayAccount({
     required this.id,
@@ -1334,9 +1342,14 @@ class PayAccount {
     required this.number,
     this.docId = '',
     this.phone = '',
+    this.label = '',
+    this.isDefault = false,
   });
 
   final String id;
+
+  /// Alias corto que el usuario le pone a la cuenta (v27).
+  final String label;
 
   /// Nombre del banco tal como se muestra (kVkBanks).
   final String bank;
@@ -1353,9 +1366,35 @@ class PayAccount {
   /// Teléfono vinculado al pago móvil.
   final String phone;
 
+  /// Cuenta que el Conversor usa por defecto al armar un cobro (v27).
+  final bool isDefault;
+
   bool get isSavings => type == 'ahorro';
 
   String get typeLabel => isSavings ? 'Ahorro' : 'Corriente';
+
+  /// Lo que se muestra como título: alias si existe, si no banco + tipo.
+  String get displayLabel =>
+      label.trim().isEmpty ? '$bank · $typeLabel' : label.trim();
+
+  PayAccount copyWith({
+    String? label,
+    bool? isDefault,
+    String? bank,
+    String? type,
+    String? number,
+    String? docId,
+    String? phone,
+  }) => PayAccount(
+    id: id,
+    bank: bank ?? this.bank,
+    type: type ?? this.type,
+    number: number ?? this.number,
+    docId: docId ?? this.docId,
+    phone: phone ?? this.phone,
+    label: label ?? this.label,
+    isDefault: isDefault ?? this.isDefault,
+  );
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -1364,6 +1403,8 @@ class PayAccount {
     'number': number,
     'docId': docId,
     'phone': phone,
+    'label': label,
+    'isDefault': isDefault,
   };
 
   static PayAccount? tryParse(Map j) {
@@ -1378,6 +1419,8 @@ class PayAccount {
       number: number,
       docId: sOf(j['docId']).trim(),
       phone: sOf(j['phone']).trim(),
+      label: sOf(j['label']).trim(),
+      isDefault: j['isDefault'] == true,
     );
   }
 }

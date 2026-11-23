@@ -6,6 +6,7 @@ Máx ~10 líneas. Al cerrar el turno: las líneas bajan a `PROGRESS_WARM.md`
 justificaciones. Solo se AÑADE.
 Si no hay turno activo, el último cerrado está al final de `PROGRESS_WARM.md`.
 
+2026-11-24 · DONE · v27 GUI/UX reconstruida — Inicio de verdad (tasa + 4 acciones + tu mes + actividad), hub Más con buscador, Ajustes en 5 subpantallas, precisión 2/3/4 (REA CalculaYa), cuentas con alias/principal e insignias de banco, ETH fuera, textos humanizados · analyze 0 · 322/322 · auditoría VERDE · visual 9/9 · 7_PERSIST
 2026-11-24 · DONE · v26 dispositivos nuevos — vertical+horizontal: orientación libre, shell adaptativo (alto<500=pestañas; sidebar solo pantallas holgadas), Conversor DOS PANELES ≥560px (pad-panel derecho, vertical intacto v24.1a); cinta del Inicio fuera con TODO su árbol (RateTicker + «Personalización» de Ajustes + campos del modelo; respaldos viejos cargan); fecha del héroe fuera (saludo 24px titular); ventana Android día/noche EXACTA + edge-to-edge + cutout shortEdges (área blanca del teclado y noche interrumpida) · analyze 0 · 315/315 · auditoría VERDE · web verificado 390×844 y 844×390 · 7_PERSIST
 
 2026-10-02 · DOING · TASK-35 abre turno — GUI correcta: notch/SafeArea en todas las superficies, techo en menús/sheets, Sala al lenguaje Ve del prototipo, toggle de tema en cabecera · docs-news reintegrados a nivel contenido (AGENT.md + bitácoras canónicas + skills-lock) · gate n/a · 3_IMPLEMENT

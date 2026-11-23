@@ -383,7 +383,8 @@ Future<void> main() async {
       // INDEFINIDO) — pumpAndSettle nunca terminaría. Bombeo acotado.
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('COTIZACIÓN PRINCIPAL'), findsOneWidget);
+      expect(find.text('TU MES'), findsOneWidget);
+      expect(find.text('Convertir'), findsWidgets);
     });
 
     testWidgets('Conversor: dual + swap + referencia + notas', (tester) async {
@@ -540,13 +541,10 @@ Future<void> main() async {
       // El resto de las secciones sigue completo (evaluar, no borrar) —
       // la lista es perezosa: se baja hasta cada una para construirla.
       expect(find.text('Ajustes'), findsOneWidget);
-      expect(find.text('PAÍS'), findsOneWidget);
+      expect(find.text('GENERAL'), findsOneWidget);
+      expect(find.text('TASAS'), findsOneWidget);
       final lista = find.byType(Scrollable).first;
-      for (final seccion in [
-        'DATOS Y CONEXIÓN',
-        'MONEDAS Y TASAS',
-        'CUENTAS Y PAGO MÓVIL',
-      ]) {
+      for (final seccion in ['PAGO MÓVIL', 'DATOS', 'ACERCA DE']) {
         await tester.scrollUntilVisible(
           find.text(seccion),
           300,
@@ -968,7 +966,7 @@ Future<void> main() async {
       tester.view.physicalSize = const Size(320, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(_wrap(const SettingsScreen(), store: store));
+      await tester.pumpWidget(_wrap(const SettingsTasasPage(), store: store));
       await tester.pumpAndSettle(const Duration(milliseconds: 100));
       // Scroll hasta la sección de manuales.
       await tester.scrollUntilVisible(
@@ -1001,17 +999,15 @@ Future<void> main() async {
       );
       // Las 6 divisas fiat tienen asset real (assets/flags): ninguna cae al
       // fallback (ColoredBox del errorBuilder).
-      final fiat = Currency.values
-          .where((c) => c != Currency.usdt && c != Currency.eth)
-          .length;
+      final fiat = Currency.values.where((c) => c != Currency.usdt).length;
       expect(find.byType(Image), findsNWidgets(fiat));
       expect(find.byType(ColoredBox), findsNothing);
-      // v23.2: USDT y ETH se PINTAN con su sello exacto (no cualquier paint).
+      // v23.2: USDT se PINTA con su sello exacto (no cualquier paint).
       expect(
         find.byWidgetPredicate(
           (w) => w is CustomPaint && w.painter is CryptoFlagPainter,
         ),
-        findsNWidgets(2),
+        findsOneWidget,
       );
     });
   });
@@ -1046,7 +1042,8 @@ Future<void> main() async {
       );
       // La cotización sigue a la vista — las tasas viven aquí, ya no en una
       // cinta superior.
-      expect(find.text('COTIZACIÓN PRINCIPAL'), findsOneWidget);
+      expect(find.text('TU MES'), findsOneWidget);
+      expect(find.text('Convertir'), findsWidgets);
     });
 
     testWidgets('tasa manual activa → SIN banner de salud (no es offline)', (
@@ -1173,7 +1170,7 @@ Future<void> main() async {
         await tester.pump(const Duration(milliseconds: 150));
       }
       expect(find.text('Tus datos viven en tu teléfono'), findsOneWidget);
-      expect(find.text('1/13'), findsOneWidget);
+      expect(find.text('1/12'), findsOneWidget);
       // Se marcó ANTES de mostrarse (una oportunidad, no un bucle).
       expect(isTourDone(prefs), isTrue);
       // Saltar corta TODO el tour y restaura la petaña de origen.

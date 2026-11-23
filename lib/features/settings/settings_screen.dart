@@ -1,12 +1,13 @@
-/// ─── Ajustes (§9.8 · 8 anclas) ──────────────────────────────────────────────
-/// país · personalización (ticker 3×3×3) · monedas y tasas (por módulo +
-/// manuales + salud) · apariencia (light/dark/system) · alertas (spikes,
-/// metas, brecha, daily, reminder, permiso) · respaldo (export/import
-/// replace+merge/resetAll conservando tablero) · tutorial · legal.
+/// ─── Ajustes (v27 · hub + subpantallas) ───────────────────────────────────
+/// El módulo de Ajustes se reconstruye como un hub: seis grupos, una línea
+/// por ajuste y el valor actual a la vista. Cada grupo abre su propia
+/// pantalla (General · Tasas · Cuentas · Apariencia · Datos), así el móvil
+/// no arrastra una lista interminable ni esconde funciones al final.
 library;
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
@@ -25,11 +26,13 @@ import '../../services/ticket_files.dart';
 import '../../services/ve_log.dart';
 import 'package:talker_flutter/talker_flutter.dart';
 import '../../widgets/export_sheet.dart';
+import '../../widgets/bank_badge.dart';
 import '../../widgets/app_tour.dart';
 import '../../widgets/rate_sheet.dart';
 import '../../widgets/ui.dart';
 import '../../core/banks_ve.dart';
 import '../../core/version.dart';
+import '../home/app_widgets.dart' show showAppWidgetGallery;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -44,41 +47,498 @@ part 'settings_alertas.dart';
 part 'settings_system.dart';
 part 'cuentas_pago_movil.dart';
 
+/// Hub de Ajustes: grupos con una línea por ajuste y el valor actual.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final store = ref.watch(appStoreProvider);
+    final theme = ref.watch(themeControllerProvider);
     final scheme = Theme.of(context).colorScheme;
+    final country = CountryX.from(store.settings.country);
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
-      body: VeEntry(
+      body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
-            const VeTitle(
-              sub: Text('Todo lo que la app decide contigo'),
-              child: Text('Ajustes'),
+            Text(
+              'Ajustes',
+              style: VeText.displayNum(
+                26,
+                color: scheme.onSurface,
+                weight: FontWeight.w600,
+              ),
             ),
-            _Pais(store: store),
-            _DatosConexion(store: store),
-            // v26 (orden del dueño): FUERA la «Cinta de cotizaciones» y sus
-            // tres ajustes (modo/tamaño/velocidad) — la cinta del Inicio se
-            // retiró del shell y la configuración muere con ella.
-            _Monedas(store: store),
-            // v23: cuentas de cobro para compartir el Pago Móvil desde el
-            // Conversor (comparativa CalculaYa).
-            const CuentasPagoMovil(),
-            _Diagnostico(),
-            _Registros(),
-            _Apariencia(),
-            _Alertas(store: store),
-            _Respaldo(store: store),
-            _TutorialLegal(store: store),
+            const SizedBox(height: 3),
+            Text(
+              'La app, a tu manera.',
+              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 6),
+            _SettingsGroup(
+              title: 'General',
+              items: [
+                _SettingsTile(
+                  icon: LucideIcons.globe2,
+                  title: 'País y moneda',
+                  value: country.label,
+                  anchor: TourKeys.conexion,
+                  onTap: () => context.push('/ajustes/general'),
+                ),
+                _SettingsTile(
+                  icon: LucideIcons.hash,
+                  title: 'Decimales',
+                  value: '${store.settings.precision} decimales',
+                  onTap: () => context.push('/ajustes/general'),
+                ),
+                _SettingsTile(
+                  icon: LucideIcons.palette,
+                  title: 'Apariencia',
+                  value: switch (theme.mode) {
+                    ThemeMode.light => 'Claro',
+                    ThemeMode.dark => 'Grafito',
+                    ThemeMode.system => 'Sistema',
+                  },
+                  onTap: () => context.push('/ajustes/apariencia'),
+                ),
+                _SettingsTile(
+                  icon: LucideIcons.fingerprint,
+                  title: 'Bloqueo biométrico',
+                  value: store.settings.biometricLock ? 'Activado' : 'Apagado',
+                  onTap: () => context.push('/ajustes/apariencia'),
+                ),
+              ],
+            ),
+            _SettingsGroup(
+              title: 'Tasas',
+              items: [
+                _SettingsTile(
+                  icon: LucideIcons.repeat2,
+                  title: 'Fuentes y manuales',
+                  value: 'BCV, paralelo, tuyas',
+                  onTap: () => context.push('/ajustes/tasas'),
+                ),
+                _SettingsTile(
+                  icon: LucideIcons.bellRing,
+                  title: 'Alertas',
+                  value: store.settings.spikeAlerts
+                      ? 'Picos activos'
+                      : 'Sin picos',
+                  onTap: () => context.push('/ajustes/tasas'),
+                ),
+                _SettingsTile(
+                  icon: LucideIcons.activity,
+                  title: 'Diagnóstico de fuentes',
+                  value: 'Probar regiones',
+                  onTap: () => context.push('/ajustes/tasas'),
+                ),
+              ],
+            ),
+            _SettingsGroup(
+              title: 'Pago móvil',
+              items: [
+                _SettingsTile(
+                  icon: LucideIcons.landmark,
+                  title: 'Cuentas de cobro',
+                  value:
+                      '${store.data.accounts.length} de ${AppStore.kMaxAccounts}',
+                  onTap: () => context.push('/ajustes/cuentas'),
+                ),
+              ],
+            ),
+            _SettingsGroup(
+              title: 'Datos',
+              items: [
+                _SettingsTile(
+                  icon: LucideIcons.databaseBackup,
+                  title: 'Respaldo',
+                  value: 'Exportar o restaurar',
+                  anchor: TourKeys.tutorial,
+                  onTap: () => context.push('/ajustes/datos'),
+                ),
+                _SettingsTile(
+                  icon: LucideIcons.scrollText,
+                  title: 'Registros de la app',
+                  value: 'Solo en tu teléfono',
+                  onTap: () => context.push('/ajustes/datos'),
+                ),
+                _SettingsTile(
+                  icon: LucideIcons.download,
+                  title: 'Actualizaciones',
+                  value: 'Canal de desarrollo',
+                  onTap: () => context.push('/ajustes/datos'),
+                ),
+              ],
+            ),
+            _SettingsGroup(
+              title: 'Acerca de',
+              items: [
+                _SettingsTile(
+                  icon: LucideIcons.info,
+                  title: 'ValoraVE',
+                  value: kAppVersionVisible,
+                  onTap: () => context.push('/ajustes/datos'),
+                ),
+                _SettingsTile(
+                  icon: LucideIcons.gavel,
+                  title: 'Privacidad y licencias',
+                  value: 'Qué vive en tu teléfono',
+                  onTap: () => context.push('/ajustes/datos'),
+                ),
+              ],
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SettingsGroup extends ConsumerWidget {
+  const _SettingsGroup({required this.title, required this.items});
+
+  final String title;
+  final List<_SettingsTile> items;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 18, 2, 2),
+          child: Text(
+            title.toUpperCase(),
+            style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+          ),
+        ),
+        for (final item in items)
+          KeyedSubtree(
+            key: item.anchor,
+            child: InkWell(
+              onTap: item.onTap,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 11),
+                decoration: BoxDecoration(
+                  border: item == items.last
+                      ? null
+                      : Border(
+                          bottom: BorderSide(
+                            color: scheme.outlineVariant.withValues(
+                              alpha: 0.55,
+                            ),
+                          ),
+                        ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(item.icon, size: 18, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.title,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      LucideIcons.chevronRight,
+                      size: 17,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SettingsTile {
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.onTap,
+    this.anchor,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final VoidCallback onTap;
+  final Key? anchor;
+}
+
+/// Andamiaje de subpantalla: back, título, subtítulo y contenido. Una sola
+/// piel para los cinco grupos de Ajustes.
+class SettingsSubpage extends ConsumerWidget {
+  const SettingsSubpage({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: scheme.surfaceContainerLowest,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: VeIconBtn(
+                icon: LucideIcons.arrowLeft,
+                label: 'Volver',
+                size: 36,
+                iconSize: 16,
+                onTap: () =>
+                    context.canPop() ? context.pop() : context.go('/ajustes'),
+              ),
+            ),
+            Text(
+              title,
+              style: VeText.displayNum(
+                26,
+                color: scheme.onSurface,
+                weight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              subtitle,
+              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 4),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SettingsGeneralPage extends ConsumerWidget {
+  const SettingsGeneralPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
+    return SettingsSubpage(
+      title: 'General',
+      subtitle: 'País, precisión y cómo se conecta la app.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Pais(store: store),
+          const SizedBox(height: 4),
+          _Precision(store: store),
+          const SizedBox(height: 4),
+          _DatosConexion(store: store),
+          const SizedBox(height: 4),
+          const _AppWidgetsRow(),
+        ],
+      ),
+    );
+  }
+}
+
+/// Precisión decimal (v27 · REA CalculaYa): 2, 3 o 4 decimales. La API
+/// publica 4; el usuario elige cuántos ver en tasas y resultados.
+class _Precision extends ConsumerWidget {
+  const _Precision({required this.store});
+
+  final AppStore store;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const VeEyebrow(
+          hint: 'Las tasas llegan con cuatro decimales. Tú eliges cuántos ver.',
+          child: Text('DECIMALES'),
+        ),
+        Row(
+          children: [
+            for (final d in const [2, 3, 4]) ...[
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: d == 4 ? 0 : 6),
+                  child: ChipTag(
+                    '$d decimales',
+                    selected: store.settings.precision == d,
+                    onTap: () => store.setPrecision(d),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Se aplica a las tasas y al resultado del conversor. El redondeo '
+          'sigue siendo un modo aparte en el conversor.',
+          style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+class _AppWidgetsRow extends ConsumerWidget {
+  const _AppWidgetsRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    if (kIsWeb) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const VeEyebrow(
+          hint:
+              'Tasa BCV, paralelo y brecha en la pantalla de inicio de Android.',
+          child: Text('WIDGETS DE ANDROID'),
+        ),
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => showAppWidgetGallery(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(
+                  LucideIcons.layoutGrid,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Añadir un widget',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Icon(
+                  LucideIcons.chevronRight,
+                  size: 17,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class SettingsTasasPage extends ConsumerWidget {
+  const SettingsTasasPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
+    return SettingsSubpage(
+      title: 'Tasas',
+      subtitle: 'Las fuentes que usa tu app, tus tasas y tus alertas.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Monedas(store: store),
+          _Alertas(store: store),
+          _Diagnostico(),
+        ],
+      ),
+    );
+  }
+}
+
+class SettingsCuentasPage extends ConsumerWidget {
+  const SettingsCuentasPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SettingsSubpage(
+      title: 'Cuentas y Pago Móvil',
+      subtitle: 'Tus datos de cobro, listos para compartir.',
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [CuentasPagoMovil()],
+      ),
+    );
+  }
+}
+
+class SettingsAparienciaPage extends ConsumerWidget {
+  const SettingsAparienciaPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return const SettingsSubpage(
+      title: 'Apariencia',
+      subtitle: 'Claro, grafito o el tema del sistema.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [_Apariencia()],
+      ),
+    );
+  }
+}
+
+class SettingsDatosPage extends ConsumerWidget {
+  const SettingsDatosPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final store = ref.watch(appStoreProvider);
+    return SettingsSubpage(
+      title: 'Datos y acerca de',
+      subtitle: 'Respaldo, registros, actualizaciones y tutorial.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Respaldo(store: store),
+          _Registros(),
+          _TutorialLegal(store: store),
+        ],
       ),
     );
   }
@@ -151,8 +611,8 @@ class _DatosConexion extends ConsumerWidget {
                     ),
                     subtitle: Text(
                       s.offlineMode
-                          ? 'Activo: la app NO consulta ninguna API. Todo se lee de tu libro local y tus tasas manuales.'
-                          : 'Desactivado: la app consulta las APIs de tasas según el intervalo de abajo.',
+                          ? 'Encendido: la app no consulta ninguna API. Todo sale de tu libro y tus tasas manuales.'
+                          : 'Apagado: la app consulta las tasas según el intervalo de abajo.',
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.4,
@@ -199,7 +659,7 @@ class _DatosConexion extends ConsumerWidget {
                           ? 'Sin servidor configurado'
                           : (poller.sseConnected
                                 ? 'Conectado en vivo'
-                                : 'Sin conexión — sigue el ciclo normal'),
+                                : 'Sin conexión; sigue el ciclo normal'),
                       child: Semantics(
                         label: s.sseUrl.isEmpty
                             ? 'Estado: sin servidor configurado'
@@ -230,8 +690,8 @@ class _DatosConexion extends ConsumerWidget {
                     ),
                     subtitle: Text(
                       s.sseUrl.isEmpty
-                          ? 'Desactivado. Si despliegas el servidor web ValoraVE, pega su URL: el tablero llega por push sin esperar el intervalo'
-                          : '${s.sseUrl} · ${poller.sseConnected ? 'stream conectado' : 'sin conexión — el ciclo normal sigue'}',
+                          ? 'Apagado. Si tienes un servidor ValoraVE, pega su URL: las tasas llegan al instante.'
+                          : '${s.sseUrl} · ${poller.sseConnected ? 'stream conectado' : 'sin conexión; el ciclo normal sigue'}',
                       style: TextStyle(
                         fontSize: 11,
                         height: 1.35,
@@ -251,7 +711,7 @@ class _DatosConexion extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Las tasas descargadas se guardan en tu teléfono (una fila por fecha y fuente, sin duplicados) y siguen disponibles sin conexión.',
+                    'Las tasas se guardan en tu teléfono y siguen disponibles sin conexión.',
                     style: TextStyle(
                       fontSize: 11.5,
                       height: 1.45,

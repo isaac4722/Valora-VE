@@ -260,6 +260,7 @@ class AppStore extends ChangeNotifier {
     bool? biometricLock,
     String? sseUrl,
     String? numMode,
+    int? precision,
     bool? accountsBiometric,
   }) {
     final s = _data.settings;
@@ -271,7 +272,10 @@ class AppStore extends ChangeNotifier {
       pollMinutes: pollMinutes,
       biometricLock: biometricLock,
       sseUrl: sseUrl,
-      numMode: numMode == 'redondeo' ? 'redondeo' : (numMode == null ? null : 'decimales'),
+      numMode: numMode == 'redondeo'
+          ? 'redondeo'
+          : (numMode == null ? null : 'decimales'),
+      precision: precision?.clamp(2, 4),
       accountsBiometric: accountsBiometric,
     );
     _data = _data.copyWith(settings: patched);
@@ -292,9 +296,11 @@ class AppStore extends ChangeNotifier {
   /// 'decimales' (fiel) o 'redondeo' (entero; la ruta conserva la cifra).
   void setNumMode(String v) => _patchSettings(numMode: v);
 
+  /// Precisión decimal visible (v27 · REA CalculaYa): 2, 3 o 4 decimales.
+  void setPrecision(int v) => _patchSettings(precision: v);
+
   /// Candado biométrico de la sección Cuentas y Pago Móvil (v23).
-  void setAccountsBiometric(bool v) =>
-      _patchSettings(accountsBiometric: v);
+  void setAccountsBiometric(bool v) => _patchSettings(accountsBiometric: v);
 
   // ─── 2.1c Cuentas y Pago Móvil (v23 · comparativa CalculaYa) ───────────
 
@@ -306,17 +312,47 @@ class AppStore extends ChangeNotifier {
   bool addAccount(PayAccount a) {
     if (a.bank.isEmpty || a.number.trim().isEmpty) return false;
     if (_data.accounts.length >= kMaxAccounts) return false;
-    _data = _data.copyWith(accounts: [..._data.accounts, a]);
+    final first = _data.accounts.isEmpty;
+    final makeDefault = first || a.isDefault;
+    final accounts = [
+      for (final x in _data.accounts)
+        x.copyWith(isDefault: makeDefault ? false : x.isDefault),
+      a.copyWith(isDefault: makeDefault),
+    ];
+    _data = _data.copyWith(accounts: accounts);
     _persist();
     return true;
   }
 
-  /// Retira una cuenta por id.
+  /// Retira una cuenta por id. Si era la predeterminada, la primera que
+  /// queda toma el relevo (v27 · sistema de cuentas de CalculaYa).
   void removeAccount(String id) {
+    final wasDefault = _data.accounts.any((a) => a.id == id && a.isDefault);
+    final rest = _data.accounts.where((a) => a.id != id).toList();
+    if (wasDefault && rest.isNotEmpty) {
+      rest[0] = rest[0].copyWith(isDefault: true);
+    }
+    _data = _data.copyWith(accounts: rest);
+    _persist();
+  }
+
+  /// Marca una cuenta como la predeterminada para el cobro (v27).
+  void setDefaultAccount(String id) {
     _data = _data.copyWith(
-      accounts: _data.accounts.where((a) => a.id != id).toList(),
+      accounts: [
+        for (final a in _data.accounts) a.copyWith(isDefault: a.id == id),
+      ],
     );
     _persist();
+  }
+
+  /// Cuenta que el Conversor usa al armar un Pago Móvil (v27): la marcada
+  /// o, si nadie lo está, la primera. Null sin cuentas.
+  PayAccount? get defaultAccount {
+    for (final a in _data.accounts) {
+      if (a.isDefault) return a;
+    }
+    return _data.accounts.isEmpty ? null : _data.accounts.first;
   }
 
   /// URL del despliegue web con SSE en vivo (17.7): '' apaga el stream.

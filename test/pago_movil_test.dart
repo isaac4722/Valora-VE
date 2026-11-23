@@ -7,8 +7,7 @@ library;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'
-    show rootBundle, FontLoader, ByteData;
+import 'package:flutter/services.dart' show rootBundle, FontLoader, ByteData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
@@ -80,17 +79,29 @@ Future<void> main() async {
         'number': '0105...',
       });
       expect(parsed!.type, 'corriente');
-      expect(PayAccount.tryParse({'id': '', 'bank': 'B', 'number': '1'}), isNull);
+      expect(
+        PayAccount.tryParse({'id': '', 'bank': 'B', 'number': '1'}),
+        isNull,
+      );
     });
 
     test('AppData viejo sin accounts carga vacío + round-trip', () {
       final d = AppData.fromJson({'version': 1});
       expect(d.accounts, isEmpty);
-      final d2 = AppData.fromJson(Map<String, dynamic>.from(
-        AppData(accounts: const [
-          PayAccount(id: 'z', bank: 'Banesco', type: 'ahorro', number: '123'),
-        ]).toJson(),
-      ));
+      final d2 = AppData.fromJson(
+        Map<String, dynamic>.from(
+          AppData(
+            accounts: const [
+              PayAccount(
+                id: 'z',
+                bank: 'Banesco',
+                type: 'ahorro',
+                number: '123',
+              ),
+            ],
+          ).toJson(),
+        ),
+      );
       expect(d2.accounts, hasLength(1));
       expect(d2.accounts.first.typeLabel, 'Ahorro');
     });
@@ -124,18 +135,28 @@ Future<void> main() async {
     test('addAccount acepta hasta 4 y removeAccount retira', () {
       for (var i = 0; i < 4; i++) {
         expect(
-          store.addAccount(PayAccount(
-            id: 'a$i',
-            bank: 'Banco $i',
-            type: 'corriente',
-            number: '0$i',
-          )),
+          store.addAccount(
+            PayAccount(
+              id: 'a$i',
+              bank: 'Banco $i',
+              type: 'corriente',
+              number: '0$i',
+            ),
+          ),
           isTrue,
         );
       }
-      expect(store.addAccount(PayAccount(
-        id: 'a4', bank: 'Banco 4', type: 'corriente', number: '04',
-      )), isFalse);
+      expect(
+        store.addAccount(
+          PayAccount(
+            id: 'a4',
+            bank: 'Banco 4',
+            type: 'corriente',
+            number: '04',
+          ),
+        ),
+        isFalse,
+      );
       store.removeAccount('a2');
       expect(store.data.accounts, hasLength(3));
       expect(store.data.accounts.map((a) => a.id), isNot(contains('a2')));
@@ -151,13 +172,27 @@ Future<void> main() async {
 
   group('Merge de respaldo', () {
     test('accounts: unión por id, la del respaldo sobrevive', () {
-      final local = AppData(accounts: const [
-        PayAccount(id: 'keep', bank: 'Banesco', type: 'corriente', number: '1'),
-      ]);
-      final incoming = AppData(accounts: const [
-        PayAccount(id: 'keep', bank: 'LOCAL', type: 'corriente', number: '9'),
-        PayAccount(id: 'nueva', bank: 'Mercantil', type: 'ahorro', number: '2'),
-      ]);
+      final local = AppData(
+        accounts: const [
+          PayAccount(
+            id: 'keep',
+            bank: 'Banesco',
+            type: 'corriente',
+            number: '1',
+          ),
+        ],
+      );
+      final incoming = AppData(
+        accounts: const [
+          PayAccount(id: 'keep', bank: 'LOCAL', type: 'corriente', number: '9'),
+          PayAccount(
+            id: 'nueva',
+            bank: 'Mercantil',
+            type: 'ahorro',
+            number: '2',
+          ),
+        ],
+      );
       final res = mergeBackupData(local, incoming);
       expect(res.data.accounts, hasLength(2));
       expect(
@@ -227,29 +262,31 @@ Future<void> main() async {
       expect(avisos[2], contains('no 11'));
     });
 
-    test('CI: la letra no cuenta; 5 y 9 dígitos son válidos; vacío no avisa',
-        () {
-      expect(
-        pagoMovilSoftWarnings(
-          number: '0' * 20,
-          docId: 'V12345',
-          phone: '04141234567',
-        ),
-        isEmpty,
-      );
-      expect(
-        pagoMovilSoftWarnings(
-          number: '0' * 20,
-          docId: 'E123456789',
-          phone: '04141234567',
-        ),
-        isEmpty,
-      );
-      expect(
-        pagoMovilSoftWarnings(number: '0' * 20, docId: '', phone: ''),
-        isEmpty,
-      );
-    });
+    test(
+      'CI: la letra no cuenta; 5 y 9 dígitos son válidos; vacío no avisa',
+      () {
+        expect(
+          pagoMovilSoftWarnings(
+            number: '0' * 20,
+            docId: 'V12345',
+            phone: '04141234567',
+          ),
+          isEmpty,
+        );
+        expect(
+          pagoMovilSoftWarnings(
+            number: '0' * 20,
+            docId: 'E123456789',
+            phone: '04141234567',
+          ),
+          isEmpty,
+        );
+        expect(
+          pagoMovilSoftWarnings(number: '0' * 20, docId: '', phone: ''),
+          isEmpty,
+        );
+      },
+    );
 
     test('espacios y guiones no cuentan como dígitos (teléfono 10 avisa)', () {
       final avisos = pagoMovilSoftWarnings(
@@ -275,15 +312,21 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
-            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+            appStoreProvider.overrideWith(
+              (ref) => store,
+              disposeNotifier: false,
+            ),
+            themeControllerProvider.overrideWith(
+              (ref) => ThemeController(),
+              disposeNotifier: false,
+            ),
           ],
           child: MaterialApp(
-              theme: AppTheme.light(),
-              home: const Scaffold(
-                body: SingleChildScrollView(child: CuentasPagoMovil()),
-              ),
+            theme: AppTheme.light(),
+            home: const Scaffold(
+              body: SingleChildScrollView(child: CuentasPagoMovil()),
             ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -302,9 +345,9 @@ Future<void> main() async {
       await tester.pumpAndSettle();
       // v23.3: el alta es VeField/VeInput (rótulo fuera del campo) — los
       // tres EditableText de la hoja en orden: número · cédula · teléfono.
-      await tester.enterText(find.byType(EditableText).at(0), '123');
-      await tester.enterText(find.byType(EditableText).at(1), 'V123');
-      await tester.enterText(find.byType(EditableText).at(2), '0414');
+      await tester.enterText(find.byType(EditableText).at(1), '123');
+      await tester.enterText(find.byType(EditableText).at(2), 'V123');
+      await tester.enterText(find.byType(EditableText).at(3), '0414');
       await tester.tap(find.text('Guardar'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
@@ -329,9 +372,12 @@ Future<void> main() async {
 
       await tester.tap(find.text('Agregar cuenta'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(EditableText).at(0), '01341234567890123456');
-      await tester.enterText(find.byType(EditableText).at(1), 'V12345678');
-      await tester.enterText(find.byType(EditableText).at(2), '04141234567');
+      await tester.enterText(
+        find.byType(EditableText).at(1),
+        '01341234567890123456',
+      );
+      await tester.enterText(find.byType(EditableText).at(2), 'V12345678');
+      await tester.enterText(find.byType(EditableText).at(3), '04141234567');
       await tester.tap(find.text('Guardar'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
@@ -353,11 +399,7 @@ Future<void> main() async {
       store = AppStore.withData(
         AppData(settings: const Settings(onboarded: true)),
       );
-      poller = RatesPoller(
-        store,
-        NotificationsService(),
-        AlertEngine(prefs),
-      );
+      poller = RatesPoller(store, NotificationsService(), AlertEngine(prefs));
     });
 
     Future<void> pumpConverter(WidgetTester tester) async {
@@ -369,14 +411,23 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
-            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
-            ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
+            appStoreProvider.overrideWith(
+              (ref) => store,
+              disposeNotifier: false,
+            ),
+            themeControllerProvider.overrideWith(
+              (ref) => ThemeController(),
+              disposeNotifier: false,
+            ),
+            ratesPollerProvider.overrideWith(
+              (ref) => poller,
+              disposeNotifier: false,
+            ),
           ],
           child: MaterialApp(
-              theme: AppTheme.light(),
-              home: const Scaffold(body: ConverterScreen()),
-            ),
+            theme: AppTheme.light(),
+            home: const Scaffold(body: ConverterScreen()),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -385,17 +436,23 @@ Future<void> main() async {
     testWidgets('con destino VES: botón visible, hoja arma el cobro', (
       tester,
     ) async {
-      store.setRateBoard(RateBoard(sources: {
-        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 9, 17)),
-      }));
+      store.setRateBoard(
+        RateBoard(
+          sources: {
+            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 9, 17)),
+          },
+        ),
+      );
       store.setConverterPair('usd', 'ves');
-      store.addAccount(const PayAccount(
-        id: 'a1',
-        bank: 'Banesco',
-        type: 'corriente',
-        number: '01341234567890123456',
-        docId: 'V12345678',
-      ));
+      store.addAccount(
+        const PayAccount(
+          id: 'a1',
+          bank: 'Banesco',
+          type: 'corriente',
+          number: '01341234567890123456',
+          docId: 'V12345678',
+        ),
+      );
       await pumpConverter(tester);
       expect(find.text('Pago Móvil'), findsOneWidget);
       await tester.tap(find.text('Pago Móvil'));
@@ -404,26 +461,37 @@ Future<void> main() async {
       // El monto (1 USD × 40) y los datos de la cuenta en la hoja.
       expect(find.text('Compartir Pago Móvil'), findsOneWidget);
       expect(find.text('Bs 40,00'), findsOneWidget);
-      expect(find.textContaining('Cuenta corriente: 01341234567890123456'), findsOneWidget);
+      expect(
+        find.textContaining('Cuenta corriente: 01341234567890123456'),
+        findsOneWidget,
+      );
       expect(find.textContaining('quien reciba el mensaje'), findsOneWidget);
     });
 
     testWidgets('sin destino VES: el botón no existe (par USD→COP)', (
       tester,
     ) async {
-      store.setRateBoard(RateBoard(sources: {
-        'cop-trm': RateEntry(rate: 4000, updatedAt: DateTime(2026, 9, 17)),
-        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 9, 17)),
-      }));
+      store.setRateBoard(
+        RateBoard(
+          sources: {
+            'cop-trm': RateEntry(rate: 4000, updatedAt: DateTime(2026, 9, 17)),
+            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 9, 17)),
+          },
+        ),
+      );
       store.setConverterPair('usd', 'cop');
       await pumpConverter(tester);
       expect(find.text('Pago Móvil'), findsNothing);
     });
 
     testWidgets('sin cuentas: la hoja invita a Ajustes', (tester) async {
-      store.setRateBoard(RateBoard(sources: {
-        'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 9, 17)),
-      }));
+      store.setRateBoard(
+        RateBoard(
+          sources: {
+            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 9, 17)),
+          },
+        ),
+      );
       store.setConverterPair('usd', 'ves');
       await pumpConverter(tester);
       await tester.tap(find.text('Pago Móvil'));

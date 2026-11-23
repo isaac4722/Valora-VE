@@ -121,15 +121,13 @@ class MainShell extends ConsumerWidget {
       label: 'Lista',
     ),
     _TabSpec(
-      location: '/productos',
-      icon: LucideIcons.package,
-      label: 'Productos',
-    ),
-    _TabSpec(
       location: '/analisis',
       icon: LucideIcons.chartColumn,
       label: 'Análisis',
     ),
+    // v27: la quinta pestaña es «Más» — el hub con buscador que reúne
+    // Productos, Historial, Tickets, Sala, Cuentas y Ajustes.
+    _TabSpec(location: '/mas', icon: LucideIcons.layoutGrid, label: 'Más'),
   ];
 
   @override
@@ -304,32 +302,32 @@ const List<_SideItem> _sideMain = [
     branch: 2,
   ),
   _SideItem(
-    icon: LucideIcons.package,
-    label: 'Productos',
-    location: '/productos',
-    branch: 3,
-  ),
-  _SideItem(
     icon: LucideIcons.chartColumn,
     label: 'Análisis',
     location: '/analisis',
-    branch: 4,
+    branch: 3,
   ),
 ];
 
 const List<_SideItem> _sideLibro = [
   _SideItem(
+    icon: LucideIcons.package,
+    label: 'Productos',
+    location: '/productos',
+    branch: 5,
+  ),
+  _SideItem(
     icon: LucideIcons.history,
     label: 'Historial',
     location: '/historial',
-    branch: 5,
+    branch: 6,
   ),
   _SideItem(icon: LucideIcons.receipt, label: 'Tickets', location: '/tickets'),
   _SideItem(
     icon: LucideIcons.settings,
     label: 'Ajustes',
     location: '/ajustes',
-    branch: 6,
+    branch: 7,
   ),
 ];
 
@@ -754,6 +752,9 @@ class _MobileTabs extends ConsumerWidget {
     // superior al 65 %; SIN píldora de indicador, SIN sombra.
     final scheme = context.ve.colorScheme;
 
+    // v27: en las rutas sin pestaña propia (Productos · Historial ·
+    // Ajustes) la barra marca «Más», que es la puerta desde la que se llegó.
+    final int effective = current >= 4 ? 4 : current;
     return Container(
       key: kNavBarKey,
       decoration: BoxDecoration(
@@ -770,7 +771,7 @@ class _MobileTabs extends ConsumerWidget {
               Expanded(
                 child: _TabButton(
                   spec: MainShell._tabs[i],
-                  active: i == current,
+                  active: i == effective,
                   badge: i == 2 ? cartCount : 0,
                   activeColor: scheme.foreground,
                   inactiveColor: scheme.onSurfaceVariant,

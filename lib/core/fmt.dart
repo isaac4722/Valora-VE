@@ -83,6 +83,19 @@ String fmtRate(double v) {
 /// Tasa EUR: siempre 4 decimales (§3.3 fmtEurRate).
 String fmtEurRate(double v) => fmtNum(v, decimals: 4);
 
+/// v27 · precisión elegida por el usuario (REA CalculaYa: la API publica
+/// tasas con 4 decimales). Se usa donde la tasa es la protagonista y el
+/// usuario pidió ver más (o menos) detalle.
+String fmtRatePrecise(double v, int precision) =>
+    fmtNum(v, decimals: precision.clamp(2, 6));
+
+/// Monto con la precisión elegida; COP conserva 0 decimales por formato
+/// local (§3.3), sin importar el modo.
+String fmtMoneyPrecise(double v, Currency c, int precision) {
+  if (c == Currency.cop) return fmtNum(v, decimals: 0);
+  return fmtNum(v, decimals: precision.clamp(2, 4));
+}
+
 /// Porcentaje con signo: «+2,1 %».
 String fmtPct(double v, {int decimals = 1, bool forceSign = false}) {
   final s = fmtNum(v.abs(), decimals: decimals);
@@ -256,10 +269,9 @@ DateTime? parseDateField(dynamic v) {
 /// comillas escapadas, delimitadores y saltos de línea dentro de notas de
 /// compra ya no rompen columnas en Excel/Sheets). CRLF como manda el estándar.
 String toCSV(List<List<String>> rows, {String delimiter = ','}) =>
-    const ListToCsvConverter(eol: '\r\n').convert(
-      rows,
-      fieldDelimiter: delimiter,
-    );
+    const ListToCsvConverter(
+      eol: '\r\n',
+    ).convert(rows, fieldDelimiter: delimiter);
 
 /// Parsea CSV tolerante: detecta delimitador, soporta «""» y \n embebido.
 List<List<String>> parseCSV(String text) {

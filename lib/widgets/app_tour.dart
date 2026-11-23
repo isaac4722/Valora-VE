@@ -143,21 +143,13 @@ final List<TourSegment> kTourSegments = <TourSegment>[
             'cálculos de la app usan la que actives aquí.',
       ),
       TourStep(
-        id: 'inicio.foco',
-        title: 'Todas tus divisas',
-        anchor: TourKeys.divisasFoco,
-        body:
-            'Aquí ves cada moneda del foco con su tasa activa. «Ir al '
-            'conversor» te lleva directo al cambio, con fecha y fuentes.',
-      ),
-      TourStep(
         id: 'inicio.navbar',
         title: 'Cinco pestañas, todo a un toque',
         anchor: kNavBarKey,
         body:
-            'Inicio · Conversor · Lista · Productos · Análisis. La campana '
-            'guarda tus avisos y la lupa de arriba abre la búsqueda de toda '
-            'la app; los ajustes viven en el bloque «Libro» del Inicio.',
+            'Inicio · Conversor · Lista · Análisis · Más. La campana '
+            'guarda tus avisos, la lupa abre la búsqueda y «Más» reúne '
+            'Productos, Historial, Tickets, Sala y Ajustes.',
       ),
     ],
   ),
@@ -253,21 +245,21 @@ final List<TourSegment> kTourSegments = <TourSegment>[
     steps: [
       TourStep(
         id: 'ajustes.conexion',
-        title: 'Tú decides cuándo consultar',
+        title: 'General: país, precisión y conexión',
         anchor: TourKeys.conexion,
         body:
-            'Con «No consultar API automáticamente» la app no toca la red: '
-            'todo se lee de tu libro local y tus tasas manuales. El '
-            'intervalo de consulta también se cambia aquí.',
+            'Aquí viven el país, los decimales que ves y el modo sin red: '
+            'si apagas las consultas, la app trabaja solo con tu libro local '
+            'y tus tasas manuales.',
       ),
       TourStep(
         id: 'ajustes.tutorial',
-        title: 'Este tour, cuando quieras',
+        title: 'Datos y acerca de',
         anchor: TourKeys.tutorial,
         body:
-            'Repite el tutorial o la bienvenida desde aquí. Avisos con '
-            'umbrales, biometría opcional y respaldo JSON completan los '
-            'ajustes.',
+            'Respaldo JSON, registros locales, actualizaciones y este mismo '
+            'tutorial viven en «Datos y acerca de». Todo se queda en tu '
+            'teléfono.',
         cta: 'Entendido',
       ),
     ],

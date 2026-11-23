@@ -1,5 +1,64 @@
 # Changelog
 
+## v27 — GUI/UX reconstruida: Inicio de verdad, hub «Más», Ajustes en capas y precisión CalculaYa (orden del dueño)
+
+Encargo: «reconstruir las GUI/UX de la app móvil de la forma más completa
+posible, mantener el contexto, usar impeccable y humanizer, quitar ETH,
+usar los decimales de CalculaYa (REA), copiar su sistema de cuentas y
+facilitar el acceso a los módulos». Metodología EGM: lectura de evidencia
+del repo (v19–v26), auditoría doble pez→elefante (UX/visual + datos/
+textos) y gate visual con capturas reales a 390×844.
+
+- **Inicio de verdad (v27)**: una sola cifra protagonista (tasa activa +
+  fuente + frescura + chispa real de 14 días), cuatro acciones de uso
+  diario (Convertir · Lista · Precios · Cuentas), «Tu mes» con la cifra
+  gastada y su presupuesto, y «Actividad reciente». Se retiran del Inicio
+  el acordeón «Todo lo demás», la tabla de cotización, las divisas del
+  foco, las alertas, las tiendas, los registros, las herramientas, el
+  bloque «Libro» y la tarjeta de App Widgets. Nada se pierde: la
+  cotización completa vive en **Tasas**, las herramientas en **Más**, los
+  widgets en **Ajustes → General**, las alertas en **Productos** y las
+  tiendas en **Historial/Análisis**.
+- **Navegación lógica (5 pestañas)**: Inicio · Conversor · Lista ·
+  Análisis · **Más**. «Más» es un hub con buscador local que reúne
+  Productos, Historial, Tickets, Sala Viva, Cuentas, Ajustes,
+  Actualizaciones y Privacidad. Las rutas sin pestaña propia marcan
+  «Más» en la barra; el sidebar de escritorio conserva Productos en
+  «Libro». Paleta ⌘K y tour actualizados a las cinco pestañas.
+- **Ajustes reconstruido**: hub con seis grupos y el valor actual a la
+  vista; cada grupo abre su pantalla (General · Tasas · Cuentas ·
+  Apariencia · Datos y acerca de). General reúne país, **decimales
+  2/3/4**, modo sin red, intervalo y widgets; Tasas reúne fuentes,
+  manuales, tasas propias, alertas y diagnóstico; Cuentas es la pantalla
+  de cobro; Datos reúne respaldo, registros, actualizaciones, tutorial y
+  legal. Se acabó la lista interminable con secciones escondidas al final.
+- **Precisión decimal (REA CalculaYa)**: ajuste persistido 2/3/4
+  decimales (`Settings.precision`), aplicado a la tasa protagonista, a
+  las filas de Tasas y al resultado del conversor; `fmtRatePrecise` y
+  `fmtMoneyPrecise` con tests. La API de CalculaYa publica 4 decimales;
+  el usuario elige cuántos ver sin perder la cifra exacta.
+- **Cuentas de cobro (sistema CalculaYa)**: cada cuenta tiene alias
+  («Cuenta principal»), banco, tipo, número, CI, teléfono y una estrella
+  de **cuenta principal**; el Conversor abre el Pago Móvil con esa cuenta
+  por defecto. Se añaden insignias originales por banco (27 monogramas
+  sobre el color de marca, pintadas en Flutter) — no logos de terceros —
+  con fallback de monograma. Borrar la principal promueve a la siguiente.
+- **ETH retirado**: fuera del enum `Currency`, de las fuentes, del tema,
+  del painter de banderas, del welcome (rejilla 4+3) y de las pruebas.
+  Quedan 7 divisas: VES · USD · EUR · COP · BRL · MXN · USDT.
+- **Textos humanizados**: Inicio, navegación, Ajustes, Cuentas, Tasas,
+  Más, avisos y mensajes de cobro; menos párrafos, cero guiones largos en
+  la UI y una idea por línea. Se conserva el español venezolano y el
+  vocabulario local.
+- **APIs al servicio de la pantalla**: Tasas muestra qué proveedores
+  responden y cuáles no (`providers`/`degraded` del tablero); Ajustes
+  mantiene diagnóstico por región, GitHub Releases, biometría, SSE,
+  respaldo JSON y registros locales. Sin cifras inventadas.
+- Gates: analyze 0 · **322/322** tests (nuevos: precisión, cuentas
+  principales/alias, insignias, hub, tasas y navegación) · auditoría de
+  prohibiciones VERDE · gate visual 9 capturas a 390×844 (Inicio, Tasas,
+  Más, Ajustes, General, Cuentas, Datos y shell).
+
 ## v26 — dispositivos nuevos: vertical y horizontal + noche limpia (orden del dueño)
 
 «Configura todo para vertical y horizontal en los móviles nuevos

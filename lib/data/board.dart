@@ -81,10 +81,13 @@ Future<Response<dynamic>> _fetchJsonResponse(
   try {
     final res = await _dio
         .getUri<dynamic>(uri, cancelToken: ct)
-        .timeout(timeout, onTimeout: () {
-      ct.cancel('timeout');
-      throw Exception('timeout ${uri.host}');
-    });
+        .timeout(
+          timeout,
+          onTimeout: () {
+            ct.cancel('timeout');
+            throw Exception('timeout ${uri.host}');
+          },
+        );
     if (res.statusCode != 200) throw Exception('HTTP ${res.statusCode}');
     return res;
   } on DioException {
@@ -478,9 +481,8 @@ Future<RegionBlock> _coBlock() async {
   return (sources, errors, providers.toList());
 }
 
-/// Cripto (v23.2): USDT P2P (Worker de Calculaya) + tether global y ETH
-/// (CoinGecko). ETH no tiene segunda fuente pública estable — el manual del
-/// usuario la cubre.
+/// Cripto (v23.2): USDT P2P (Worker de Calculaya) + tether global
+/// (CoinGecko). El manual del usuario cubre la referencia local.
 Future<RegionBlock> _cryptoBlock() async {
   final sources = <String, RateEntry>{};
   final errors = <String>[];
@@ -502,14 +504,9 @@ Future<RegionBlock> _cryptoBlock() async {
     final v = await _fetchJson(
       Uri.parse(
         'https://api.coingecko.com/api/v3/simple/price'
-        '?ids=tether,ethereum&vs_currencies=usd',
+        '?ids=tether&vs_currencies=usd',
       ),
     );
-    final eth = parseCoinGeckoUsd(v, 'ethereum');
-    if (eth != null) {
-      sources['eth-usd'] = eth;
-      providers.add('coingecko.com');
-    }
     final tether = parseCoinGeckoUsd(v, 'tether');
     if (tether != null) {
       sources['usdt-usd'] = tether;
@@ -523,6 +520,7 @@ Future<RegionBlock> _cryptoBlock() async {
   }
   return (sources, errors, providers.toList());
 }
+
 /// México: USD fix (DolarAPI → Frankfurter como respaldo).
 Future<RegionBlock> _mxBlock() async {
   final sources = <String, RateEntry>{};
@@ -656,13 +654,12 @@ Future<BoardResult> fetchBoard([RateBoard? previous]) async {
   var crypto = results[4];
   final pendingDerive = crypto.$1.remove('__tetherDerive__');
   if (pendingDerive != null && !crypto.$1.containsKey('usdt-ves')) {
-    final derived = deriveUsdtVesFromGlobal(pendingDerive, results[0].$1['ves-parallel']);
+    final derived = deriveUsdtVesFromGlobal(
+      pendingDerive,
+      results[0].$1['ves-parallel'],
+    );
     if (derived != null) {
-      crypto = (
-        {...crypto.$1, 'usdt-ves': derived},
-        crypto.$2,
-        [...crypto.$3],
-      );
+      crypto = ({...crypto.$1, 'usdt-ves': derived}, crypto.$2, [...crypto.$3]);
     }
   }
   return mergeRegionBlocks([...results.take(4), crypto], previous);

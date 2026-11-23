@@ -77,9 +77,8 @@ class _TapScaleState extends State<TapScale> {
 }
 
 /// Bandera circular de divisa desde assets internos (offline-first).
-/// Cripto (v23.2): USDT y ETH NO tienen bandera — son monedas con sello
-/// propio, pintadas en canvas (₮ teal de Tether · rombo indigo de ETH),
-/// sin depender de fuentes ni assets nuevos.
+/// Cripto (v23.2): USDT no tiene bandera — es una moneda con sello propio,
+/// pintada en canvas (₮ teal de Tether), sin depender de fuentes ni assets.
 class Flag extends StatelessWidget {
   const Flag(this.code, {super.key, this.size = 20});
 
@@ -95,7 +94,7 @@ class Flag extends StatelessWidget {
     Currency.mxn: 'assets/flags/mx.png',
   };
 
-  static bool _painted(Currency c) => c == Currency.usdt || c == Currency.eth;
+  static bool _painted(Currency c) => c == Currency.usdt;
 
   @override
   Widget build(BuildContext context) {
@@ -133,8 +132,7 @@ class Flag extends StatelessWidget {
 }
 
 /// Sello pintado de cripto (v23.2): ₮ de Tether (teal de marca, glyph blanco
-/// de barras) y rombo de ETH (indigo de marca, mitades con opacidad).
-/// Público para que el gate de tests pueda distinguirlo de otros paints.
+/// de barras). Público para que el gate de tests pueda distinguirlo.
 class CryptoFlagPainter extends CustomPainter {
   const CryptoFlagPainter(this.code);
 
@@ -144,57 +142,30 @@ class CryptoFlagPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final w = size.width, h = size.height;
     final c = Offset(w / 2, h / 2);
-    final isUsdt = code == Currency.usdt;
-    canvas.drawCircle(
-      c,
-      w / 2,
-      Paint()
-        ..color = isUsdt ? const Color(0xFF26A17B) : const Color(0xFF627EEA),
-    );
+    canvas.drawCircle(c, w / 2, Paint()..color = const Color(0xFF26A17B));
     final white = Paint()..color = Colors.white;
-    if (isUsdt) {
-      // ₮: barra superior, palo central y barra cruzada (glyph del tether).
-      final rrect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, w, h),
-        Radius.circular(w / 2),
-      );
-      canvas.save();
-      canvas.clipPath(Path()..addRRect(rrect));
-      final bw = w * 0.56, sx = w * 0.12;
-      void bar(double dy, double bh, double bwidth, {double? dx}) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(dx ?? (w - bwidth) / 2, dy, bwidth, bh),
-            Radius.circular(bh / 2),
-          ),
-          white,
-        );
-      }
-
-      bar(h * 0.24, h * 0.11, bw);
-      bar(h * 0.24, h * 0.55, sx, dx: w / 2 - sx / 2);
-      bar(h * 0.52, h * 0.10, bw * 0.82);
-      canvas.restore();
-    } else {
-      // Rombo ETH: mitad superior sólida, mitad inferior al 70 %.
-      final top = Path()
-        ..moveTo(w / 2, h * 0.16)
-        ..lineTo(w * 0.78, h * 0.50)
-        ..lineTo(w / 2, h * 0.62)
-        ..lineTo(w * 0.22, h * 0.50)
-        ..close();
-      canvas.drawPath(top, white);
-      final bottom = Path()
-        ..moveTo(w / 2, h * 0.66)
-        ..lineTo(w * 0.78, h * 0.54)
-        ..lineTo(w / 2, h * 0.84)
-        ..lineTo(w * 0.22, h * 0.54)
-        ..close();
-      canvas.drawPath(
-        bottom,
-        white..color = Colors.white.withValues(alpha: 0.7),
+    // ₮: barra superior, palo central y barra cruzada (glyph del tether).
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, w, h),
+      Radius.circular(w / 2),
+    );
+    canvas.save();
+    canvas.clipPath(Path()..addRRect(rrect));
+    final bw = w * 0.56, sx = w * 0.12;
+    void bar(double dy, double bh, double bwidth, {double? dx}) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(dx ?? (w - bwidth) / 2, dy, bwidth, bh),
+          Radius.circular(bh / 2),
+        ),
+        white,
       );
     }
+
+    bar(h * 0.24, h * 0.11, bw);
+    bar(h * 0.24, h * 0.55, sx, dx: w / 2 - sx / 2);
+    bar(h * 0.52, h * 0.10, bw * 0.82);
+    canvas.restore();
   }
 
   @override
@@ -517,6 +488,8 @@ class ChipTag extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
         ),
         child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
           child: Text(
             label,
             style: TextStyle(
@@ -2114,7 +2087,7 @@ class SkeletonPaper extends StatelessWidget {
 /// con tema fijo claro. Para tinta con tema oscuro usa VeColors.of(context).
 
 /// Tinta firma por divisa (§8): VES azul · USD rojo · EUR violeta ·
-/// COP oliva · BRL verde · MXN magenta · USDT teal · ETH indigo (v23.2).
+/// COP oliva · BRL verde · MXN magenta · USDT teal.
 Color currencyInk(Currency c) => switch (c) {
   Currency.ves => Color(0xFF2563EB),
   Currency.usd => Color(0xFFCF4437),
@@ -2123,7 +2096,6 @@ Color currencyInk(Currency c) => switch (c) {
   Currency.brl => Color(0xFF12873C),
   Currency.mxn => Color(0xFFB03D90),
   Currency.usdt => VeColors.usdtLight,
-  Currency.eth => VeColors.ethLight,
 };
 
 /// Tinta por categoría de fuente de tasa (código string del enum

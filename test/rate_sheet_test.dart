@@ -11,7 +11,7 @@ import 'package:valorave/core/currencies.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/store.dart';
-import 'package:valorave/features/home/home_screen.dart';
+import 'package:valorave/features/rates/rates_screen.dart';
 import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
@@ -52,7 +52,7 @@ void main() {
 
   void noop() {}
 
-  testWidgets('Home: lista de cotización agrupada USD/EUR con filas visuales', (
+  testWidgets('Tasas: lista agrupada USD/EUR con filas visuales', (
     tester,
   ) async {
     final store = _storeConTablero();
@@ -63,16 +63,24 @@ void main() {
       ProviderScope(
         overrides: [
           appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
-          ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
+          ratesPollerProvider.overrideWith(
+            (ref) => poller,
+            disposeNotifier: false,
+          ),
           // TASK-35 (p2): la cabecera de Inicio observa el tema (toggle).
-          themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+          themeControllerProvider.overrideWith(
+            (ref) => ThemeController(),
+            disposeNotifier: false,
+          ),
           // v19.4: los widgets de Inicio leen sus prefs (como la app).
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: MaterialApp(
-            theme: AppTheme.light(),
-            home: const Scaffold(body: HomeScreen()),
+          theme: AppTheme.light(),
+          home: const Scaffold(
+            body: SingleChildScrollView(child: RatesBoard()),
           ),
+        ),
       ),
     );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
@@ -98,7 +106,7 @@ void main() {
     expect(store.sourceFor(Currency.ves), 'ves-parallel');
   });
 
-  testWidgets('Home: tasa manual desde la fila, SIN ir a Ajustes', (
+  testWidgets('Tasas: tasa manual desde la fila, SIN ir a Ajustes', (
     tester,
   ) async {
     final store = _storeConTablero();
@@ -108,16 +116,24 @@ void main() {
       ProviderScope(
         overrides: [
           appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
-          ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
+          ratesPollerProvider.overrideWith(
+            (ref) => poller,
+            disposeNotifier: false,
+          ),
           // TASK-35 (p2): la cabecera de Inicio observa el tema (toggle).
-          themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+          themeControllerProvider.overrideWith(
+            (ref) => ThemeController(),
+            disposeNotifier: false,
+          ),
           // v19.4: los widgets de Inicio leen sus prefs (como la app).
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: MaterialApp(
-            theme: AppTheme.light(),
-            home: const Scaffold(body: HomeScreen()),
+          theme: AppTheme.light(),
+          home: const Scaffold(
+            body: SingleChildScrollView(child: RatesBoard()),
           ),
+        ),
       ),
     );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));

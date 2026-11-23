@@ -15,7 +15,7 @@ import 'package:valorave/core/models.dart';
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/data/backup.dart';
 import 'package:valorave/data/store.dart';
-import 'package:valorave/features/home/home_screen.dart';
+import 'package:valorave/features/rates/rates_screen.dart';
 import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
@@ -52,10 +52,13 @@ void main() {
       final d = AppData.fromJson({'version': 1});
       expect(d.customRates, isEmpty);
       // Round-trip del agregado.
-      final d2 = AppData.fromJson(Map<String, dynamic>.from(
-        _conRates(const [CustomRate(id: 'z', name: 'Zelle', bsPerUsd: 40)])
-            .toJson(),
-      ));
+      final d2 = AppData.fromJson(
+        Map<String, dynamic>.from(
+          _conRates(const [
+            CustomRate(id: 'z', name: 'Zelle', bsPerUsd: 40),
+          ]).toJson(),
+        ),
+      );
       expect(d2.customRates, hasLength(1));
       expect(d2.customRates.first.name, 'Zelle');
     });
@@ -116,10 +119,12 @@ void main() {
       final local = _conRates(const [
         CustomRate(id: 'keep', name: 'Zelle', bsPerUsd: 46),
       ]);
-      final incoming = AppData(customRates: const [
-        CustomRate(id: 'keep', name: 'Zelle', bsPerUsd: 99), // empate=local
-        CustomRate(id: 'nueva', name: 'Binance', bsPerUsd: 52),
-      ]);
+      final incoming = AppData(
+        customRates: const [
+          CustomRate(id: 'keep', name: 'Zelle', bsPerUsd: 99), // empate=local
+          CustomRate(id: 'nueva', name: 'Binance', bsPerUsd: 52),
+        ],
+      );
       final res = mergeBackupData(local, incoming);
       expect(res.data.customRates, hasLength(2));
       expect(
@@ -141,7 +146,7 @@ void main() {
     });
   });
 
-  group('Inicio: fila de tasa propia + GapChip', () {
+  group('Tasas: fila de tasa propia + GapChip', () {
     // Patrón de app_widgets_test: AppStore.withData (sin Hive) + un poller
     // por prueba; _persist sin caja abierta es seguro (solo notifica).
     late AppStore store;
@@ -153,27 +158,34 @@ void main() {
       store = AppStore.withData(
         AppData(settings: const Settings(onboarded: true)),
       );
-      poller = RatesPoller(
-        store,
-        NotificationsService(),
-        AlertEngine(prefs),
-      );
+      poller = RatesPoller(store, NotificationsService(), AlertEngine(prefs));
     });
 
-    Future<void> pumpHome(WidgetTester tester) async {
+    Future<void> pumpRates(WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
-            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
-            ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
+            appStoreProvider.overrideWith(
+              (ref) => store,
+              disposeNotifier: false,
+            ),
+            themeControllerProvider.overrideWith(
+              (ref) => ThemeController(),
+              disposeNotifier: false,
+            ),
+            ratesPollerProvider.overrideWith(
+              (ref) => poller,
+              disposeNotifier: false,
+            ),
           ],
           // Mismo shell que la app (main.dart): ShadTheme arriba del
           // MaterialApp — la GUI «Ve» lo exige.
           child: MaterialApp(
-              theme: AppTheme.light(),
-              home: const Scaffold(body: HomeScreen()),
+            theme: AppTheme.light(),
+            home: const Scaffold(
+              body: SingleChildScrollView(child: RatesBoard()),
             ),
+          ),
         ),
       );
       await tester.pump(const Duration(milliseconds: 300));
@@ -183,12 +195,14 @@ void main() {
       tester,
     ) async {
       store.setRateBoard(
-        RateBoard(sources: {
-          'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 9, 17)),
-        }),
+        RateBoard(
+          sources: {
+            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 9, 17)),
+          },
+        ),
       );
       store.addCustomRate('Zelle', 46.4);
-      await pumpHome(tester);
+      await pumpRates(tester);
       // Grupo «TUS TASAS» con el nombre y la brecha (46,4/40 − 1 = +16,0 %).
       expect(find.text('TUS TASAS'), findsOneWidget);
       expect(find.text('Zelle'), findsOneWidget);
@@ -203,12 +217,14 @@ void main() {
     testWidgets('sin BCV no hay brecha: jamás un «NaN»', (tester) async {
       // Tablero sin ves-bcv: la fila vive, el chip no.
       store.setRateBoard(
-        RateBoard(sources: {
-          'cop-trm': RateEntry(rate: 4000, updatedAt: DateTime(2026, 9, 17)),
-        }),
+        RateBoard(
+          sources: {
+            'cop-trm': RateEntry(rate: 4000, updatedAt: DateTime(2026, 9, 17)),
+          },
+        ),
       );
       store.addCustomRate('Efectivo', 48);
-      await pumpHome(tester);
+      await pumpRates(tester);
       expect(find.text('Efectivo'), findsOneWidget);
       expect(find.textContaining('% vs BCV'), findsNothing);
     });

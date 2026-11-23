@@ -9,4 +9,4 @@ library;
 /// Versión visible (ronda v23.0 · GUI simple «Instrumento directo»:
 /// Inicio en 4 bloques + Libro en móvil, VeKeypad y redondeo, tasas
 /// propias con brecha, Cuentas y Pago Móvil — comparativa CalculaYa).
-const String kAppVersionVisible = '23.0';
+const String kAppVersionVisible = '27.0';

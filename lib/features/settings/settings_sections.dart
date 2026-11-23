@@ -25,7 +25,7 @@ class _Pais extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tablero configurado para ${country.label}',
+                  'Tu tablero está en ${country.label}.',
                   style: TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w800,
@@ -46,7 +46,7 @@ class _Pais extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Orden del foco',
+                  'Orden de tus divisas',
                   style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 6),
@@ -82,7 +82,7 @@ class _Pais extends ConsumerWidget {
                 TextButton(
                   onPressed: () =>
                       store.setSetting('currencyOrder', <String>[]),
-                  child: const Text('Restablecer orden'),
+                  child: const Text('Restaurar orden'),
                 ),
                 // Espejo del Home: quitar el sueldo guardado (con confirmación).
                 if (store.settings.effectiveSalary() != null)
@@ -110,8 +110,7 @@ class _Pais extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('¿Quitar el sueldo?'),
         content: const Text(
-          'Se borra el sueldo guardado (monto, base/variable o rango). '
-          'Podrás escribirlo de nuevo cuando quieras.',
+          'Se borra el sueldo guardado. Puedes escribirlo de nuevo cuando quieras.',
         ),
         actions: [
           TextButton(
@@ -206,7 +205,7 @@ class _Monedas extends ConsumerWidget {
                     style: TextStyle(fontSize: 13),
                   ),
                   subtitle: const Text(
-                    'Consulta el tablero en segundo plano al abrir la app',
+                    'Consulta las tasas al abrir la app',
                     style: TextStyle(fontSize: 11),
                   ),
                   value: store.settings.autoRefresh,
@@ -214,7 +213,7 @@ class _Monedas extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Tasas manuales (offline)',
+                  'Tasas manuales',
                   style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 4),
@@ -224,7 +223,7 @@ class _Monedas extends ConsumerWidget {
                 // el atajo cotidiano; las manuales por fuente son el modo
                 // avanzado de siempre, intacto.
                 Text(
-                  'Tus tasas con nombre',
+                  'Tus tasas',
                   style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 4),
@@ -397,8 +396,7 @@ class _CustomRates extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'p. ej. Zelle, Efectivo, Binance — aparece en Inicio con su '
-              'brecha vs BCV',
+              'Zelle, Efectivo, Binance… Aparece en Tasas con su brecha frente al BCV.',
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(ctx).colorScheme.onSurfaceVariant,
@@ -530,8 +528,7 @@ class _CustomRates extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(top: 2),
             child: Text(
-              'Tus tasas viven también en el Inicio, junto al BCV y el '
-              'paralelo, con su brecha.',
+              'También aparecen en Tasas, junto al BCV y al paralelo.',
               style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
             ),
           ),
@@ -581,7 +578,7 @@ class _Apariencia extends ConsumerWidget {
                     style: TextStyle(fontSize: 13),
                   ),
                   subtitle: Text(
-                    'Android 12 o superior · botones y selección toman la paleta del wallpaper; fondos y cifras siguen de marca',
+                    'Android 12 o superior. Botones y selección usan el color del fondo.',
                     style: TextStyle(
                       fontSize: 11,
                       color: scheme.onSurfaceVariant,
@@ -614,7 +611,7 @@ class _Apariencia extends ConsumerWidget {
                     style: TextStyle(fontSize: 13),
                   ),
                   subtitle: Text(
-                    'Huella, rostro o PIN del dispositivo. Se pregunta una vez al abrir la app; sin soporte nunca se activa',
+                    'Huella, rostro o PIN al abrir. Se pide una sola vez.',
                     style: TextStyle(
                       fontSize: 11,
                       color: scheme.onSurfaceVariant,
@@ -846,7 +843,7 @@ class _DiagnosticoState extends ConsumerState<_Diagnostico> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Consulta cada región y mide su latencia. Si una falla, la app sigue con las demás.',
+                  'Consulta cada región y mide su respuesta. Si una falla, las demás siguen.',
                   style: TextStyle(
                     fontSize: 11.5,
                     color: scheme.onSurfaceVariant,
@@ -949,9 +946,7 @@ class _Registros extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Errores de red, reconexiones y eventos de la sala, '
-                  'guardados solo en este teléfono (últimos 500). Nada sale '
-                  'del dispositivo.',
+                  'Errores de red y eventos de la sala. Solo en este teléfono; nada sale de aquí.',
                   style: TextStyle(
                     fontSize: 11.5,
                     color: scheme.onSurfaceVariant,

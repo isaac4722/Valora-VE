@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/core/theme.dart';
@@ -17,6 +18,7 @@ import 'package:valorave/services/alerts.dart';
 import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
 import 'package:valorave/widgets/app_router.dart';
+import 'package:valorave/features/home/app_widgets.dart';
 import 'package:valorave/widgets/app_tour.dart' show kTourDoneKey;
 import 'package:valorave/providers/providers.dart';
 
@@ -50,12 +52,7 @@ void main() {
   late SharedPreferences prefs;
 
   /// El scroll de la hoja de la galería.
-  final sheetScroll = find
-      .descendant(
-        of: find.byType(DraggableScrollableSheet),
-        matching: find.byType(Scrollable),
-      )
-      .first;
+  final sheetScroll = find.byType(Scrollable).first;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -88,7 +85,7 @@ void main() {
     poller = RatesPoller(store, notifs, alerts);
   });
 
-  Future<void> pumpHome(WidgetTester tester) async {
+  Future<GoRouter> pumpHome(WidgetTester tester) async {
     final router = buildRouter(store: store);
     await tester.pumpWidget(
       ProviderScope(
@@ -96,131 +93,100 @@ void main() {
           appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
           // TASK-35 (p2): la cabecera de Inicio y el sidebar observan el
           // tema (toggle claro/oscuro) — como appProviders en producción.
-          themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
+          themeControllerProvider.overrideWith(
+            (ref) => ThemeController(),
+            disposeNotifier: false,
+          ),
           sharedPreferencesProvider.overrideWithValue(prefs),
-          ratesPollerProvider.overrideWith((ref) => poller, disposeNotifier: false),
+          ratesPollerProvider.overrideWith(
+            (ref) => poller,
+            disposeNotifier: false,
+          ),
         ],
         // La app real arranca bajo ShadApp.custom + MaterialApp.router
         // (main.dart · TASK-34 p4): ShadTheme arriba, Material de verdad.
         child: MaterialApp.router(
-            theme: AppTheme.light(),
-            routerConfig: router,
-          ),
+          theme: AppTheme.light(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pump();
+    return router;
   }
 
   /// Despliega «Ver todo» (v23: lo cotidiano-ocasional vive tras el pliegue)
   /// y lleva la tarjeta «+» a la vista para abrir la galería. Bombeo
   /// acotado (NO pumpAndSettle): el LoadingState con tablero vacío nunca
   /// asienta y el ticker del Inicio anima siempre.
-  /// El scroll del Inicio: el Scrollable QUE ENVUELVE al pliegue «Todo lo
-  /// demás» (tras expandir aparecen scrollables nuevos dentro de las
-  /// secciones y un `.last` dejaría de apuntar a la lista).
-  Finder homeScroll() => find
-      .ancestor(of: find.text('TODO LO DEMÁS'), matching: find.byType(Scrollable))
-      .first;
-
-  Future<void> abrirGaleria(WidgetTester tester) async {
-    await tester.scrollUntilVisible(
-      find.text('Ver todo'),
-      200,
-      scrollable: homeScroll(),
-    );
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Ver todo'));
-    await tester.pump(const Duration(milliseconds: 400));
-    // La tarjeta «+» vive al fondo del contenido desplegado: el pliegue es
-    // UN hijo de la lista y construye TODAS sus secciones de una vez — el
-    // finder las halla aunque estén fuera del viewport y el
-    // scrollUntilVisible se da por satisfecho. Arrastre manual acotado
-    // hasta que la tarjeta entre en pantalla.
-    final tarjeta = find.text('App Widgets');
-    for (var i = 0; i < 10; i++) {
-      final box = tester.renderObject<RenderBox>(tarjeta);
-      if (box.localToGlobal(Offset.zero).dy < 520) break;
-      await tester.drag(homeScroll(), const Offset(0, -300));
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-    await tester.pump(const Duration(milliseconds: 200));
-    await tester.tap(tarjeta);
+  Future<void> abrirGaleria(WidgetTester tester, GoRouter router) async {
+    // v27: la galería vive en Ajustes → General → Widgets de Android.
+    router.go('/ajustes/general');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(DraggableScrollableSheet), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Añadir un widget'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.tap(find.text('Añadir un widget'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(AppWidgetsPage), findsOneWidget);
     expect(
       find.textContaining('viven en tu pantalla de inicio de Android'),
       findsOneWidget,
     );
   }
 
-  testWidgets('el Inicio resume en bloques y «Ver todo» no quita nada', (
+  testWidgets('Inicio: tasa, acciones, tu mes y actividad — sin acordeones', (
     tester,
   ) async {
+    // Viewport alto para que la lista pinte todos los bloques (es un test
+    // de contenido, no de scroll).
+    tester.view.physicalSize = const Size(390, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     await pumpHome(tester);
-    // A la vista: lo que el usuario viene a ver (B2 cotiza). v23.2: las
-    // divisas del foco y el resumen del mes también viven tras «Ver todo» —
-    // la Cotización compacta queda de primera pantalla.
-    expect(find.text('COTIZACIÓN PRINCIPAL'), findsOneWidget);
+    // v27: el Inicio es una pantalla de inicio de verdad: una cifra, cuatro
+    // acciones, el mes y la actividad. La cotización completa vive en Tasas.
+    expect(find.text('TU MES'), findsOneWidget);
+    expect(find.text('ACTIVIDAD RECIENTE'), findsOneWidget);
+    expect(find.text('Convertir'), findsWidgets);
+    expect(find.text('Cuentas'), findsOneWidget);
+    expect(find.text('TODO LO DEMÁS'), findsNothing);
+    expect(find.text('COTIZACIÓN PRINCIPAL'), findsNothing);
     expect(find.text('DIVISAS DEL FOCO'), findsNothing);
-    expect(find.text('RESUMEN DEL MES'), findsNothing);
-    // v23: despliegue progresivo — plegado por defecto, a un toque.
-    expect(find.text('TODO LO DEMÁS'), findsOneWidget);
-    expect(find.text('Ver todo'), findsOneWidget);
     expect(find.text('ALERTAS DE PRECIOS'), findsNothing);
-    expect(find.text('TUS TIENDAS'), findsNothing);
     expect(find.text('HERRAMIENTAS'), findsNothing);
-    // Desplegar expone las secciones de siempre, en su orden.
-    await tester.scrollUntilVisible(
-      find.text('Ver todo'),
-      200,
-      scrollable: homeScroll(),
-    );
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Ver todo'));
-    await tester.pump(const Duration(milliseconds: 400));
-    // v23.2: divisas y resumen también viven tras «Ver todo».
-    expect(find.text('DIVISAS DEL FOCO'), findsOneWidget);
-    expect(find.text('RESUMEN DEL MES'), findsOneWidget);
-    expect(find.text('ALERTAS DE PRECIOS'), findsOneWidget);
-    expect(find.text('TUS TIENDAS'), findsOneWidget);
-    expect(find.text('REGISTROS RECIENTES'), findsOneWidget);
-    expect(find.text('HERRAMIENTAS'), findsOneWidget);
-    // La única puerta de widgets: la tarjeta de App Widgets.
-    expect(find.text('App Widgets'), findsOneWidget);
-    expect(find.textContaining('Tasa BCV, Paralelo y Brecha'), findsOneWidget);
-    // Cerrar replega sin perder nada del árbol.
-    await tester.ensureVisible(find.text('Cerrar'));
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Cerrar'));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('ALERTAS DE PRECIOS'), findsNothing);
-    // Nada del sistema retirado: sin selectores de tamaño ni altas/bajas.
+    // Sin el sistema retirado de widgets configurables.
     expect(find.byType(SegmentedButton<dynamic>), findsNothing);
     expect(find.text('En Inicio'), findsNothing);
     expect(find.text('Inicio limpio'), findsNothing);
   });
 
-  testWidgets('Libro: la sección del sidebar también vive en móvil', (
+  testWidgets('Más: el hub reúne los módulos que antes costaba encontrar', (
     tester,
   ) async {
-    // Viewport móvil 390×844: sin sidebar, la única puerta a Historial/
-    // Tickets/Ajustes es el bloque «Libro» al pie del Inicio (v23).
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await pumpHome(tester);
-    expect(find.text('LIBRO'), findsOneWidget);
-    expect(find.text('Historial'), findsOneWidget);
-    expect(find.text('Tickets'), findsOneWidget);
-    expect(find.text('Ajustes'), findsWidgets);
-    // La puerta de Tickets navega a la galería (ruta fuera del shell).
-    await tester.ensureVisible(find.text('Tickets'));
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Tickets'));
+    final router = await pumpHome(tester);
+    router.go('/mas');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Galería'), findsOneWidget);
+    expect(find.text('Más'), findsWidgets);
+    expect(find.text('Productos'), findsOneWidget);
+    expect(find.text('Historial'), findsOneWidget);
+    expect(find.text('Tickets'), findsOneWidget);
+    expect(find.text('Ajustes'), findsOneWidget);
+    expect(find.text('Sala en vivo'), findsOneWidget);
+    // El buscador filtra de verdad: «cuentas» deja solo Cuentas y Pago Móvil.
+    await tester.enterText(find.byType(TextField), 'cuentas');
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('Cuentas y Pago Móvil'), findsOneWidget);
+    expect(find.text('Historial'), findsNothing);
   });
 
   testWidgets('la galería muestra los 3 widgets con preview fiel', (
@@ -232,11 +198,11 @@ void main() {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await pumpHome(tester);
-    await abrirGaleria(tester);
+    final router = await pumpHome(tester);
+    await abrirGaleria(tester, router);
     // La hoja se pinta SOBRE el Inicio: los asserts de cifras van
     // acotados a su interior (el Home de atrás también las muestra).
-    final sheet = find.byType(DraggableScrollableSheet);
+    final sheet = find.byType(AppWidgetsPage);
     Finder enHoja(String t) =>
         find.descendant(of: sheet, matching: find.text(t));
     // Las dos primeras entradas quedan a la vista al abrir la hoja.
@@ -290,8 +256,8 @@ void main() {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await pumpHome(tester);
-    await abrirGaleria(tester);
+    final router = await pumpHome(tester);
+    await abrirGaleria(tester, router);
     // El botón de la primera entrada (Tasa BCV).
     await tester.ensureVisible(find.text('Tasa BCV'));
     await tester.pump(const Duration(milliseconds: 200));
@@ -328,8 +294,8 @@ void main() {
       ),
     );
 
-    await pumpHome(tester);
-    await abrirGaleria(tester);
+    final router = await pumpHome(tester);
+    await abrirGaleria(tester, router);
     await tester.ensureVisible(find.text('Tasa BCV'));
     await tester.pump(const Duration(milliseconds: 200));
     await tester.tap(find.text('Añadir').first);

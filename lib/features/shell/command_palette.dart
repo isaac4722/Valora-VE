@@ -43,37 +43,40 @@ class _Hit {
 }
 
 /// Módulos navegables con hint (los del shell · paralelo al NAV del web).
-const List<(String, String, IconData, String)> kSearchModules =
-    <(String, String, IconData, String)>[
-      ('Inicio', 'Tasas del día y resumen', LucideIcons.home, '/'),
-      (
-        'Conversor',
-        'Conversor con fecha histórica',
-        LucideIcons.arrowLeftRight,
-        '/conversor',
-      ),
-      (
-        'Lista',
-        'Lista de compras y vuelto',
-        LucideIcons.shoppingCart,
-        '/lista',
-      ),
-      (
-        'Productos',
-        'Catálogo y metas de precio',
-        LucideIcons.package,
-        '/productos',
-      ),
-      (
-        'Análisis',
-        'Brecha, gastos y devaluación',
-        LucideIcons.chartColumn,
-        '/analisis',
-      ),
-      ('Historial', 'Compras como asientos', LucideIcons.history, '/historial'),
-      ('Tickets', 'Fotos de tus recibos', LucideIcons.receipt, '/tickets'),
-      ('Ajustes', 'País, cinta y apariencia', LucideIcons.settings, '/ajustes'),
-    ];
+const List<(String, String, IconData, String)>
+kSearchModules = <(String, String, IconData, String)>[
+  ('Inicio', 'Tasas del día y resumen', LucideIcons.home, '/'),
+  (
+    'Conversor',
+    'Conversor con fecha histórica',
+    LucideIcons.arrowLeftRight,
+    '/conversor',
+  ),
+  ('Lista', 'Lista de compras y vuelto', LucideIcons.shoppingCart, '/lista'),
+  (
+    'Productos',
+    'Catálogo y metas de precio',
+    LucideIcons.package,
+    '/productos',
+  ),
+  (
+    'Análisis',
+    'Brecha, gastos y devaluación',
+    LucideIcons.chartColumn,
+    '/analisis',
+  ),
+  ('Historial', 'Compras como asientos', LucideIcons.history, '/historial'),
+  ('Tickets', 'Fotos de tus recibos', LucideIcons.receipt, '/tickets'),
+  ('Tasas', 'Cotización completa y tus tasas', LucideIcons.repeat2, '/tasas'),
+  (
+    'Cuentas',
+    'Datos de cobro y Pago Móvil',
+    LucideIcons.landmark,
+    '/ajustes/cuentas',
+  ),
+  ('Ajustes', 'País, tasas y apariencia', LucideIcons.settings, '/ajustes'),
+  ('Más', 'Todos los módulos de la app', LucideIcons.layoutGrid, '/mas'),
+];
 
 /// Abre el command palette. Ruta empujada como diálogo sin barrera de color
 /// duro — Linear usa un scrim suave que deja leer la app detrás.
@@ -125,10 +128,20 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
     // se desmonta con el pop).
     showToast(context, 'Abriendo…');
     Navigator.of(context).pop();
-    if (location == '/historial' || location == '/ajustes') {
-      context.push(location);
-    } else {
+    const branches = {
+      '/',
+      '/conversor',
+      '/lista',
+      '/productos',
+      '/analisis',
+      '/historial',
+      '/ajustes',
+      '/mas',
+    };
+    if (branches.contains(location)) {
       context.go(location);
+    } else {
+      context.push(location);
     }
   }
 

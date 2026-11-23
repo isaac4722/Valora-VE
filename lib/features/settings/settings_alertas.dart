@@ -78,7 +78,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                     style: TextStyle(fontSize: 13),
                   ),
                   subtitle: Text(
-                    'Vigila BCV y paralelo; cooldown 30 min por fuente',
+                    'Avisa cuando BCV o paralelo se muevan fuerte. 30 min entre avisos.',
                     style: const TextStyle(fontSize: 11),
                   ),
                   value: store.settings.spikeAlerts,
@@ -106,7 +106,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                   ),
                   subtitle: Text(
                     store.settings.targetBcv == null
-                        ? 'Apagada — avisa una vez al cruzar, rearma al bajar'
+                        ? 'Apagada. Avisa una vez al cruzar el precio.'
                         : 'Meta: ${fmtRate(store.settings.targetBcv!)} Bs/USD',
                     style: const TextStyle(fontSize: 11),
                   ),
@@ -161,7 +161,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                   subtitle: Text(
                     alerts.reminderEnabled
                         ? 'Avisa a las ${alerts.reminderHour}:00 (con la app abierta o cerrada, ±1 h)'
-                        : 'Un aviso al día para registrar tus precios',
+                        : 'Un aviso al día para que registres tus precios.',
                     style: const TextStyle(fontSize: 11),
                   ),
                   value: alerts.reminderEnabled,
@@ -288,8 +288,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                   label: const Text('Probar aviso'),
                 ),
                 Text(
-                  'El permiso se gestiona aquí (única fuente, §9.8): '
-                  'POST_NOTIFICATIONS en API 33+.',
+                  'El permiso de notificaciones se gestiona aquí.',
                   style: TextStyle(
                     fontSize: 10.5,
                     color: scheme.onSurfaceVariant,

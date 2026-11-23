@@ -31,7 +31,7 @@ class _Respaldo extends StatelessWidget {
                       ExportSpec(
                         title: 'Respaldo de tus datos',
                         subtitle:
-                            'JSON completo — listas, productos y '
+                            'JSON completo: listas, productos y '
                             'preferencias',
                         formats: [
                           ExportFormat(
@@ -94,8 +94,7 @@ class _Respaldo extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Fusionar une por id y no toca tu carrito ni tus ajustes. '
-                  'Reemplazar conserva el tablero vivo y el resto entra del archivo.',
+                  'Fusionar suma por id y no toca tu carrito ni tus ajustes. Reemplazar conserva el tablero vivo.',
                   style: TextStyle(
                     fontSize: 11,
                     color: scheme.onSurfaceVariant,
@@ -118,17 +117,14 @@ class _Respaldo extends StatelessWidget {
                       foregroundColor: VeColors.of(context).neg,
                     ),
                     icon: const Icon(Icons.delete_forever, size: 16),
-                    label: const Text(
-                      'Borrar todos los datos (conserva tablero)',
-                    ),
+                    label: const Text('Borrar todos mis datos'),
                     onPressed: () {
                       showDialog<void>(
                         context: context,
                         builder: (ctx) => AlertDialog(
                           title: const Text('¿Borrar todo?'),
                           content: const Text(
-                            'Productos, compras, movimientos, lista y plantillas se '
-                            'eliminan. El tablero de tasas vivo se conserva.',
+                            'Se borran productos, compras, lista y plantillas. El tablero de tasas se conserva.',
                           ),
                           actions: [
                             TextButton(
@@ -295,7 +291,7 @@ class _TutorialLegal extends StatelessWidget {
                     style: TextStyle(fontSize: 13),
                   ),
                   subtitle: const Text(
-                    '13 pasos por toda la app, anclados a cada pantalla',
+                    'Un recorrido por toda la app, paso a paso.',
                     style: TextStyle(fontSize: 11),
                   ),
                   trailing: const Icon(Icons.play_arrow_rounded, size: 20),
@@ -336,7 +332,7 @@ class _TutorialLegal extends StatelessWidget {
                   style: TextStyle(fontSize: 13.5),
                 ),
                 subtitle: const Text(
-                  'Canal de desarrollo: APK de cada ronda en GitHub Releases',
+                  'APK de cada ronda en GitHub Releases.',
                   style: TextStyle(fontSize: 11.5),
                 ),
                 trailing: const Icon(Icons.chevron_right_rounded, size: 20),

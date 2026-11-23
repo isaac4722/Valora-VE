@@ -103,7 +103,6 @@ void main() {
       expect(AppTheme.light().extension<VeInk>()!.pos, VeColors.posLight);
       expect(AppTheme.dark().extension<VeInk>()!.pos, VeColors.posDark);
       expect(AppTheme.dark().extension<VeInk>()!.usdt, VeColors.usdtDark);
-      expect(AppTheme.dark().extension<VeInk>()!.eth, VeColors.ethDark);
     });
   });
 }

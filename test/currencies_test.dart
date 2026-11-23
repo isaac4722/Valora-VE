@@ -11,9 +11,9 @@ RateContext ctx({
 }) => RateContext(rates: rates ?? const {}, selected: selected ?? const {});
 
 void main() {
-  group('RateSource · 20 fuentes (v23.2 + cripto)', () {
+  group('RateSource · 18 fuentes (v23.2 + cripto)', () {
     test('catálogo exacto de fuentes', () {
-      expect(RateSource.all.length, 20);
+      expect(RateSource.all.length, 18);
       expect(RateSource.byId['ves-bcv']!.category, SourceCategory.official);
       expect(
         RateSource.byId['ves-parallel']!.category,
@@ -24,17 +24,13 @@ void main() {
       expect(RateSource.sourcesFor(Currency.ves).length, 4);
       expect(RateSource.sourcesFor(Currency.cop).length, 3);
       expect(RateSource.sourcesFor(Currency.eur).length, 4);
-      // v23.2: USDT (P2P + global + manual) y ETH (global + manual).
+      // v23.2: USDT (P2P + global + manual).
       expect(RateSource.sourcesFor(Currency.usdt).length, 3);
-      expect(RateSource.sourcesFor(Currency.eth).length, 2);
       expect(RateSource.byId['usdt-ves']!.category, SourceCategory.parallel);
       expect(RateSource.byId['usdt-ves']!.base, Currency.usdt);
       expect(RateSource.byId['usdt-ves']!.quote, Currency.ves);
       expect(RateSource.byId['usdt-usd']!.base, Currency.usdt);
       expect(RateSource.byId['usdt-usd']!.quote, Currency.usd);
-      expect(RateSource.byId['eth-usd']!.base, Currency.eth);
-      expect(RateSource.byId['eth-usd']!.quote, Currency.usd);
-      expect(RateSource.byId['eth-manual']!.category, SourceCategory.manual);
     });
 
     test('DEFAULT_RATE_SOURCE = v15 oficiales + cripto v23.2', () {
@@ -45,7 +41,6 @@ void main() {
       expect(RateSource.defaultSource[Currency.brl], 'brl-br');
       expect(RateSource.defaultSource[Currency.mxn], 'mxn-banxico');
       expect(RateSource.defaultSource[Currency.usdt], 'usdt-ves');
-      expect(RateSource.defaultSource[Currency.eth], 'eth-usd');
     });
 
     test('validSourceId rechaza ids muertos con fallback', () {
@@ -119,7 +114,7 @@ void main() {
     });
   });
 
-  group('Motor · cripto (v23.2 USDT + ETH)', () {
+  group('Motor · cripto (v23.2 USDT)', () {
     test('USDT↔Bs arista DIRECTA con la referencia P2P', () {
       final c = ctx(
         rates: {'usdt-ves': 1075.67},
@@ -129,8 +124,14 @@ void main() {
       expect(plan.direct, isTrue);
       expect(plan.path, [Currency.usdt, Currency.ves]);
       expect(plan.sourceIds, ['usdt-ves']);
-      expect(c.convert(100, Currency.usdt, Currency.ves), closeTo(107567, 0.01));
-      expect(c.convert(1075.67, Currency.ves, Currency.usdt), closeTo(1, 0.0001));
+      expect(
+        c.convert(100, Currency.usdt, Currency.ves),
+        closeTo(107567, 0.01),
+      );
+      expect(
+        c.convert(1075.67, Currency.ves, Currency.usdt),
+        closeTo(1, 0.0001),
+      );
     });
 
     test('USDT global ↔ USD: 1 USDT = 0.9986 USD', () {
@@ -139,7 +140,10 @@ void main() {
         selected: {Currency.usdt: 'usdt-usd'},
       );
       expect(c.unitsPerUSD(Currency.usdt), closeTo(1.0014, 0.0001));
-      expect(c.convert(100, Currency.usd, Currency.usdt), closeTo(100.1406, 0.001));
+      expect(
+        c.convert(100, Currency.usd, Currency.usdt),
+        closeTo(100.1406, 0.001),
+      );
       final plan = c.plan(Currency.usd, Currency.usdt)!;
       expect(plan.direct, isTrue);
     });
@@ -164,31 +168,12 @@ void main() {
       expect(c.unitsPerUSD(Currency.usdt), closeTo(0.85413, 0.0001));
     });
 
-    test('ETH→Bs por puente USD (CoinGecko × paralelo)', () {
-      // Payload real 21/11/2026: ETH 1611.41 USD · paralelo 1069.74 Bs.
-      final c = ctx(
-        rates: {'eth-usd': 1611.41, 'ves-parallel': 1069.74},
-        selected: {Currency.eth: 'eth-usd', Currency.ves: 'ves-parallel'},
-      );
-      final plan = c.plan(Currency.eth, Currency.ves)!;
-      expect(plan.path, [Currency.eth, Currency.usd, Currency.ves]);
-      expect(
-        c.convert(1, Currency.eth, Currency.ves),
-        closeTo(1611.41 * 1069.74, 0.5),
-      );
-      expect(c.convert(1611.41 * 1069.74, Currency.ves, Currency.eth), closeTo(1, 0.0001));
-    });
-
-    test('foco = 8 divisas y parser tolerante de códigos cripto', () {
-      expect(CurrencyX.focus.length, 8);
+    test('foco = 7 divisas y parser tolerante de códigos cripto', () {
+      expect(CurrencyX.focus.length, 7);
       expect(CurrencyX.from('usdt'), Currency.usdt);
-      expect(CurrencyX.from('ETH'), Currency.eth);
       expect(Currency.usdt.symbol, '₮');
-      expect(Currency.eth.symbol, 'Ξ');
       expect(Currency.usdt.label, 'Tether');
-      expect(Currency.eth.label, 'Ethereum');
       expect(quickAmounts[Currency.usdt]!.length, 6);
-      expect(quickAmounts[Currency.eth]!.length, 6);
     });
   });
 
@@ -375,17 +360,16 @@ void main() {
   });
 
   group('focusOrder y países', () {
-    test('focusOrder respeta preferencia y SIEMPRE devuelve 8 (v23.2)', () {
+    test('focusOrder respeta preferencia y SIEMPRE devuelve 7 (v23.2)', () {
       final order = CurrencyX.focusOrder(['EUR', 'VES', 'XX', 'ves']);
-      expect(order.length, 8);
+      expect(order.length, 7);
       expect(order.first, Currency.eur);
       expect(order[1], Currency.ves);
-      expect(order.map((c) => c).toSet().length, 8);
-      // Las cripto entran al final del orden canónico si el usuario no las
-      // movió: VES·USD·EUR·COP·BRL·MXN·USDT·ETH.
+      expect(order.map((c) => c).toSet().length, 7);
+      // La cripto entra al final del orden canónico si el usuario no la
+      // movió: VES·USD·EUR·COP·BRL·MXN·USDT.
       final canon = CurrencyX.focusOrder(null);
       expect(canon[6], Currency.usdt);
-      expect(canon[7], Currency.eth);
     });
 
     test('setCountry-estilo: fuente EUR por país', () {

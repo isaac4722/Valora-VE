@@ -37,8 +37,7 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tus datos de cobro para compartir el monto por Pago Móvil '
-                  'desde el Conversor. Se guardan SOLO en este teléfono.',
+                  'Guarda tus datos de cobro una vez y comparte el Pago Móvil desde el Conversor. Todo queda en este teléfono.',
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.4,
@@ -47,18 +46,10 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
                 ),
                 const SizedBox(height: 10),
                 if (!store.settings.accountsBiometric || _abierta) ...[
-                  for (final a in store.data.accounts)
-                    _AccountTile(account: a),
+                  for (final a in store.data.accounts) _AccountTile(account: a),
                   if (store.data.accounts.isEmpty)
-                    Text(
-                      'Sin cuentas todavía. Agrega una y el Conversor arma el '
-                      'mensaje de cobro por ti.',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  if (store.data.accounts.length < AppStore.kMaxAccounts)
+                    _EmptyAccounts(onAdd: () => _abrirAlta(context, store))
+                  else if (store.data.accounts.length < AppStore.kMaxAccounts)
                     Align(
                       alignment: Alignment.centerLeft,
                       child: VeBtn(
@@ -78,7 +69,7 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
                       style: TextStyle(fontSize: 13),
                     ),
                     subtitle: Text(
-                      'Opcional — el candado de la app ya protege todo',
+                      'Opcional. El candado de la app ya protege todo.',
                       style: TextStyle(
                         fontSize: 11,
                         color: scheme.onSurfaceVariant,
@@ -145,6 +136,7 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
   /// Validación SUAVE: avisos cuando algo luce raro, jamás bloqueo (la
   /// longitud real varía por banco — hallazgo goldfish).
   Future<void> _abrirAlta(BuildContext context, AppStore store) async {
+    final labelCtrl = TextEditingController();
     final numberCtrl = TextEditingController();
     final docCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
@@ -160,14 +152,23 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
       title: 'Nueva cuenta de cobro',
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(ctx).bottom,
-          ),
+          padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                VeField(
+                  label: 'Nombre (opcional)',
+                  hint: 'Cómo la reconoces: «Principal», «Zelle»…',
+                  child: VeInput(
+                    controller: labelCtrl,
+                    maxLength: 18,
+                    placeholder: 'Cuenta principal',
+                    semantic: 'Nombre de la cuenta',
+                  ),
+                ),
+                const SizedBox(height: 10),
                 VeField(
                   label: 'Banco',
                   child: VeSelect<String>(
@@ -268,9 +269,9 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
         phone: phone,
       );
       if (avisos.isNotEmpty && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ojo: ${avisos.join(' · ')}.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ojo: ${avisos.join(' · ')}.')));
       }
       store.addAccount(
         PayAccount(
@@ -280,6 +281,7 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
           number: number,
           docId: docId,
           phone: phone,
+          label: labelCtrl.text.trim(),
         ),
       );
     }
@@ -289,6 +291,7 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
     // disposed», cazado por el test del alta). Viven hasta que el texto
     // deje de pintarse.
     Future<void>.delayed(const Duration(milliseconds: 400), () {
+      labelCtrl.dispose();
       numberCtrl.dispose();
       docCtrl.dispose();
       phoneCtrl.dispose();
@@ -296,7 +299,59 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
   }
 }
 
-/// Fila de cuenta: banco + tipo, número (monoespaciada), CI y teléfono.
+/// Estado vacío de cuentas (v27): una tarjeta con la puerta de alta.
+class _EmptyAccounts extends ConsumerWidget {
+  const _EmptyAccounts({required this.onAdd});
+
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(LucideIcons.landmark, size: 24, color: scheme.onSurfaceVariant),
+          const SizedBox(height: 10),
+          Text(
+            'Aún no tienes cuentas',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Guarda tu banco, número, cédula y teléfono una vez. El Conversor '
+            'arma el mensaje de cobro por ti.',
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.4,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          VeBtn(
+            variant: VeBtnVariant.primary,
+            size: VeBtnSize.sm,
+            icon: LucideIcons.plus,
+            onPressed: onAdd,
+            child: const Text('Agregar cuenta'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Fila de cuenta (v27): insignia del banco, alias o banco, número y un
+/// menú con las tres acciones que importan: cuenta principal, copiar datos
+/// y borrar. Toda la fila respira; el blanco de la estrella es de 44 px.
 class _AccountTile extends ConsumerWidget {
   const _AccountTile({required this.account});
 
@@ -306,47 +361,111 @@ class _AccountTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
+    final ink = VeColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          BankBadge(bank: account.bank, size: 38),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${account.bank} · ${account.typeLabel}',
+                  account.displayLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'N.º ${account.number}'
-                  '${account.docId.isEmpty ? '' : ' · CI ${account.docId}'}'
-                  '${account.phone.isEmpty ? '' : ' · ${account.phone}'}',
+                  '${account.bank} · ${account.typeLabel}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11.5,
-                    fontFeatures: [FontFeature.tabularFigures()],
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
+                Text(
+                  'N.º ${account.number}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                if (account.docId.isNotEmpty || account.phone.isNotEmpty)
+                  Text(
+                    [
+                      if (account.docId.isNotEmpty) 'CI ${account.docId}',
+                      if (account.phone.isNotEmpty) 'Tel. ${account.phone}',
+                    ].join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
               ],
             ),
           ),
-          InkWell(
-            onTap: () => store.removeAccount(account.id),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.close,
-                size: 15,
-                color: scheme.onSurfaceVariant,
+          Semantics(
+            button: true,
+            label: account.isDefault
+                ? 'Cuenta principal'
+                : 'Marcar ${account.displayLabel} como cuenta principal',
+            child: IconButton(
+              tooltip: account.isDefault
+                  ? 'Cuenta principal'
+                  : 'Marcar como principal',
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                account.isDefault
+                    ? Icons.star_rounded
+                    : Icons.star_border_rounded,
+                size: 20,
+                color: account.isDefault ? ink.warn : scheme.onSurfaceVariant,
               ),
+              onPressed: account.isDefault
+                  ? null
+                  : () => store.setDefaultAccount(account.id),
             ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Más acciones',
+            iconSize: 18,
+            onSelected: (v) {
+              if (v == 'copy') {
+                final text = [
+                  account.displayLabel,
+                  '${account.bank} · ${account.typeLabel}',
+                  'N.º ${account.number}',
+                  if (account.docId.isNotEmpty) 'CI ${account.docId}',
+                  if (account.phone.isNotEmpty) 'Tel. ${account.phone}',
+                ].join('\n');
+                copiarAlPortapapeles(
+                  context,
+                  text,
+                  'Datos de la cuenta copiados',
+                );
+              } else if (v == 'delete') {
+                store.removeAccount(account.id);
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'copy', child: Text('Copiar datos')),
+              PopupMenuItem(value: 'delete', child: Text('Borrar cuenta')),
+            ],
           ),
         ],
       ),
@@ -368,20 +487,20 @@ List<String> pagoMovilSoftWarnings({
   final nCuenta = digitos(number);
   if (number.isNotEmpty && nCuenta != 20) {
     avisos.add(
-      'la cuenta tiene $nCuenta dígitos, no 20 — revisa que esté completa',
+      'la cuenta tiene $nCuenta dígitos, no 20. Revisa que esté completa',
     );
   }
   final nCi = digitos(docId);
   if (docId.isNotEmpty && (nCi < 5 || nCi > 9)) {
     avisos.add(
-      'la cédula tiene $nCi dígitos, no entre 5 y 9 — revisa la letra y '
+      'la cédula tiene $nCi dígitos, no entre 5 y 9. Revisa la letra y '
       'el número',
     );
   }
   final nTel = digitos(phone);
   if (phone.isNotEmpty && nTel != 11) {
     avisos.add(
-      'el teléfono tiene $nTel dígitos, no 11 — revisa que esté completo',
+      'el teléfono tiene $nTel dígitos, no 11. Revisa que esté completo',
     );
   }
   return avisos;
@@ -393,7 +512,7 @@ String pagoMovilMessage({
   required double montoBs,
   required PayAccount account,
 }) {
-  final buf = StringBuffer('Pago Móvil — Bs ${fmtNum(montoBs, decimals: 2)}\n');
+  final buf = StringBuffer('Pago Móvil · Bs ${fmtNum(montoBs, decimals: 2)}\n');
   buf.writeln('Banco: ${account.bank}');
   buf.writeln('Cuenta ${account.typeLabel.toLowerCase()}: ${account.number}');
   if (account.docId.isNotEmpty) buf.writeln('CI: ${account.docId}');

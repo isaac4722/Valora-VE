@@ -13,6 +13,7 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../widgets/ui.dart';
+import '../../widgets/bank_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -20,7 +21,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 /// Mensaje de cobro por Pago Móvil: monto es-VE + datos de la cuenta.
 /// Texto plano, sin marcas — lo pega cualquier chat.
 String pagoMovilMessage(double montoBs, PayAccount a) {
-  final buf = StringBuffer('Pago Móvil — Bs ${fmtNum(montoBs, decimals: 2)}');
+  final buf = StringBuffer('Pago Móvil · Bs ${fmtNum(montoBs, decimals: 2)}');
   buf.write('\nBanco: ${a.bank}');
   buf.write('\nCuenta ${a.typeLabel.toLowerCase()}: ${a.number}');
   if (a.docId.isNotEmpty) buf.write('\nCI: ${a.docId}');
@@ -61,6 +62,13 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
   int _sel = 0;
 
   @override
+  void initState() {
+    super.initState();
+    final i = widget.accounts.indexWhere((a) => a.isDefault);
+    _sel = i < 0 ? 0 : i;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final VeInk? ink = Theme.of(context).extension<VeInk>();
@@ -98,7 +106,7 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
               variant: VeBtnVariant.primary,
               onPressed: () {
                 Navigator.of(context).pop();
-                context.go('/ajustes');
+                context.go('/ajustes/cuentas');
               },
               child: const Text('Ir a Ajustes'),
             ),
@@ -143,7 +151,14 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
                     VeChip(
                       active: i == _sel,
                       onTap: () => setState(() => _sel = i),
-                      child: Text(a.bank),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          BankBadge(bank: a.bank, size: 16),
+                          const SizedBox(width: 5),
+                          Flexible(child: Text(a.displayLabel)),
+                        ],
+                      ),
                     ),
                 ],
               ),
@@ -202,9 +217,8 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
                   variant: VeBtnVariant.primary,
                   icon: LucideIcons.share2,
                   expands: true,
-                  onPressed: () => SharePlus.instance.share(
-                    ShareParams(text: msg),
-                  ),
+                  onPressed: () =>
+                      SharePlus.instance.share(ShareParams(text: msg)),
                   child: const Text('Compartir'),
                 ),
               ),

@@ -46,6 +46,7 @@ class RateTile extends ConsumerWidget {
     this.onEdit,
     this.freshness,
     this.showFlag = true,
+    this.precision,
   });
 
   final String sourceId;
@@ -61,6 +62,9 @@ class RateTile extends ConsumerWidget {
   /// Texto de frescura («hace 5 min») — opcional.
   final String? freshness;
   final bool showFlag;
+
+  /// Decimales de la tasa (v27 · precisión elegida por el usuario).
+  final int? precision;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -169,7 +173,9 @@ class RateTile extends ConsumerWidget {
                       has
                           ? (s.currency == Currency.eur
                                 ? fmtEurRate(rate)
-                                : fmtRate(rate))
+                                : (precision == null
+                                      ? fmtRate(rate)
+                                      : fmtRatePrecise(rate, precision!)))
                           : '—',
                       style: VeText.displayNum(
                         17,

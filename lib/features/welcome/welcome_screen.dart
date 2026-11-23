@@ -216,9 +216,8 @@ class _SlideMarca extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 34),
-              // Las ocho divisas del foco con banderas reales (assets/flags).
-              // v24.1: rejilla 4+4 equilibrada — el Wrap dejaba a ETH sola en
-              // una segunda fila (7+1), un elemento mal ubicado a la vista.
+              // Las siete divisas del foco con banderas reales (assets/flags).
+              // v27: rejilla 4+3 — sin ETH, la segunda fila queda equilibrada.
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

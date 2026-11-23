@@ -26,10 +26,13 @@ import '../features/history/history_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/insights/insights_screen.dart';
 import '../features/legal/legal_screen.dart';
+import '../features/more/more_screen.dart';
 import '../features/lista/lista_screen.dart';
 import '../features/products/products_screen.dart';
+import '../features/rates/rates_screen.dart';
 import '../features/room/room_screen.dart';
 import '../features/room/sala_viva.dart';
+import '../features/scanner/scanner_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/shell/main_shell.dart';
 import '../features/tickets/tickets_screen.dart';
@@ -44,8 +47,20 @@ final GlobalKey kHeroRateKey = GlobalKey(debugLabel: 'hero-rate');
 /// Rutas top-level válidas para deep link web (v24.1). Fuera de la lista
 /// (rutas inexistentes o assets) el router decide con su mecanismo propio.
 const Set<String> kDeepLinkRoutes = <String>{
-  '/', '/bienvenida', '/conversor', '/lista', '/productos', '/analisis',
-  '/historial', '/ajustes', '/legal', '/actualizaciones', '/tickets', '/sala',
+  '/',
+  '/bienvenida',
+  '/conversor',
+  '/lista',
+  '/productos',
+  '/analisis',
+  '/historial',
+  '/ajustes',
+  '/mas',
+  '/tasas',
+  '/legal',
+  '/actualizaciones',
+  '/tickets',
+  '/sala',
 };
 
 /// v24.1 — Normaliza la ruta de entrada del motor a una ruta de la app:
@@ -85,9 +100,7 @@ GoRouter buildRouter({required AppStore store}) {
     // El gate de onboarding lo resuelve el redirect de abajo (nativo
     // incluido: sin URL el default es '/' y el redirect manda a /bienvenida
     // si falta).
-    initialLocation: !store.settings.onboarded
-        ? '/bienvenida'
-        : entradaWeb,
+    initialLocation: !store.settings.onboarded ? '/bienvenida' : entradaWeb,
     overridePlatformDefaultLocation: entradaWeb != null,
     // El store (ChangeNotifier) re-evalúa el redirect en cada mutación sin
     // perder el estado de navegación: onboarding 0→1 con setCountry ya no
@@ -127,20 +140,27 @@ GoRouter buildRouter({required AppStore store}) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/productos',
-                builder: (_, _) => const ProductsScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
                 path: '/analisis',
                 builder: (_, _) => const InsightsScreen(),
               ),
             ],
           ),
-          // Rutas extra (sin tab, acceso por header/CTA).
+          // v27: la quinta pestaña es el hub «Más» — el resto de módulos
+          // vive a un toque y con buscador propio.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: '/mas', builder: (_, _) => const MoreScreen()),
+            ],
+          ),
+          // Rutas extra (sin tab): se abren desde Más, el Inicio o el tour.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/productos',
+                builder: (_, _) => const ProductsScreen(),
+              ),
+            ],
+          ),
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -159,6 +179,42 @@ GoRouter buildRouter({required AppStore store}) {
           ),
         ],
       ),
+      // v27 · Tasas: la cotización completa, fuera del Inicio.
+      GoRoute(
+        path: '/tasas',
+        pageBuilder: (context, s) => vePage(context, s, const RatesScreen()),
+      ),
+      // v27 · Ajustes en subpantallas (hub → grupo).
+      GoRoute(
+        path: '/ajustes/general',
+        pageBuilder: (context, s) =>
+            vePage(context, s, const SettingsGeneralPage()),
+      ),
+      GoRoute(
+        path: '/ajustes/tasas',
+        pageBuilder: (context, s) =>
+            vePage(context, s, const SettingsTasasPage()),
+      ),
+      GoRoute(
+        path: '/ajustes/cuentas',
+        pageBuilder: (context, s) =>
+            vePage(context, s, const SettingsCuentasPage()),
+      ),
+      GoRoute(
+        path: '/ajustes/apariencia',
+        pageBuilder: (context, s) =>
+            vePage(context, s, const SettingsAparienciaPage()),
+      ),
+      GoRoute(
+        path: '/ajustes/datos',
+        pageBuilder: (context, s) =>
+            vePage(context, s, const SettingsDatosPage()),
+      ),
+      // v27 · Escáner directo desde Más.
+      GoRoute(
+        path: '/escanear',
+        pageBuilder: (context, s) => vePage(context, s, const ScannerScreen()),
+      ),
       GoRoute(
         path: '/legal',
         pageBuilder: (context, s) => vePage(context, s, const LegalScreen()),
@@ -173,8 +229,7 @@ GoRouter buildRouter({required AppStore store}) {
       // Tickets (dp6): galería de fotos de recibos de las compras.
       GoRoute(
         path: '/tickets',
-        pageBuilder: (context, s) =>
-            vePage(context, s, const TicketsScreen()),
+        pageBuilder: (context, s) => vePage(context, s, const TicketsScreen()),
       ),
       // Sala en vivo: PANTALLA COMPLETA (v17.2, decisión del dueño — no
       // vuelve a ser un sheet deslizable). v18.0: esta ruta es la
@@ -187,8 +242,7 @@ GoRouter buildRouter({required AppStore store}) {
       // gobierno del anfitrión y regreso automático a la Lista.
       GoRoute(
         path: '/sala-viva',
-        pageBuilder: (context, s) =>
-            vePage(context, s, const SalaVivaScreen()),
+        pageBuilder: (context, s) => vePage(context, s, const SalaVivaScreen()),
       ),
     ],
   );

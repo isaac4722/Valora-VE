@@ -32,6 +32,16 @@ void main() {
       expect(fmtEurRate(43.4), '43,4000');
     });
 
+    test('v27 · precisión elegida: 2/3/4 decimales', () {
+      expect(fmtRatePrecise(919.8227, 2), '919,82');
+      expect(fmtRatePrecise(919.8227, 3), '919,823');
+      expect(fmtRatePrecise(919.8227, 4), '919,8227');
+      expect(fmtMoneyPrecise(1234.5, Currency.usd, 2), '1.234,50');
+      expect(fmtMoneyPrecise(1234.5, Currency.usd, 4), '1.234,5000');
+      // COP conserva 0 decimales por formato local.
+      expect(fmtMoneyPrecise(4200000, Currency.cop, 4), '4.200.000');
+    });
+
     test('fmtPct con signo', () {
       expect(fmtPct(2.14), '+2,1 %');
       expect(fmtPct(-3.2), '−3,2 %');
