@@ -338,7 +338,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Toca un producto para ver su ficha: precio por tienda, disponibilidad y meta de precio objetivo.',
+                  'Toca un producto para ver su precio por tienda, si está disponible y tu meta.',
                   style: TextStyle(
                     fontSize: 12,
                     color: scheme.onSurfaceVariant,

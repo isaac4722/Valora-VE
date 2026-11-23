@@ -192,9 +192,7 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
       context: context,
       builder: (dctx) => AlertDialog(
         title: const Text('Código no registrado'),
-        content: Text(
-          'Código $scanned no registrado: no coincide con ningún producto de tu libro ni con un ítem de la lista.',
-        ),
+        content: Text('El código $scanned no está en tu libro ni en la lista.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dctx, 'rescan'),

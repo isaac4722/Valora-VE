@@ -603,7 +603,7 @@ class _DatosConexion extends ConsumerWidget {
                       }
                     },
                     title: const Text(
-                      'No consultar API automáticamente',
+                      'No consultar tasas automáticamente',
                       style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w800,
@@ -682,7 +682,7 @@ class _DatosConexion extends ConsumerWidget {
                       ),
                     ),
                     title: const Text(
-                      'SSE en vivo (opcional)',
+                      'Actualización en vivo (opcional)',
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,

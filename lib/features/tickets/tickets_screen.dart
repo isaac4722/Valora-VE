@@ -103,7 +103,7 @@ class TicketsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'La foto se comprime a 1024 px al guardarla. Cada ticket queda atado a su compra del historial.',
+                'La foto se comprime al guardarla y queda atada a su compra del historial.',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12,
@@ -153,7 +153,7 @@ class TicketsScreen extends ConsumerWidget {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  'Todas tus compras ya tienen ticket. Cierra una compra nueva desde Lista para adjuntar otra foto.',
+                  'Todas tus compras ya tienen ticket. Cierra una compra nueva en Lista para adjuntar otra foto.',
                 ),
               )
             else ...[
