@@ -1,16 +1,16 @@
-/// ─── Controles «Ve» · Material 3 nativo (v24) ───────────────────────────────
-/// Botones, chips, badges, inputs y selectores del lenguaje del prototipo,
-/// construidos sobre Material 3 PURO (InkWell/Material/TextField/MenuAnchor):
-/// la misma piel exacta — medidas, tintas y estados hover/pressed — sin capa
-/// de terceros. Era shadcn (TASK-34), hoy Flutter puro por orden del dueño.
+/// ─── Controles «Ve» · Material 3 nativo (v25 «HOJA») ──────────────────────
+/// Botones, chips, badges, inputs y selectores del lenguaje «HOJA»:
+/// píldoras SIN borde, tinta sólida solo donde importa (primario, chip
+/// activo, tecla de keypad), inputs SUBRAYADOS y badges SOLO de texto.
+/// Construidos sobre Material 3 PURO (InkWell/Material/TextField/MenuAnchor).
 ///
-/// Medidas EXACTAS del prototipo (ui.tsx):
-///   Btn   sm 28 · md 36 · lg 44 px, radius 8, active:scale .98
-///   IconBtn 32×32 con borde line-strong
-///   Chip  h 28, pill 999, activo = tinta invertida fg→bg
-///   Badge h 20, caps 10.5px w600 tracking .06em, fondo tenue del tono
-///   Toggle 32×18 · Checkbox 18 radius 5 (pop al marcar)
-///   Stepper 28 con separadores · Input 36 con foco tinta
+/// Medidas v25 (regla del dueño):
+///   Btn   sm 36 · md 44 · lg 52 px, píldora 999, primary = tinta sólida
+///   IconBtn plano · hover tonal circular · pista ≥44
+///   Chip  h 28 · pill 999 · activo = tinta sólida · inactivo tonal muted
+///   Badge solo-texto caps 10.5px w600 + punto opcional (SIN fondo)
+///   Toggle 32×18 · Checkbox circular · Stepper sin caja
+///   Input 36 SUBRAYADO (reposo 1px · foco 2px tinta)
 library;
 
 import 'package:flutter/material.dart';
@@ -29,12 +29,12 @@ enum VeBtnVariant { primary, secondary, ghost, danger }
 enum VeBtnSize { sm, md, lg }
 
 /// Botón del sistema sobre [_VeRawButton] — Material 3 puro con la piel
-/// exacta del prototipo.
+/// «HOJA».
 ///
-/// - primary: tinta invertida (bg fg / texto bg).
-/// - secondary: superficie + borde fuerte, hover en `--hover`.
-/// - ghost: sin borde; texto muted → fg y fondo hover.
-/// - danger: superficie + texto neg + borde neg 40 %, hover en `--neg-bg`.
+/// - primary: píldora de TINTA sólida (fg) con texto bg.
+/// - secondary: tonal muted SIN borde, hover en `--hover`.
+/// - ghost: sin fill; texto fg, hover en `--hover`.
+/// - danger: tonal neg 10 % SIN borde con texto neg.
 class VeBtn extends StatelessWidget {
   const VeBtn({
     super.key,
@@ -81,9 +81,10 @@ class VeBtn extends StatelessWidget {
       double isz,
       double gap,
     ) = switch (size) {
-      VeBtnSize.sm => (28, 10, 12, 13, 6),
-      VeBtnSize.md => (36, 14, 13, 15, 8),
-      VeBtnSize.lg => (44, 16, 14, 16, 8),
+      // v25 «HOJA»: alturas sm 36 · md 44 · lg 52 (regla del dueño).
+      VeBtnSize.sm => (36, 12, 12, 13, 6),
+      VeBtnSize.md => (44, 16, 13.5, 15, 8),
+      VeBtnSize.lg => (52, 18, 14.5, 16, 8),
     };
 
     final (
@@ -91,39 +92,36 @@ class VeBtn extends StatelessWidget {
       Color hoverBg,
       Color pressedBg,
       Color fg,
-      Color? borderColor,
     ) = switch (variant) {
       VeBtnVariant.primary => (
         scheme.primary,
         _shift(scheme.primary, dark ? 0.10 : -0.08),
         _shift(scheme.primary, dark ? 0.16 : -0.14),
         scheme.background,
-        null,
       ),
+      // Tonal muted SIN borde: el tono es el contorno.
       VeBtnVariant.secondary => (
-        scheme.card,
+        scheme.muted,
         scheme.accent,
         scheme.accent,
         scheme.foreground,
-        dark ? VeColors.lineStrongDark : VeColors.lineStrongLight,
       ),
       VeBtnVariant.ghost => (
         Colors.transparent,
         scheme.accent,
         scheme.accent,
         scheme.foreground,
-        null,
       ),
+      // Danger tonal neg 10 % (token negBg) SIN borde, texto neg.
       VeBtnVariant.danger => (
-        scheme.card,
         ink.negBg,
-        ink.negBg,
+        _shift(ink.negBg, dark ? 0.06 : -0.04),
+        _shift(ink.negBg, dark ? 0.10 : -0.08),
         ink.neg,
-        ink.neg.withValues(alpha: 0.4),
       ),
     };
 
-    Widget button = _VeRawButton(
+    final Widget button = _VeRawButton(
       onPressed: enabled ? onPressed : null,
       height: h,
       width: expands ? double.infinity : null,
@@ -139,77 +137,19 @@ class VeBtn extends StatelessWidget {
       textStyle: TextStyle(
         fontFamily: 'Inter',
         fontSize: fs,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w600,
         color: fg,
       ),
-      radius: kVeControlRadius,
+      radius: 999,
       leading: icon == null ? null : Icon(icon, size: iconSize ?? isz),
       child: child,
     );
-
-    if (borderColor != null) {
-      button = _VeBorder(
-        radius: kVeControlRadius,
-        color: borderColor,
-        child: button,
-      );
-    }
 
     return Semantics(
       button: true,
       enabled: enabled,
       label: semantic,
       child: _TapScaleVe(onTap: enabled ? onPressed : null, child: button),
-    );
-  }
-}
-
-/// Envoltorio de borde FLUTTER puro para controles shadcn: pinta el borde
-/// DENTRO del tamaño del hijo (cero píxeles reservados — el control mide
-/// exactamente lo que dice medir) y añade un halo de foco vía boxShadow
-/// (tampoco afecta el layout) cuando el foco entra por teclado.
-class _VeBorder extends StatefulWidget {
-  const _VeBorder({
-    required this.radius,
-    required this.color,
-    required this.child,
-    this.ringColor,
-  });
-
-  final double radius;
-  final Color color;
-  final Widget child;
-
-  /// Color del halo de foco (por defecto: tinta al 25 %).
-  final Color? ringColor;
-
-  @override
-  State<_VeBorder> createState() => _VeBorderState();
-}
-
-class _VeBorderState extends State<_VeBorder> {
-  bool _focused = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = context.ve.colorScheme;
-    final ring = widget.ringColor ?? scheme.primary.withValues(alpha: 0.25);
-    return Focus(
-      canRequestFocus: false,
-      skipTraversal: true,
-      onFocusChange: (v) => setState(() => _focused = v),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(widget.radius),
-          border: Border.all(color: widget.color),
-          boxShadow: _focused
-              ? [BoxShadow(color: ring, blurRadius: 4, spreadRadius: 1)]
-              : null,
-        ),
-        child: widget.child,
-      ),
     );
   }
 }
@@ -279,9 +219,7 @@ class _VeRawButtonState extends State<_VeRawButton> {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: widget.onPressed,
-          onHighlightChanged: enabled
-              ? (v) => setState(() => _down = v)
-              : null,
+          onHighlightChanged: enabled ? (v) => setState(() => _down = v) : null,
           borderRadius: r,
           child: Opacity(
             opacity: enabled ? 1 : 0.6,
@@ -302,31 +240,26 @@ class _VeRawButtonState extends State<_VeRawButton> {
                       // color propio — sin esto, el icono caía al negro del
                       // IconTheme de la app y desaparecía sobre el primario.
                       IconTheme.merge(
-                        data: IconThemeData(
-                          color: widget.foregroundColor,
-                        ),
+                        data: IconThemeData(color: widget.foregroundColor),
                         child: widget.leading!,
                       ),
                       SizedBox(width: widget.gap),
                     ],
-                    // Fill mode: Flexible(loose) da al hijo un máximo ACOTADO
-                    // (lo que resta del ancho) — hijos con Expanded interno
-                    // (trigger del VeSelect) son legales y los chicos (iconos,
-                    // textos) miden lo suyo sin forced stretch.
-                    widget.width == null
-                        ? DefaultTextStyle(
-                            style: widget.textStyle ??
-                                TextStyle(color: widget.foregroundColor),
-                            child: widget.child,
-                          )
-                        : Flexible(
-                            fit: FlexFit.loose,
-                            child: DefaultTextStyle(
-                              style: widget.textStyle ??
-                                  TextStyle(color: widget.foregroundColor),
-                              child: widget.child,
-                            ),
-                          ),
+                    // v25 · fix overflow 320: el hijo va SIEMPRE en
+                    // Flexible(loose) — da al contenido un máximo ACOTADO
+                    // (lo que resta del ancho). Hijos con Expanded interno
+                    // (trigger del VeSelect) son legales; textos e iconos
+                    // miden lo suyo sin forced stretch y JAMÁS desbordan la
+                    // píldora (un Text apretado envuelve, no rebosa).
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: DefaultTextStyle(
+                        style:
+                            widget.textStyle ??
+                            TextStyle(color: widget.foregroundColor),
+                        child: widget.child,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -378,8 +311,9 @@ class _TapScaleVeState extends State<_TapScaleVe> {
 Color _shift(Color c, double t) =>
     t >= 0 ? Color.lerp(c, Colors.white, t)! : Color.lerp(c, Colors.black, -t)!;
 
-/// Botón cuadrado de 32×32 con icono (IconBtn del prototipo), borde fuerte,
-/// tooltip nativo shadcn y punto rojo opcional de notificación.
+/// Botón de icono PLANO v25 «HOJA»: sin borde, hover tonal circular y
+/// punto rojo opcional de notificación. Pista ≥44 garantizada por el
+/// envoltorio de golpe.
 class VeIconBtn extends StatelessWidget {
   const VeIconBtn({
     super.key,
@@ -408,7 +342,6 @@ class VeIconBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = context.ve.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
-    final bool dark = context.ve.brightness == Brightness.dark;
 
     Widget core = Semantics(
       button: true,
@@ -418,43 +351,34 @@ class VeIconBtn extends StatelessWidget {
         child: Tooltip(
           message: label,
           waitDuration: const Duration(milliseconds: 450),
-          child: _VeBorder(
-            radius: kVeControlRadius,
-            color: danger
-                ? ink.neg.withValues(alpha: 0.4)
-                : dark
-                ? VeColors.lineStrongDark
-                : VeColors.lineStrongLight,
-            child: _VeRawButton(
-              onPressed: onTap,
-              width: size,
-              height: size,
-              padding: EdgeInsets.zero,
-              backgroundColor: scheme.card,
-              hoverBackgroundColor: scheme.accent,
-              pressedBackgroundColor: scheme.accent,
-              foregroundColor: danger ? ink.neg : scheme.foreground,
-              radius: kVeControlRadius,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(icon, size: iconSize),
-                  if (dot)
-                    Positioned(
-                      right: -3,
-                      top: -3,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: ink.neg,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: scheme.card, width: 2),
-                        ),
+          child: _VeRawButton(
+            onPressed: onTap,
+            width: size,
+            height: size,
+            padding: EdgeInsets.zero,
+            backgroundColor: Colors.transparent,
+            hoverBackgroundColor: scheme.accent,
+            pressedBackgroundColor: scheme.accent,
+            foregroundColor: danger ? ink.neg : scheme.foreground,
+            radius: 999,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(icon, size: iconSize),
+                if (dot)
+                  Positioned(
+                    right: -3,
+                    top: -3,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: ink.neg,
+                        shape: BoxShape.circle,
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -468,21 +392,31 @@ class VeIconBtn extends StatelessWidget {
     // onTap corre UNA vez).
     final double hit = size < 44 ? 44 : size;
     if (onTap == null) {
-      return SizedBox(width: hit, height: hit, child: Center(child: core));
+      return SizedBox(
+        width: hit,
+        height: hit,
+        child: Center(child: core),
+      );
     }
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: SizedBox(width: hit, height: hit, child: Center(child: core)),
+      child: SizedBox(
+        width: hit,
+        height: hit,
+        child: Center(child: core),
+      ),
     );
   }
 }
 
 // ────────────────────────────────────────────────────────────── Chips ──────
 
-/// Chip pill del prototipo (h 28 · radius 999): filtros de categoría, montos
-/// rápidos del conversor, acciones de encabezado. Activo = tinta invertida.
-/// `dashed` reproduce la variante «añadir» con borde discontinuo.
+/// Chip pill v25 «HOJA» (h 28 visual · radius 999): filtros de categoría,
+/// montos rápidos del conversor, acciones de encabezado. ACTIVO = píldora
+/// de tinta sólida; inactivo = tonal muted SIN borde. Sin borde discontinuo
+/// (`dashed` se aplana al mismo tonal). Pista de toque ≥44: el wrapper
+/// centra la píldora de 28 en una caja de golpe de 44 de alto.
 class VeChip extends StatelessWidget {
   const VeChip({
     super.key,
@@ -517,65 +451,69 @@ class VeChip extends StatelessWidget {
     final scheme = context.ve.colorScheme;
     final bool dark = context.ve.brightness == Brightness.dark;
 
+    final Color fg = active ? scheme.background : scheme.foreground;
     final Widget content = icon == null
-        ? _chipText(context, active ? scheme.background : scheme.foreground)
+        ? _chipText(context, fg)
         : Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 13, color: active ? scheme.background : scheme.foreground),
+              Icon(icon, size: 13, color: fg),
               const SizedBox(width: 5),
-              Flexible(child: _chipText(context, active ? scheme.background : scheme.foreground)),
+              Flexible(child: _chipText(context, fg)),
             ],
           );
 
-    Widget button = _VeRawButton(
+    final Widget button = _VeRawButton(
       onPressed: onTap,
       height: 28,
       width: expands ? double.infinity : null,
       mainAxisAlignment: expands
           ? MainAxisAlignment.center
           : MainAxisAlignment.start,
-      padding: dashed
-          ? EdgeInsets.zero
-          : EdgeInsets.symmetric(horizontal: dense ? 6 : 12),
-      backgroundColor: active ? scheme.primary : scheme.card,
+      padding: EdgeInsets.symmetric(horizontal: dense ? 6 : 12),
+      // v25 «HOJA»: activo = tinta sólida · inactivo = tonal muted (sin
+      // borde, sin discontinuo).
+      backgroundColor: active ? scheme.primary : scheme.muted,
       hoverBackgroundColor: active
           ? _shift(scheme.primary, dark ? 0.10 : -0.08)
           : scheme.accent,
       pressedBackgroundColor: active
           ? _shift(scheme.primary, dark ? 0.16 : -0.14)
           : scheme.accent,
-      foregroundColor: active ? scheme.background : scheme.foreground,
+      foregroundColor: fg,
+      radius: 999,
       textStyle: TextStyle(
         fontFamily: 'Inter',
         fontSize: 12,
         fontWeight: FontWeight.w500,
-        color: active ? scheme.background : scheme.foreground,
+        color: fg,
       ),
       child: content,
     );
 
-    if (dashed) {
-      button = _DashedBorder(
-        radius: 14,
-        color: dark ? VeColors.lineStrongDark : VeColors.lineStrongLight,
-        child: button,
-      );
-    } else {
-      button = _VeBorder(
-        radius: 999,
-        color: active
-            ? scheme.primary
-            : dark
-            ? VeColors.lineStrongDark
-            : VeColors.lineStrongLight,
-        child: button,
-      );
-    }
-
+    // Pista de toque ≥44 (v23.3, patrón VeIconBtn): caja de golpe centrada
+    // — el visual sigue siendo la píldora de 28.
+    // v25.2 (fix Wrap): SIN `expands`, el Center debe ENCOGERSE al ancho de
+    // la píldora (`widthFactor: 1`) — con widthFactor null, Center se
+    // expandía al ancho entrante del Wrap (358) y CADA chip ocupaba su
+    // propia fila centrada (la fila de fechas se apilaba verticalmente).
+    final double hit = 44;
     return Semantics(
       button: onTap != null,
-      child: _TapScaleVe(onTap: onTap, child: button),
+      child: SizedBox(
+        width: expands ? double.infinity : null,
+        height: hit,
+        child: Center(
+          widthFactor: expands ? null : 1,
+          child: onTap == null
+              ? button
+              : GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onTap,
+                  child: _TapScaleVe(onTap: onTap, child: button),
+                ),
+        ),
+      ),
     );
   }
 
@@ -590,72 +528,13 @@ class VeChip extends StatelessWidget {
   );
 }
 
-/// Borde discontinuo redondeado (variante «dashed» del Chip).
-class _DashedBorder extends StatelessWidget {
-  const _DashedBorder({
-    required this.radius,
-    required this.color,
-    required this.child,
-  });
-
-  final double radius;
-  final Color color;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      foregroundPainter: _DashedRRectPainter(radius: radius, color: color),
-      child: child,
-    );
-  }
-}
-
-class _DashedRRectPainter extends CustomPainter {
-  _DashedRRectPainter({required this.radius, required this.color});
-
-  final double radius;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = color;
-    for (final p in _dashPath(rrect, 4, 3)) {
-      canvas.drawPath(p, paint);
-    }
-  }
-
-  List<Path> _dashPath(RRect rrect, double dash, double gap) {
-    final path = Path()..addRRect(rrect);
-    final metrics = path.computeMetrics();
-    final out = <Path>[];
-    for (final m in metrics) {
-      double start = 0;
-      while (start < m.length) {
-        out.add(m.extractPath(start, (start + dash).clamp(0, m.length)));
-        start += dash + gap;
-      }
-    }
-    return out;
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedRRectPainter old) =>
-      old.color != color || old.radius != radius;
-}
-
 // ────────────────────────────────────────────────────────────── Badge ──────
 
 /// Tono semántico de [VeBadge] (fondo tenue + texto del tono).
 enum VeTone { neutral, pos, neg, warn, info }
 
-/// Badge caps del prototipo: 10.5 px w600 mayúsculas, fondo tenue del tono
-/// (`--pos-bg` & co.) y punto pulsante opcional. Flutter puro (v24).
+/// Badge v25 «HOJA»: SOLO texto de color — caps 10.5 px w600 mayúsculas
+/// del tono y punto pulsante opcional. SIN fondo, SIN borde (regla de 3).
 class VeBadge extends StatelessWidget {
   const VeBadge({
     super.key,
@@ -673,20 +552,16 @@ class VeBadge extends StatelessWidget {
     final scheme = context.ve.colorScheme;
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
 
-    final (Color bg, Color fg) = switch (tone) {
-      VeTone.neutral => (scheme.muted, scheme.mutedForeground),
-      VeTone.pos => (ink.posBg, ink.pos),
-      VeTone.neg => (ink.negBg, ink.neg),
-      VeTone.warn => (ink.warnBg, ink.warn),
-      VeTone.info => (ink.infoBg, ink.manual),
+    final Color fg = switch (tone) {
+      VeTone.neutral => scheme.mutedForeground,
+      VeTone.pos => ink.pos,
+      VeTone.neg => ink.neg,
+      VeTone.warn => ink.warn,
+      VeTone.info => ink.manual,
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(6),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
       child: DefaultTextStyle(
         style: TextStyle(
           fontFamily: 'Inter',
@@ -699,7 +574,7 @@ class VeBadge extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (dot) ...[
-              VePulseDot(color: fg, size: 5),
+              VePulseDot(color: fg, size: 4),
               const SizedBox(width: 6),
             ],
             child,
@@ -792,9 +667,7 @@ class VeToggle extends StatelessWidget {
           child: AnimatedAlign(
             duration: const Duration(milliseconds: 180),
             curve: Curves.easeOut,
-            alignment: value
-                ? Alignment.centerRight
-                : Alignment.centerLeft,
+            alignment: value ? Alignment.centerRight : Alignment.centerLeft,
             child: Padding(
               padding: const EdgeInsets.all(2),
               child: Container(
@@ -816,8 +689,9 @@ class VeToggle extends StatelessWidget {
 
 // ──────────────────────────────────────────────────────────── Checkbox ─────
 
-/// Checkbox 18 px radius 5, Flutter puro (v24), con la animación pop del
-/// prototipo al marcar y el check en tinta invertida.
+/// Checkbox 18 px v25 «HOJA»: CIRCULAR (controles 999) y SIN borde —
+/// tonal muted al reposo, tinta sólida al marcar, con la animación pop del
+/// check en tinta invertida.
 class VeCheckbox extends StatelessWidget {
   const VeCheckbox({
     super.key,
@@ -838,29 +712,26 @@ class VeCheckbox extends StatelessWidget {
         ? VeColors.lineStrongDark
         : VeColors.lineStrongLight;
 
-    return _VeBorder(
-      radius: 5,
-      color: value ? scheme.primary : lineStrong,
-      ringColor: scheme.primary.withValues(alpha: 0.45),
-      child: Semantics(
-        checked: value,
-        enabled: onChanged != null,
-        child: Material(
-          color: value ? scheme.primary : scheme.card,
-          child: InkWell(
-            onTap: onChanged,
-            child: SizedBox(
-              width: 18,
-              height: 18,
-              child: Center(
-                // Desmarcado: card sobre card — el check no se ve; marcado:
-                // fondo (tinta invertida sobre primary). El pop vive en
-                // _PopCheck (solo en la transición a marcado).
-                child: _PopCheck(
-                  color: value ? scheme.background : scheme.card,
-                  size: 12,
-                  checked: value,
-                ),
+    return Semantics(
+      checked: value,
+      enabled: onChanged != null,
+      child: Material(
+        color: value ? scheme.primary : lineStrong,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onChanged,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: Center(
+              // Marcado: check en tinta invertida sobre la píldora de tinta.
+              // El pop vive en _PopCheck (solo en la transición a marcado).
+              child: _PopCheck(
+                color: value ? scheme.background : Colors.transparent,
+                size: 12,
+                checked: value,
               ),
             ),
           ),
@@ -932,9 +803,9 @@ class VeSegment<T> {
   final String label;
 }
 
-/// Control segmentado del prototipo (subtle + borde) con MEJORA sobre el
-/// original: la pastilla activa se DESLIZA entre segmentos (AnimatedAlign)
-/// en vez de aparecer — feedback de movimiento superior.
+/// Control segmentado v25 «HOJA»: contenedor transparente y la pastilla
+/// activa — píldora de TINTA sólida — se DESLIZA entre segmentos
+/// (AnimatedAlign). Cero borde, cero sombra.
 class VeSegmented<T> extends StatelessWidget {
   const VeSegmented({
     super.key,
@@ -949,19 +820,12 @@ class VeSegmented<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = context.ve;
-    final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
+    final scheme = context.ve.colorScheme;
     final int active = segments.indexWhere((s) => s.value == value);
 
     return Container(
       height: 32,
       padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: scheme.muted,
-        borderRadius: BorderRadius.circular(kVeControlRadius),
-        border: Border.all(color: scheme.border),
-      ),
       child: LayoutBuilder(
         builder: (context, c) {
           final double w = c.maxWidth / segments.length;
@@ -979,18 +843,9 @@ class VeSegmented<T> extends StatelessWidget {
                     width: w,
                     height: double.infinity,
                     decoration: BoxDecoration(
-                      color: scheme.card,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: scheme.border),
-                      boxShadow: [
-                        BoxShadow(
-                          color: dark
-                              ? Colors.black.withValues(alpha: 0.35)
-                              : const Color(0x1409090B),
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
+                      // v25 «HOJA»: segmento activo = píldora de tinta.
+                      color: scheme.primary,
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                 ),
@@ -1014,7 +869,7 @@ class VeSegmented<T> extends StatelessWidget {
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: i == active
-                                  ? scheme.foreground
+                                  ? scheme.background
                                   : scheme.mutedForeground,
                             ),
                             child: Text(segments[i].label),
@@ -1034,8 +889,8 @@ class VeSegmented<T> extends StatelessWidget {
 
 // ──────────────────────────────────────────────────────────── Stepper ──────
 
-/// Stepper compacto del prototipo: − valor + con separadores verticales
-/// (h 28), usado en la lista y en «dividir cuenta».
+/// Stepper compacto v25 «HOJA»: − valor + SIN caja y SIN separadores
+/// dibujados — solo iconos y cifra tabular sobre el papel (h 36).
 class VeStepper extends StatelessWidget {
   const VeStepper({
     super.key,
@@ -1054,12 +909,7 @@ class VeStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = context.ve;
-    final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
-    final Color lineStrong = dark
-        ? VeColors.lineStrongDark
-        : VeColors.lineStrongLight;
+    final scheme = context.ve.colorScheme;
 
     Widget side(IconData i, VoidCallback? onTap) => GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -1082,14 +932,10 @@ class VeStepper extends StatelessWidget {
 
     return Semantics(
       label: semantic,
-      child: Container(
+      child: SizedBox(
         height: 36,
-        decoration: BoxDecoration(
-          color: scheme.card,
-          borderRadius: BorderRadius.circular(kVeControlRadius),
-          border: Border.all(color: lineStrong),
-        ),
-        clipBehavior: Clip.antiAlias,
+        // v25 «HOJA»: stepper SIN caja (ni clip — no hay superficie que
+        // recortar).
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1097,23 +943,18 @@ class VeStepper extends StatelessWidget {
               LucideIcons.minus,
               value <= min ? null : () => onChanged(value - 1),
             ),
-            Container(
+            SizedBox(
               width: 36,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(color: scheme.border),
-                  right: BorderSide(color: scheme.border),
-                ),
-              ),
-              child: Text(
-                '$value',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  color: scheme.foreground,
+              child: Center(
+                child: Text(
+                  '$value',
+                  style: TextStyle(
+                    fontFamily: 'SpaceGrotesk',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    color: scheme.foreground,
+                  ),
                 ),
               ),
             ),
@@ -1130,8 +971,8 @@ class VeStepper extends StatelessWidget {
 
 // ────────────────────────────────────────────────────────────── Input ──────
 
-/// Campo de texto 36 px del prototipo sobre `TextField` de Material 3
-/// (v24): borde fuerte, placeholder `--faint` y foco con borde tinta.
+/// Campo de texto 36 px v25 «HOJA» sobre `TextField` de Material 3:
+/// SUBRAYADO — sin fill ni caja; reposo línea 1 px, foco línea 2 px tinta.
 class VeInput extends StatelessWidget {
   const VeInput({
     super.key,
@@ -1173,52 +1014,57 @@ class VeInput extends StatelessWidget {
     return Semantics(
       label: semantic,
       textField: true,
-      child: _VeBorder(
-        radius: kVeControlRadius,
-        color: dark ? VeColors.lineStrongDark : VeColors.lineStrongLight,
-        child: Material(
-          color: scheme.card,
-          borderRadius: BorderRadius.circular(kVeControlRadius),
-          clipBehavior: Clip.antiAlias,
-          child: SizedBox(
-            height: 36,
-            child: Center(
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                enabled: enabled,
-                autofocus: autofocus,
-                keyboardType: keyboardType,
-                inputFormatters: inputFormatters,
-                maxLength: maxLength,
-                textAlign: textAlign,
-                onChanged: onChanged,
-                onSubmitted: onSubmitted,
-                cursorColor: scheme.primary,
-                style:
-                    style ??
-                    TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13.5,
-                      color: scheme.foreground,
-                    ),
-                decoration: InputDecoration(
-                  hintText: placeholder,
-                  hintStyle: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 13.5,
-                    color: faint,
-                  ),
-                  border: InputBorder.none,
-                  isCollapsed: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 9,
-                  ),
-                  // maxLength NO muestra contador (contrato de la era shadcn).
-                  counterText: '',
+      child: SizedBox(
+        height: 36,
+        child: Center(
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            enabled: enabled,
+            autofocus: autofocus,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            maxLength: maxLength,
+            textAlign: textAlign,
+            onChanged: onChanged,
+            onSubmitted: onSubmitted,
+            cursorColor: scheme.primary,
+            style:
+                style ??
+                TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13.5,
+                  color: scheme.foreground,
+                ),
+            decoration: InputDecoration(
+              hintText: placeholder,
+              hintStyle: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13.5,
+                color: faint,
+              ),
+              // v25 «HOJA»: input subrayado — línea 1 px en reposo, 2 px de
+              // tinta al foco. Sin fill.
+              border: UnderlineInputBorder(
+                borderSide: BorderSide(
+                  color: dark
+                      ? VeColors.lineStrongDark
+                      : VeColors.lineStrongLight,
                 ),
               ),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: scheme.border),
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: scheme.primary, width: 2),
+              ),
+              isCollapsed: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 2,
+                vertical: 9,
+              ),
+              // maxLength NO muestra contador (contrato de la era shadcn).
+              counterText: '',
             ),
           ),
         ),
@@ -1283,9 +1129,9 @@ class VeSelectOption<T> {
   final String label;
 }
 
-/// Select sobre `MenuAnchor` de Material 3 (v24) con la piel del prototipo
-/// (36 px · borde fuerte). Menú nativo de Flutter — controlado por `value`,
-/// sin trucos de remount.
+/// Select sobre `MenuAnchor` de Material 3 v25 «HOJA» (36 px · trigger
+/// subrayado). Menú popover radio 20, sin borde, sin sombra — controlado
+/// por `value`, sin trucos de remount.
 class VeSelect<T> extends StatelessWidget {
   const VeSelect({
     super.key,
@@ -1333,38 +1179,40 @@ class VeSelect<T> extends StatelessWidget {
 
     return Semantics(
       label: semantic,
-      child: _VeBorder(
-        radius: kVeControlRadius,
-        color: dark ? VeColors.lineStrongDark : VeColors.lineStrongLight,
-        child: MenuAnchor(
-          alignmentOffset: const Offset(0, 4),
-          style: MenuStyle(
-            backgroundColor: WidgetStatePropertyAll(scheme.popover),
-            shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kVeRadius),
-                side: BorderSide(color: scheme.border),
-              ),
-            ),
-            padding: const WidgetStatePropertyAll(
-              EdgeInsets.symmetric(vertical: 4),
-            ),
+      child: MenuAnchor(
+        alignmentOffset: const Offset(0, 4),
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(scheme.popover),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+          elevation: const WidgetStatePropertyAll(0),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           ),
-          menuChildren: [
-            for (final o in options)
-              MenuItemButton(
-                onPressed: () => onChanged?.call(o.value),
-                child: Text(
-                  o.label,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 13,
-                    color: scheme.foreground,
-                  ),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(vertical: 4),
+          ),
+        ),
+        menuChildren: [
+          for (final o in options)
+            MenuItemButton(
+              onPressed: () => onChanged?.call(o.value),
+              child: Text(
+                o.label,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  color: scheme.foreground,
                 ),
               ),
-          ],
-          builder: (context, controller, child) => _VeRawButton(
+            ),
+        ],
+        builder: (context, controller, child) => Container(
+          // v25 «HOJA»: trigger subrayado (línea 1 px bajo el control).
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: scheme.border, width: 1)),
+          ),
+          child: _VeRawButton(
             onPressed: () {
               if (controller.isOpen) {
                 controller.close();
@@ -1374,12 +1222,12 @@ class VeSelect<T> extends StatelessWidget {
             },
             height: 36,
             width: double.infinity,
-            backgroundColor: scheme.card,
+            backgroundColor: Colors.transparent,
             hoverBackgroundColor: scheme.accent,
             pressedBackgroundColor: scheme.accent,
             foregroundColor: scheme.foreground,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            radius: kVeControlRadius,
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            radius: 999,
             child: selectedLabel == null
                 ? triggerRow(placeholder ?? 'Elegir…', isPlaceholder: true)
                 : triggerRow(selectedLabel),
@@ -1392,7 +1240,8 @@ class VeSelect<T> extends StatelessWidget {
 
 // ──────────────────────────────────────────────────────────────── kbd ──────
 
-/// Tecla de atajo (kbd del prototipo): JetBrains Mono 10 px, borde línea.
+/// Tecla de atajo (kbd) v25 «HOJA»: SOLO texto — JetBrains Mono 10 px en
+/// muted, sin caja ni borde.
 class VeKbd extends StatelessWidget {
   const VeKbd({super.key, required this.label});
 
@@ -1401,12 +1250,8 @@ class VeKbd extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = context.ve.colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-      decoration: BoxDecoration(
-        border: Border.all(color: scheme.border),
-        borderRadius: BorderRadius.circular(4),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Text(
         label,
         style: TextStyle(

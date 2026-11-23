@@ -113,10 +113,10 @@ class PinShowCard extends StatelessWidget {
                 Container(
                   width: 48,
                   height: 48,
+                  // v25 «HOJA»: tecla TONAL sin borde (regla de 3).
                   decoration: BoxDecoration(
                     color: scheme.muted,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _lineStrong(context)),
                   ),
                   alignment: Alignment.center,
                   child: Text(e, style: const TextStyle(fontSize: 24)),
@@ -142,11 +142,6 @@ class PinShowCard extends StatelessWidget {
       ),
     );
   }
-}
-
-Color _lineStrong(BuildContext context) {
-  final dark = context.ve.brightness == Brightness.dark;
-  return dark ? VeColors.lineStrongDark : VeColors.lineStrongLight;
 }
 
 /// Teclado de emojis del INVITADO: marca los 4 emojis del PIN. Estilo
@@ -183,17 +178,13 @@ class PinEmojiPad extends StatelessWidget {
               Container(
                 width: 44,
                 height: 44,
+                // v25 «HOJA»: slot TONAL sin borde — el error se dice con
+                // tonal neg (10 %), como el botón danger del sistema.
                 decoration: BoxDecoration(
-                  color: i < chars.length ? scheme.accent : scheme.muted,
+                  color: error
+                      ? ink.neg.withValues(alpha: 0.10)
+                      : (i < chars.length ? scheme.accent : scheme.muted),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: error
-                        ? ink.neg
-                        : (i < chars.length
-                              ? _lineStrong(context)
-                              : scheme.border),
-                    width: error || i < chars.length ? 1.2 : 1,
-                  ),
                 ),
                 alignment: Alignment.center,
                 child: Text(
@@ -222,10 +213,10 @@ class PinEmojiPad extends StatelessWidget {
                   onChanged(entered + e);
                 },
                 child: Container(
+                  // v25 «HOJA»: tecla TONAL sin borde (regla de 3).
                   decoration: BoxDecoration(
-                    color: scheme.card,
+                    color: scheme.muted,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: scheme.border),
                   ),
                   alignment: Alignment.center,
                   child: Text(e, style: const TextStyle(fontSize: 17)),

@@ -105,7 +105,7 @@ void toggleVeTheme(WidgetRef ref) {
   final prefs = ref.read(sharedPreferencesProvider);
   final platformDark =
       WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-          Brightness.dark;
+      Brightness.dark;
   final dark =
       theme.mode == ThemeMode.dark ||
       (theme.mode == ThemeMode.system && platformDark);
@@ -166,7 +166,9 @@ class MainShell extends ConsumerWidget {
       appStoreProvider.select((s) => s.settings.offlineMode),
     );
     final int cartCount = ref.watch(
-      appStoreProvider.select((s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity)),
+      appStoreProvider.select(
+        (s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity),
+      ),
     );
 
     // v19 (orden del dueño): la tasa MANUAL es una tasa personalizada, NO un
@@ -194,9 +196,7 @@ class MainShell extends ConsumerWidget {
               ? RateHealthBanner(
                   stale: poller.rateStale,
                   offline: poller.offlineNet,
-                  onRetry: poller.offlineNet
-                      ? null
-                      : () => poller.refreshNow(),
+                  onRetry: poller.offlineNet ? null : () => poller.refreshNow(),
                 )
               : const SizedBox(width: double.infinity),
         ),
@@ -220,10 +220,8 @@ class MainShell extends ConsumerWidget {
             children: [
               _VeSidebar(
                 current: current,
-                onBranch: (i) => navigationShell.goBranch(
-                  i,
-                  initialLocation: i == current,
-                ),
+                onBranch: (i) =>
+                    navigationShell.goBranch(i, initialLocation: i == current),
               ),
               Expanded(child: mainColumn),
             ],
@@ -250,19 +248,13 @@ class MainShell extends ConsumerWidget {
             : SystemUiOverlayStyle.dark,
         child: Scaffold(
           backgroundColor: scheme.surfaceContainerLowest,
-          body: Stack(
-            children: [
-              // Fondo ambiental del prototipo: radiales pos/warn + puntos.
-              const Positioned.fill(child: VeAmbient()),
-              Positioned.fill(
-                child: SafeArea(
-                  // Abajo lo resuelven la barra de tabs (móvil) o las
-                  // propias pantallas (escritorio).
-                  bottom: false,
-                  child: content,
-                ),
-              ),
-            ],
+          // v25 «HOJA»: fondo PLANO — fuera el ambiente (radiales/puntos),
+          // la pantalla es una hoja de papel continua.
+          body: SafeArea(
+            // Abajo lo resuelven la barra de tabs (móvil) o las
+            // propias pantallas (escritorio).
+            bottom: false,
+            child: content,
           ),
           bottomNavigationBar: wide
               ? null
@@ -274,10 +266,7 @@ class MainShell extends ConsumerWidget {
                     // vibración sutil (no-op en web). El layout del shell
                     // NO se toca (test de notch = guardián).
                     HapticFeedback.selectionClick();
-                    navigationShell.goBranch(
-                      i,
-                      initialLocation: i == current,
-                    );
+                    navigationShell.goBranch(i, initialLocation: i == current);
                   },
                 ),
         ),
@@ -307,43 +296,47 @@ class _SideItem {
 }
 
 const List<_SideItem> _sideMain = [
+  _SideItem(icon: LucideIcons.home, label: 'Inicio', location: '/', branch: 0),
   _SideItem(
-      icon: LucideIcons.home, label: 'Inicio', location: '/', branch: 0),
+    icon: LucideIcons.arrowLeftRight,
+    label: 'Conversor',
+    location: '/conversor',
+    branch: 1,
+  ),
   _SideItem(
-      icon: LucideIcons.arrowLeftRight,
-      label: 'Conversor',
-      location: '/conversor',
-      branch: 1),
+    icon: LucideIcons.shoppingCart,
+    label: 'Lista',
+    location: '/lista',
+    branch: 2,
+  ),
   _SideItem(
-      icon: LucideIcons.shoppingCart,
-      label: 'Lista',
-      location: '/lista',
-      branch: 2),
+    icon: LucideIcons.package,
+    label: 'Productos',
+    location: '/productos',
+    branch: 3,
+  ),
   _SideItem(
-      icon: LucideIcons.package,
-      label: 'Productos',
-      location: '/productos',
-      branch: 3),
-  _SideItem(
-      icon: LucideIcons.chartColumn,
-      label: 'Análisis',
-      location: '/analisis',
-      branch: 4),
+    icon: LucideIcons.chartColumn,
+    label: 'Análisis',
+    location: '/analisis',
+    branch: 4,
+  ),
 ];
 
 const List<_SideItem> _sideLibro = [
   _SideItem(
-      icon: LucideIcons.history,
-      label: 'Historial',
-      location: '/historial',
-      branch: 5),
+    icon: LucideIcons.history,
+    label: 'Historial',
+    location: '/historial',
+    branch: 5,
+  ),
+  _SideItem(icon: LucideIcons.receipt, label: 'Tickets', location: '/tickets'),
   _SideItem(
-      icon: LucideIcons.receipt, label: 'Tickets', location: '/tickets'),
-  _SideItem(
-      icon: LucideIcons.settings,
-      label: 'Ajustes',
-      location: '/ajustes',
-      branch: 6),
+    icon: LucideIcons.settings,
+    label: 'Ajustes',
+    location: '/ajustes',
+    branch: 6,
+  ),
 ];
 
 /// Sidebar de 224 px del prototipo (App.tsx): marca, búsqueda ⌘K, navegación
@@ -360,11 +353,14 @@ class _VeSidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = context.ve.colorScheme;
+    // v25 «HOJA»: sidebar TRANSPARENTE sobre el papel con hairline derecho
+    // al 65 % — filas de texto plano, sin relleno ambiental.
     return Container(
       width: 224,
       decoration: BoxDecoration(
-        color: scheme.card.withValues(alpha: 0.92),
-        border: Border(right: BorderSide(color: scheme.border)),
+        border: Border(
+          right: BorderSide(color: scheme.border.withValues(alpha: 0.65)),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -374,7 +370,11 @@ class _VeSidebar extends ConsumerWidget {
             height: 56,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: scheme.border)),
+              border: Border(
+                bottom: BorderSide(
+                  color: scheme.border.withValues(alpha: 0.65),
+                ),
+              ),
             ),
             child: Row(
               children: [
@@ -415,9 +415,7 @@ class _VeSidebar extends ConsumerWidget {
                     onTap: () => onBranch(item.branch!),
                   ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    10, 16, 10, 6,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(10, 16, 10, 6),
                   child: Text(
                     'LIBRO',
                     style: TextStyle(
@@ -452,7 +450,8 @@ class _VeSidebar extends ConsumerWidget {
     // store entero, solo cuando cambia la cantidad visible del badge.
     return ref.watch(
       appStoreProvider.select(
-          (s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity)),
+        (s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity),
+      ),
     );
   }
 
@@ -537,12 +536,12 @@ class _SidebarSearch extends ConsumerWidget {
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Container(
-          height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          // v25 «HOJA»: tonal muted SIN borde (píldora secundaria).
           decoration: BoxDecoration(
-            color: scheme.background.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: scheme.border),
+            color: scheme.muted,
+            borderRadius: BorderRadius.circular(999),
           ),
           child: Row(
             children: [
@@ -589,13 +588,12 @@ class _SideNavButton extends ConsumerWidget {
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Container(
-          height: 32,
+          height: 36,
           margin: const EdgeInsets.only(bottom: 2),
           padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: active ? scheme.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
+          // v25 «HOJA»: fila de texto PLANA — el activo se lee por la tinta
+          // plena y el indicador, sin píldora de fondo.
+          decoration: const BoxDecoration(),
           child: Row(
             children: [
               // Indicador de tinta (3 px × 16) del prototipo.
@@ -667,7 +665,9 @@ class _SidebarRates extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: scheme.border)),
+        border: Border(
+          top: BorderSide(color: scheme.border.withValues(alpha: 0.65)),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -756,15 +756,17 @@ class _MobileTabs extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // v25 «HOJA»: barra plana — papel sólido (tapa el scroll) + hairline
+    // superior al 65 %; SIN píldora de indicador, SIN sombra.
     final scheme = context.ve.colorScheme;
-    final bool dark = context.ve.brightness == Brightness.dark;
-    final Color faint = dark ? VeColors.faintDark : VeColors.faintLight;
 
     return Container(
       key: kNavBarKey,
       decoration: BoxDecoration(
-        color: scheme.card,
-        border: Border(top: BorderSide(color: scheme.border)),
+        color: scheme.background,
+        border: Border(
+          top: BorderSide(color: scheme.border.withValues(alpha: 0.65)),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -777,7 +779,7 @@ class _MobileTabs extends ConsumerWidget {
                   active: i == current,
                   badge: i == 2 ? cartCount : 0,
                   activeColor: scheme.foreground,
-                  inactiveColor: faint,
+                  inactiveColor: scheme.onSurfaceVariant,
                   onTap: () => onTab(i),
                 ),
               ),
@@ -825,16 +827,15 @@ class _TabButton extends ConsumerWidget {
         // notch caza. Por eso la píldora es decoración pura dentro del
         // ConstrainedBox de siempre y el Padding la hace respirar.
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 5, 6, 3),
+          padding: const EdgeInsets.fromLTRB(6, 7, 6, 5),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 50),
+            constraints: const BoxConstraints(minHeight: 64),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 220),
               curve: kEaseVe,
-              decoration: BoxDecoration(
-                color: active ? scheme.secondary : Colors.transparent,
-                borderRadius: BorderRadius.circular(11),
-              ),
+              // v25 «HOJA»: SIN píldora de indicador — el tab vivo se lee
+              // solo por la tinta (plena vs muted) y el peso del label.
+              decoration: const BoxDecoration(),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -844,7 +845,7 @@ class _TabButton extends ConsumerWidget {
                     children: [
                       Icon(
                         spec.icon,
-                        size: 20,
+                        size: 22,
                         color: active ? activeColor : inactiveColor,
                       ),
                       if (badge > 0)
@@ -856,9 +857,7 @@ class _TabButton extends ConsumerWidget {
                               minWidth: 16,
                               minHeight: 16,
                             ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color: activeColor,
@@ -880,6 +879,8 @@ class _TabButton extends ConsumerWidget {
                   const SizedBox(height: 3),
                   Text(
                     spec.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 10.5,

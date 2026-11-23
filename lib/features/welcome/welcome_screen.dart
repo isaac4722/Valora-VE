@@ -435,14 +435,11 @@ class _SlideDatos extends ConsumerWidget {
               Builder(
                 builder: (cardCtx) {
                   final shad = cardCtx.ve.colorScheme;
+                  // v25 «HOJA»: bloque informativo PLANO — el contenido y
+                  // el hairline interno dan la estructura, sin caja.
                   return Container(
                     padding: const EdgeInsets.all(16),
-                    clipBehavior: Clip.antiAlias,
-                    decoration: BoxDecoration(
-                      color: shad.card,
-                      borderRadius: BorderRadius.circular(kVeRadius),
-                      border: Border.all(color: shad.border),
-                    ),
+                    color: shad.background,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -617,12 +614,8 @@ class _CountryChip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final shad = context.ve.colorScheme;
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-    final lineStrong = dark
-        ? VeColors.lineStrongDark
-        : VeColors.lineStrongLight;
-    // TASK-34 p11: chip Ve con bandera — píldora card + borde line-strong;
-    // seleccionado invierte la tinta (fg / bg), como el VeChip del kit.
+    // v25 «HOJA»: píldora SIN borde — seleccionada = tinta sólida (como el
+    // VeChip del kit), resto = tonal muted.
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
@@ -631,11 +624,7 @@ class _CountryChip extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? scheme.onSurface : lineStrong,
-            width: selected ? 1.4 : 1,
-          ),
-          color: selected ? scheme.onSurface : shad.card,
+          color: selected ? shad.primary : shad.muted,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -646,11 +635,12 @@ class _CountryChip extends ConsumerWidget {
                 ? Icon(
                     Icons.public,
                     size: 14,
-                    color: selected
-                        ? scheme.surfaceContainerLowest
-                        : scheme.primary,
+                    color: selected ? shad.background : scheme.onSurfaceVariant,
                   )
-                : Flag(country.currency, size: 14),
+                : Opacity(
+                    opacity: selected ? 1 : 0.9,
+                    child: Flag(country.currency, size: 14),
+                  ),
             const SizedBox(width: 6),
             Text(
               country.label,
@@ -658,9 +648,7 @@ class _CountryChip extends ConsumerWidget {
                 fontFamily: 'Inter',
                 fontSize: 12.5,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected
-                    ? scheme.surfaceContainerLowest
-                    : scheme.onSurface,
+                color: selected ? shad.background : scheme.onSurface,
               ),
             ),
           ],
@@ -686,28 +674,14 @@ class _WelcomeBullet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final shad = context.ve.colorScheme;
-    // TASK-34 p11: cromática VeCard — superficie card, borde --line, radio 10.
+    // v25 «HOJA»: bullet PLANO — icono de color sobre el papel, sin tile
+    // de relleno ni caja contenedora; la jerarquía la dan el aire y la
+    // tipografía.
     return Container(
       padding: const EdgeInsets.all(14),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: shad.card,
-        borderRadius: BorderRadius.circular(kVeRadius),
-        border: Border.all(color: shad.border),
-      ),
       child: Row(
         children: <Widget>[
-          Container(
-            width: 38,
-            height: 38,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 19, color: color),
-          ),
+          Icon(icon, size: 20, color: color),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

@@ -224,14 +224,11 @@ class _AppWidgetsCard extends ConsumerWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => showAppWidgetGallery(context),
+        // v25 «HOJA»: fila plana — sin borde ni fill; la tinta primaria de
+        // los iconos basta para señalar la puerta.
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: scheme.primary.withValues(alpha: 0.35)),
-            color: scheme.primary.withValues(alpha: 0.04),
-          ),
           child: Row(
             children: [
               Icon(
@@ -351,18 +348,54 @@ class _HeroState extends ConsumerState<_Hero> {
     // prototipo); en móvil la fila completa de 3 iconos.
     final bool movil = MediaQuery.sizeOf(context).width < 700;
 
+    // v25 «HOJA»: los iconos SUBEN a la línea de la fecha y el saludo queda
+    // con el ancho COMPLETO del papel (jamás truncado).
+    final Widget iconos = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Fila de iconos del prototipo: alertas (punto si hay sin leer) ·
+        // búsqueda (palette ⌘K) · tema (claro/oscuro) · ajustes.
+        VeIconBtn(
+          icon: LucideIcons.bell,
+          label: 'Alertas',
+          dot: hayNoLeidas,
+          onTap: () => showNotificationCenter(context, ref),
+        ),
+        const SizedBox(width: 8),
+        VeIconBtn(
+          icon: LucideIcons.search,
+          label: 'Buscar',
+          onTap: () => showCommandPalette(context),
+        ),
+        const SizedBox(width: 8),
+        VeIconBtn(
+          icon: veEffectiveDark(ref) ? LucideIcons.sun : LucideIcons.moon,
+          label: veEffectiveDark(ref) ? 'Tema claro' : 'Tema oscuro',
+          onTap: () => toggleVeTheme(ref),
+        ),
+        if (movil) ...[
+          const SizedBox(width: 8),
+          VeIconBtn(
+            icon: LucideIcons.settings,
+            label: 'Ajustes',
+            onTap: () => context.go('/ajustes'),
+          ),
+        ],
+      ],
+    );
+
     return Padding(
       padding: const EdgeInsets.only(top: 10, bottom: 14),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // v19 (orden del dueño): la fecha LARGA se retira — una sola
-                // línea corta «lun 15 sep · 14:30» como eyebrow del prototipo.
-                Text(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // v19 (orden del dueño): la fecha LARGA se retira — una sola
+              // línea corta «lun 15 sep · 14:30» como eyebrow del prototipo.
+              Expanded(
+                child: Text(
                   '${kDias[now.weekday - 1].substring(0, 3)} ${now.day} ${kMeses[now.month - 1].substring(0, 3)} · $hhmm',
                   style: VeText.labelCaps(
                     10.5,
@@ -370,83 +403,52 @@ class _HeroState extends ConsumerState<_Hero> {
                     weight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 3),
-                // Saludo 22 px Space Grotesk (prototipo · sin nombre porque
-                // la app no pide datos personales).
-                Text(
-                  saludo,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: VeText.displayNum(
-                    22,
-                    color: scheme.onSurface,
-                    weight: FontWeight.w600,
+              ),
+              iconos,
+            ],
+          ),
+          const SizedBox(height: 3),
+          // Saludo 22 px Space Grotesk (prototipo · sin nombre porque
+          // la app no pide datos personales) — ancho completo, sin recorte.
+          Text(
+            saludo,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: VeText.displayNum(
+              22,
+              color: scheme.onSurface,
+              weight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (widget.poller.loading)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else ...[
+                if (vsAyer != null) ...[
+                  Tooltip(
+                    message: '${vsAyer.$1} hoy vs ayer (snapshot local)',
+                    child: TrendBadge(vsAyer.$2),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Flexible(
+                  child: Text(
+                    freshness ?? '',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    if (widget.poller.loading)
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    else ...[
-                      if (vsAyer != null) ...[
-                        Tooltip(
-                          message: '${vsAyer.$1} hoy vs ayer (snapshot local)',
-                          child: TrendBadge(vsAyer.$2),
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                      Flexible(
-                        child: Text(
-                          freshness ?? '',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(width: 10),
-          // Fila de iconos del prototipo: alertas (punto si hay sin leer) ·
-          // búsqueda (palette ⌘K) · tema (claro/oscuro, orden del dueño
-          // TASK-35: el botón de arriba vuelve) · ajustes.
-          VeIconBtn(
-            icon: LucideIcons.bell,
-            label: 'Alertas',
-            dot: hayNoLeidas,
-            onTap: () => showNotificationCenter(context, ref),
-          ),
-          const SizedBox(width: 8),
-          VeIconBtn(
-            icon: LucideIcons.search,
-            label: 'Buscar',
-            onTap: () => showCommandPalette(context),
-          ),
-          const SizedBox(width: 8),
-          VeIconBtn(
-            icon: veEffectiveDark(ref)
-                ? LucideIcons.sun
-                : LucideIcons.moon,
-            label: veEffectiveDark(ref) ? 'Tema claro' : 'Tema oscuro',
-            onTap: () => toggleVeTheme(ref),
-          ),
-          if (movil) ...[
-            const SizedBox(width: 8),
-            VeIconBtn(
-              icon: LucideIcons.settings,
-              label: 'Ajustes',
-              onTap: () => context.go('/ajustes'),
-            ),
-          ],
         ],
       ),
     );
@@ -514,9 +516,10 @@ class _RateHero extends ConsumerWidget {
     ).map((p) => p.rate).toList(growable: false);
     final bool subio = serie.length >= 2 && serie.last >= serie.first;
 
-    return VeCard(
+    // v25 «HOJA»: héroe DIRECTO al papel — sin tarjeta contenedora.
+    return Padding(
       key: kHeroRateKey,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -534,13 +537,9 @@ class _RateHero extends ConsumerWidget {
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(2.5),
-                decoration: BoxDecoration(
-                  color: scheme.onSurfaceVariant.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: const Flag(Currency.ves, size: 13),
+              const Padding(
+                padding: EdgeInsets.all(2.5),
+                child: Flag(Currency.ves, size: 13),
               ),
             ],
           ),
@@ -552,57 +551,42 @@ class _RateHero extends ConsumerWidget {
             builder: (context, constraints) {
               final inline = constraints.maxWidth >= 420;
               Widget cifra = Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Flexible(
                     // Flash del prototipo: el número destella en pos
                     // cuando la tasa cambia (VeFlash vigila e.rate).
+                    // v25 «HOJA»: héroe 44 px con FittedBox — jamás recorte.
                     child: VeFlash(
                       value: e.rate,
-                      child: Text(
-                        fmtRate(e.rate),
-                        style: VeText.displayNum(
-                          38,
-                          color: scheme.onSurface,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          fmtRate(e.rate),
+                          style: VeText.displayNum(44, color: scheme.onSurface),
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   // v21 (GUI superior): bandera + moneda como UN token de
-                  // unidad — antes la bandera flotaba suelta entre la cifra
-                  // y «USD» y el trío leía desordenado. El chip apoya en la
-                  // línea base y le da a la cifra su propio aire.
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(9),
-                      border: Border.all(
-                        color: scheme.outlineVariant.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Flag(Currency.usd, size: 15),
-                        const SizedBox(width: 5),
-                        Text(
-                          'USD',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                            color: scheme.onSurfaceVariant,
-                          ),
+                  // unidad. v25 «HOJA»: sin caja — texto caps + bandera.
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Flag(Currency.usd, size: 15),
+                      const SizedBox(width: 5),
+                      Text(
+                        'USD',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                          color: scheme.onSurfaceVariant,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               );
@@ -642,10 +626,7 @@ class _RateHero extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    if (chispa != null) ...[
-                      const SizedBox(width: 12),
-                      chispa,
-                    ],
+                    if (chispa != null) ...[const SizedBox(width: 12), chispa],
                     const SizedBox(width: 10),
                     copiar,
                   ],
@@ -745,52 +726,47 @@ class _WeekSpark extends ConsumerWidget {
         kDias[DateTime.parse(p.day).weekday - 1].substring(0, 1).toUpperCase(),
     ];
 
+    // v25 «HOJA»: directo al papel — sin tarjeta contenedora.
     return Padding(
-      padding: const EdgeInsets.only(top: 10, bottom: 2),
-      child: VeCard(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Últimos 7 días',
-                    style: VeText.labelCaps(
-                      10.5,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Ayer ',
+      padding: const EdgeInsets.fromLTRB(0, 12, 0, 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Últimos 7 días',
                   style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
                 ),
-                VeNum(
-                  fmtRate(ayer),
-                  style: VeText.displayNum(
-                    14,
-                    color: scheme.onSurface,
-                    weight: FontWeight.w600,
-                  ),
+              ),
+              Text(
+                'Ayer ',
+                style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+              ),
+              VeNum(
+                fmtRate(ayer),
+                style: VeText.displayNum(
+                  14,
+                  color: scheme.onSurface,
+                  weight: FontWeight.w600,
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            VeBars(
-              labels: labels,
-              data: values,
-              // v24.1: tono pos (verde marca) — las barras en tinta fg
-              // (negro) leían como vigas muertas; el color solo significa
-              // (§5) y aquí la serie es un dato positivo del tablero.
-              tone: VeChartTone.pos,
-              height: 96,
-              formatValue: fmtRate,
-              semantic: 'Tasa de los últimos 7 días, una barra por día',
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          VeBars(
+            labels: labels,
+            data: values,
+            // v24.1: tono pos (verde marca) — las barras en tinta fg
+            // (negro) leían como vigas muertas; el color solo significa
+            // (§5) y aquí la serie es un dato positivo del tablero.
+            tone: VeChartTone.pos,
+            height: 96,
+            formatValue: fmtRate,
+            semantic: 'Tasa de los últimos 7 días, una barra por día',
+          ),
+        ],
       ),
     );
   }
@@ -830,7 +806,8 @@ class _CotizacionPrincipal extends ConsumerWidget {
             // Desconexión ELEGIDA (modo offline): cloud_off + guía local.
             OfflineState(
               'Modo offline activo',
-              hint: 'Todo corre en tu teléfono. Pega una tasa o desactiva el modo offline.',
+              hint:
+                  'Todo corre en tu teléfono. Pega una tasa o desactiva el modo offline.',
               actionLabel: 'Tasa manual',
               onAction: () => _editManual(context, ref, store, manualId),
             )
@@ -860,65 +837,81 @@ class _CotizacionPrincipal extends ConsumerWidget {
               onAction: () => _editManual(context, ref, store, manualId),
             )
         else
-          VeCard(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              children: [
-                // ── Grupo USD: todas las fuentes «1 USD = X» ──
-                // v20: hint corto — el largo «· toca para activar» se
-                // truncaba con feo (VLM gate); tocar es descubrible.
-                const RateGroupHeader(
-                  Currency.usd,
-                  hint: '1 USD = X',
-                ),
-                ..._groupRows(context, ref, store, ctx, [
+          // v25 «HOJA»: SIN tarjeta contenedora — eyebrow + filas planas con
+          // hairlines (filas en tinta, seleccionada sin caja).
+          Column(
+            children: [
+              // ── Grupo USD: todas las fuentes «1 USD = X» ──
+              // v20: hint corto — el largo «· toca para activar» se
+              // truncaba con feo (VLM gate); tocar es descubrible.
+              const RateGroupHeader(Currency.usd, hint: '1 USD = X'),
+              ..._withHairlines(
+                _groupRows(context, ref, store, ctx, [
                   Currency.ves,
                   Currency.cop,
                   Currency.brl,
                   Currency.mxn,
                 ], country.currency),
-                // ── Tus tasas (v23 · comparativa CalculaYa): tasas propias
-                // con nombre y brecha vs BCV; tocar = aplicar (mecanismo
-                // manual existente, cero cambios en el core).
-                if (customRates.isNotEmpty) ...<Widget>[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
-                    child: Text(
-                      'TUS TASAS',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.76,
-                        color: scheme.onSurfaceVariant,
-                      ),
+              ),
+              // ── Tus tasas (v23 · comparativa CalculaYa): tasas propias
+              // con nombre y brecha vs BCV; tocar = aplicar (mecanismo
+              // manual existente, cero cambios en el core).
+              if (customRates.isNotEmpty) ...<Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
+                  child: Text(
+                    'TUS TASAS',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.76,
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
-                  for (final r in customRates)
-                    _CustomRateRow(
-                      rate: r,
-                      bcv: ctx.rate('ves-bcv'),
-                      selected:
-                          ctx.sel(Currency.ves) == 'ves-manual' &&
-                          (store.data.manualRates['ves-manual'] ==
-                              r.bsPerUsd),
-                      onTap: () => store.applyCustomRate(r),
+                ),
+                for (final (i, r) in customRates.indexed) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: scheme.outlineVariant.withValues(alpha: 0.65),
                     ),
-                ],
-                // ── Grupo EUR: aristas del euro (solo si alguna tiene valor) ──
-                if (_visibleSources(ctx, const [
-                  Currency.eur,
-                ], country.currency).isNotEmpty) ...<Widget>[
-                  const RateGroupHeader(Currency.eur, hint: '1 EUR = X'),
-                  ..._groupRows(context, ref, store, ctx, const [
-                    Currency.eur,
-                  ], country.currency),
+                  _CustomRateRow(
+                    rate: r,
+                    bcv: ctx.rate('ves-bcv'),
+                    selected:
+                        ctx.sel(Currency.ves) == 'ves-manual' &&
+                        (store.data.manualRates['ves-manual'] == r.bsPerUsd),
+                    onTap: () => store.applyCustomRate(r),
+                  ),
                 ],
               ],
-            ),
+              // ── Grupo EUR: aristas del euro (solo si alguna tiene valor) ──
+              if (_visibleSources(ctx, const [
+                Currency.eur,
+              ], country.currency).isNotEmpty) ...<Widget>[
+                const RateGroupHeader(Currency.eur, hint: '1 EUR = X'),
+                ..._withHairlines(
+                  _groupRows(context, ref, store, ctx, const [
+                    Currency.eur,
+                  ], country.currency),
+                ),
+              ],
+            ],
           ),
       ],
     );
+  }
+
+  /// v25 «HOJA»: hairline 1 px entre filas de la lista de cotización.
+  List<Widget> _withHairlines(List<Widget> rows) {
+    final out = <Widget>[];
+    for (var i = 0; i < rows.length; i++) {
+      if (i > 0) out.add(const Divider(height: 1, thickness: 1));
+      out.add(rows[i]);
+    }
+    return out;
   }
 
   /// Fuentes visibles de [currencies]: con valor (>0) + SIEMPRE la Manual
@@ -981,7 +974,11 @@ class _CotizacionPrincipal extends ConsumerWidget {
   ) async {
     final s = RateSource.of(sourceId);
     if (s == null) return;
-    final saved = await showManualRateEditor(context, ref: ref, sourceId: sourceId);
+    final saved = await showManualRateEditor(
+      context,
+      ref: ref,
+      sourceId: sourceId,
+    );
     if (saved && context.mounted) {
       store.setRateSource(s.currency, s.id);
     }
@@ -1012,15 +1009,9 @@ class _CustomRateRow extends ConsumerWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        // Selected: tinte manual al 12 % — el mismo lenguaje de RateTile.
+        // v25 «HOJA»: fila seleccionada SIN CAJA — tinta plena + check 14.
         margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected
-              ? ink.manual.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
         child: Row(
           children: [
             const SourceSeal(SourceCategory.manual),
@@ -1029,15 +1020,27 @@ class _CustomRateRow extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    rate.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          rate.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: selected
+                                ? scheme.onSurface
+                                : scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      if (selected) ...[
+                        const SizedBox(width: 6),
+                        Icon(Icons.check_rounded, size: 14, color: ink.manual),
+                      ],
+                    ],
                   ),
                   if (gap != null)
                     Padding(
@@ -1049,12 +1052,10 @@ class _CustomRateRow extends ConsumerWidget {
             ),
             Text(
               '${fmtRate(rate.bsPerUsd)} Bs',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
-                color: scheme.onSurface,
+              style: VeText.displayNum(
+                15,
+                color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+                weight: FontWeight.w700,
               ),
             ),
           ],
@@ -1310,8 +1311,9 @@ class _ResumenMes extends ConsumerWidget {
                 'total del mes, tiendas y comparación con el mes anterior.',
           )
         else
-          VeCard(
-            padding: const EdgeInsets.all(14),
+          // v25 «HOJA»: directo al papel — sin tarjeta contenedora.
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1449,101 +1451,104 @@ void showStoreSheet(BuildContext context, String storeName) {
     title: storeName.isEmpty ? 'Sin tienda' : storeName,
     builder: (ctx) => Consumer(
       builder: (ctx, ref, _) {
-      final store = ref.watch(appStoreProvider);
-      final scheme = Theme.of(ctx).colorScheme;
-      final stats = an.storeStats(store.purchases);
-      final stat = stats.where((s) => s.store == storeName).firstOrNull;
-      final purchases = an.storeDetail(store.purchases, storeName);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              StoreAvatar(
-                storeName.isEmpty ? 'Sin Tienda' : storeName,
-                size: 40,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (stat != null)
-                      Text(
-                        '${stat.count} compras · última ${stat.last == null ? '—' : fmtDate(stat.last!)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: scheme.onSurfaceVariant,
+        final store = ref.watch(appStoreProvider);
+        final scheme = Theme.of(ctx).colorScheme;
+        final stats = an.storeStats(store.purchases);
+        final stat = stats.where((s) => s.store == storeName).firstOrNull;
+        final purchases = an.storeDetail(store.purchases, storeName);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                StoreAvatar(
+                  storeName.isEmpty ? 'Sin Tienda' : storeName,
+                  size: 40,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (stat != null)
+                        Text(
+                          '${stat.count} compras · última ${stat.last == null ? '—' : fmtDate(stat.last!)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (stat == null)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(
-                'Sin compras registradas de esta tienda.',
-                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
-              ),
-            )
-          else ...[
-            ReadWindow(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'GASTO ACUMULADO',
-                    style: VeText.labelCaps(
-                      9.5,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    fmtUSD(stat.totalUSD),
-                    style: VeText.displayNum(26, color: scheme.onSurface),
-                  ),
-                ],
-              ),
+              ],
             ),
-            const SizedBox(height: 12),
-            for (final p in purchases.take(12))
+            const SizedBox(height: 14),
+            if (stat == null)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: LedgerRow(
-                  label: '${fmtDate(p.date)} · ${p.items.length} artículos',
-                  value: fmtUSD(p.totalUSD),
-                  dots: true, // cierre de la cuenta por tienda: con puntos
-                ),
-              ),
-            if (purchases.length > 12)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.only(top: 12),
                 child: Text(
-                  'y ${purchases.length - 12} compras más en el Historial.',
+                  'Sin compras registradas de esta tienda.',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 13,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
+              )
+            else ...[
+              ReadWindow(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'GASTO ACUMULADO',
+                      style: VeText.labelCaps(
+                        9.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      fmtUSD(stat.totalUSD),
+                      style: VeText.displayNum(26, color: scheme.onSurface),
+                    ),
+                  ],
+                ),
               ),
-            const SizedBox(height: 14),
-            VeBtn(
-              variant: VeBtnVariant.primary,
-              expands: true,
-              onPressed: () {
-                Navigator.pop(ctx);
-                ctx.go('/historial');
-              },
-              child: const Text('Ver en el Historial'),
-            ),
+              const SizedBox(height: 12),
+              for (final p in purchases.take(12))
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: LedgerRow(
+                    label: '${fmtDate(p.date)} · ${p.items.length} artículos',
+                    value: fmtUSD(p.totalUSD),
+                    dots: true, // cierre de la cuenta por tienda: con puntos
+                  ),
+                ),
+              if (purchases.length > 12)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'y ${purchases.length - 12} compras más en el Historial.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 14),
+              VeBtn(
+                variant: VeBtnVariant.primary,
+                expands: true,
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  ctx.go('/historial');
+                },
+                child: const Text('Ver en el Historial'),
+              ),
+            ],
           ],
-        ],
-      );
+        );
       },
     ),
   );
@@ -1640,22 +1645,13 @@ class _Tool extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // Tile del prototipo: VeCard tocable con icono en cajita muted.
+    // v25 «HOJA»: quick-action plano — icono desnudo + label, sin cajita.
     return VeCard(
       onTap: onTap,
       padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
       child: Column(
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: scheme.primary.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, size: 17, color: scheme.primary),
-          ),
+          Icon(icon, size: 22, color: scheme.primary),
           const SizedBox(height: 7),
           Text(
             label,

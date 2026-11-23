@@ -183,19 +183,17 @@ class _CoachOverlayState extends State<_CoachOverlay> {
     // espacio sea justo, «Saltar»/«Siguiente» quedan visibles y tocables
     // (el contenido es lo que se scrollea, nunca los botones).
     final card = Material(
-      color: scheme.surfaceContainerHighest,
-      elevation: 6,
-      shadowColor: Colors.black54,
-      borderRadius: BorderRadius.circular(18),
+      // v25 «HOJA»: popover PLANO — radio 20, elev 0, sin borde; lo separa
+      // del papel el scrim, no una sombra ni una caja.
+      color: scheme.surface,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         // Ancho FIJO (el del hueco): el texto envuelve siempre igual.
         constraints: BoxConstraints.tightFor(width: maxW),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: scheme.outlineVariant),
-        ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[

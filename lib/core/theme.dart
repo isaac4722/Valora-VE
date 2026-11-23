@@ -372,18 +372,17 @@ abstract final class AppTheme {
             ? SystemUiOverlayStyle.light
             : SystemUiOverlayStyle.dark,
       ),
-      // §8 sombra firma sutil: card eleva 1 con sombra azul-noche al 8 %.
+      // v25 «HOJA»: la tarjeta es INVISIBLE — la jerarquía la crean la
+      // tipografía y el espacio, no cajas. Elev 0, sin borde, radio 0 y
+      // fondo del papel: cualquier Card residual se disuelve en la hoja.
       cardTheme: CardThemeData(
-        elevation: 1,
-        shadowColor: const Color(0x140C1016),
-        color: card,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        color: bg,
         surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: border),
-        ),
+        clipBehavior: Clip.none,
+        shape: const RoundedRectangleBorder(),
       ),
       // §8 transición de página firma (slide 18/10 px + fade).
       pageTransitionsTheme: const PageTransitionsTheme(
@@ -396,7 +395,13 @@ abstract final class AppTheme {
           TargetPlatform.fuchsia: VePageTransitionsBuilder(),
         },
       ),
-      dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
+      // v25 «HOJA»: las listas se dividen con hairlines al 65 % de la
+      // línea — la separación existe, pero no dibuja cajas.
+      dividerTheme: DividerThemeData(
+        color: border.withValues(alpha: 0.65),
+        thickness: 1,
+        space: 1,
+      ),
       // Superficies del navegador (§craft-floor): la selección de texto y
       // las barras de scroll también son parte del sistema — no quedan con
       // los defaults del navegador azul.
@@ -422,37 +427,36 @@ abstract final class AppTheme {
         crossAxisMargin: 2,
         mainAxisMargin: 2,
       ),
+      // v25 «HOJA»: input SUBRAYADO — sin fill, sin caja. Reposo línea 1 px
+      // border; foco línea 2 px tinta.
       inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: muted.withValues(alpha: 0.55),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+        filled: false,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+        border: UnderlineInputBorder(borderSide: BorderSide(color: border)),
+        enabledBorder: UnderlineInputBorder(
           borderSide: BorderSide(color: border),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: border),
+        disabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: border.withValues(alpha: 0.45)),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: effPrimary, width: 1.4),
+        focusedBorder: UnderlineInputBorder(
+          borderSide: BorderSide(color: effPrimary, width: 2),
         ),
         hintStyle: TextStyle(
           color: mutedFg.withValues(alpha: 0.75),
           fontSize: 13.5,
         ),
       ),
+      // v25 «HOJA»: botones PÍLDORA (radius 999). Primario = píldora de
+      // tinta sólida; secundario = tonal muted SIN borde. Ambos h44.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: effPrimary,
           foregroundColor: effOnPrimary,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 13.5,
@@ -463,9 +467,12 @@ abstract final class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: fg,
-          side: BorderSide(color: border),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          backgroundColor: muted,
+          side: BorderSide.none,
+          elevation: 0,
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(
             fontFamily: 'Inter',
             fontSize: 13.5,
@@ -499,23 +506,26 @@ abstract final class AppTheme {
         ),
         waitDuration: const Duration(milliseconds: 450),
       ),
+      // v25 «HOJA»: snackbar de TINTA INVERTIDA (papel → tinta), radio 14,
+      // cero elevación.
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: isDark ? VeColors.accentDark : VeColors.primaryLight,
+        backgroundColor: fg,
         contentTextStyle: TextStyle(
           fontFamily: 'Inter',
           fontSize: 13,
-          color: isDark ? VeColors.fgDark : Colors.white,
+          color: bg,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
+      // v25 «HOJA»: hojas/diálogos radio 20, ELEV 0 — solo el scrim los
+      // separa del papel (sombra transparente).
       dialogTheme: DialogThemeData(
         backgroundColor: card,
         surfaceTintColor: Colors.transparent,
-        // §8: diálogos elevan 8 con sombra firma al 12 %.
-        elevation: 8,
-        shadowColor: const Color(0x1F0C1016),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: TextStyle(
           fontFamily: 'Inter',
           fontSize: 16,
@@ -538,15 +548,15 @@ abstract final class AppTheme {
           (Set<WidgetState> states) =>
               states.contains(WidgetState.selected) ? effPrimary : border,
         ),
-        trackOutlineColor: WidgetStateProperty.resolveWith(
-          (Set<WidgetState> states) =>
-              states.contains(WidgetState.selected) ? effPrimary : border,
-        ),
+        // v25 «HOJA»: toggle SIN borde de pista.
+        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       ),
+      // v25 «HOJA»: chip PÍLDORA tonal (muted) SIN borde — el activo se
+      // pinta aparte con tinta sólida.
       chipTheme: ChipThemeData(
-        backgroundColor: card,
-        side: BorderSide(color: border),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        backgroundColor: muted,
+        side: BorderSide.none,
+        shape: const StadiumBorder(),
         labelStyle: TextStyle(
           fontFamily: 'Inter',
           fontSize: 12,
@@ -555,12 +565,13 @@ abstract final class AppTheme {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       ),
+      // v25 «HOJA»: bottom sheet radio 20, elev 0 (sombra transparente).
       bottomSheetTheme: const BottomSheetThemeData(
         showDragHandle: true,
-        elevation: 8,
-        shadowColor: Color(0x1F0C1016),
+        elevation: 0,
+        shadowColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
       ),
     );

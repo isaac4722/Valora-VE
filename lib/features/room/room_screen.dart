@@ -204,14 +204,9 @@ class _ErrorBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sem = VeColors.of(context);
-    final scheme = context.ve.colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: sem.negBg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: sem.neg.withValues(alpha: 0.35)),
-      ),
+      // v25 «HOJA»: aviso PLANO — icono + texto en neg, sin fill ni borde.
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -224,7 +219,7 @@ class _ErrorBanner extends ConsumerWidget {
                 fontFamily: 'Inter',
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: scheme.foreground,
+                color: sem.neg,
               ),
             ),
           ),
@@ -417,7 +412,11 @@ typedef _RoomAction = Future<void> Function(Future<String?> Function() action);
 /// Fila de una sala avistada (escaneo o búsqueda): modo · nombre · código
 /// y anfitrión. Tap → hoja de unirse prellenada (pregunta nombre y PIN).
 class _RoomAdTile extends ConsumerWidget {
-  const _RoomAdTile({required this.ad, required this.busy, required this.onTap});
+  const _RoomAdTile({
+    required this.ad,
+    required this.busy,
+    required this.onTap,
+  });
 
   final RoomAd ad;
   final bool busy;
@@ -618,10 +617,7 @@ class _CreateCardState extends ConsumerState<_CreateCard> {
               // Escribir ya escucha: sin tocar el botón de Salas
               // cercanas, una sola vez por búsqueda.
               final hayTexto = v.trim().isNotEmpty;
-              if (hayTexto &&
-                  !_scanKicked &&
-                  !room.scanning &&
-                  !widget.busy) {
+              if (hayTexto && !_scanKicked && !room.scanning && !widget.busy) {
                 _scanKicked = true;
                 room.startScan();
               } else if (!hayTexto) {
@@ -772,7 +768,9 @@ class _ScanCardState extends ConsumerState<_ScanCard> {
               VeBtn(
                 variant: VeBtnVariant.ghost,
                 size: VeBtnSize.sm,
-                icon: room.scanning ? LucideIcons.circleStop : LucideIcons.radar,
+                icon: room.scanning
+                    ? LucideIcons.circleStop
+                    : LucideIcons.radar,
                 enabled: !widget.busy,
                 onPressed: widget.busy
                     ? null

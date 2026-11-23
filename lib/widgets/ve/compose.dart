@@ -1,12 +1,10 @@
-/// ─── Composición «Ve» · cards, rows, sheets y ambiente ──────────────────────
-/// Piezas de composición del prototipo web sobre Material 3 puro (v24):
-/// Card/Group/Row (listas divididas), Eyebrow/Title (jerarquía tipográfica),
-/// Sheet (bottom móvil / modal centrado escritorio — como el original),
-/// StickyBar con blur, Empty punteado y el fondo ambiental (radiales
-/// pos/warn + rejilla de puntos).
+/// ─── Composición «Ve» · rows, sheets y hairlines (v25 «HOJA») ──────────────
+/// Piezas de composición sobre Material 3 puro. La pantalla es UNA hoja de
+/// papel continua: los contenedores (cards/grupos/sheets/sticky bars) son
+/// TRANSPARENTES — la jerarquía la crean la tipografía, la tinta y el
+/// espacio vertical; solo las hairlines (línea al 65 %) dividen filas y
+/// secciones. CERO bordes, CERO sombras, CERO blur.
 library;
-
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -14,10 +12,17 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/theme.dart';
 import '../../core/ve_theme.dart';
 
+/// Hairline firma de la hoja (línea al 65 % de alpha).
+BorderSide veHairline(BuildContext context) {
+  final border = context.ve.colorScheme.border;
+  return BorderSide(color: border.withValues(alpha: 0.65));
+}
+
 // ──────────────────────────────────────────────────────────────── Card ─────
 
-/// Tarjeta del prototipo: radius 10, borde `--line`, superficie; al pasar el
-/// cursor el borde sube a `--line-strong` (hover suave de escritorio).
+/// «Tarjeta» v25 «HOJA»: contenedor INVISIBLE. Sin borde, sin fill, sin
+/// sombra — solo aire y, si es interactiva, Material transparente + InkWell
+/// con el asiento táctil 0.985. La jerarquía la pone el contenido.
 class VeCard extends StatefulWidget {
   const VeCard({
     super.key,
@@ -37,50 +42,41 @@ class VeCard extends StatefulWidget {
 }
 
 class _VeCardState extends State<VeCard> {
-  bool _hover = false;
   bool _press = false;
 
   @override
   Widget build(BuildContext context) {
-    final shad = context.ve;
-    final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
-    final Color lineStrong = dark
-        ? VeColors.lineStrongDark
-        : VeColors.lineStrongLight;
     final bool interactive = widget.onTap != null;
 
-    return MouseRegion(
-      onEnter: interactive ? (_) => setState(() => _hover = true) : null,
-      onExit: interactive ? (_) => setState(() => _hover = false) : null,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: interactive ? (_) => setState(() => _press = true) : null,
-        onTapUp: interactive ? (_) => setState(() => _press = false) : null,
-        onTapCancel: interactive ? () => setState(() => _press = false) : null,
-        onTap: widget.onTap,
-        child: AnimatedScale(
-          // v21.1: presión táctil — la tarjeta se asienta 1.5 % al tocar
-          // (solo interactivas) con la curva firma. Respeta
-          // disableAnimations: sin escala si el sistema lo pide.
-          duration: const Duration(milliseconds: 140),
-          curve: Curves.easeOut,
-          scale: _press && !MediaQuery.disableAnimationsOf(context)
-              ? 0.985
-              : 1.0,
-          child: AnimatedContainer(
+    Widget content = Padding(padding: widget.padding, child: widget.child);
+
+    if (!interactive) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(kVeRadius),
+        clipBehavior: widget.clip ? Clip.antiAlias : Clip.none,
+        child: content,
+      );
+    }
+
+    return Semantics(
+      button: true,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          onTapDown: (_) => setState(() => _press = true),
+          onTapUp: (_) => setState(() => _press = false),
+          onTapCancel: () => setState(() => _press = false),
+          child: AnimatedScale(
+            // v21.1: presión táctil — el bloque se asienta 1.5 % al tocar
+            // con la curva firma. Respeta disableAnimations.
             duration: const Duration(milliseconds: 140),
             curve: Curves.easeOut,
-            padding: widget.padding,
-            clipBehavior: widget.clip ? Clip.antiAlias : Clip.none,
-            decoration: BoxDecoration(
-              color: scheme.card,
-              borderRadius: BorderRadius.circular(kVeRadius),
-              border: Border.all(
-                color: _hover && interactive ? lineStrong : scheme.border,
-              ),
-            ),
-            child: widget.child,
+            scale: _press && !MediaQuery.disableAnimationsOf(context)
+                ? 0.985
+                : 1.0,
+            child: Material(type: MaterialType.transparency, child: content),
           ),
         ),
       ),
@@ -88,8 +84,8 @@ class _VeCardState extends State<VeCard> {
   }
 }
 
-/// Grupo de filas divididas (Group + Row del prototipo): tarjeta con
-/// separadores `--line` entre hijos y filas de mínimo 46 px.
+/// Grupo de filas divididas (Group + Row del prototipo) v25 «HOJA»:
+/// contenedor transparente con hairlines entre hijos y filas de mínimo 52 px
 class VeGroup extends StatelessWidget {
   const VeGroup({super.key, required this.children, this.semantic});
 
@@ -101,29 +97,26 @@ class VeGroup extends StatelessWidget {
     final scheme = context.ve.colorScheme;
     return Semantics(
       label: semantic,
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: scheme.card,
-          borderRadius: BorderRadius.circular(kVeRadius),
-          border: Border.all(color: scheme.border),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < children.length; i++) ...[
-              if (i > 0) Divider(height: 1, thickness: 1, color: scheme.border),
-              children[i],
-            ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: scheme.border.withValues(alpha: 0.65),
+              ),
+            children[i],
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-/// Fila de lista del prototipo: etiqueta + subtítulo a la izquierda, valor a
-/// la derecha (tabular). Tappable → hover; `danger` en tinta negativa.
+/// Fila de lista v25 «HOJA»: transparente (sin hover-fill), ≥52 px, tap con
+/// InkWell; `danger` en tinta negativa.
 class VeRow extends StatefulWidget {
   const VeRow({
     super.key,
@@ -149,8 +142,6 @@ class VeRow extends StatefulWidget {
 }
 
 class _VeRowState extends State<VeRow> {
-  bool _hover = false;
-
   @override
   Widget build(BuildContext context) {
     final scheme = context.ve.colorScheme;
@@ -214,9 +205,8 @@ class _VeRowState extends State<VeRow> {
     );
 
     final row = Container(
-      constraints: const BoxConstraints(minHeight: 46),
+      constraints: const BoxConstraints(minHeight: 52),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      color: _hover && widget.onTap != null ? scheme.accent : null,
       child: content,
     );
 
@@ -226,14 +216,9 @@ class _VeRowState extends State<VeRow> {
     return Semantics(
       label: widget.semantic,
       button: true,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          child: row,
-        ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(onTap: widget.onTap, child: row),
       ),
     );
   }
@@ -426,8 +411,7 @@ Future<T?> showVeSheet<T>({
   // el modal bottom sheet con useSafeArea expone un MediaQuery sin padding
   // y el 88 % «útil» se inflaría sobre la barra de estado.
   final double ceiling =
-      (MediaQuery.sizeOf(context).height -
-          MediaQuery.paddingOf(context).top) *
+      (MediaQuery.sizeOf(context).height - MediaQuery.paddingOf(context).top) *
       0.88;
 
   if (desktop) {
@@ -575,8 +559,7 @@ class _VeHalfChrome extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: scheme.card,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-        border: Border.all(color: scheme.border),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Material(
         type: MaterialType.transparency,
@@ -603,7 +586,7 @@ class _VeHalfChrome extends StatelessWidget {
                 height: 48,
                 padding: const EdgeInsets.only(left: 16, right: 8),
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: scheme.border)),
+                  border: Border(bottom: veHairline(context)),
                 ),
                 child: Row(
                   children: [
@@ -628,7 +611,6 @@ class _VeHalfChrome extends StatelessWidget {
                       // v23.3 (pez 2-a P1-1): caja de golpe ≥44 — visual
                       // 32 (mismo icono 15), pista 44×44 centrada.
                       const _VeSheetCloseBtn(),
-
                   ],
                 ),
               ),
@@ -645,7 +627,7 @@ class _VeHalfChrome extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                   decoration: BoxDecoration(
-                    border: Border(top: BorderSide(color: scheme.border)),
+                    border: Border(top: veHairline(context)),
                   ),
                   child: SafeArea(
                     top: false,
@@ -706,15 +688,15 @@ class _VeSheetChrome extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: scheme.card,
+          // v25 «HOJA»: hojas radio 20, sin borde — solo el scrim separa.
           borderRadius: bottomSheet
-              ? const BorderRadius.vertical(top: Radius.circular(14))
-              : BorderRadius.circular(14),
-          border: Border.all(color: scheme.border),
+              ? const BorderRadius.vertical(top: Radius.circular(20))
+              : BorderRadius.circular(20),
         ),
         child: Material(
           // Ancestro Material transparente: los cuerpos de la app mezclan
-          // controles shadcn con widgets Material propios (MoneyField,
-          // TextField de nombre, PopupMenu de divisas…) que lo exigen.
+          // controles con widgets Material propios (MoneyField, TextField
+          // de nombre, PopupMenu de divisas…) que lo exigen.
           type: MaterialType.transparency,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -724,7 +706,7 @@ class _VeSheetChrome extends StatelessWidget {
                 height: 48,
                 padding: const EdgeInsets.only(left: 16, right: 8),
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: scheme.border)),
+                  border: Border(bottom: veHairline(context)),
                 ),
                 child: Row(
                   children: [
@@ -749,7 +731,6 @@ class _VeSheetChrome extends StatelessWidget {
                       // v23.3 (pez 2-a P1-1): caja de golpe ≥44 — visual
                       // 32 (mismo icono 15), pista 44×44 centrada.
                       const _VeSheetCloseBtn(),
-
                   ],
                 ),
               ),
@@ -765,7 +746,7 @@ class _VeSheetChrome extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
                   decoration: BoxDecoration(
-                    border: Border(top: BorderSide(color: scheme.border)),
+                    border: Border(top: veHairline(context)),
                   ),
                   child: SafeArea(
                     top: false,
@@ -795,11 +776,8 @@ class _VeSheetChrome extends StatelessWidget {
 /// casi opaco + borde superior. Colocar como último hijo de un Stack
 /// sobre el contenido scrollable.
 ///
-/// v22.0 (rendimiento): SIN BackdropFilter. El blur real (sigma 12) fuerza
-/// un saveLayer + gaussiana del CONTENIDO ENTERO que pasa por debajo en
-/// cada frame de scroll — el jank nº1 de Lista/Productos/Historial en
-/// teléfonos humildes. Con alpha 0.96 la lectura es la misma (la capa se
-/// percibe sólida) y el costo baja a un rectángulo plano.
+/// v25 «HOJA»: papel SÓLIDO (puede tapar contenido al scrollear) + hairline
+/// superior al 65 % — la única separación contra la hoja.
 class VeStickyBar extends StatelessWidget {
   const VeStickyBar({super.key, required this.children});
 
@@ -807,14 +785,12 @@ class VeStickyBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = context.ve;
-    final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
+    final scheme = context.ve.colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: scheme.background.withValues(alpha: dark ? 0.97 : 0.96),
-        border: Border(top: BorderSide(color: scheme.border)),
+        color: scheme.background,
+        border: Border(top: veHairline(context)),
       ),
       child: SafeArea(
         top: false,
@@ -837,14 +813,9 @@ class VeStickyBar extends StatelessWidget {
 
 // ─────────────────────────────────────────────────────────────── Empty ─────
 
-/// Estado vacío del prototipo: tarjeta punteada (borde discontinuo
-/// `--line-strong`), icono en medallón, título, subtítulo y acción
-/// opcional centrada.
-///
-/// v21 (GUI superior): el medallón de icono es OPCIONAL pero presente en
-/// todos los estados de la app — un vacío sin señal visual leía como
-/// «algo se rompió»; con el medallón lee como «aquí aún no hay nada, y
-/// así se llena». La jerarquía sube: título 14/700, pista 12.5 con aire.
+/// Estado vacío v25 «HOJA»: SIN borde punteado y SIN medallón — icono
+/// desnudo en muted, título, subtítulo y acción opcional centrada. La
+/// ausencia se anuncia con aire y tinta, no con una caja.
 class VeEmpty extends StatelessWidget {
   const VeEmpty({
     super.key,
@@ -858,43 +829,20 @@ class VeEmpty extends StatelessWidget {
   final String? sub;
   final Widget? action;
 
-  /// Icono del medallón (Lucide en toda la app: receiptText, images,
-  /// shoppingCart…). Sin icono el título queda solo, como siempre.
+  /// Icono (Lucide en toda la app: receiptText, images, shoppingCart…).
+  /// Sin icono el título queda solo, como siempre.
   final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    final shad = context.ve;
-    final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
-    final Color lineStrong = dark
-        ? VeColors.lineStrongDark
-        : VeColors.lineStrongLight;
-    final Color line = dark ? VeColors.borderDark : VeColors.borderLight;
+    final scheme = context.ve.colorScheme;
 
-    return Container(
+    return Padding(
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(kVeRadius),
-      ),
-      foregroundDecoration: _DashedDecoration(
-        color: lineStrong,
-        radius: kVeRadius,
-      ),
       child: Column(
         children: [
           if (icon != null) ...[
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: scheme.muted.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(13),
-                border: Border.all(color: line),
-              ),
-              child: Icon(icon, size: 20, color: scheme.mutedForeground),
-            ),
+            Icon(icon, size: 22, color: scheme.mutedForeground),
             const SizedBox(height: 14),
           ],
           Text(
@@ -927,48 +875,6 @@ class VeEmpty extends StatelessWidget {
   }
 }
 
-class _DashedDecoration extends Decoration {
-  const _DashedDecoration({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  BoxPainter createBoxPainter([VoidCallback? onChanged]) {
-    return _DashedBoxPainter(color: color, radius: radius);
-  }
-}
-
-class _DashedBoxPainter extends BoxPainter {
-  _DashedBoxPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Offset offset, ImageConfiguration configuration) {
-    final size = configuration.size;
-    if (size == null) return;
-    final rect = offset & size;
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
-    final path = Path()..addRRect(rrect);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color = color;
-    for (final m in path.computeMetrics()) {
-      double start = 0;
-      while (start < m.length) {
-        canvas.drawPath(
-          m.extractPath(start, (start + 5).clamp(0, m.length)),
-          paint,
-        );
-        start += 5 + 4;
-      }
-    }
-  }
-}
-
 // ──────────────────────────────────────────────────────────── Ambiente ─────
 
 /// Fondo ambiental del prototipo (app-ambient + app-dots): dos radiales
@@ -977,109 +883,16 @@ class _DashedBoxPainter extends BoxPainter {
 ///
 /// Pintado UNA sola vez (RepaintBoundary + shouldRepaint false) — costo
 /// trivial incluso en pantallas grandes.
+/// Fondo ambiental v25 «HOJA»: FUERA. La pantalla es papel plano — el
+/// scaffold ya pinta el fondo; esta pieza queda como no-op transparente
+/// para no romper a quien la monta (main_shell).
 class VeAmbient extends StatelessWidget {
   const VeAmbient({super.key, this.dots = true});
 
   final bool dots;
 
   @override
-  Widget build(BuildContext context) {
-    final shad = context.ve;
-    final scheme = shad.colorScheme;
-    final VeInk ink = Theme.of(context).extension<VeInk>()!;
-    final bool dark = shad.brightness == Brightness.dark;
-
-    return RepaintBoundary(
-      child: CustomPaint(
-        painter: _AmbientPainter(
-          pos: ink.pos,
-          warn: ink.warn,
-          line: scheme.border,
-          dots: dots,
-          dark: dark,
-        ),
-        size: Size.infinite,
-      ),
-    );
-  }
-}
-
-class _AmbientPainter extends CustomPainter {
-  _AmbientPainter({
-    required this.pos,
-    required this.warn,
-    required this.line,
-    required this.dots,
-    required this.dark,
-  });
-
-  final Color pos;
-  final Color warn;
-  final Color line;
-  final bool dots;
-  final bool dark;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Radial pos: foco en 85 % x, -12 % y → radio 1100×520 (elipse aprox).
-    final rectPos = Rect.fromCenter(
-      center: Offset(size.width * 0.85, -size.height * 0.12),
-      width: size.width * 1.6,
-      height: size.height * 1.1,
-    );
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()
-        ..shader = ui.Gradient.radial(rectPos.center, rectPos.width / 2, [
-          pos.withValues(alpha: dark ? 0.05 : 0.07),
-          pos.withValues(alpha: 0),
-        ]),
-    );
-
-    // Radial warn: foco en -8 % x, 18 % y.
-    final rectWarn = Rect.fromCenter(
-      center: Offset(-size.width * 0.08, size.height * 0.18),
-      width: size.width * 1.3,
-      height: size.height * 0.95,
-    );
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()
-        ..shader = ui.Gradient.radial(rectWarn.center, rectWarn.width / 2, [
-          warn.withValues(alpha: dark ? 0.045 : 0.06),
-          warn.withValues(alpha: 0),
-        ]),
-    );
-
-    if (!dots) return;
-
-    // Rejilla de puntos 22 px con máscara que se desvanece al 72 %.
-    final dotPaint = Paint()..color = line;
-    final fade = Paint()
-      ..shader = ui.Gradient.linear(
-        Offset(0, 0),
-        Offset(0, size.height * 0.72),
-        [const Color(0xFF000000), const Color(0x00000000)],
-      )
-      ..blendMode = BlendMode.dstIn;
-
-    canvas.saveLayer(Offset.zero & size, Paint());
-    const step = 22.0;
-    for (double x = step / 2; x < size.width; x += step) {
-      for (double y = step / 2; y < size.height; y += step) {
-        canvas.drawCircle(Offset(x, y), 1, dotPaint);
-      }
-    }
-    canvas.drawRect(Offset.zero & size, fade);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _AmbientPainter old) =>
-      old.pos != pos ||
-      old.warn != warn ||
-      old.line != line ||
-      old.dots != dots;
+  Widget build(BuildContext context) => const SizedBox.expand();
 }
 
 // ───────────────────────────────────────────────── Flash de número ────────
@@ -1194,7 +1007,7 @@ class _VeSheetCloseBtnState extends State<_VeSheetCloseBtn> {
           onExit: (_) => setState(() => _hover = false),
           child: Material(
             color: _hover ? scheme.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(kVeControlRadius),
+            borderRadius: BorderRadius.circular(999),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: () => Navigator.of(context).maybePop(),

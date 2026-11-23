@@ -104,7 +104,8 @@ class VeSparkline extends StatelessWidget {
           lineBarsData: [
             LineChartBarData(
               spots: [
-                for (var i = 0; i < data.length; i++) FlSpot(i.toDouble(), data[i]),
+                for (var i = 0; i < data.length; i++)
+                  FlSpot(i.toDouble(), data[i]),
               ],
               isCurved: false,
               barWidth: 1.6,
@@ -164,12 +165,15 @@ class VeBars extends StatelessWidget {
               gridData: const FlGridData(show: false),
               borderData: FlBorderData(show: false),
               titlesData: FlTitlesData(
-                leftTitles:
-                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles:
-                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                rightTitles:
-                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                leftTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
@@ -222,9 +226,7 @@ class VeBars extends StatelessWidget {
                     x: i,
                     barRods: [
                       BarChartRodData(
-                        toY: data[i] <= 0
-                            ? 2.0
-                            : math.max(3.0, data[i] * t),
+                        toY: data[i] <= 0 ? 2.0 : math.max(3.0, data[i] * t),
                         // v24.1: con pocas barras (la serie de 7 días arranca
                         // con 2-3 días) el ancho fijo 26 hacía vigas negras;
                         // el ancho acompaña a la cantidad de datos.
@@ -499,9 +501,7 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
     if (b == null) return;
     setState(() => _x = x.clamp(0.0, 1.0).toDouble());
     widget.onScrub?.call(
-      DateTime.fromMillisecondsSinceEpoch(
-        (b.$1 + (b.$2 - b.$1) * _x!).round(),
-      ),
+      DateTime.fromMillisecondsSinceEpoch((b.$1 + (b.$2 - b.$1) * _x!).round()),
     );
   }
 
@@ -579,8 +579,7 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
                             ),
                             leftTitles: widget.yLabel == null
                                 ? const AxisTitles(
-                                    sideTitles:
-                                        SideTitles(showTitles: false),
+                                    sideTitles: SideTitles(showTitles: false),
                                   )
                                 : AxisTitles(
                                     sideTitles: SideTitles(
@@ -671,9 +670,7 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
                                             begin: Alignment.topCenter,
                                             end: Alignment.bottomCenter,
                                             colors: [
-                                              s.color.withValues(
-                                                alpha: 0.28,
-                                              ),
+                                              s.color.withValues(alpha: 0.28),
                                               s.color.withValues(alpha: 0),
                                             ],
                                           ),
@@ -687,11 +684,11 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
                             // tooltip interno apagado, el indicador de
                             // fl_chart hace de crosshair.
                             touchTooltipData: const LineTouchTooltipData(
-                              getTooltipItems:
-                                  defaultLineTooltipNoItems,
+                              getTooltipItems: defaultLineTooltipNoItems,
                             ),
-                            getTouchedSpotIndicator: (bar, spots) =>
-                                spots.map((spot) {
+                            getTouchedSpotIndicator: (bar, spots) => spots.map((
+                              spot,
+                            ) {
                               return TouchedSpotIndicatorData(
                                 FlLine(
                                   color: crossInk,
@@ -702,18 +699,19 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
                                   show: true,
                                   getDotPainter: (spot, percent, bar, index) =>
                                       FlDotCirclePainter(
-                                    radius: 3,
-                                    color: scheme.background,
-                                    strokeWidth: 2,
-                                    strokeColor:
-                                        bar.color ?? scheme.foreground,
-                                  ),
+                                        radius: 3,
+                                        color: scheme.background,
+                                        strokeWidth: 2,
+                                        strokeColor:
+                                            bar.color ?? scheme.foreground,
+                                      ),
                                 ),
                               );
                             }).toList(),
                             touchCallback: (event, response) {
                               final spots = response?.lineBarSpots;
-                              final end = event is FlPointerExitEvent ||
+                              final end =
+                                  event is FlPointerExitEvent ||
                                   event is FlPanEndEvent ||
                                   event is FlPanCancelEvent;
                               if (spots == null || spots.isEmpty) {
@@ -721,8 +719,7 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
                                 return;
                               }
                               final spot = spots.first;
-                              final frac =
-                                  (spot.x - minX) / (maxX - minX);
+                              final frac = (spot.x - minX) / (maxX - minX);
                               if (end) {
                                 _scrubTo(frac);
                                 _release();
@@ -771,10 +768,7 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
     final built = widget.tooltipBuilder?.call(t, rows) ?? defaultChip;
     return Align(
       alignment: Alignment(-1 + 2 * _x!.clamp(0.1, 0.9).toDouble(), -1),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 2),
-        child: built,
-      ),
+      child: Padding(padding: const EdgeInsets.only(top: 2), child: built),
     );
   }
 }
@@ -840,7 +834,8 @@ class _Legend extends StatelessWidget {
   }
 }
 
-/// Chip de valor del gráfico: superficie + borde fuerte + texto tabular.
+/// Chip de valor del gráfico v25 «HOJA»: píldora de TINTA invertida (como
+/// el snackbar) con texto del papel — sin borde, sin sombra.
 class _ChartChip extends StatelessWidget {
   const _ChartChip({required this.text});
 
@@ -848,17 +843,12 @@ class _ChartChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = context.ve;
-    final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
+    final scheme = context.ve.colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: scheme.background,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: dark ? VeColors.lineStrongDark : VeColors.lineStrongLight,
-        ),
+        color: scheme.foreground,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
@@ -866,7 +856,7 @@ class _ChartChip extends StatelessWidget {
           fontFamily: 'Inter',
           fontSize: 11,
           fontFeatures: const [FontFeature.tabularFigures()],
-          color: scheme.foreground,
+          color: scheme.background,
         ),
       ),
     );

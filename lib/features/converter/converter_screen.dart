@@ -170,7 +170,7 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
       base.sel(to),
     };
     final day = SnapshotPoint.dayKey(date);
-    
+
     // MEJORA PERFORMANCE: Separa manuales y paraleliza el resto
     final manualRates = <String, double>{};
     final toFetch = <String>[];
@@ -185,23 +185,32 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
       }
     }
 
-    final fetchedPoints = await Future.wait(toFetch.map((id) async {
-      try {
-        final point = await rateOn(
-          id, day, preferLocal: offlineNet,
-          localFallback: (sourceId, d) {
-            final local = store.snapshots.where((p) => p.sourceId == sourceId && p.day == d).toList()
-              ..sort((a, b) => a.day.compareTo(b.day));
-            return local.isEmpty ? null : HistPoint(date: local.last.day, rate: local.last.rate);
-          },
-        );
-        if (point != null) {
-          final pointDay = point.date.length == 10 ? point.date : day;
-          return SnapshotPoint(sourceId: id, day: pointDay, rate: point.rate);
-        }
-      } catch (_) {}
-      return null;
-    }));
+    final fetchedPoints = await Future.wait(
+      toFetch.map((id) async {
+        try {
+          final point = await rateOn(
+            id,
+            day,
+            preferLocal: offlineNet,
+            localFallback: (sourceId, d) {
+              final local =
+                  store.snapshots
+                      .where((p) => p.sourceId == sourceId && p.day == d)
+                      .toList()
+                    ..sort((a, b) => a.day.compareTo(b.day));
+              return local.isEmpty
+                  ? null
+                  : HistPoint(date: local.last.day, rate: local.last.rate);
+            },
+          );
+          if (point != null) {
+            final pointDay = point.date.length == 10 ? point.date : day;
+            return SnapshotPoint(sourceId: id, day: pointDay, rate: point.rate);
+          }
+        } catch (_) {}
+        return null;
+      }),
+    );
 
     final fetched = fetchedPoints.whereType<SnapshotPoint>().toList();
     final rates = <String, double>{...manualRates};
@@ -211,13 +220,18 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
 
     if (fetched.isNotEmpty) {
       final merged = mergeSeries(fetched, store.snapshots);
-      store.snapshots..clear()..addAll(merged);
+      store.snapshots
+        ..clear()
+        ..addAll(merged);
       store.persistSnapshots();
     }
     final b = rates['ves-bcv'], p = rates['ves-parallel'];
     if (b != null && p != null) rates['ves-avg'] = (b + p) / 2;
     if (mounted) {
-      setState(() { _historicRates = rates; _historicLoading = false; });
+      setState(() {
+        _historicRates = rates;
+        _historicLoading = false;
+      });
     }
   }
 
@@ -227,20 +241,35 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     return RateContext(rates: _historicRates!, selected: base.selected);
   }
 
-  void _swapSides(AppStore store, Currency from, Currency to, ConversionPlan? plan, double result) {
+  void _swapSides(
+    AppStore store,
+    Currency from,
+    Currency to,
+    ConversionPlan? plan,
+    double result,
+  ) {
     final rate = plan?.rate ?? 0;
-    final nuevo = _driver == 'to' ? _toTyped : (rate > 0 && result > 0 ? result : _fromTyped);
+    final nuevo = _driver == 'to'
+        ? _toTyped
+        : (rate > 0 && result > 0 ? result : _fromTyped);
     store.setConverterPair(to.code, from.code);
     setState(() {
       _fromTyped = nuevo > 0 ? nuevo : 0;
       _toTyped = 0;
       _driver = 'from';
       _lastSyncedPassive = '';
-      _fromCtrl.text = fmtNum(_fromTyped, decimals: smartDecimals(_fromTyped, to));
+      _fromCtrl.text = fmtNum(
+        _fromTyped,
+        decimals: smartDecimals(_fromTyped, to),
+      );
     });
   }
 
-  bool _hasOverride(AppStore store, Currency c) => store.data.settings.rateSourcesByModule.containsKey(moduleRateKey(RateModule.converter.code, c.code));
+  bool _hasOverride(AppStore store, Currency c) => store
+      .data
+      .settings
+      .rateSourcesByModule
+      .containsKey(moduleRateKey(RateModule.converter.code, c.code));
 
   void _pickSource(Currency c, String id) {
     final store = ref.read(appStoreProvider);
@@ -254,16 +283,25 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
 
   Future<Set<String>> _diasRemotos(List<String> ids) async {
     if (ref.read(ratesPollerProvider).offlineNet) return const <String>{};
-    final probes = <String>{ for (final id in ids) ...(id == 'ves-avg' ? const ['ves-bcv', 'ves-parallel'] : [id]) };
-    final results = await Future.wait(probes.where((id) {
-      final def = RateSource.of(id);
-      return def != null && def.category != SourceCategory.manual;
-    }).map((id) async {
-      try {
-        final res = await seriesForSource(id, 180);
-        return res.points.map((p) => p.date).toSet();
-      } catch (_) { return <String>{}; }
-    }));
+    final probes = <String>{
+      for (final id in ids)
+        ...(id == 'ves-avg' ? const ['ves-bcv', 'ves-parallel'] : [id]),
+    };
+    final results = await Future.wait(
+      probes
+          .where((id) {
+            final def = RateSource.of(id);
+            return def != null && def.category != SourceCategory.manual;
+          })
+          .map((id) async {
+            try {
+              final res = await seriesForSource(id, 180);
+              return res.points.map((p) => p.date).toSet();
+            } catch (_) {
+              return <String>{};
+            }
+          }),
+    );
     return results.expand((e) => e).toSet();
   }
 
@@ -273,19 +311,36 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     final from = CurrencyX.from(store.data.converter.from);
     final to = CurrencyX.from(store.data.converter.to);
     final plan = ctx.plan(from, to);
-    final ids = <String>{ if (plan != null) ...plan.sourceIds, ctx.sel(from), if (from != to) ctx.sel(to) };
-    final days = <String>{ for (final id in ids) for (final p in snapshotSeries(store.snapshots, id, 180)) p.day };
+    final ids = <String>{
+      if (plan != null) ...plan.sourceIds,
+      ctx.sel(from),
+      if (from != to) ctx.sel(to),
+    };
+    final days = <String>{
+      for (final id in ids)
+        for (final p in snapshotSeries(store.snapshots, id, 180)) p.day,
+    };
     if (!mounted) return;
-    final label = ids.map((id) => convSourceNames[id] ?? RateSource.of(id)?.label ?? id).join(' + ');
+    final label = ids
+        .map((id) => convSourceNames[id] ?? RateSource.of(id)?.label ?? id)
+        .join(' + ');
     // v23.3 (pez 2-a P0-1): chrome del kit — el calendario histórico era
     // el último modal crudo de radio 20 de la app.
     final picked = await showVeHalfSheet<DateTime>(
       context: context,
       title: 'Elegir fecha histórica',
-      builder: (_) => _CalendarioHistorico(days: days, futureDays: _diasRemotos(ids.toList()), initial: _dateMode == 'custom' ? _customDate : null, sourceLabel: label),
+      builder: (_) => _CalendarioHistorico(
+        days: days,
+        futureDays: _diasRemotos(ids.toList()),
+        initial: _dateMode == 'custom' ? _customDate : null,
+        sourceLabel: label,
+      ),
     );
     if (picked == null || !mounted) return;
-    setState(() { _customDate = picked; _dateMode = 'custom'; });
+    setState(() {
+      _customDate = picked;
+      _dateMode = 'custom';
+    });
     _applyRateContext();
   }
 
@@ -298,15 +353,23 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     final amount = _amountNowFor(ctx, from, to);
     if (plan == null || amount <= 0) return null;
     final result = amount * plan.rate;
-    final primaryId = plan.sourceIds.isNotEmpty ? plan.sourceIds.first : ctx.sel(from);
+    final primaryId = plan.sourceIds.isNotEmpty
+        ? plan.sourceIds.first
+        : ctx.sel(from);
     final src = RateSource.of(primaryId);
     final label = convSourceNames[primaryId] ?? src?.label ?? primaryId;
     final cat = src?.category.label ?? '';
     return renderConversionSharePng(
-      context, from: from, to: to, inputAmount: amount, resultAmount: result,
+      context,
+      from: from,
+      to: to,
+      inputAmount: amount,
+      resultAmount: result,
       rateLine: '1 ${from.code} = ${fmtRate(plan.rate)} ${to.code}',
       sourceLabel: cat.isEmpty ? label : '$label · $cat',
-      date: _dateMode == 'today' ? DateTime.now() : (_customDate ?? DateTime.now()),
+      date: _dateMode == 'today'
+          ? DateTime.now()
+          : (_customDate ?? DateTime.now()),
     );
   }
 
@@ -319,20 +382,47 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     final amount = _amountNowFor(ctx, from, to);
     if (plan == null || amount <= 0) return;
     final result = amount * plan.rate;
-    final text = '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} · 1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} — ValoraVE';
-    await showExportSheet(context, ExportSpec(
-      title: 'Resultado ${from.code} → ${to.code}',
-      subtitle: '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} ${to.code}',
-      formats: [
-        ExportFormat(icon: Icons.subject_rounded, label: 'Texto', hint: 'Cifra y tasa listas para pegar en un chat', run: (share) async { await SharePlus.instance.share(ShareParams(text: text)); return null; }),
-        ExportFormat(icon: Icons.image_outlined, label: 'Imagen PNG', hint: 'Tarjeta de ValoraVE con la conversión', run: (share) async {
-          final png = await _renderCard(); if (png == null) return 'No pude generar la tarjeta';
-          if (share) { await sharePng(png, 'conversion-valorave.png'); return null; }
-          final path = await downloadBytes(png, fileName: 'conversion-valorave.png');
-          return path == null ? 'No se pudo guardar la imagen.' : 'Guardado en: $path';
-        }),
-      ],
-    ));
+    final text =
+        '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} · 1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} — ValoraVE';
+    await showExportSheet(
+      context,
+      ExportSpec(
+        title: 'Resultado ${from.code} → ${to.code}',
+        subtitle:
+            '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} ${to.code}',
+        formats: [
+          ExportFormat(
+            icon: Icons.subject_rounded,
+            label: 'Texto',
+            hint: 'Cifra y tasa listas para pegar en un chat',
+            run: (share) async {
+              await SharePlus.instance.share(ShareParams(text: text));
+              return null;
+            },
+          ),
+          ExportFormat(
+            icon: Icons.image_outlined,
+            label: 'Imagen PNG',
+            hint: 'Tarjeta de ValoraVE con la conversión',
+            run: (share) async {
+              final png = await _renderCard();
+              if (png == null) return 'No pude generar la tarjeta';
+              if (share) {
+                await sharePng(png, 'conversion-valorave.png');
+                return null;
+              }
+              final path = await downloadBytes(
+                png,
+                fileName: 'conversion-valorave.png',
+              );
+              return path == null
+                  ? 'No se pudo guardar la imagen.'
+                  : 'Guardado en: $path';
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   void _copyResult() {
@@ -344,14 +434,26 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
     final amount = _amountNowFor(ctx, from, to);
     if (plan == null || amount <= 0) return;
     final result = amount * plan.rate;
-    final primaryId = plan.sourceIds.isNotEmpty ? plan.sourceIds.first : ctx.sel(from);
+    final primaryId = plan.sourceIds.isNotEmpty
+        ? plan.sourceIds.first
+        : ctx.sel(from);
     final src = RateSource.of(primaryId);
     final label = convSourceNames[primaryId] ?? src?.label ?? primaryId;
     final cat = src?.category.label ?? '';
-    copiarAlPortapapeles(context, '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} ${to.code} · 1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} ($label${cat.isEmpty ? '' : ' · $cat'}) · ValoraVE', 'Resultado copiado');
+    copiarAlPortapapeles(
+      context,
+      '${fmtMoney(amount, from)} ${from.code} = ${fmtMoney(result, to)} ${to.code} · 1 ${from.code} = ${fmtRate(plan.rate)} ${to.code} ($label${cat.isEmpty ? '' : ' · $cat'}) · ValoraVE',
+      'Resultado copiado',
+    );
   }
 
-  void _syncPassiveController(RateContext ctx, Currency from, Currency to, double result, double amount) {
+  void _syncPassiveController(
+    RateContext ctx,
+    Currency from,
+    Currency to,
+    double result,
+    double amount,
+  ) {
     final passiveTo = _driver == 'from';
     // v23 (numMode · comparativa CalculaYa «Alternar redondeo»): en modo
     // redondeo el RESULTADO se muestra entero; la línea «≈» de abajo y la
@@ -361,14 +463,22 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
         ? (result > 0
               ? fmtNum(result, decimals: round ? 0 : smartDecimals(result, to))
               : '')
-        : (amount > 0 ? fmtNum(amount, decimals: smartDecimals(amount, from)) : '');
+        : (amount > 0
+              ? fmtNum(amount, decimals: smartDecimals(amount, from))
+              : '');
     if (passiveTxt == _lastSyncedPassive) return;
     final ctrl = passiveTo ? _toCtrl : _fromCtrl;
-    if (ctrl.text == passiveTxt) { _lastSyncedPassive = passiveTxt; return; }
+    if (ctrl.text == passiveTxt) {
+      _lastSyncedPassive = passiveTxt;
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (ctrl.text != passiveTxt) {
-        ctrl.value = TextEditingValue(text: passiveTxt, selection: TextSelection.collapsed(offset: passiveTxt.length));
+        ctrl.value = TextEditingValue(
+          text: passiveTxt,
+          selection: TextSelection.collapsed(offset: passiveTxt.length),
+        );
         _lastSyncedPassive = passiveTxt;
       }
     });
@@ -377,14 +487,24 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
   /// v23.2 (patrón calculadora): las secciones secundarias viven en
   /// half-sheets — la pantalla queda a la vista sin subir/bajar.
   Future<void> _showSeccion(String titulo, WidgetBuilder builder) async {
-    await showVeHalfSheet<void>(context: context, title: titulo, builder: builder);
+    await showVeHalfSheet<void>(
+      context: context,
+      title: titulo,
+      builder: builder,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final fromCode = ref.watch(appStoreProvider.select((s) => s.data.converter.from));
-    final toCode = ref.watch(appStoreProvider.select((s) => s.data.converter.to));
-    final numMode = ref.watch(appStoreProvider.select((s) => s.settings.numMode));
+    final fromCode = ref.watch(
+      appStoreProvider.select((s) => s.data.converter.from),
+    );
+    final toCode = ref.watch(
+      appStoreProvider.select((s) => s.data.converter.to),
+    );
+    final numMode = ref.watch(
+      appStoreProvider.select((s) => s.settings.numMode),
+    );
     final from = CurrencyX.from(fromCode);
     final to = CurrencyX.from(toCode);
 
@@ -397,13 +517,19 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
 
     _syncPassiveController(ctx, from, to, result, amount);
 
-    final primaryId = (plan != null && plan.sourceIds.isNotEmpty) ? plan.sourceIds.first : ctx.sel(from);
+    final primaryId = (plan != null && plan.sourceIds.isNotEmpty)
+        ? plan.sourceIds.first
+        : ctx.sel(from);
     final src = RateSource.of(primaryId);
     final entry = store.board.sources[primaryId];
     final when = entry?.updatedAt ?? store.board.fetchedAt;
-    final frescura = src?.category == SourceCategory.manual ? 'tu tasa manual' : (when != null ? timeAgo(when) : 'sin fecha aún');
+    final frescura = src?.category == SourceCategory.manual
+        ? 'tu tasa manual'
+        : (when != null ? timeAgo(when) : 'sin fecha aún');
     final srcLabel = convSourceNames[primaryId] ?? src?.label ?? primaryId;
-    final subTitulo = (plan != null && plan.rate > 0) ? '$srcLabel · 1 ${from.code} = ${fmtRate(plan.rate)} ${to.code}' : 'Sin tasa disponible para este par';
+    final subTitulo = (plan != null && plan.rate > 0)
+        ? '$srcLabel · 1 ${from.code} = ${fmtRate(plan.rate)} ${to.code}'
+        : 'Sin tasa disponible para este par';
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -421,13 +547,24 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const TipsTrigger(scope: 'conversor'),
-                    VeTitle(sub: Text(subTitulo), child: const Text('Conversor')),
+                    VeTitle(
+                      sub: Text(subTitulo),
+                      child: const Text('Conversor'),
+                    ),
                     KeyedSubtree(
                       key: TourKeys.convFecha,
                       child: _FechaTasas(
-                        mode: _dateMode, customDate: _customDate, loading: _historicLoading,
-                        sinDatos: _historicRates != null && !_historicLoading && (plan == null || plan.rate <= 0),
-                        onMode: (m) { setState(() => _dateMode = m); _applyRateContext(); },
+                        mode: _dateMode,
+                        customDate: _customDate,
+                        loading: _historicLoading,
+                        sinDatos:
+                            _historicRates != null &&
+                            !_historicLoading &&
+                            (plan == null || plan.rate <= 0),
+                        onMode: (m) {
+                          setState(() => _dateMode = m);
+                          _applyRateContext();
+                        },
                         onOpenCalendar: _openHistoricCalendar,
                       ),
                     ),
@@ -436,9 +573,17 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                       key: TourKeys.convFuente,
                       child: RepaintBoundary(
                         child: _DualInput(
-                          fromCtrl: _fromCtrl, toCtrl: _toCtrl, from: from, to: to, result: result, plan: plan, ctx: ctx,
+                          fromCtrl: _fromCtrl,
+                          toCtrl: _toCtrl,
+                          from: from,
+                          to: to,
+                          result: result,
+                          plan: plan,
+                          ctx: ctx,
                           driver: _driver,
-                          activeSourceId: primaryId, frescura: frescura, hasOverride: _hasOverride(store, from),
+                          activeSourceId: primaryId,
+                          frescura: frescura,
+                          hasOverride: _hasOverride(store, from),
                           // v24.1 (patrón calculadora): tocar el lado
                           // INACTIVO abre una entrada NUEVA (el valor
                           // pasivo se sustituye, no se concatena); tocar
@@ -456,121 +601,210 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                             }
                           }),
                           onAdjust: (v) => setState(() {
-                            _fromTyped = v <= 0 ? 0 : v; _driver = 'from'; _lastSyncedPassive = '';
-                            _fromCtrl.text = fmtNum(_fromTyped, decimals: smartDecimals(_fromTyped, from));
+                            _fromTyped = v <= 0 ? 0 : v;
+                            _driver = 'from';
+                            _lastSyncedPassive = '';
+                            _fromCtrl.text = fmtNum(
+                              _fromTyped,
+                              decimals: smartDecimals(_fromTyped, from),
+                            );
                           }),
-                          onSwap: () => _swapSides(store, from, to, plan, result),
-                          onFrom: (c) => c == to ? _swapSides(store, from, to, plan, result) : store.setConverterPair(c.code, to.code),
-                          onTo: (c) => c == from ? _swapSides(store, from, to, plan, result) : store.setConverterPair(from.code, c.code),
+                          onSwap: () =>
+                              _swapSides(store, from, to, plan, result),
+                          onFrom: (c) => c == to
+                              ? _swapSides(store, from, to, plan, result)
+                              : store.setConverterPair(c.code, to.code),
+                          onTo: (c) => c == from
+                              ? _swapSides(store, from, to, plan, result)
+                              : store.setConverterPair(from.code, c.code),
                           onPickSource: _pickSource,
-                          onClearOverride: () => store.setModuleRateSource(RateModule.converter, from, null),
+                          onClearOverride: () => store.setModuleRateSource(
+                            RateModule.converter,
+                            from,
+                            null,
+                          ),
                         ),
+                      ),
+                    ),
+                    // v25.1: fichas de montos + modo de vista vuelven al
+                    // SCROLL — el piso fijo queda SOLO con acciones + pad.
+                    // Con todo dentro, el piso medía ~400 px y el campo
+                    // resultado caía tras el pliegue del scroll (hit-test
+                    // muerto a 390×844: el tap lo comía el clip del viewport).
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      // Fichas en UNA línea: 6 expandidas + «Limpiar»
+                      // natural al final — cada slot sobra aire.
+                      child: Row(
+                        children: [
+                          for (final v in const [1, 5, 10, 20, 50, 100])
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
+                                child: VeChip(
+                                  expands: true,
+                                  dense: true,
+                                  onTap: () =>
+                                      _setFromAmount(v.toDouble(), from),
+                                  child: Text('$v'),
+                                ),
+                              ),
+                            ),
+                          VeChip(
+                            dense: true,
+                            onTap: () => _setFromAmount(0, from),
+                            child: const Text('Limpiar'),
+                          ),
+                        ],
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      // v23.2: acciones al mínimo — iconos con etiqueta para
-                      // el lector (Semantics) y texto solo donde la palabra
-                      // es la marca del flujo («Pago Móvil»).
-                      child: Row(children: [
-                        Semantics(
-                          label: 'Compartir resultado',
-                          child: VeBtn(
-                            size: VeBtnSize.lg,
-                            variant: VeBtnVariant.secondary,
-                            enabled: plan != null && result > 0,
-                            onPressed: _shareCard,
-                            child: const Icon(LucideIcons.share2, size: 16),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Semantics(
-                          label: 'Copiar resultado',
-                          child: VeBtn(
-                            size: VeBtnSize.lg,
-                            variant: VeBtnVariant.secondary,
-                            enabled: plan != null && result > 0,
-                            onPressed: _copyResult,
-                            child: const Icon(LucideIcons.copy, size: 16),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (to == Currency.ves)
-                          Expanded(
-                            child: VeBtn(
-                              size: VeBtnSize.lg,
-                              variant: VeBtnVariant.secondary,
-                              icon: LucideIcons.smartphone,
-                              enabled: result > 0,
-                              onPressed: () => showPagoMovilSheet(
-                                context,
-                                ref: ref,
-                                montoBs: result,
-                              ),
-                              child: const Text('Pago Móvil'),
-                            ),
-                          )
-                        else
-                          const Spacer(),
-                      ]),
+                      child: VeSegmented<String>(
+                        value: numMode,
+                        onChanged: store.setNumMode,
+                        segments: const [
+                          VeSegment(value: 'decimales', label: 'Decimales'),
+                          VeSegment(value: 'redondeo', label: 'Redondear'),
+                        ],
+                      ),
                     ),
+                    // v25.1: la fila de acciones se MUDÓ al piso fijo junto al
+                    // pad (regresión de hit-test: el display v25 creció, la
+                    // fila caía tras el pliegue y el teclado interceptaba el
+                    // tap de «Pago Móvil»). v23.2: acciones al mínimo —
+                    // iconos con etiqueta para el lector (Semantics) y texto
+                    // solo donde la palabra es la marca del flujo.
                     // v23.2: secciones secundarias como fichas — abren
                     // half-sheets y NO compiten por el alto de la pantalla.
                     // 4 slots iguales: SIEMPRE una sola línea.
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Row(children: [
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: VeChip(
-                              dense: true,
-                              onTap: () => _showSeccion('Referencia de fuentes', (c) => _ReferenciaFuentes(ctx: ctx, from: from, to: to, onPick: _pickSource)),
-                              child: FittedBox(fit: BoxFit.scaleDown, child: const Text('Fuentes')),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                              ),
+                              child: VeChip(
+                                dense: true,
+                                onTap: () => _showSeccion(
+                                  'Referencia de fuentes',
+                                  (c) => _ReferenciaFuentes(
+                                    ctx: ctx,
+                                    from: from,
+                                    to: to,
+                                    onPick: _pickSource,
+                                  ),
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: const Text('Fuentes'),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: VeChip(
-                              dense: true,
-                              onTap: () => _showSeccion('Tabla de montos', (c) => _TablaMontos(
-                                ctx: ctx, amount: amount, from: from,
-                                onAmount: (v) { setState(() { _fromTyped = v <= 0 ? 0 : v; _driver = 'from'; _lastSyncedPassive = ''; _fromCtrl.text = fmtNum(_fromTyped, decimals: smartDecimals(_fromTyped, from)); }); Navigator.pop(c); },
-                              )),
-                              child: FittedBox(fit: BoxFit.scaleDown, child: const Text('Tabla')),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                              ),
+                              child: VeChip(
+                                dense: true,
+                                onTap: () => _showSeccion(
+                                  'Tabla de montos',
+                                  (c) => _TablaMontos(
+                                    ctx: ctx,
+                                    amount: amount,
+                                    from: from,
+                                    onAmount: (v) {
+                                      setState(() {
+                                        _fromTyped = v <= 0 ? 0 : v;
+                                        _driver = 'from';
+                                        _lastSyncedPassive = '';
+                                        _fromCtrl.text = fmtNum(
+                                          _fromTyped,
+                                          decimals: smartDecimals(
+                                            _fromTyped,
+                                            from,
+                                          ),
+                                        );
+                                      });
+                                      Navigator.pop(c);
+                                    },
+                                  ),
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: const Text('Tabla'),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: VeChip(
-                              dense: true,
-                              onTap: () => _showSeccion('Recientes', (c) => _Recientes(from: from, to: to, amount: amount, result: result, plan: plan,
-                                onRestore: (r) {
-                                  final rf = CurrencyX.from(r.from);
-                                  if (from != rf || to != CurrencyX.from(r.to)) store.setConverterPair(r.from, r.to);
-                                  setState(() { _fromTyped = r.amount; _driver = 'from'; _lastSyncedPassive = ''; _fromCtrl.text = fmtNum(r.amount, decimals: smartDecimals(r.amount, rf)); });
-                                  Navigator.pop(c);
-                                },
-                              )),
-                              child: FittedBox(fit: BoxFit.scaleDown, child: const Text('Recientes')),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                              ),
+                              child: VeChip(
+                                dense: true,
+                                onTap: () => _showSeccion(
+                                  'Recientes',
+                                  (c) => _Recientes(
+                                    from: from,
+                                    to: to,
+                                    amount: amount,
+                                    result: result,
+                                    plan: plan,
+                                    onRestore: (r) {
+                                      final rf = CurrencyX.from(r.from);
+                                      if (from != rf ||
+                                          to != CurrencyX.from(r.to)) {
+                                        store.setConverterPair(r.from, r.to);
+                                      }
+                                      setState(() {
+                                        _fromTyped = r.amount;
+                                        _driver = 'from';
+                                        _lastSyncedPassive = '';
+                                        _fromCtrl.text = fmtNum(
+                                          r.amount,
+                                          decimals: smartDecimals(r.amount, rf),
+                                        );
+                                      });
+                                      Navigator.pop(c);
+                                    },
+                                  ),
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: const Text('Recientes'),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: VeChip(
-                              dense: true,
-                              onTap: () => _showSeccion('Notas', (c) => _Notas(ctrl: _notesCtrl)),
-                              child: FittedBox(fit: BoxFit.scaleDown, child: const Text('Notas')),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                              ),
+                              child: VeChip(
+                                dense: true,
+                                onTap: () => _showSeccion(
+                                  'Notas',
+                                  (c) => _Notas(ctrl: _notesCtrl),
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: const Text('Notas'),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ]),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -590,38 +824,53 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Fichas en UNA línea: 6 expandidas + «Limpiar»
-                      // natural al final — cada slot sobra aire.
-                      Row(children: [
-                        for (final v in const [1, 5, 10, 20, 50, 100])
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 2),
-                              child: VeChip(
-                                expands: true,
-                                dense: true,
-                                onTap: () => _setFromAmount(v.toDouble(), from),
-                                child: Text('$v'),
-                              ),
+                      // v25.1: acciones en el PISO — siempre visibles y
+                      // tocables junto al pad, nunca tras el pliegue.
+                      Row(
+                        children: [
+                          Semantics(
+                            label: 'Compartir resultado',
+                            child: VeBtn(
+                              size: VeBtnSize.lg,
+                              variant: VeBtnVariant.secondary,
+                              enabled: plan != null && result > 0,
+                              onPressed: _shareCard,
+                              child: const Icon(LucideIcons.share2, size: 16),
                             ),
                           ),
-                        VeChip(
-                          dense: true,
-                          onTap: () => _setFromAmount(0, from),
-                          child: const Text('Limpiar'),
-                        ),
-                      ]),
-                      const SizedBox(height: 8),
-                      VeKeypad(onKey: _padKey),
-                      const SizedBox(height: 8),
-                      VeSegmented<String>(
-                        value: numMode,
-                        onChanged: store.setNumMode,
-                        segments: const [
-                          VeSegment(value: 'decimales', label: 'Decimales'),
-                          VeSegment(value: 'redondeo', label: 'Redondear'),
+                          const SizedBox(width: 8),
+                          Semantics(
+                            label: 'Copiar resultado',
+                            child: VeBtn(
+                              size: VeBtnSize.lg,
+                              variant: VeBtnVariant.secondary,
+                              enabled: plan != null && result > 0,
+                              onPressed: _copyResult,
+                              child: const Icon(LucideIcons.copy, size: 16),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (to == Currency.ves)
+                            Expanded(
+                              child: VeBtn(
+                                size: VeBtnSize.lg,
+                                variant: VeBtnVariant.secondary,
+                                icon: LucideIcons.smartphone,
+                                enabled: result > 0,
+                                onPressed: () => showPagoMovilSheet(
+                                  context,
+                                  ref: ref,
+                                  montoBs: result,
+                                ),
+                                child: const Text('Pago Móvil'),
+                              ),
+                            )
+                          else
+                            const Spacer(),
                         ],
                       ),
+                      const SizedBox(height: 8),
+                      VeKeypad(onKey: _padKey),
                     ],
                   ),
                 ),
@@ -635,150 +884,378 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
 }
 
 class _FechaTasas extends ConsumerWidget {
-  const _FechaTasas({required this.mode, required this.customDate, required this.loading, required this.sinDatos, required this.onMode, required this.onOpenCalendar});
-  final String mode; final DateTime? customDate; final bool loading; final bool sinDatos;
-  final ValueChanged<String> onMode; final VoidCallback onOpenCalendar;
+  const _FechaTasas({
+    required this.mode,
+    required this.customDate,
+    required this.loading,
+    required this.sinDatos,
+    required this.onMode,
+    required this.onOpenCalendar,
+  });
+  final String mode;
+  final DateTime? customDate;
+  final bool loading;
+  final bool sinDatos;
+  final ValueChanged<String> onMode;
+  final VoidCallback onOpenCalendar;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ink = Theme.of(context).extension<VeInk>()!;
     final String periodo = switch (mode) {
-      'yesterday' => 'de ayer', 'week' => 'de hace 7 días',
-      _ => customDate == null ? 'del día elegido' : 'del ${fmtDate(customDate!)}',
+      'yesterday' => 'de ayer',
+      'week' => 'de hace 7 días',
+      _ =>
+        customDate == null ? 'del día elegido' : 'del ${fmtDate(customDate!)}',
     };
     // v23.2: sin tarjeta envolvente — la fila de fechas respira directa en
     // la página (cada dp cuenta en el patrón calculadora).
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Wrap(spacing: 6, runSpacing: 6, children: [
-        VeChip(active: mode == 'today', onTap: () => onMode('today'), child: const Text('Hoy')),
-        VeChip(active: mode == 'yesterday', onTap: () => onMode('yesterday'), child: const Text('Ayer')),
-        VeChip(active: mode == 'week', onTap: () => onMode('week'), child: const Text('Hace 7 días')),
-        VeChip(active: mode == 'custom', icon: LucideIcons.calendarDays, onTap: onOpenCalendar, child: const Text('Fecha')),
-      ]),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            VeChip(
+              active: mode == 'today',
+              onTap: () => onMode('today'),
+              child: const Text('Hoy'),
+            ),
+            VeChip(
+              active: mode == 'yesterday',
+              onTap: () => onMode('yesterday'),
+              child: const Text('Ayer'),
+            ),
+            VeChip(
+              active: mode == 'week',
+              onTap: () => onMode('week'),
+              child: const Text('Hace 7 días'),
+            ),
+            VeChip(
+              active: mode == 'custom',
+              icon: LucideIcons.calendarDays,
+              onTap: onOpenCalendar,
+              child: const Text('Fecha'),
+            ),
+          ],
+        ),
         if (mode != 'today') ...[
           const SizedBox(height: 8),
           if (loading)
-            const Row(children: [SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('Buscando tasa…', style: TextStyle(fontSize: 12))])
+            const Row(
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 8),
+                Text('Buscando tasa…', style: TextStyle(fontSize: 12)),
+              ],
+            )
           else
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(color: ink.warnBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: ink.warn.withValues(alpha: 0.35))),
-              child: Row(children: [
-                Icon(Icons.history, size: 15, color: ink.warn), const SizedBox(width: 8),
-                Expanded(child: Text(sinDatos ? 'Sin datos ese día — elige otro en el calendario' : 'Tasa $periodo', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: ink.warn), maxLines: 2, overflow: TextOverflow.ellipsis)),
-                VeBtn(variant: VeBtnVariant.ghost, size: VeBtnSize.sm, onPressed: () => onMode('today'), child: const Text('Hoy')),
-              ]),
+              // v25 «HOJA»: aviso PLANO — texto warn, sin fill ni borde.
+              child: Row(
+                children: [
+                  Icon(Icons.history, size: 15, color: ink.warn),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      sinDatos
+                          ? 'Sin datos ese día — elige otro en el calendario'
+                          : 'Tasa $periodo',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: ink.warn,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  VeBtn(
+                    variant: VeBtnVariant.ghost,
+                    size: VeBtnSize.sm,
+                    onPressed: () => onMode('today'),
+                    child: const Text('Hoy'),
+                  ),
+                ],
+              ),
             ),
         ],
-        ],
+      ],
     );
   }
 }
 
 class _DualInput extends ConsumerWidget {
-  const _DualInput({required this.fromCtrl, required this.toCtrl, required this.from, required this.to, required this.result, required this.plan, required this.ctx, required this.driver, required this.activeSourceId, required this.frescura, required this.hasOverride, required this.onDriverTap, required this.onAdjust, required this.onSwap, required this.onFrom, required this.onTo, required this.onPickSource, required this.onClearOverride});
+  const _DualInput({
+    required this.fromCtrl,
+    required this.toCtrl,
+    required this.from,
+    required this.to,
+    required this.result,
+    required this.plan,
+    required this.ctx,
+    required this.driver,
+    required this.activeSourceId,
+    required this.frescura,
+    required this.hasOverride,
+    required this.onDriverTap,
+    required this.onAdjust,
+    required this.onSwap,
+    required this.onFrom,
+    required this.onTo,
+    required this.onPickSource,
+    required this.onClearOverride,
+  });
   final TextEditingController fromCtrl, toCtrl;
-  final Currency from, to; final double result; final ConversionPlan? plan;
-  final RateContext ctx; final String driver, activeSourceId, frescura; final bool hasOverride;
+  final Currency from, to;
+  final double result;
+  final ConversionPlan? plan;
+  final RateContext ctx;
+  final String driver, activeSourceId, frescura;
+  final bool hasOverride;
+
   /// v24.1 (patrón calculadora): los campos son de SOLO LECTURA — el toque
   /// cambia el lado ACTIVO (el pad escribe donde el usuario tocó) y el
   /// teclado del sistema jamás aparece.
-  final ValueChanged<String> onDriverTap; final ValueChanged<double> onAdjust;
-  final VoidCallback onSwap; final ValueChanged<Currency> onFrom, onTo;
-  final void Function(Currency c, String id) onPickSource; final VoidCallback onClearOverride;
+  final ValueChanged<String> onDriverTap;
+  final ValueChanged<double> onAdjust;
+  final VoidCallback onSwap;
+  final ValueChanged<Currency> onFrom, onTo;
+  final void Function(Currency c, String id) onPickSource;
+  final VoidCallback onClearOverride;
 
   Widget _fuenteLine(BuildContext ctx2, WidgetRef ref, ColorScheme scheme) {
     final src = RateSource.of(activeSourceId);
-    final label = convSourceNames[activeSourceId] ?? src?.label ?? activeSourceId;
-    return Row(children: [
-      Expanded(child: InkWell(
-        onTap: () => _openSourcesSheet(ctx2, ref), borderRadius: BorderRadius.circular(10),
-        child: Padding(padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4), child: Row(children: [
-          if (src != null) ...[SourceSeal(src.category), const SizedBox(width: 8)],
-          Expanded(child: Text.rich(TextSpan(text: label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurface), children: [TextSpan(text: ' · $frescura', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: scheme.onSurfaceVariant))]), maxLines: 1, overflow: TextOverflow.ellipsis)),
-          const SizedBox(width: 4), Icon(LucideIcons.chevronDown, size: 16, color: scheme.onSurfaceVariant),
-        ])),
-      )),
-      if (hasOverride) VeBtn(variant: VeBtnVariant.ghost, size: VeBtnSize.sm, onPressed: onClearOverride, child: const Text('Seguir global')),
-    ]);
+    final label =
+        convSourceNames[activeSourceId] ?? src?.label ?? activeSourceId;
+    return Row(
+      children: [
+        Expanded(
+          child: InkWell(
+            onTap: () => _openSourcesSheet(ctx2, ref),
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: Row(
+                children: [
+                  if (src != null) ...[
+                    SourceSeal(src.category),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        text: label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: ' · $frescura',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    LucideIcons.chevronDown,
+                    size: 16,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (hasOverride)
+          VeBtn(
+            variant: VeBtnVariant.ghost,
+            size: VeBtnSize.sm,
+            onPressed: onClearOverride,
+            child: const Text('Seguir global'),
+          ),
+      ],
+    );
   }
+
   Future<void> _openSourcesSheet(BuildContext context, WidgetRef ref) async {
-    await showRateSheet(context, ref: ref, currency: from, ctx: ctx, currentId: activeSourceId, onPick: (id) => onPickSource(from, id));
+    await showRateSheet(
+      context,
+      ref: ref,
+      currency: from,
+      ctx: ctx,
+      currentId: activeSourceId,
+      onPick: (id) => onPickSource(from, id),
+    );
   }
+
   double _fromValueOf(double result, ConversionPlan? plan) {
     final rate = plan?.rate ?? 0;
     return rate <= 0 ? 0 : (result > 0 ? result / rate : 0);
   }
+
   Widget _montoRow(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     // v24.1: el símbolo de la divisa del lado ACTIVO va en tinta plena —
     // feedback de dónde escribirá el pad, sin abrir ningún teclado.
     final activo = driver != 'to';
-    return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-      Text(from.symbol, style: VeText.displayNum(24, color: activo ? scheme.onSurface : scheme.onSurfaceVariant, weight: FontWeight.w600)),
-      const SizedBox(width: 8),
-      Expanded(child: MoneyField(controller: fromCtrl, readOnly: true, onTap: () => onDriverTap('from'), maxDecimals: 6, style: VeText.displayNum(34, color: scheme.onSurface, weight: FontWeight.w600), decoration: const InputDecoration(hintText: 'Monto', border: InputBorder.none, isCollapsed: true, contentPadding: EdgeInsets.symmetric(vertical: 6)))),
-      const SizedBox(width: 8), CurrencySelect(value: from, onChanged: onFrom),
-    ]);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          from.symbol,
+          style: VeText.displayNum(
+            24,
+            color: activo ? scheme.onSurface : scheme.onSurfaceVariant,
+            weight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: MoneyField(
+            controller: fromCtrl,
+            readOnly: true,
+            onTap: () => onDriverTap('from'),
+            maxDecimals: 6,
+            style: VeText.displayNum(
+              34,
+              color: scheme.onSurface,
+              weight: FontWeight.w600,
+            ),
+            decoration: const InputDecoration(
+              hintText: 'Monto',
+              border: InputBorder.none,
+              isCollapsed: true,
+              contentPadding: EdgeInsets.symmetric(vertical: 6),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        CurrencySelect(value: from, onChanged: onFrom),
+      ],
+    );
   }
+
   Widget _resultadoRow(ColorScheme scheme) {
     final ok = plan != null && result > 0;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Expanded(child: MoneyField(controller: toCtrl, readOnly: true, onTap: () => onDriverTap('to'), maxDecimals: 6, style: VeText.displayNum(40, color: ok ? scheme.onSurface : scheme.onSurfaceVariant), decoration: InputDecoration(hintText: 'Resultado', border: InputBorder.none, isCollapsed: true, contentPadding: const EdgeInsets.symmetric(vertical: 6), hintStyle: VeText.displayNum(40, color: scheme.onSurfaceVariant)))),
-        const SizedBox(width: 8), CurrencySelect(value: to, onChanged: onTo),
-      ]),
-      Padding(padding: const EdgeInsets.only(left: 4, top: 2), child: Text(ok ? '≈ ${fmtMoney(result, to)}' : 'sin tasa para este par', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: ok ? 12 : 10.5, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant))),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: MoneyField(
+                controller: toCtrl,
+                readOnly: true,
+                onTap: () => onDriverTap('to'),
+                maxDecimals: 6,
+                style: VeText.displayNum(
+                  40,
+                  color: ok ? scheme.onSurface : scheme.onSurfaceVariant,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Resultado',
+                  border: InputBorder.none,
+                  isCollapsed: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                  hintStyle: VeText.displayNum(
+                    40,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            CurrencySelect(value: to, onChanged: onTo),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, top: 2),
+          child: Text(
+            ok ? '≈ ${fmtMoney(result, to)}' : 'sin tasa para este par',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: ok ? 12 : 10.5,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
   }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     return VeCard(
       padding: const EdgeInsets.all(12),
-      child: Column(children: [
-        _fuenteLine(context, ref, scheme), const Divider(height: 12), _montoRow(context),
-        Padding(
-          // v23.3 (pez 2-a P1-1): fila del swap a 44 — el botón insignia de
-          // la pantalla tenía 32×32 de pista.
-          padding: EdgeInsets.zero,
-          child: SizedBox(
-            height: 44,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                const Positioned.fill(
-                  child: Center(child: Divider(height: 1)),
-                ),
-                _SwapBtn(onTap: onSwap),
-              ],
+      child: Column(
+        children: [
+          _fuenteLine(context, ref, scheme),
+          const Divider(height: 12),
+          _montoRow(context),
+          Padding(
+            // v23.3 (pez 2-a P1-1): fila del swap a 44 — el botón insignia de
+            // la pantalla tenía 32×32 de pista.
+            padding: EdgeInsets.zero,
+            child: SizedBox(
+              height: 44,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Positioned.fill(
+                    child: Center(child: Divider(height: 1)),
+                  ),
+                  _SwapBtn(onTap: onSwap),
+                ],
+              ),
             ),
           ),
-        ),
-        _resultadoRow(scheme),
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Row(
-            children: [
-              for (final adj in quickAdjustments)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    // FittedBox: el sello ±10 %/±100 nunca rebosa en
-                    // pantallas angostas (cifras blindadas §9.2).
-                    child: VeChip(
-                      expands: true,
-                      onTap: () => onAdjust(adj.apply(_fromValueOf(result, plan))),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(adj.label),
+          _resultadoRow(scheme),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                for (final adj in quickAdjustments)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      // FittedBox: el sello ±10 %/±100 nunca rebosa en
+                      // pantallas angostas (cifras blindadas §9.2).
+                      child: VeChip(
+                        expands: true,
+                        onTap: () =>
+                            onAdjust(adj.apply(_fromValueOf(result, plan))),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(adj.label),
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }
@@ -789,29 +1266,33 @@ class _SwapBtn extends ConsumerStatefulWidget {
   @override
   ConsumerState<_SwapBtn> createState() => _SwapBtnState();
 }
+
 class _SwapBtnState extends ConsumerState<_SwapBtn> {
   double _turns = 0;
   @override
   Widget build(BuildContext context) {
     final shad = context.ve;
     final scheme = shad.colorScheme;
-    final bool dark = shad.brightness == Brightness.dark;
     return Semantics(
-      button: true, label: 'Invertir par',
+      button: true,
+      label: 'Invertir par',
       child: TapScale(
-        onTap: () { setState(() => _turns += 0.5); widget.onTap(); },
+        onTap: () {
+          setState(() => _turns += 0.5);
+          widget.onTap();
+        },
         child: AnimatedRotation(
-          turns: _turns, duration: const Duration(milliseconds: 220), curve: kEaseVe,
+          turns: _turns,
+          duration: const Duration(milliseconds: 220),
+          curve: kEaseVe,
           child: Container(
             // v23.3 (pez 2-a P1-1): visual 32, pista 44×44 — el dedo
-            // tiene margen sin engordar el círculo.
-            width: 44, height: 44,
+            // tiene margen sin engordar el control.
+            // v25 «HOJA»: IconButton PLANO — sin círculo ni borde.
+            width: 44,
+            height: 44,
             alignment: Alignment.center,
-            child: Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.card, border: Border.all(width: 1, color: dark ? VeColors.lineStrongDark : VeColors.lineStrongLight)),
-              child: Icon(Icons.swap_vert, size: 16, color: scheme.foreground),
-            ),
+            child: Icon(Icons.swap_vert, size: 20, color: scheme.foreground),
           ),
         ),
       ),

@@ -32,7 +32,6 @@ import '../../core/banks_ve.dart';
 import '../../core/version.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
-import 'package:valorave/core/ve_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 // v18.0: la versión visible vive en core/version.dart (fuente única — la
@@ -83,9 +82,9 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-/// Tarjeta de sección de Ajustes con la cromática Ve del prototipo
-/// (TASK-34 p10): superficie shad, borde --line, radius 10 — sin elevación
-/// Material. Sustituye a las `Card` de Material 3 en toda la pantalla.
+/// Sección de Ajustes v25 «HOJA»: PLANA — solo el ancestro Material
+/// transparente que exigen los ListTiles/SwitchListTiles Material de las
+/// secciones; la separación entre secciones la pone el aire, no una caja.
 class _VeSettingsCard extends ConsumerWidget {
   const _VeSettingsCard({required this.child});
 
@@ -93,22 +92,7 @@ class _VeSettingsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shad = context.ve.colorScheme;
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: shad.card,
-        borderRadius: BorderRadius.circular(kVeRadius),
-        border: Border.all(color: shad.border),
-      ),
-      // Ancestro Material transparente: las secciones mezclan controles
-      // shadcn con ListTiles/SwitchListTiles Material que lo exigen (la
-      // Card de Material 3 que sustituye lo proveía).
-      child: Material(
-        type: MaterialType.transparency,
-        child: child,
-      ),
-    );
+    return Material(type: MaterialType.transparency, child: child);
   }
 }
 

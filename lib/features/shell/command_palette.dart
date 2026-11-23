@@ -240,23 +240,11 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
         child: Container(
           width: paletteWidth,
           constraints: const BoxConstraints(maxHeight: 560),
-          // TASK-34 p11: cromática del palette del prototipo — superficie
-          // card, borde --line-strong, radio 14.
+          // v25 «HOJA»: popover PLANO — superficie card, radio 20, ELEV 0 y
+          // sin borde: lo separa del papel el scrim, no una caja.
           decoration: BoxDecoration(
             color: shad.card,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? VeColors.lineStrongDark
-                  : VeColors.lineStrongLight,
-            ),
-            boxShadow: const <BoxShadow>[
-              BoxShadow(
-                color: Color(0x1F0C1016),
-                blurRadius: 24,
-                offset: Offset(0, 12),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(20),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -526,7 +514,6 @@ class _PaletteRow extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: shad.muted,
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: shad.border, width: 0.5),
                         ),
                         child: Text(
                           '↵',
@@ -561,10 +548,10 @@ class _KeyHint extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final box = Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+      // v25 «HOJA»: tecla tonal SIN borde.
       decoration: BoxDecoration(
         color: scheme.onSurfaceVariant.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: scheme.outlineVariant, width: 0.5),
       ),
       child: Text(
         child,

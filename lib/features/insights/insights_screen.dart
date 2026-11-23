@@ -94,11 +94,13 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                         final shad = barCtx.ve.colorScheme;
                         return Container(
                           padding: const EdgeInsets.all(4),
+                          // v25 «HOJA»: pista del segmentado TONAL muted y
+                          // SIN borde — la activa es la píldora de tinta.
                           decoration: BoxDecoration(
                             color: shad.muted,
-                            borderRadius:
-                                BorderRadius.circular(kVeControlRadius),
-                            border: Border.all(color: shad.border),
+                            borderRadius: BorderRadius.circular(
+                              kVeControlRadius,
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -186,7 +188,6 @@ class _AnchorTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final shad = context.ve.colorScheme;
     final scheme = Theme.of(context).colorScheme;
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Semantics(
       // v23.3 (pez 2-a): el lector de pantalla anuncia la vista y su
       // estado (antes el InkWell era mudo para TalkBack).
@@ -199,33 +200,18 @@ class _AnchorTab extends ConsumerWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(vertical: 7),
+          // v25 «HOJA»: píldora activa de TINTA sólida — sin borde ni
+          // sombra; el contenido invierte a color papel.
           decoration: BoxDecoration(
-            // Píldora activa del VeSegmented: superficie card + borde y una
-            // sombra corta — la píldora «flota» sobre el muted del contenedor.
-            color: selected ? shad.card : null,
+            color: selected ? shad.primary : null,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected ? shad.border : Colors.transparent,
-            ),
-            boxShadow: selected
-                ? [
-                    // v23.3 (pez 2-a): la sombra de la píldora sale de los
-                    // tokens (antes Colors.black y un literal fuera de
-                    // ve.dart — invisible en dark el borde del heatmap).
-                    BoxShadow(
-                      color: dark ? VeColors.shadowDark : VeColors.shadowLight,
-                      blurRadius: 3,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                : null,
           ),
           child: Column(
             children: [
               Icon(
                 icon,
                 size: 15,
-                color: selected ? shad.foreground : scheme.onSurfaceVariant,
+                color: selected ? shad.background : scheme.onSurfaceVariant,
               ),
               const SizedBox(height: 3),
               // v23.3 (pez 2-a): una línea con elipsis + Semantics — a
@@ -241,7 +227,7 @@ class _AnchorTab extends ConsumerWidget {
                   fontFamily: 'Inter',
                   fontSize: 9.5,
                   fontWeight: FontWeight.w500,
-                  color: selected ? shad.foreground : scheme.onSurfaceVariant,
+                  color: selected ? shad.background : scheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -341,8 +327,7 @@ class _DivisasAnchorState extends ConsumerState<_DivisasAnchor> {
     var bestD = (DateTime.parse(pts.first.date).millisecondsSinceEpoch - ms)
         .abs();
     for (var i = 1; i < pts.length; i++) {
-      final d =
-          (DateTime.parse(pts[i].date).millisecondsSinceEpoch - ms).abs();
+      final d = (DateTime.parse(pts[i].date).millisecondsSinceEpoch - ms).abs();
       if (d < bestD) {
         best = i;
         bestD = d;
@@ -554,11 +539,7 @@ class _DayPanel extends ConsumerWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
+      // v25 «HOJA»: panel del día PLANO — eyebrow + datos, sin caja.
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -717,9 +698,7 @@ class _LookupFechaState extends ConsumerState<_LookupFecha> {
                   .where((p) => p.sourceId == 'ves-bcv' && p.day == day)
                   .firstOrNull;
               final p = store.snapshots
-                  .where(
-                    (x) => x.sourceId == 'ves-parallel' && x.day == day,
-                  )
+                  .where((x) => x.sourceId == 'ves-parallel' && x.day == day)
                   .firstOrNull;
               setState(() {
                 _date = d;
@@ -731,11 +710,8 @@ class _LookupFechaState extends ConsumerState<_LookupFecha> {
             borderRadius: BorderRadius.circular(10),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLowest,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: scheme.outlineVariant),
-              ),
+              // v25 «HOJA»: selector de fecha PLANO — icono + fecha +
+              // chevron, sin caja.
               child: Row(
                 children: [
                   Icon(

@@ -19,7 +19,6 @@ import '../core/models.dart';
 import '../core/theme.dart';
 import 've/ve.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:valorave/core/ve_theme.dart';
 import 'package:intl/intl.dart';
 
 /// Curva firma del sistema (EASE [0.16, 1, 0.3, 1]) — definida UNA sola vez
@@ -148,7 +147,8 @@ class CryptoFlagPainter extends CustomPainter {
     canvas.drawCircle(
       c,
       w / 2,
-      Paint()..color = isUsdt ? const Color(0xFF26A17B) : const Color(0xFF627EEA),
+      Paint()
+        ..color = isUsdt ? const Color(0xFF26A17B) : const Color(0xFF627EEA),
     );
     final white = Paint()..color = Colors.white;
     if (isUsdt) {
@@ -169,6 +169,7 @@ class CryptoFlagPainter extends CustomPainter {
           white,
         );
       }
+
       bar(h * 0.24, h * 0.11, bw);
       bar(h * 0.24, h * 0.55, sx, dx: w / 2 - sx / 2);
       bar(h * 0.52, h * 0.10, bw * 0.82);
@@ -188,7 +189,10 @@ class CryptoFlagPainter extends CustomPainter {
         ..lineTo(w / 2, h * 0.84)
         ..lineTo(w * 0.22, h * 0.54)
         ..close();
-      canvas.drawPath(bottom, white..color = Colors.white.withValues(alpha: 0.7));
+      canvas.drawPath(
+        bottom,
+        white..color = Colors.white.withValues(alpha: 0.7),
+      );
     }
   }
 
@@ -196,7 +200,8 @@ class CryptoFlagPainter extends CustomPainter {
   bool shouldRepaint(covariant CryptoFlagPainter old) => old.code != code;
 }
 
-/// Sello puntual de estado/fuente: borde de tinta 38 %, fondo al 8 % (§8).
+/// Sello puntual de estado/fuente v25 «HOJA»: SOLO texto de color (caps)
+/// con icono opcional — sin borde ni fondo (regla de 3).
 class Stamp extends StatelessWidget {
   const Stamp(this.text, {super.key, this.color, this.icon});
 
@@ -210,13 +215,8 @@ class Stamp extends StatelessWidget {
     final Widget? iconWidget = icon == null
         ? null
         : Icon(icon, size: 10, color: c);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        border: Border.all(color: c.withValues(alpha: 0.38)),
-        borderRadius: BorderRadius.circular(6),
-        color: c.withValues(alpha: 0.08),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -237,8 +237,8 @@ class Stamp extends StatelessWidget {
   }
 }
 
-/// Ventana de lectura: pozo hundido donde se asienta la cifra héroe
-/// (Semantics en cifras protagonistas, §Fase 3).
+/// Ventana de lectura v25 «HOJA»: la cifra héroe asienta DIRECTO en el
+/// papel — sin pozo, sin borde, sin fill. Solo aire + Semantics.
 class ReadWindow extends StatelessWidget {
   const ReadWindow({
     super.key,
@@ -253,19 +253,8 @@ class ReadWindow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
+    return Padding(
       padding: padding,
-      decoration: BoxDecoration(
-        color: dark
-            ? VeColors.mutedDark.withValues(alpha: 0.8)
-            : VeColors.mutedLight.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(10),
-        // §8 regla dura: bordes 100 % sólidos (nunca alpha parcial).
-        border: Border.all(
-          color: dark ? VeColors.borderDark : VeColors.borderLight,
-        ),
-      ),
       child: Semantics(label: semanticLabel, child: child),
     );
   }
@@ -431,13 +420,10 @@ class SourceSeal extends StatelessWidget {
       SourceCategory.mixed => (Icons.balance_rounded, 'PROMEDIO', sem.warn),
       SourceCategory.manual => (Icons.edit_note_rounded, 'MANUAL', sem.manual),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-      decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: c.withValues(alpha: 0.38), width: 1),
-      ),
+    // v25 «HOJA»: sello SOLO texto de color (icono + palabra) — sin fondo,
+    // sin borde. La identidad no necesita caja.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -516,10 +502,8 @@ class ChipTag extends StatelessWidget {
     // TASK-34 p10 · lenguaje Ve del prototipo: píldora 28 px (radio 999)
     // superficie card + borde line-strong; seleccionada invierte la tinta
     // (fondo fg / texto bg) — idéntico al VeChip del kit, misma API.
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
-    final lineStrong = dark
-        ? VeColors.lineStrongDark
-        : VeColors.lineStrongLight;
+    // v25 «HOJA»: píldora SIN borde — seleccionada = tinta sólida (tinte
+    // semántico o fg), sin seleccionar = tonal muted.
     final activeBg = color ?? scheme.onSurface;
     return InkWell(
       onTap: onTap,
@@ -528,9 +512,8 @@ class ChipTag extends StatelessWidget {
         height: 28,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: selected ? activeBg : scheme.surfaceContainerLow,
+          color: selected ? activeBg : scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? activeBg : lineStrong),
         ),
         child: Center(
           child: Text(
@@ -581,10 +564,9 @@ class SegmentedChips<T> extends StatelessWidget {
   }
 }
 
-/// Panel con la cromática Ve del prototipo (TASK-34 p11): superficie shad
-/// card, borde --line, radius 10 — sustituye a las `Card` de Material 3 en
-/// las pantallas que aún no se migran pieza a pieza. Ancestro Material
-/// transparente para que ListTiles/InkWell internos sigan funcionando.
+/// Panel v25 «HOJA»: INVISIBLE — sin superficie, sin borde, sin radio
+/// (tarjetas 0). Conserva el ancestro Material transparente para que
+/// ListTiles/InkWell internos sigan funcionando.
 class VePanelCard extends StatelessWidget {
   const VePanelCard({super.key, required this.child, this.margin});
 
@@ -593,15 +575,8 @@ class VePanelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shad = context.ve.colorScheme;
-    return Container(
-      margin: margin,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: shad.card,
-        borderRadius: BorderRadius.circular(kVeRadius),
-        border: Border.all(color: shad.border),
-      ),
+    return Padding(
+      padding: margin ?? EdgeInsets.zero,
       child: Material(type: MaterialType.transparency, child: child),
     );
   }
@@ -754,49 +729,37 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
-        child: Column(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: scheme.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 22, color: scheme.primary),
+    // v25 «HOJA»: directo al papel — sin Card, sin medallón.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
+      child: Column(
+        children: [
+          Icon(icon, size: 26, color: scheme.primary),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            hint,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.45,
+              color: scheme.onSurfaceVariant,
             ),
+          ),
+          if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w700,
-              ),
+            FilledButton.icon(
+              onPressed: onAction,
+              icon: const Icon(Icons.arrow_forward, size: 15),
+              label: Text(actionLabel!),
             ),
-            const SizedBox(height: 6),
-            Text(
-              hint,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12.5,
-                height: 1.45,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 14),
-              FilledButton.icon(
-                onPressed: onAction,
-                icon: const Icon(Icons.arrow_forward, size: 15),
-                label: Text(actionLabel!),
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
@@ -825,46 +788,42 @@ class LoadingState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
-        child: Column(
-          children: [
-            SizedBox(
-              width: 26,
-              height: 26,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.6,
-                color: scheme.primary,
-              ),
+    // v25 «HOJA»: directo al papel — sin Card.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
+      child: Column(
+        children: [
+          SizedBox(
+            width: 26,
+            height: 26,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.6,
+              color: scheme.primary,
             ),
-            const SizedBox(height: 14),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+          ),
+          if (hint != null) ...[
+            const SizedBox(height: 6),
             Text(
-              title,
+              hint!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w700,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.45,
+                color: scheme.onSurfaceVariant,
               ),
             ),
-            if (hint != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                hint!,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.45,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 14),
-              GhostButton(actionLabel!, onPressed: onAction),
-            ],
           ],
-        ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 14),
+            GhostButton(actionLabel!, onPressed: onAction),
+          ],
+        ],
       ),
     );
   }
@@ -892,45 +851,33 @@ class ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final Color neg = VeColors.of(context).neg;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
-        child: Column(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: neg.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, size: 24, color: neg),
+    // v25 «HOJA»: directo al papel — sin Card, sin medallón.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
+      child: Column(
+        children: [
+          Icon(icon, size: 28, color: neg),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            hint,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.45,
+              color: scheme.onSurfaceVariant,
             ),
+          ),
+          if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              hint,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12.5,
-                height: 1.45,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 14),
-              GhostButton(actionLabel!, onPressed: onAction),
-            ],
+            GhostButton(actionLabel!, onPressed: onAction),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -962,57 +909,45 @@ class OfflineState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
-        child: Column(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, size: 24, color: scheme.onSurfaceVariant),
+    // v25 «HOJA»: directo al papel — sin Card, sin medallón.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
+      child: Column(
+        children: [
+          Icon(icon, size: 28, color: scheme.onSurfaceVariant),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            hint,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.45,
+              color: scheme.onSurfaceVariant,
             ),
+          ),
+          if ((actionLabel != null && onAction != null) ||
+              (secondaryLabel != null && onSecondary != null)) ...[
             const SizedBox(height: 14),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              hint,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12.5,
-                height: 1.45,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            if ((actionLabel != null && onAction != null) ||
-                (secondaryLabel != null && onSecondary != null)) ...[
-              const SizedBox(height: 14),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (actionLabel != null && onAction != null) ...[
-                    GhostButton(actionLabel!, onPressed: onAction),
-                    if (secondaryLabel != null && onSecondary != null)
-                      const SizedBox(width: 8),
-                  ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (actionLabel != null && onAction != null) ...[
+                  GhostButton(actionLabel!, onPressed: onAction),
                   if (secondaryLabel != null && onSecondary != null)
-                    GhostButton(secondaryLabel!, onPressed: onSecondary),
+                    const SizedBox(width: 8),
                 ],
-              ),
-            ],
+                if (secondaryLabel != null && onSecondary != null)
+                  GhostButton(secondaryLabel!, onPressed: onSecondary),
+              ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1083,49 +1018,48 @@ class StatCard extends StatelessWidget {
       StatTone.warn => sem.warn,
       StatTone.neutral => scheme.onSurfaceVariant,
     };
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(13),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 13, color: toneColor),
-                  const SizedBox(width: 5),
-                ],
-                Expanded(
-                  child: Text(
-                    label.toUpperCase(),
-                    style: VeText.labelCaps(10, color: scheme.onSurfaceVariant),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+    // v25 «HOJA»: stat DIRECTO al papel — sin tarjeta.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 13, color: toneColor),
+                const SizedBox(width: 5),
               ],
-            ),
-            const SizedBox(height: 9),
-            // Números largos y nombres libres (p. ej. «Tienda top» del
-            // Home): FittedBox scaleDown + 1 línea — patrón §8 (fix
-            // overflow/misalignment de tarjetas hermanas).
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                maxLines: 1,
-                style: VeText.displayNum(22, color: scheme.onSurface),
-              ),
-            ),
-            if (sub != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                sub!,
-                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              Expanded(
+                child: Text(
+                  label.toUpperCase(),
+                  style: VeText.labelCaps(10, color: scheme.onSurfaceVariant),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
+          ),
+          const SizedBox(height: 9),
+          // Números largos y nombres libres (p. ej. «Tienda top» del
+          // Home): FittedBox scaleDown + 1 línea — patrón §8 (fix
+          // overflow/misalignment de tarjetas hermanas).
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: VeText.displayNum(22, color: scheme.onSurface),
+            ),
+          ),
+          if (sub != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              sub!,
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -1161,10 +1095,10 @@ class StoreAvatar extends StatelessWidget {
       width: size,
       height: size,
       alignment: Alignment.center,
+      // v25 «HOJA»: avatar sin borde (solo el disco tenue con iniciales).
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: scheme.outlineVariant),
+        color: scheme.surfaceContainerHighest,
+        shape: BoxShape.circle,
       ),
       child: Text(
         initials,
@@ -1288,17 +1222,13 @@ class LiveBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!live) return const SizedBox.shrink();
     final VeInk sem = VeColors.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: sem.pos.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: sem.pos.withValues(alpha: 0.3)),
-      ),
+    // v25 «HOJA»: badge solo-texto + punto — sin fondo ni borde.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          LiveDot(color: sem.pos),
+          LiveDot(color: sem.pos, size: 5),
           const SizedBox(width: 5),
           Text(
             label ?? 'en vivo',
@@ -1333,25 +1263,17 @@ class RateBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = RateSource.of(sourceId);
     final label = s?.label ?? sourceId;
+    final scheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(999),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        // TASK-33 Linear: mismo lenguaje que ChipTag — plano muted al
-        // reposo, tinte 12 % + borde 45 % seleccionado, radio 8.
+        // v25 «HOJA»: píldora SIN borde — seleccionada = tinta sólida con
+        // texto del papel; sin seleccionar = tonal muted.
         decoration: BoxDecoration(
-          color: selected
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
-              : Theme.of(
-                  context,
-                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.45)
-                : Colors.transparent,
-          ),
+          color: selected ? scheme.primary : scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1367,9 +1289,12 @@ class RateBadge extends StatelessWidget {
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
+                  color: selected
+                      ? scheme.surfaceContainerLowest
+                      : scheme.onSurface,
                 ),
               ),
             ),
@@ -1379,7 +1304,9 @@ class RateBadge extends StatelessWidget {
                 trailing!,
                 style: VeText.displayNum(
                   12.5,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: selected
+                      ? scheme.surfaceContainerLowest
+                      : scheme.onSurface,
                 ),
               ),
             ],
@@ -1454,17 +1381,14 @@ class CurrencySelect extends StatelessWidget {
           );
           if (picked != null && picked != value) onChanged(picked);
         },
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(999),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          // Trigger outline plano estilo shadcn Select: fondo superficie y
-          // borde 100 %.
+          // v25 «HOJA»: trigger tonal muted SIN borde (como un botón
+          // secundario de la hoja).
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant,
-            ),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(999),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1517,73 +1441,61 @@ class _CurrencyTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final fuentes = RateSource.sourcesFor(currency).length;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      child: Material(
-        color: selected
-            ? scheme.primary.withValues(alpha: 0.08)
-            : scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: selected
-                  ? Border.all(color: scheme.primary, width: 1.4)
-                  : Border.all(color: scheme.outlineVariant.withValues(
-                      alpha: 0.5,
-                    )),
-            ),
-            child: Row(
-              children: [
-                Flag(currency, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        currency.label,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                          color: scheme.onSurface,
-                        ),
+    // v25 «HOJA»: fila plana SIN caja — seleccionada = tinta plena + check.
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 52),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          child: Row(
+            children: [
+              Flag(currency, size: 22),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      currency.label,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: selected
+                            ? scheme.onSurface
+                            : scheme.onSurfaceVariant,
                       ),
-                      const SizedBox(height: 1),
-                      Text(
-                        fuentes > 0
-                            ? '${currency.code} · $fuentes '
-                              '${fuentes == 1 ? 'fuente' : 'fuentes'} de tasa'
-                            : currency.code,
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      fuentes > 0
+                          ? '${currency.code} · $fuentes '
+                                '${fuentes == 1 ? 'fuente' : 'fuentes'} de tasa'
+                          : currency.code,
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: scheme.onSurfaceVariant,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  currency.symbol,
-                  style: VeText.displayNum(
-                    16,
-                    weight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                currency.symbol,
+                style: VeText.displayNum(
+                  18,
+                  weight: FontWeight.w700,
+                  color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
                 ),
-                const SizedBox(width: 8),
-                if (selected)
-                  Icon(Icons.check_circle_rounded, size: 16,
-                      color: scheme.primary)
-                else
-                  const SizedBox(width: 16),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              if (selected)
+                Icon(Icons.check_rounded, size: 14, color: scheme.onSurface)
+              else
+                const SizedBox(width: 16),
+            ],
           ),
         ),
       ),
@@ -1609,12 +1521,19 @@ Future<Currency?> showCurrencySheet(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          for (final c in options)
+          for (final (i, c) in options.indexed) ...[
+            if (i > 0)
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: Theme.of(ctx).colorScheme.outlineVariant,
+              ),
             _CurrencyTile(
               currency: c,
               selected: c == value,
               onTap: () => Navigator.of(ctx).pop(c),
             ),
+          ],
           const SizedBox(height: 6),
         ],
       ),
@@ -1664,8 +1583,11 @@ class PushScreen extends StatelessWidget {
                 height: 56,
                 padding: const EdgeInsets.fromLTRB(8, 0, 12, 0),
                 decoration: BoxDecoration(
+                  // v25 «HOJA»: hairline al 65 % bajo la cabecera.
                   border: Border(
-                    bottom: BorderSide(color: scheme.outlineVariant),
+                    bottom: BorderSide(
+                      color: scheme.outlineVariant.withValues(alpha: 0.65),
+                    ),
                   ),
                 ),
                 child: Row(
@@ -1980,13 +1902,11 @@ class _MoneyFieldState extends State<MoneyField> {
   }
 }
 
-/// ─── VeKeypad (v23 · GUI simple · comparativa CalculaYa 1.1.0) ──────────────
-/// Teclado numérico propio del conversor: 0-9 · «,» decimal es-VE · ⌫
-/// (el «limpiar» vive junto a las fichas de montos que lo acompañan).
-/// Nace dentro de «El Instrumento»: cifras tabulares Inter, borde 100 %,
-/// papel-tinta (card + línea), háptica sutil (`selectionClick`) y
-/// `Semantics` por tecla; blancos ≥ 48 dp. «⌫» y «,» en tinta muted —
-/// son herramientas, no datos (§5: el color solo significa).
+/// ─── VeKeypad (v25 «HOJA») ────────────────────────────────────────────────
+/// Teclado numérico propio del conversor: 0-9 · «,» decimal es-VE · ⌫.
+/// Tecla = CUADRADO TONAL (muted) radius 16 SIN borde, h 56, cifras Space
+/// Grotesk tabulares 22. Háptica sutil (`selectionClick`) y `Semantics`
+/// por tecla. «⌫» y «,» en tinta muted — son herramientas, no datos (§5).
 class VeKeypad extends StatelessWidget {
   const VeKeypad({super.key, required this.onKey});
 
@@ -2009,8 +1929,6 @@ class VeKeypad extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final shad = context.ve;
-    final bool dark = shad.brightness == Brightness.dark;
     final quiet = scheme.onSurfaceVariant;
     Widget key(String k) {
       final isTool = k == '⌫' || k == ',';
@@ -2023,22 +1941,18 @@ class VeKeypad extends StatelessWidget {
             onKey(k);
           },
           child: Container(
-            height: 44, // v23.2: piso calculadora — tecla alineada al kit (44)
+            // v25 «HOJA»: tecla tonal SIN borde — h 56, radio 16.
+            height: 56,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: shad.colorScheme.card,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: dark
-                    ? VeColors.lineStrongDark
-                    : VeColors.lineStrongLight,
-              ),
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
               k,
               style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 17.5,
+                fontFamily: 'SpaceGrotesk',
+                fontSize: 22,
                 fontWeight: FontWeight.w600,
                 fontFeatures: const [FontFeature.tabularFigures()],
                 color: isTool ? quiet : scheme.onSurface,
@@ -2055,9 +1969,7 @@ class VeKeypad extends StatelessWidget {
         for (final row in _rows)
           Row(
             spacing: 6,
-            children: [
-              for (final k in row) Expanded(child: key(k)),
-            ],
+            children: [for (final k in row) Expanded(child: key(k))],
           ),
       ],
     );
@@ -2086,23 +1998,15 @@ class GapChip extends StatelessWidget {
     final VeInk ink = Theme.of(context).extension<VeInk>()!;
     final hot = g.abs() > 5;
     final sign = g >= 0 ? '+' : '−';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-      decoration: BoxDecoration(
-        color: hot ? ink.warnBg : scheme.onSurfaceVariant.withValues(
-          alpha: 0.08,
-        ),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        '$sign${fmtNum(g.abs(), decimals: 1)} % vs BCV',
-        style: TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 10.5,
-          fontWeight: FontWeight.w600,
-          fontFeatures: const [FontFeature.tabularFigures()],
-          color: hot ? ink.warn : scheme.onSurfaceVariant,
-        ),
+    // v25 «HOJA»: SOLO texto de color — sin fondo ni borde.
+    return Text(
+      '$sign${fmtNum(g.abs(), decimals: 1)} % vs BCV',
+      style: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 10.5,
+        fontWeight: FontWeight.w600,
+        fontFeatures: const [FontFeature.tabularFigures()],
+        color: hot ? ink.warn : scheme.onSurfaceVariant,
       ),
     );
   }
@@ -2132,16 +2036,12 @@ class RateHealthBanner extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      // v25 «HOJA»: banner tonal PLANO — fill suave, sin borde.
       decoration: BoxDecoration(
         color: netDown
             ? sem.manual.withValues(alpha: 0.09)
             : sem.warn.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: netDown
-              ? sem.manual.withValues(alpha: 0.35)
-              : sem.warn.withValues(alpha: 0.35),
-        ),
       ),
       child: Row(
         children: [
@@ -2344,17 +2244,13 @@ class SkeletonPaper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: height,
       margin: const EdgeInsets.only(bottom: 10),
+      // v25 «HOJA»: sin borde — solo el bloque tenue del papel.
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow.withValues(alpha: 0.7),
+        color: scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(10),
-        // §8 regla dura: borde sólido (nunca alpha parcial).
-        border: Border.all(
-          color: dark ? VeColors.borderDark : VeColors.borderLight,
-        ),
       ),
     );
   }
@@ -2526,21 +2422,14 @@ class CurrencyTag extends StatelessWidget {
       'EUR' => (sem.manual, 'EUR'),
       _ => (scheme.onSurfaceVariant, c),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-      decoration: BoxDecoration(
-        color: ink.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: ink.withValues(alpha: 0.32)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.6,
-          color: ink,
-        ),
+    // v25 «HOJA»: etiqueta SOLO texto de color — sin píldora.
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 9,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.6,
+        color: ink,
       ),
     );
   }
@@ -2583,8 +2472,8 @@ String fmtMesAno(DateTime d) => DateFormat.MMMM('es').format(d).substring(0, 3);
 // SheetHeader, Paginator, Settle y CategoryLegend.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Botón primario de la casa: lleno, radio 12, feedback táctil TapScale.
-/// Unifica el FilledButton crudo que quedaba suelto en las pantallas.
+/// Botón primario de la casa v25 «HOJA»: píldora de tinta sólida h44
+/// (radius 999). Unifica el FilledButton crudo que quedaba suelto.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton(this.text, {super.key, this.onPressed, this.icon});
 
@@ -2600,8 +2489,9 @@ class PrimaryButton extends StatelessWidget {
       style: FilledButton.styleFrom(
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        shape: const StadiumBorder(),
       ),
       icon: icon != null ? Icon(icon, size: 18) : null,
       label: Text(text),
@@ -2609,8 +2499,9 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
-/// Botón fantasma con borde: acción secundaria visible, sin competir con el
-/// primario. [ink] tiñe texto y borde (para acciones destructivas/alerta).
+/// Botón fantasma v25 «HOJA»: SOLO texto (h44, píldora al hover) — acción
+/// secundaria visible sin competir con el primario. [ink] tiñe el texto
+/// (para acciones destructivas/alerta).
 class GhostButton extends StatelessWidget {
   const GhostButton(
     this.text, {
@@ -2632,16 +2523,18 @@ class GhostButton extends StatelessWidget {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: ink ?? scheme.onSurface,
-        side: BorderSide(color: ink?.withValues(alpha: 0.35) ?? scheme.outline),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        // v25 «HOJA»: ghost SIN borde y SIN fill.
+        backgroundColor: Colors.transparent,
+        side: BorderSide.none,
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: const StadiumBorder(),
       ),
       icon: icon != null ? Icon(icon, size: 18) : null,
       label: Text(text),
     );
   }
 }
-
 
 /// Tarjeta compacta de tasa (grid 2-col de «Divisas del foco»): bandera +
 /// etiqueta arriba, cifra displayNum abajo, tinte por categoría de fuente.
@@ -2664,16 +2557,12 @@ class MiniRateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // v25 «HOJA»: sin tarjeta — label + cifra directos al papel.
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: scheme.outline.withValues(alpha: 0.8)),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2724,14 +2613,9 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
+    // v25 «HOJA»: sección transparente — eyebrow + contenido.
+    return Padding(
       padding: padding,
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.8)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

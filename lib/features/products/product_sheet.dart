@@ -407,25 +407,29 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
     // Alerta de subida de precio (v17.5) + metas de producto (17.7 · el
     // mismo camino del 2º plano): engine + sistema + centro + metSince.
     try {
-      ref.read(alertsProvider).checkProductRise(
-        notifs: ref.read(notificationsProvider),
-        persist: (kind, title, body) =>
-            store.pushNotification(kind: kind, title: title, body: body),
-        productId: p.id,
-        productName: p.name,
-        oldPrice: prev?.price ?? 0,
-        newPrice: norm.usd,
-        storeName: storeName.isEmpty ? null : storeName,
-      );
+      ref
+          .read(alertsProvider)
+          .checkProductRise(
+            notifs: ref.read(notificationsProvider),
+            persist: (kind, title, body) =>
+                store.pushNotification(kind: kind, title: title, body: body),
+            productId: p.id,
+            productName: p.name,
+            oldPrice: prev?.price ?? 0,
+            newPrice: norm.usd,
+            storeName: storeName.isEmpty ? null : storeName,
+          );
       // Metas de precio (17.7 · price_targets): anuncia «bajo tu meta» por
       // el canal del sistema + centro y fija metSince — mismo camino que el
       // 2º plano de workmanager.
-      ref.read(alertsProvider).checkProductTargets(
-        store: store,
-        notifs: ref.read(notificationsProvider),
-        persist: (kind, title, body) =>
-            store.pushNotification(kind: kind, title: title, body: body),
-      );
+      ref
+          .read(alertsProvider)
+          .checkProductTargets(
+            store: store,
+            notifs: ref.read(notificationsProvider),
+            persist: (kind, title, body) =>
+                store.pushNotification(kind: kind, title: title, body: body),
+          );
     } catch (_) {
       // Sin Provider (previews/tests): la alerta es no-op, el registro sigue.
     }
@@ -663,10 +667,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
       children: [
         _header(context, store, p),
         _vigente(context, p),
-        if (_justMet) ...[
-          const SizedBox(height: 8),
-          _metBanner(context, p),
-        ],
+        if (_justMet) ...[const SizedBox(height: 8), _metBanner(context, p)],
         _stats(context, p),
         _addPrice(context, store, p),
         _tiendas(context, p),
@@ -834,10 +835,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
             children: [
               Text(
                 '—',
-                style: VeText.displayNum(
-                  34,
-                  color: scheme.mutedForeground,
-                ),
+                style: VeText.displayNum(34, color: scheme.mutedForeground),
               ),
               const SizedBox(height: 6),
               Text(
@@ -850,73 +848,75 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
               ),
             ],
           )
-        : Builder(builder: (context) {
-            final recs = [...p.records]
-              ..sort((a, b) => a.date.compareTo(b.date));
-            final prev = recs.length >= 2 ? recs[recs.length - 2] : null;
-            final varPct = prev == null
-                ? null
-                : an.priceVariation(prev.price, last.price);
-            final perUnit = _perUnitOf(last, p);
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        'PRECIO VIGENTE',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: VeText.labelCaps(
-                          9.5,
-                          color: scheme.mutedForeground,
+        : Builder(
+            builder: (context) {
+              final recs = [...p.records]
+                ..sort((a, b) => a.date.compareTo(b.date));
+              final prev = recs.length >= 2 ? recs[recs.length - 2] : null;
+              final varPct = prev == null
+                  ? null
+                  : an.priceVariation(prev.price, last.price);
+              final perUnit = _perUnitOf(last, p);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'PRECIO VIGENTE',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: VeText.labelCaps(
+                            9.5,
+                            color: scheme.mutedForeground,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    // El libro de precios es USD-normalizado: divisa
-                    // explícita (v17.5).
-                    const CurrencyTag('USD'),
-                    if (varPct != null) ...[
-                      const SizedBox(width: 5),
-                      TrendBadge(varPct),
+                      const SizedBox(width: 6),
+                      // El libro de precios es USD-normalizado: divisa
+                      // explícita (v17.5).
+                      const CurrencyTag('USD'),
+                      if (varPct != null) ...[
+                        const SizedBox(width: 5),
+                        TrendBadge(varPct),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 6),
-                // Números largos: FittedBox scaleDown (§8).
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    fmtUSD(last.price),
-                    style: VeText.displayNum(34, color: scheme.foreground),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${timeAgo(last.date)} · ${_storeOf(last)}'
-                  '${last.currency != 'USD' ? ' · pagó ${fmtMoney(last.originalPrice, CurrencyX.from(last.currency))}' : ''}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.foreground.withValues(alpha: 0.75),
+                  const SizedBox(height: 6),
+                  // Números largos: FittedBox scaleDown (§8).
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      fmtUSD(last.price),
+                      style: VeText.displayNum(34, color: scheme.foreground),
+                    ),
                   ),
-                ),
-                if (perUnit != null) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
-                    '≈ ${fmtUSD(perUnit)} / ${baseUnitLabel(p)}',
-                    style: VeText.displayNum(12.5, color: ink.pos),
+                    '${timeAgo(last.date)} · ${_storeOf(last)}'
+                    '${last.currency != 'USD' ? ' · pagó ${fmtMoney(last.originalPrice, CurrencyX.from(last.currency))}' : ''}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.foreground.withValues(alpha: 0.75),
+                    ),
                   ),
+                  if (perUnit != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '≈ ${fmtUSD(perUnit)} / ${baseUnitLabel(p)}',
+                      style: VeText.displayNum(12.5, color: ink.pos),
+                    ),
+                  ],
                 ],
-              ],
-            );
-          });
+              );
+            },
+          );
 
     return Padding(
       padding: const EdgeInsets.only(top: 14),
@@ -935,11 +935,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
             const SizedBox(height: 8),
             SizedBox(
               height: 48,
-              child: VeSparkline(
-                data: series,
-                tone: st.spark,
-                height: 48,
-              ),
+              child: VeSparkline(data: series, tone: st.spark, height: 48),
             ),
           ],
         ],
@@ -955,13 +951,9 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
 
   Widget _metBanner(BuildContext context, Product p) {
     final sem = VeColors.of(context);
+    // v25 «HOJA»: aviso PLANO — icono + texto en pos, sin fill ni borde.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: sem.pos.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: sem.pos.withValues(alpha: 0.35)),
-      ),
       child: Row(
         children: [
           Icon(LucideIcons.circleCheck, size: 15, color: sem.pos),
@@ -994,17 +986,12 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
         ? null
         : recs.fold<double>(0, (a, r) => a + r.price) / recs.length;
 
-    Widget cell(String label, String value, {bool first = false}) {
+    Widget cell(String label, String value) {
       return Expanded(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: first
-              ? null
-              : BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: scheme.border),
-                  ),
-                ),
+          // v25 «HOJA»: stats en fila PLANA — sin cajas; las cifras hablan
+          // solas.
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1036,22 +1023,12 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
 
     return Padding(
       padding: const EdgeInsets.only(top: 14),
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: scheme.border),
-        ),
-        child: Row(
-          children: [
-            cell('Mejor', best == null ? '—' : fmtUSD(best), first: true),
-            cell('Promedio', avg == null ? '—' : fmtUSD(avg)),
-            cell(
-              'Meta',
-              p.targetPrice == null ? '—' : fmtUSD(p.targetPrice!),
-            ),
-          ],
-        ),
+      child: Row(
+        children: [
+          cell('Mejor', best == null ? '—' : fmtUSD(best)),
+          cell('Promedio', avg == null ? '—' : fmtUSD(avg)),
+          cell('Meta', p.targetPrice == null ? '—' : fmtUSD(p.targetPrice!)),
+        ],
       ),
     );
   }
@@ -1391,8 +1368,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                     VeIconBtn(
                       icon: LucideIcons.trash2,
                       danger: true,
-                      onTap: () =>
-                          _confirmDeleteRecord(context, store, p, r),
+                      onTap: () => _confirmDeleteRecord(context, store, p, r),
                       label: 'Eliminar registro',
                     ),
                   ],
@@ -1772,10 +1748,7 @@ class _NewProductSheetState extends ConsumerState<NewProductSheet> {
           const SizedBox(height: 5),
           Text(
             _barcodeWarn!,
-            style: TextStyle(
-              fontSize: 11.5,
-              color: VeColors.of(context).warn,
-            ),
+            style: TextStyle(fontSize: 11.5, color: VeColors.of(context).warn),
           ),
         ],
         const SizedBox(height: 14),
@@ -1854,10 +1827,7 @@ class _NewProductSheetState extends ConsumerState<NewProductSheet> {
         const SizedBox(height: 6),
         Text(
           'Sin precio igual se crea: lo añades después desde su ficha.',
-          style: TextStyle(
-            fontSize: 11.5,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
         ),
         if (_error != null) ...[
           const SizedBox(height: 6),

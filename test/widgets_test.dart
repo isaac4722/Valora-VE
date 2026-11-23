@@ -60,8 +60,14 @@ Widget _wrap(
   return ProviderScope(
     overrides: [
       appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
-      themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
-      ratesPollerProvider.overrideWith((ref) => _poller, disposeNotifier: false),
+      themeControllerProvider.overrideWith(
+        (ref) => ThemeController(),
+        disposeNotifier: false,
+      ),
+      ratesPollerProvider.overrideWith(
+        (ref) => _poller,
+        disposeNotifier: false,
+      ),
       alertsProvider.overrideWith((ref) => _alerts),
       notificationsProvider.overrideWith((ref) => _notifs),
       // v19.4: el Inicio lee las prefs de widgets (como appProviders en
@@ -69,19 +75,22 @@ Widget _wrap(
       sharedPreferencesProvider.overrideWithValue(_prefs),
       // v18.0 · Sala Viva: controlador de sala a nivel app (como en
       // appProviders) — la Lista y la sala lo comparten.
-      roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
+      roomControllerProvider.overrideWith(
+        (ref) => RoomController(store),
+        disposeNotifier: false,
+      ),
     ],
     // TASK-34 (p5+p6): Inicio y Conversor usan el kit «Ve» (shadcn_ui
     // real), que necesita ShadTheme en el árbol — como en la app
     // (ShadApp.custom en main.dart monta MaterialApp dentro). El harness
     // replica ese shell.
     child: MaterialApp(
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: mode,
-        localizationsDelegates: const [],
-        home: child,
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: mode,
+      localizationsDelegates: const [],
+      home: child,
+    ),
   );
 }
 
@@ -154,16 +163,16 @@ Future<void> main() async {
       // exige ShadTheme en el árbol — mismo shell de producción.
       await tester.pumpWidget(
         MaterialApp(
-            theme: AppTheme.light(),
-            home: Scaffold(
-              body: Center(
-                child: CurrencySelect(
-                  value: Currency.usd,
-                  onChanged: (c) => picked = c,
-                ),
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Center(
+              child: CurrencySelect(
+                value: Currency.usd,
+                onChanged: (c) => picked = c,
               ),
             ),
           ),
+        ),
       );
       await tester.tap(find.byType(CurrencySelect));
       await tester.pumpAndSettle();
@@ -284,15 +293,24 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
-            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
-            ratesPollerProvider.overrideWith((ref) => _poller, disposeNotifier: false),
+            appStoreProvider.overrideWith(
+              (ref) => store,
+              disposeNotifier: false,
+            ),
+            themeControllerProvider.overrideWith(
+              (ref) => ThemeController(),
+              disposeNotifier: false,
+            ),
+            ratesPollerProvider.overrideWith(
+              (ref) => _poller,
+              disposeNotifier: false,
+            ),
             sharedPreferencesProvider.overrideWithValue(_prefs),
           ],
           child: MaterialApp.router(
-              theme: AppTheme.light(),
-              routerConfig: router2,
-            ),
+            theme: AppTheme.light(),
+            routerConfig: router2,
+          ),
         ),
       );
       await tester.pump(const Duration(milliseconds: 300));
@@ -412,9 +430,7 @@ Future<void> main() async {
       await _initServices(store);
       store.setRateBoard(
         RateBoard(
-          sources: {
-            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now()),
-          },
+          sources: {'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now())},
         ),
       );
       // Par limpio USD → VES para leer el monto de origen sin ruido.
@@ -548,7 +564,10 @@ Future<void> main() async {
         // El campo de origen arranca con «1» de cortesía: Limpiar abre la
         // entrada nueva (el tocar el lado ya activo NO borra lo tecleado).
         await tester.tap(
-          find.descendant(of: find.byType(VeChip), matching: find.text('Limpiar')),
+          find.descendant(
+            of: find.byType(VeChip),
+            matching: find.text('Limpiar'),
+          ),
         );
         await tester.pump();
         await escribir(tester, fields.first, '1000');
@@ -596,14 +615,8 @@ Future<void> main() async {
       expect(find.text('Lista de compras'), findsOneWidget);
       // agrega un ítem (TASK-34: campos VeInput anclados por Key — el
       // placeholder sigue en pantalla para el usuario)
-      await tester.enterText(
-        find.byKey(const Key('lista-nombre')),
-        'Café',
-      );
-      await tester.enterText(
-        find.byKey(const Key('lista-precio')),
-        '40',
-      );
+      await tester.enterText(find.byKey(const Key('lista-nombre')), 'Café');
+      await tester.enterText(find.byKey(const Key('lista-precio')), '40');
       // TASK-34: la zona de captura quedó más abajo (barra de presupuesto +
       // alta rápida encima) — se baja hasta el botón antes de tocarlo y se
       // arrastra UN POCO MÁS para que quede por encima de la VeStickyBar
@@ -618,10 +631,7 @@ Future<void> main() async {
       expect(store.cart.length, 1);
       // Vuelve al héroe para verificar el total (la fila nueva empujó el
       // contenido hacia abajo).
-      await tester.drag(
-        find.byType(Scrollable).first,
-        const Offset(0, 600),
-      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 600));
       await tester.pumpAndSettle();
       // v19: total en moneda de cálculo + USD de extra al lado.
       store.setSetting('calcCurrency', 'VES');
@@ -829,17 +839,29 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
-            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
-            ratesPollerProvider.overrideWith((ref) => _poller, disposeNotifier: false),
+            appStoreProvider.overrideWith(
+              (ref) => store,
+              disposeNotifier: false,
+            ),
+            themeControllerProvider.overrideWith(
+              (ref) => ThemeController(),
+              disposeNotifier: false,
+            ),
+            ratesPollerProvider.overrideWith(
+              (ref) => _poller,
+              disposeNotifier: false,
+            ),
             sharedPreferencesProvider.overrideWithValue(_prefs),
             // v18.0: la Lista lee el controlador de sala del árbol.
-            roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
+            roomControllerProvider.overrideWith(
+              (ref) => RoomController(store),
+              disposeNotifier: false,
+            ),
           ],
           child: MaterialApp.router(
-              theme: AppTheme.light(),
-              routerConfig: router,
-            ),
+            theme: AppTheme.light(),
+            routerConfig: router,
+          ),
         ),
       );
       // v17.6: la rama Home del shell tiene board vacío → LoadingState
@@ -1032,17 +1054,29 @@ Future<void> main() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
-            themeControllerProvider.overrideWith((ref) => ThemeController(), disposeNotifier: false),
-            ratesPollerProvider.overrideWith((ref) => _poller, disposeNotifier: false),
+            appStoreProvider.overrideWith(
+              (ref) => store,
+              disposeNotifier: false,
+            ),
+            themeControllerProvider.overrideWith(
+              (ref) => ThemeController(),
+              disposeNotifier: false,
+            ),
+            ratesPollerProvider.overrideWith(
+              (ref) => _poller,
+              disposeNotifier: false,
+            ),
             sharedPreferencesProvider.overrideWithValue(prefs),
             // v18.0: el shell/Lista leen el controlador de sala del árbol.
-            roomControllerProvider.overrideWith((ref) => RoomController(store), disposeNotifier: false),
+            roomControllerProvider.overrideWith(
+              (ref) => RoomController(store),
+              disposeNotifier: false,
+            ),
           ],
           child: MaterialApp.router(
-              theme: AppTheme.light(),
-              routerConfig: router,
-            ),
+            theme: AppTheme.light(),
+            routerConfig: router,
+          ),
         ),
       );
       // El shell monta → _TourTrigger dispara el tour. La cadena
@@ -1077,10 +1111,14 @@ Future<void> main() async {
     });
   });
 
-  group('Tarjeta de coach mark (TIPs/Tutorial)', () {
-    // El Material de la tarjeta es el único con elevation 6 en el overlay.
+  group('Burbuja de coach mark (TIPs/Tutorial)', () {
+    // v25 «HOJA»: popover PLANO — radio 20 · elevación 0 · sin borde. El
+    // Material de la tarjeta es el único con radius 20 + elev 0 del overlay.
     final cardFinder = find.byWidgetPredicate(
-      (w) => w is Material && w.elevation == 6,
+      (w) =>
+          w is Material &&
+          w.elevation == 0 &&
+          w.borderRadius == BorderRadius.circular(20),
     );
 
     testWidgets('mide su contenido: sin espacio en blanco bajo el texto', (
@@ -1196,7 +1234,9 @@ Future<void> main() async {
       for (final it in items) {
         store.addToCart(it);
       }
-      await tester.pumpWidget(_wrap(const Scaffold(body: SizedBox()), store: store));
+      await tester.pumpWidget(
+        _wrap(const Scaffold(body: SizedBox()), store: store),
+      );
       await tester.pumpWidget(
         _wrap(
           Builder(
@@ -1220,22 +1260,25 @@ Future<void> main() async {
       // Antes de v21.5 las LedgerRow del desglose iban sin padding: el
       // hueco entre filas medía 0 px. Ahora el ritmo de recibo es 6 px
       // (3 arriba + 3 abajo, patrón de home_screen).
-      await abrirCheckout(tester, items: const [
-        CartItem(
-          id: 'a',
-          name: 'Arroz',
-          quantity: 2,
-          price: 2,
-          currency: 'USD',
-        ),
-        CartItem(
-          id: 'b',
-          name: 'Pasta',
-          quantity: 1,
-          price: 3,
-          currency: 'USD',
-        ),
-      ]);
+      await abrirCheckout(
+        tester,
+        items: const [
+          CartItem(
+            id: 'a',
+            name: 'Arroz',
+            quantity: 2,
+            price: 2,
+            currency: 'USD',
+          ),
+          CartItem(
+            id: 'b',
+            name: 'Pasta',
+            quantity: 1,
+            price: 3,
+            currency: 'USD',
+          ),
+        ],
+      );
       expect(find.text('2 ítems · 3 unidades · 1 monedas'), findsOneWidget);
       final arroz = tester.getRect(find.text('2 × Arroz'));
       final pasta = tester.getRect(find.text('1 × Pasta'));
@@ -1249,23 +1292,23 @@ Future<void> main() async {
     testWidgets('héroe del total: rótulo USD en la línea base de la cifra', (
       tester,
     ) async {
-      await abrirCheckout(tester, items: const [
-        CartItem(
-          id: 'a',
-          name: 'Arroz',
-          quantity: 1,
-          price: 2,
-          currency: 'USD',
-        ),
-      ]);
+      await abrirCheckout(
+        tester,
+        items: const [
+          CartItem(
+            id: 'a',
+            name: 'Arroz',
+            quantity: 1,
+            price: 2,
+            currency: 'USD',
+          ),
+        ],
+      );
       // El héroe vive en el primer ReadWindow del modal («Total a
       // guardar»); la fila debe alinear por baseline, no al centro.
       final heroRow = tester.widget<Row>(
         find
-            .descendant(
-              of: find.byType(ReadWindow),
-              matching: find.byType(Row),
-            )
+            .descendant(of: find.byType(ReadWindow), matching: find.byType(Row))
             .first,
       );
       expect(heroRow.crossAxisAlignment, CrossAxisAlignment.baseline);
@@ -1278,24 +1321,27 @@ Future<void> main() async {
       // Un ítem ya trae tienda → el modal nace multitienda ON, un solo
       // grupo con dos campos: el primero abre con 10 px (cierra el recibo
       // el subtotal) y el segundo conserva el ritmo de 6 px.
-      await abrirCheckout(tester, items: const [
-        CartItem(
-          id: 'a',
-          name: 'Arroz',
-          quantity: 1,
-          price: 2,
-          currency: 'USD',
-          store: 'Bicentenario',
-        ),
-        CartItem(
-          id: 'b',
-          name: 'Pasta',
-          quantity: 1,
-          price: 3,
-          currency: 'USD',
-          store: 'Bicentenario',
-        ),
-      ]);
+      await abrirCheckout(
+        tester,
+        items: const [
+          CartItem(
+            id: 'a',
+            name: 'Arroz',
+            quantity: 1,
+            price: 2,
+            currency: 'USD',
+            store: 'Bicentenario',
+          ),
+          CartItem(
+            id: 'b',
+            name: 'Pasta',
+            quantity: 1,
+            price: 3,
+            currency: 'USD',
+            store: 'Bicentenario',
+          ),
+        ],
+      );
       expect(find.text('Tienda de Arroz'), findsOneWidget);
       expect(find.text('Tienda de Pasta'), findsOneWidget);
       expect(

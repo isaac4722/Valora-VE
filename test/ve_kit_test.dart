@@ -1,10 +1,10 @@
-/// ─── Tests del kit «Ve» · capa shadcn_ui del prototipo (TASK-34 · p3) ───────
+/// ─── Tests del kit «Ve» · piel v25 «HOJA» sobre Material 3 nativo ──────────
 /// Cobertura del contrato de la pieza:
-/// 1. Los controles se construyen sobre componentes shadcn/ui reales y con
-///    las medidas EXACTAS del prototipo (alturas sm/md/lg, badge, toggle).
-/// 2. Los tonos de VeBadge usan los fondos tenues de VeInk (pos-bg & co.).
+/// 1. Los controles se construyen sobre Material 3 puro con las medidas v25
+///    (alturas sm/md/lg 36/44/52, badge solo-texto, toggle 32×18).
+/// 2. VeBadge usa SOLO el texto del tono (sin fondo ni borde — regla de 3).
 /// 3. Los gráficos pintan sin romper con datos, con un punto y sin datos.
-/// 4. VeSegmented desliza su pastilla al cambiar el valor (mejora UX).
+/// 4. VeSegmented desliza su pastilla de tinta al cambiar el valor.
 library;
 
 import 'package:flutter/material.dart';
@@ -50,15 +50,14 @@ void main() {
       final md = tester.getSize(find.text('md'));
       final lg = tester.getSize(find.text('lg'));
       // El texto vive dentro del botón de altura fija: el Material interno
-      // del VeBtn (v24) mide lo pactado — el _VeBorder añade su borde
-      // alrededor, como en la era shadcn.
+      // del VeBtn (v25 «HOJA») mide lo pactado — píldoras sin borde.
       final btns = find.descendant(
         of: find.byType(VeBtn),
         matching: find.byType(Material),
       );
-      expect(tester.getSize(btns.at(0)).height, 28);
-      expect(tester.getSize(btns.at(1)).height, 36);
-      expect(tester.getSize(btns.at(2)).height, 44);
+      expect(tester.getSize(btns.at(0)).height, 36);
+      expect(tester.getSize(btns.at(1)).height, 44);
+      expect(tester.getSize(btns.at(2)).height, 52);
       expect(sm.width, greaterThan(0));
       expect(md.width, greaterThan(0));
       expect(lg.width, greaterThan(0));
@@ -86,7 +85,7 @@ void main() {
       expect(dts.style.color, VeColors.bgLight);
     });
 
-    testWidgets('danger: superficie + tinta neg + borde neg 40 %', (tester) async {
+    testWidgets('danger: tonal neg 10 % + tinta neg, SIN borde', (tester) async {
       await tester.pumpWidget(_wrap(const VeBtn(
         onPressed: null,
         variant: VeBtnVariant.danger,
@@ -98,7 +97,7 @@ void main() {
         of: find.byType(VeBtn),
         matching: find.byType(Material),
       ));
-      expect(mat.color, VeColors.cardLight);
+      expect(mat.color, VeColors.negBgLight);
       final dts = tester.widget<DefaultTextStyle>(find
           .descendant(
             of: find.byType(VeBtn),
@@ -109,21 +108,18 @@ void main() {
     });
   });
 
-  group('VeBadge · fondos tenues del tono', () {
-    for (final (tone, bg, fg) in [
-      (VeTone.pos, VeColors.posBgLight, VeColors.posLight),
-      (VeTone.neg, VeColors.negBgLight, VeColors.negLight),
-      (VeTone.warn, VeColors.warnBgLight, VeColors.warnLight),
-      (VeTone.info, VeColors.infoBgLight, VeColors.manualLight),
+  group('VeBadge · SOLO texto del tono (v25 «HOJA»)', () {
+    for (final (tone, fg) in [
+      (VeTone.pos, VeColors.posLight),
+      (VeTone.neg, VeColors.negLight),
+      (VeTone.warn, VeColors.warnLight),
+      (VeTone.info, VeColors.manualLight),
     ]) {
-      testWidgets('tono $tone usa el token -bg de VeInk', (tester) async {
+      testWidgets('tono $tone pinta SOLO texto del tono, sin fondo', (
+        tester,
+      ) async {
         await tester.pumpWidget(_wrap(VeBadge(tone: tone, child: Text('X'))));
         await tester.pumpAndSettle();
-        final cont = tester.widget<Container>(find.descendant(
-          of: find.byType(VeBadge),
-          matching: find.byType(Container),
-        ));
-        expect((cont.decoration as BoxDecoration).color, bg);
         final dts = tester.widget<DefaultTextStyle>(find
             .descendant(
               of: find.byType(VeBadge),

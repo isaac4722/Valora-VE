@@ -49,11 +49,9 @@ class _RecientesState extends ConsumerState<_Recientes> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(appStoreProvider).pushRecentConversion(
-            widget.amount,
-            widget.from,
-            widget.to,
-          );
+      ref
+          .read(appStoreProvider)
+          .pushRecentConversion(widget.amount, widget.from, widget.to);
     });
   }
 
@@ -78,8 +76,12 @@ class _RecientesState extends ConsumerState<_Recientes> {
           children: [
             for (final r in recents.take(10))
               VeRow(
-                key: ValueKey('${r.from}_${r.to}_${r.at.millisecondsSinceEpoch}'),
-                onTap: widget.onRestore == null ? null : () => widget.onRestore!(r),
+                key: ValueKey(
+                  '${r.from}_${r.to}_${r.at.millisecondsSinceEpoch}',
+                ),
+                onTap: widget.onRestore == null
+                    ? null
+                    : () => widget.onRestore!(r),
                 label: Row(
                   children: [
                     Flag(CurrencyX.from(r.from), size: 15),
@@ -163,7 +165,8 @@ class _CalendarioHistorico extends ConsumerStatefulWidget {
   final Future<Set<String>>? futureDays;
 
   @override
-  ConsumerState<_CalendarioHistorico> createState() => _CalendarioHistoricoState();
+  ConsumerState<_CalendarioHistorico> createState() =>
+      _CalendarioHistoricoState();
 }
 
 class _CalendarioHistoricoState extends ConsumerState<_CalendarioHistorico> {
@@ -258,89 +261,84 @@ class _CalendarioHistoricoState extends ConsumerState<_CalendarioHistorico> {
           style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 12),
-            if (_days.isEmpty && _remotosPendientes)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 28),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.4),
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      'Consultando días…',
-                      style: TextStyle(fontSize: 12.5),
-                    ),
-                  ],
+        if (_days.isEmpty && _remotosPendientes)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 28),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
                 ),
-              )
-            else if (_days.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: VeEmpty(
-                  icon: LucideIcons.calendar,
-                  title: 'Aún no hay fechas guardadas',
-                  sub: 'Se llena sola: un snapshot por día al refrescar tasas.',
+                SizedBox(height: 12),
+                Text('Consultando días…', style: TextStyle(fontSize: 12.5)),
+              ],
+            ),
+          )
+        else if (_days.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: VeEmpty(
+              icon: LucideIcons.calendar,
+              title: 'Aún no hay fechas guardadas',
+              sub: 'Se llena sola: un snapshot por día al refrescar tasas.',
+            ),
+          )
+        else ...[
+          Row(
+            children: [
+              IconButton(
+                onPressed: puedePrev ? () => _mover(-1) : null,
+                icon: const Icon(Icons.chevron_left, size: 20),
+                tooltip: 'Mes anterior',
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    '${mes[0].toUpperCase()}${mes.substring(1)} ${_month.year}',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurface,
+                    ),
+                  ),
                 ),
-              )
-            else ...[
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: puedePrev ? () => _mover(-1) : null,
-                    icon: const Icon(Icons.chevron_left, size: 20),
-                    tooltip: 'Mes anterior',
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        '${mes[0].toUpperCase()}${mes.substring(1)} ${_month.year}',
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: puedeNext ? () => _mover(1) : null,
-                    icon: const Icon(Icons.chevron_right, size: 20),
-                    tooltip: 'Mes siguiente',
-                  ),
-                ],
               ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  for (final d in const ['L', 'M', 'X', 'J', 'V', 'S', 'D'])
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          d,
-                          style: VeText.labelCaps(
-                            9.5,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              RepaintBoundary(
-                child: Column(children: _semanas(scheme)),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                _remotosPendientes
-                    ? 'Llegando más días desde la API…'
-                    : 'Días sombreados: API + tus snapshots guardados.',
-                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              IconButton(
+                onPressed: puedeNext ? () => _mover(1) : null,
+                icon: const Icon(Icons.chevron_right, size: 20),
+                tooltip: 'Mes siguiente',
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              for (final d in const ['L', 'M', 'X', 'J', 'V', 'S', 'D'])
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      d,
+                      style: VeText.labelCaps(
+                        9.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          RepaintBoundary(child: Column(children: _semanas(scheme))),
+          const SizedBox(height: 10),
+          Text(
+            _remotosPendientes
+                ? 'Llegando más días desde la API…'
+                : 'Días sombreados: API + tus snapshots guardados.',
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          ),
+        ],
       ],
     );
   }
@@ -378,13 +376,13 @@ class _CalendarioHistoricoState extends ConsumerState<_CalendarioHistorico> {
     final fondo = elegido
         ? scheme.primary
         : disponible
-            ? scheme.primary.withValues(alpha: 0.08)
-            : Colors.transparent;
+        ? scheme.primary.withValues(alpha: 0.08)
+        : Colors.transparent;
     final tinta = elegido
         ? scheme.onPrimary
         : disponible
-            ? scheme.onSurface
-            : scheme.onSurfaceVariant.withValues(alpha: 0.55);
+        ? (esHoy ? scheme.primary : scheme.onSurface)
+        : scheme.onSurfaceVariant.withValues(alpha: 0.55);
     return SizedBox(
       height: 42,
       child: Padding(
@@ -396,21 +394,16 @@ class _CalendarioHistoricoState extends ConsumerState<_CalendarioHistorico> {
             borderRadius: BorderRadius.circular(10),
             onTap: disponible ? () => Navigator.of(context).pop(date) : null,
             child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  border: esHoy && !elegido
-                      ? Border.all(color: scheme.primary.withValues(alpha: 0.55))
-                      : null,
-                ),
-                child: Text(
-                  '$day',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: elegido || esHoy ? FontWeight.w800 : FontWeight.w600,
-                    color: tinta,
-                  ),
+              // v25 «HOJA»: «hoy» se marca con TINTA (número en primario,
+              // w800) — sin anillo de borde alrededor del día.
+              child: Text(
+                '$day',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: elegido || esHoy
+                      ? FontWeight.w800
+                      : FontWeight.w600,
+                  color: tinta,
                 ),
               ),
             ),

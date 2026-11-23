@@ -338,16 +338,21 @@ class CheckoutModalState extends ConsumerState<CheckoutModal> {
             ?.latestRecord;
         _store.recordPurchaseItemOnProduct(pid, purchaseItem, store: itemStore);
         try {
-          ref.read(alertsProvider).checkProductRise(
-            notifs: ref.read(notificationsProvider),
-            persist: (kind, title, body) =>
-                _store.pushNotification(kind: kind, title: title, body: body),
-            productId: pid,
-            productName: purchaseItem.name,
-            oldPrice: prev?.price ?? 0,
-            newPrice: purchaseItem.priceUSD,
-            storeName: itemStore,
-          );
+          ref
+              .read(alertsProvider)
+              .checkProductRise(
+                notifs: ref.read(notificationsProvider),
+                persist: (kind, title, body) => _store.pushNotification(
+                  kind: kind,
+                  title: title,
+                  body: body,
+                ),
+                productId: pid,
+                productName: purchaseItem.name,
+                oldPrice: prev?.price ?? 0,
+                newPrice: purchaseItem.priceUSD,
+                storeName: itemStore,
+              );
         } catch (_) {
           // Sin Provider (previews/tests): la alerta es no-op, la compra sigue.
         }
@@ -432,10 +437,7 @@ class CheckoutModalState extends ConsumerState<CheckoutModal> {
       children: [
         Text(
           '${_cart.length} ítems · ${t.units} unidades · ${t.byCurrency.length} monedas',
-          style: TextStyle(
-            fontSize: 12,
-            color: scheme.onSurfaceVariant,
-          ),
+          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 10),
         ReadWindow(
@@ -453,10 +455,7 @@ class CheckoutModalState extends ConsumerState<CheckoutModal> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     '${_calcCur.code} ${fmtMoney(_totalInCalc, _calcCur)}',
-                    style: VeText.displayNum(
-                      34,
-                      color: scheme.onSurface,
-                    ),
+                    style: VeText.displayNum(34, color: scheme.onSurface),
                   ),
                 ),
               ),
@@ -475,11 +474,7 @@ class CheckoutModalState extends ConsumerState<CheckoutModal> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(
-                Icons.storefront_outlined,
-                size: 13,
-                color: scheme.primary,
-              ),
+              Icon(Icons.storefront_outlined, size: 13, color: scheme.primary),
               const SizedBox(width: 6),
               // Expanded + ellipsis: nombre de tienda libre del
               // usuario; con ~45 caracteres desbordaba (fix).
@@ -646,11 +641,7 @@ class CheckoutModalState extends ConsumerState<CheckoutModal> {
                       height: 14,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(
-                      _ticketRef == null
-                          ? 'Foto del ticket'
-                          : 'Foto lista',
-                    ),
+                  : Text(_ticketRef == null ? 'Foto del ticket' : 'Foto lista'),
             ),
             if (_ticketRef != null) ...[
               Icon(Icons.photo, size: 14, color: scheme.primary),
@@ -984,10 +975,7 @@ class _DividirCuentaPanelState extends ConsumerState<DividirCuentaPanel> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       fmtCurrency(widget.totalInCalc, widget.calcCur),
-                      style: VeText.displayNum(
-                        26,
-                        color: scheme.onSurface,
-                      ),
+                      style: VeText.displayNum(26, color: scheme.onSurface),
                     ),
                   ),
                   if (widget.calcCur != Currency.usd)
@@ -1008,10 +996,7 @@ class _DividirCuentaPanelState extends ConsumerState<DividirCuentaPanel> {
               children: [
                 Text(
                   'PERSONAS',
-                  style: VeText.labelCaps(
-                    10.5,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 6),
                 VeStepper(
@@ -1048,11 +1033,8 @@ class _DividirCuentaPanelState extends ConsumerState<DividirCuentaPanel> {
               variant: VeBtnVariant.ghost,
               size: VeBtnSize.sm,
               icon: LucideIcons.copy,
-              onPressed: () => copiarAlPortapapeles(
-                context,
-                copyText,
-                'Reparto copiado',
-              ),
+              onPressed: () =>
+                  copiarAlPortapapeles(context, copyText, 'Reparto copiado'),
               child: const Text('Copiar'),
             ),
           ],
@@ -1119,9 +1101,7 @@ class _DividirCuentaPanelState extends ConsumerState<DividirCuentaPanel> {
                       : 'Propina $_tipPct % añadida: ${fmtCurrency(tipAmount, widget.calcCur)}',
                   style: TextStyle(
                     fontSize: 11,
-                    color: _tipIncluded
-                        ? scheme.onSurfaceVariant
-                        : sem.pos,
+                    color: _tipIncluded ? scheme.onSurfaceVariant : sem.pos,
                   ),
                 ),
             ],
@@ -1156,13 +1136,10 @@ class _MatchRow extends ConsumerWidget {
     final where = match.latestRecord?.store ?? 'tu catálogo';
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
+      // v25 «HOJA»: aviso PLANO — sin fill ni borde; el warn vive en el
+      // color del texto (badge solo-texto).
       child: Container(
         padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: sem.warn.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: sem.warn.withValues(alpha: 0.35)),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1171,7 +1148,7 @@ class _MatchRow extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
+                color: sem.warn,
               ),
             ),
             const SizedBox(height: 8),

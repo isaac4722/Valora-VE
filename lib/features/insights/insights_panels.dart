@@ -22,7 +22,6 @@ import 'insights_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:valorave/core/ve_theme.dart';
 import 'package:intl/intl.dart';
 
 // ─────────────────────────── Widgets compartidos ───────────────────────────
@@ -48,89 +47,62 @@ class KpiTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final shad = context.ve.colorScheme;
     final c = color ?? scheme.onSurface;
-    // TASK-34 p9: cromática del kit Ve — superficie shad, borde --line,
-    // radius 10 (igual que VeCard del prototipo, sin sombra Material).
+    // v25 «HOJA»: KPI PLANO — eyebrow + cifra display, sin tarjeta.
     return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: shad.card,
-        borderRadius: BorderRadius.circular(kVeRadius),
-        border: Border.all(color: shad.border),
-      ),
-      child: Padding(
-        // 9P·Pulido: aire interno 12/12 (antes 11 vertical — los KPIs se
-        // veían apretados contra el borde de la tarjeta en la auditoría
-        // visual de la web).
-        // v23.3 (pez 2-a): 12/12 de verdad — el 13 rompía la rejilla de 4
-        // que el propio comentario declara.
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                if (icon != null) ...[
-                  // v20 (VLM gate): el icono va en CHIP tintado — antes era
-                  // un cuadradito pelado que leía como «checkbox». Tinte al
-                  // 15 % + borde sutil del mismo tono para que se lea como
-                  // insignia de color.
-                  Container(
-                    width: 22,
-                    height: 22,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: c.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(7),
-                      border: Border.all(color: c.withValues(alpha: 0.25)),
-                    ),
-                    child: Icon(icon, size: 14, color: c),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                Expanded(
-                  child: Text(
-                    label,
-                    // 9P·Pantalla: 2 líneas — «Brecha BCV ↔ Paralelo» ya no
-                    // se corta con «…» en la columna de 3 KPIs del móvil.
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: VeText.labelCaps(
-                      9.5,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (icon != null) ...[
+                // v25 «HOJA»: el icono va PELADO en tono de dato — sin
+                // chip tintado ni borde (el color ya dice la categoría).
+                Icon(icon, size: 14, color: c),
+                const SizedBox(width: 6),
               ],
-            ),
-            if (icon != null) const SizedBox(height: 8) else const SizedBox(height: 0),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                maxLines: 1,
-                style: VeText.displayNum(19, color: c),
-              ),
-            ),
-            if (sub != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                sub!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 10.5,
-                  height: 1.35,
-                  color: scheme.onSurfaceVariant,
+              Expanded(
+                child: Text(
+                  label,
+                  // 9P·Pantalla: 2 líneas — «Brecha BCV ↔ Paralelo» ya no
+                  // se corta con «…» en la columna de 3 KPIs del móvil.
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
                 ),
               ),
             ],
+          ),
+          if (icon != null)
+            const SizedBox(height: 8)
+          else
+            const SizedBox(height: 0),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: VeText.displayNum(19, color: c),
+            ),
+          ),
+          if (sub != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              sub!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 10.5,
+                height: 1.35,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -181,56 +153,48 @@ class PanelCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final shad = context.ve.colorScheme;
-    // TASK-34 p9: cromática VeCard — la cabecera pasa de caps-primary al
-    // eyebrow del prototipo (caps 10.5 muted + tracking), acción derecha.
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: shad.card,
-        borderRadius: BorderRadius.circular(kVeRadius),
-        border: Border.all(color: shad.border),
-      ),
-      child: Padding(
-        padding: padding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title.toUpperCase(),
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.84,
-                      color: scheme.onSurfaceVariant,
-                    ),
+    // v25 «HOJA»: panel PLANO — cabecera eyebrow + acción derecha y el
+    // contenido sobre el papel, sin tarjeta (la separación entre secciones
+    // la pone el aire, 28-36 px).
+    return Padding(
+      padding: padding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title.toUpperCase(),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.84,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
-                // ignore: use_null_aware_elements
-                if (action != null) action!,
-                // ignore: use_null_aware_elements
-                if (trailing != null) trailing!,
-              ],
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                subtitle!,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 11,
-                  height: 1.35,
-                  color: scheme.onSurfaceVariant,
-                ),
               ),
+              // ignore: use_null_aware_elements
+              if (action != null) action!,
+              // ignore: use_null_aware_elements
+              if (trailing != null) trailing!,
             ],
-            if (child != null) ...[const SizedBox(height: 10), child!],
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle!,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11,
+                height: 1.35,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
           ],
-        ),
+          if (child != null) ...[const SizedBox(height: 10), child!],
+        ],
       ),
     );
   }
@@ -257,12 +221,10 @@ class InlineHint extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
+      // v25 «HOJA»: pista PLANA — icono + texto muted sobre el papel, sin
+      // fill de fondo.
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
-          borderRadius: BorderRadius.circular(10),
-        ),
         child: Row(
           children: [
             Icon(
@@ -1256,16 +1218,9 @@ class HeatmapCalendar extends ConsumerWidget {
   Widget _legendBox(BuildContext context, Color c) => Container(
     width: 11,
     height: 11,
-    decoration: BoxDecoration(
-      color: c,
-      borderRadius: BorderRadius.circular(3),
-      // v23.3 (pez 2-a): borde del esquema — el negro plano era invisible
-      // sobre el papel oscuro (la cajita «sin datos» se fundía).
-      border: Border.all(
-        color: Theme.of(context).colorScheme.outlineVariant,
-        width: 0.5,
-      ),
-    ),
+    // v25 «HOJA»: swatch de leyenda SIN borde — el color de dato es la
+    // marca, no una caja de UI.
+    decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3)),
   );
 
   /// Grid de un mes: cuadros cuadrados en 7 columnas (L→D), con blancos de
@@ -1335,11 +1290,12 @@ class HeatmapCalendar extends ConsumerWidget {
         : '${day.day} ${fmtMesCorto(day.month)}: ${fmtPct(pct)}';
     return Semantics(
       label: label,
+      // v25 «HOJA»: celda del heatmap SIN borde — el fill ES el dato
+      // (intensidad del día), no una caja de UI.
       child: Container(
         decoration: BoxDecoration(
           color: fill,
           borderRadius: BorderRadius.circular(3),
-          border: Border.all(color: scheme.outlineVariant, width: 0.5),
         ),
       ),
     );

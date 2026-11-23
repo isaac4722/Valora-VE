@@ -64,9 +64,8 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
   // por invite/anuncio — así «Paso X de 3» arranca en 1 como el prototipo.
   bool _codeTouched = false;
 
-  String get _word => String.fromCharCodes(
-    _codeIdx.map((i) => _kAlphabet.codeUnitAt(i)),
-  );
+  String get _word =>
+      String.fromCharCodes(_codeIdx.map((i) => _kAlphabet.codeUnitAt(i)));
 
   @override
   void initState() {
@@ -136,8 +135,8 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
   void _bump(int col, int delta) {
     setState(() {
       _codeTouched = true;
-      _codeIdx[col] = (_codeIdx[col] + delta + _kAlphabet.length) %
-          _kAlphabet.length;
+      _codeIdx[col] =
+          (_codeIdx[col] + delta + _kAlphabet.length) % _kAlphabet.length;
     });
   }
 
@@ -282,13 +281,10 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
 
         // ── 3 · Código de la sala ──
         const _StepEyebrow('3 · Código de la sala', top: 18),
+        // v25 «HOJA»: bloque del código PLANO — las ruedas de letras son
+        // el control; sin caja contenedora.
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: scheme.card,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: scheme.border),
-          ),
           child: Column(
             children: [
               Row(
@@ -482,7 +478,7 @@ class _StepEyebrow extends ConsumerWidget {
 }
 
 /// Columna de letra del código (JoinSheet del prototipo): botón ▲ arriba,
-/// celda mono 20 px sobre bg-subtle con bordes horizontales, botón ▼ abajo.
+/// celda mono 20 px TONAL sin borde, botón ▼ abajo.
 class _LetterWheel extends ConsumerWidget {
   const _LetterWheel({
     required this.letter,
@@ -497,19 +493,11 @@ class _LetterWheel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = context.ve.colorScheme;
-    final bool dark = context.ve.brightness == Brightness.dark;
-    final Color lineStrong = dark
-        ? VeColors.lineStrongDark
-        : VeColors.lineStrongLight;
 
-    return Container(
+    // v25 «HOJA»: rueda PLANA — la celda de letra es la única pieza tonal
+    // (como una tecla de keypad), sin caja ni bordes alrededor.
+    return SizedBox(
       width: 44,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: scheme.background,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: lineStrong),
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -519,9 +507,7 @@ class _LetterWheel extends ConsumerWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: scheme.muted,
-              border: Border.symmetric(
-                horizontal: BorderSide(color: scheme.border),
-              ),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               letter,
@@ -533,12 +519,7 @@ class _LetterWheel extends ConsumerWidget {
               ),
             ),
           ),
-          _wheelBtn(
-            context,
-            LucideIcons.chevronDown,
-            onDown,
-            'Letra anterior',
-          ),
+          _wheelBtn(context, LucideIcons.chevronDown, onDown, 'Letra anterior'),
         ],
       ),
     );

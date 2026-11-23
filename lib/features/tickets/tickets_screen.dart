@@ -318,7 +318,6 @@ class _TicketCardState extends ConsumerState<_TicketCard> {
   @override
   Widget build(BuildContext context) {
     final shad = context.ve.colorScheme;
-    final scheme = Theme.of(context).colorScheme;
     final bool dark = Theme.of(context).brightness == Brightness.dark;
 
     return Semantics(
@@ -331,20 +330,11 @@ class _TicketCardState extends ConsumerState<_TicketCard> {
         onExit: (_) => setState(() => _hover = false),
         child: GestureDetector(
           onTap: widget.onTap,
-          child: AnimatedContainer(
+          child: AnimatedOpacity(
             duration: const Duration(milliseconds: 140),
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: shad.card,
-              borderRadius: BorderRadius.circular(kVeRadius),
-              border: Border.all(
-                color: _hover
-                    ? (dark
-                          ? VeColors.lineStrongDark
-                          : VeColors.lineStrongLight)
-                    : shad.border,
-              ),
-            ),
+            // v25 «HOJA»: ficha de ticket PLANA — la foto manda, sin
+            // tarjeta ni borde; el hover solo atenúa (feedback tonal).
+            opacity: _hover ? 0.86 : 1,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -422,7 +412,7 @@ class _TicketCardState extends ConsumerState<_TicketCard> {
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 12,
-                          color: scheme.onSurfaceVariant,
+                          color: shad.mutedForeground,
                         ),
                       ),
                     ],
@@ -763,7 +753,6 @@ class _TicketViewerState extends ConsumerState<_TicketViewer> {
     );
   }
 }
-
 
 /// Subtítulo de la galería: nº de fotos + peso total. Las fotos-archivo se
 /// miden con su tamaño REAL en disco; las data URLs legadas se estiman

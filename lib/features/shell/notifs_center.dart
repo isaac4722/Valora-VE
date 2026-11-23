@@ -87,31 +87,26 @@ class NotificationCenterBody extends ConsumerWidget {
       return const VeEmpty(
         icon: LucideIcons.bell,
         title: 'Todo tranquilo',
-        sub: 'Aquí van llegando los avisos de picos de tasa, tus metas, la '
+        sub:
+            'Aquí van llegando los avisos de picos de tasa, tus metas, la '
             'brecha y los recordatorios.',
       );
     }
 
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: context.ve.colorScheme.border),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0)
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: context.ve.colorScheme.border,
-              ),
-            _NotifRow(n: items[i]),
-          ],
+    // v25 «HOJA»: lista plana — filas + hairline 1 px al 65 %, sin caja.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0)
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: context.ve.colorScheme.border.withValues(alpha: 0.65),
+            ),
+          _NotifRow(n: items[i]),
         ],
-      ),
+      ],
     );
   }
 }

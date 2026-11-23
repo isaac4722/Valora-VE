@@ -423,7 +423,8 @@ class _ManualField extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: InkWell(
-        onTap: () => showManualRateEditor(context, ref: ref, sourceId: sourceId),
+        onTap: () =>
+            showManualRateEditor(context, ref: ref, sourceId: sourceId),
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
@@ -488,9 +489,7 @@ class _CustomRates extends ConsumerWidget {
       context: context,
       title: 'Nueva tasa tuya',
       builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(ctx).bottom,
-        ),
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -631,10 +630,7 @@ class _CustomRates extends ConsumerWidget {
             child: Text(
               'Tus tasas viven también en el Inicio, junto al BCV y el '
               'paralelo, con su brecha.',
-              style: TextStyle(
-                fontSize: 11,
-                color: scheme.onSurfaceVariant,
-              ),
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
             ),
           ),
       ],
@@ -794,23 +790,14 @@ class _ThemePreviewCard extends ConsumerWidget {
     // Tokens reales del tema que representa la tarjeta.
     final Color bg = claro ? VeColors.bgLight : VeColors.bgDark;
     final Color card = claro ? VeColors.cardLight : VeColors.cardDark;
-    final Color border = claro ? VeColors.borderLight : VeColors.borderDark;
     final Color primary = claro ? VeColors.primaryLight : VeColors.primaryDark;
     final Color muted = claro ? VeColors.mutedLight : VeColors.mutedDark;
     return TapScale(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(7),
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected
-                ? scheme.primary.withValues(alpha: 0.45)
-                : scheme.outlineVariant,
-            width: selected ? 1.4 : 1,
-          ),
-        ),
+        // v25 «HOJA»: miniatura SIN caja — la selección vive en la etiqueta
+        // (tinta + w700), no en un borde.
         child: Column(
           children: [
             // Mock del tema: fondo + tarjeta con cifra + barra primaria.
@@ -820,7 +807,6 @@ class _ThemePreviewCard extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: bg,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: border, width: 0.5),
                 ),
                 padding: const EdgeInsets.all(6),
                 // Mock a base de Stack: resistente a cualquier tamaño (el
@@ -834,7 +820,6 @@ class _ThemePreviewCard extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: card,
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: border, width: 0.5),
                         ),
                         alignment: Alignment.topLeft,
                         // «cifra» del mock: barra gruesa tinta.

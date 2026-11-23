@@ -76,9 +76,7 @@ Future<ItemEditorResult?> showItemEditorSheet(
             variant: VeBtnVariant.primary,
             icon: LucideIcons.check,
             onPressed: () => key.currentState?.save(),
-            child: Text(
-              editing ? 'Guardar cambios' : 'Agregar a la lista',
-            ),
+            child: Text(editing ? 'Guardar cambios' : 'Agregar a la lista'),
           ),
         ),
       ],
@@ -147,8 +145,12 @@ class StoreAutocompleteField extends StatelessWidget {
         return Align(
           alignment: Alignment.topLeft,
           child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(10),
+            // v25 «HOJA»: popover PLANO — radio 20, elev 0, sombra
+            // transparente (la superficie card lo distingue del papel).
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(20),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 190, maxWidth: 320),
               child: ListView(
@@ -313,7 +315,8 @@ class _ItemEditorState extends State<_ItemEditor> {
   }
 
   /// «Quitar» (solo edición): el caller elimina el ítem de la lista.
-  void remove() => Navigator.of(context).pop(const ItemEditorResult(remove: true));
+  void remove() =>
+      Navigator.of(context).pop(const ItemEditorResult(remove: true));
 
   @override
   Widget build(BuildContext context) {

@@ -75,28 +75,16 @@ class RateTile extends ConsumerWidget {
       // cabe en media pantalla; la zona de toque sigue ≥48dp.
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Material(
-        // v21 (GUI superior): jerarquía calmada estilo Linear — la lista
-        // respira en superficie neutra y SOLO la fila activa lleva el tinte
-        // de su categoría + borde; la selección se encuentra de un vistazo.
-        // El color semántico no desaparece: los sellos (v20) y el símbolo
-        // de la divisa lo conservan en TODAS las filas.
-        color: has
-            ? (selected
-                  ? ink.withValues(alpha: 0.12)
-                  : Colors.transparent)
-            : scheme.surfaceContainerHigh.withValues(alpha: 0.4),
+        // v25 «HOJA»: fila PLANA — la selección se marca con tinta (nombre +
+        // check) y valores displayNum, sin caja de fondo ni borde; las filas
+        // sin tasa quedan atenuadas por su texto muted, no por un fill.
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: selected
-                  ? Border.all(color: ink, width: 1.4)
-                  : Border.all(color: Colors.transparent, width: 1.4),
-            ),
             child: Row(
               children: <Widget>[
                 if (showFlag) ...<Widget>[
@@ -126,7 +114,7 @@ class RateTile extends ConsumerWidget {
                             const SizedBox(width: 6),
                             Icon(
                               Icons.check_circle_rounded,
-                              size: 15,
+                              size: 14,
                               color: ink,
                             ),
                           ],
@@ -312,8 +300,7 @@ Future<void> showRateSheet(
             selected: s.id == currentId,
             freshness: _freshnessOf(store, s.id),
             onTap: () async {
-              if (s.category == SourceCategory.manual &&
-                  ctx.rate(s.id) <= 0) {
+              if (s.category == SourceCategory.manual && ctx.rate(s.id) <= 0) {
                 // Manual sin valor: el editor ES la selección.
                 final saved = await showManualRateEditor(
                   sheetCtx,

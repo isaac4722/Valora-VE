@@ -161,7 +161,8 @@ class _SalaVivaScreenState extends ConsumerState<SalaVivaScreen> {
               const SizedBox(height: 12),
             ],
             if (room.isViewer) const _ViewerNotice(),
-            if (room.canAdmin) _AdminBar(onRename: _renameDialog, onClose: _confirmLeave),
+            if (room.canAdmin)
+              _AdminBar(onRename: _renameDialog, onClose: _confirmLeave),
             _CodigoQrCard(room: room),
             if (room.isHost && room.hasPin)
               Padding(
@@ -185,16 +186,11 @@ class _ErrorBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sem = VeColors.of(context);
-    final scheme = context.ve.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
+      // v25 «HOJA»: aviso PLANO — icono + texto en neg, sin fill ni borde.
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: sem.negBg,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: sem.neg.withValues(alpha: 0.35)),
-        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -207,7 +203,7 @@ class _ErrorBanner extends ConsumerWidget {
                   fontFamily: 'Inter',
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
-                  color: scheme.foreground,
+                  color: sem.neg,
                 ),
               ),
             ),
@@ -260,13 +256,9 @@ class _ViewerNotice extends ConsumerWidget {
     final scheme = context.ve.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
+      // v25 «HOJA»: aviso PLANO — icono + texto muted, sin fill ni borde.
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: scheme.muted,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: scheme.border),
-        ),
         child: Row(
           children: [
             Icon(LucideIcons.eye, size: 14, color: scheme.foreground),
@@ -585,9 +577,9 @@ class _MemberTile extends ConsumerWidget {
         if (isHostRow)
           const VeBadge(child: Text('Anfitrión'))
         else if (m.role == 'viewer')
-            const VeBadge(tone: VeTone.warn, child: Text('Observador'))
-          else
-            const VeBadge(tone: VeTone.pos, dot: true, child: Text('Editor')),
+          const VeBadge(tone: VeTone.warn, child: Text('Observador'))
+        else
+          const VeBadge(tone: VeTone.pos, dot: true, child: Text('Editor')),
         if (canManage)
           PopupMenuButton<String>(
             icon: Icon(
