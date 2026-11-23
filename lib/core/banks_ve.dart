@@ -75,6 +75,40 @@ const Map<String, int> kBankBadgeColors = <String, int>{
   'Sofitasa': 0xFF2E7D32,
 };
 
+/// Insignias REALES por banco (v27.1 · REA del APK de CalculaYa 1.1.0):
+/// los 27 PNG originales, normalizados a 128×128 sobre fondo blanco para
+/// que la fila respire. La clave es el nombre EXACTO de [kVkBanks].
+const Map<String, String> kBankBadgeAssets = <String, String>{
+  '100% Banco': 'assets/banks/100-banco.png',
+  'Banco Activo': 'assets/banks/banco-activo.png',
+  'Banco Agrícola de Venezuela': 'assets/banks/banco-agricola.png',
+  'Banco del Caroní': 'assets/banks/banco-del-caroni.png',
+  'Banco del Tesoro': 'assets/banks/banco-del-tesoro.png',
+  'Banco de Venezuela (BDV)': 'assets/banks/banco-de-venezuela.png',
+  'Banco Digital de los Trabajadores':
+      'assets/banks/banco-digital-trabajadores.png',
+  'Banco Exterior': 'assets/banks/banco-exterior.png',
+  'Banco Internacional de Desarrollo (BID)': 'assets/banks/bid.png',
+  'Banco Nacional de Crédito (BNC)': 'assets/banks/bnc.png',
+  'Banco Plaza': 'assets/banks/banco-plaza.png',
+  'Banco Provincial (BBVA)': 'assets/banks/banco-provincial.png',
+  'Banco Venezolano de Crédito': 'assets/banks/bvc.png',
+  'Bancamiga': 'assets/banks/bancamiga.png',
+  'Bancaribe': 'assets/banks/bancaribe.png',
+  'Bancrecer': 'assets/banks/bancrecer.png',
+  'Banesco': 'assets/banks/banesco.png',
+  'Banfanb': 'assets/banks/banfanb.png',
+  'Bangente': 'assets/banks/bangente.png',
+  'Banplus': 'assets/banks/banplus.png',
+  'BFC Banco Fondo Común': 'assets/banks/bfc.png',
+  'DelSur Banco Universal': 'assets/banks/delsur.png',
+  'Instituto Municipal de Crédito Popular (IMCP)': 'assets/banks/imcp.png',
+  'Mercantil': 'assets/banks/mercantil.png',
+  'Mi Banco': 'assets/banks/mi-banco.png',
+  'N58 Banco': 'assets/banks/n58.png',
+  'Sofitasa': 'assets/banks/sofitasa.png',
+};
+
 /// Iniciales cortas para el fallback sin asset (nunca debería pasar con el
 /// catálogo completo, pero la UI no puede depender de un PNG).
 String bankInitials(String bank) {

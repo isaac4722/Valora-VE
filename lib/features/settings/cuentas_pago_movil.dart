@@ -137,6 +137,7 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
   /// longitud real varía por banco — hallazgo goldfish).
   Future<void> _abrirAlta(BuildContext context, AppStore store) async {
     final labelCtrl = TextEditingController();
+    final holderCtrl = TextEditingController();
     final numberCtrl = TextEditingController();
     final docCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
@@ -166,6 +167,16 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
                     maxLength: 18,
                     placeholder: 'Cuenta principal',
                     semantic: 'Nombre de la cuenta',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                VeField(
+                  label: 'Titular (nombre completo)',
+                  child: VeInput(
+                    controller: holderCtrl,
+                    maxLength: 40,
+                    placeholder: 'Como aparece en el banco',
+                    semantic: 'Titular de la cuenta',
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -282,6 +293,7 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
           docId: docId,
           phone: phone,
           label: labelCtrl.text.trim(),
+          holderName: holderCtrl.text.trim(),
         ),
       );
     }
@@ -292,6 +304,7 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
     // deje de pintarse.
     Future<void>.delayed(const Duration(milliseconds: 400), () {
       labelCtrl.dispose();
+      holderCtrl.dispose();
       numberCtrl.dispose();
       docCtrl.dispose();
       phoneCtrl.dispose();
@@ -382,6 +395,18 @@ class _AccountTile extends ConsumerWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                if (account.holderName.trim().isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    account.holderName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 2),
                 Text(
                   '${account.bank} · ${account.typeLabel}',
@@ -513,6 +538,9 @@ String pagoMovilMessage({
   required PayAccount account,
 }) {
   final buf = StringBuffer('Pago Móvil · Bs ${fmtNum(montoBs, decimals: 2)}\n');
+  if (account.holderName.trim().isNotEmpty) {
+    buf.writeln('Titular: ${account.holderName.trim()}');
+  }
   buf.writeln('Banco: ${account.bank}');
   buf.writeln('Cuenta ${account.typeLabel.toLowerCase()}: ${account.number}');
   if (account.docId.isNotEmpty) buf.writeln('CI: ${account.docId}');

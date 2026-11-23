@@ -343,11 +343,11 @@ Future<void> main() async {
 
       await tester.tap(find.text('Agregar cuenta'));
       await tester.pumpAndSettle();
-      // v23.3: el alta es VeField/VeInput (rótulo fuera del campo) — los
-      // tres EditableText de la hoja en orden: número · cédula · teléfono.
-      await tester.enterText(find.byType(EditableText).at(1), '123');
-      await tester.enterText(find.byType(EditableText).at(2), 'V123');
-      await tester.enterText(find.byType(EditableText).at(3), '0414');
+      // v27.1: el alta es VeField/VeInput (rótulo fuera del campo) — los
+      // EditableText de la hoja: nombre · titular · número · cédula · teléfono.
+      await tester.enterText(find.byType(EditableText).at(2), '123');
+      await tester.enterText(find.byType(EditableText).at(3), 'V123');
+      await tester.enterText(find.byType(EditableText).at(4), '0414');
       await tester.tap(find.text('Guardar'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
@@ -373,11 +373,11 @@ Future<void> main() async {
       await tester.tap(find.text('Agregar cuenta'));
       await tester.pumpAndSettle();
       await tester.enterText(
-        find.byType(EditableText).at(1),
+        find.byType(EditableText).at(2),
         '01341234567890123456',
       );
-      await tester.enterText(find.byType(EditableText).at(2), 'V12345678');
-      await tester.enterText(find.byType(EditableText).at(3), '04141234567');
+      await tester.enterText(find.byType(EditableText).at(3), 'V12345678');
+      await tester.enterText(find.byType(EditableText).at(4), '04141234567');
       await tester.tap(find.text('Guardar'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));

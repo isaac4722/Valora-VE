@@ -922,7 +922,7 @@ class Settings {
     this.salaryMax,
     this.currencyOrder = const [],
     this.numMode = 'decimales',
-    this.precision = 2,
+    this.precision = 4,
     this.accountsBiometric = false,
   });
 
@@ -952,7 +952,7 @@ class Settings {
       salaryMax = null,
       currencyOrder = const [],
       numMode = 'decimales',
-      precision = 2,
+      precision = 4,
       accountsBiometric = false;
 
   Settings copyWith({
@@ -1140,7 +1140,7 @@ class Settings {
       numMode: sOf(j['numMode'], 'decimales') == 'redondeo'
           ? 'redondeo'
           : 'decimales',
-      precision: (iOf(j['precision'], 2)).clamp(2, 4),
+      precision: (iOf(j['precision'], 4)).clamp(2, 4),
       accountsBiometric: j['accountsBiometric'] == true,
     );
   }
@@ -1343,6 +1343,7 @@ class PayAccount {
     this.docId = '',
     this.phone = '',
     this.label = '',
+    this.holderName = '',
     this.isDefault = false,
   });
 
@@ -1350,6 +1351,9 @@ class PayAccount {
 
   /// Alias corto que el usuario le pone a la cuenta (v27).
   final String label;
+
+  /// Titular de la cuenta (REA CalculaYa: «Account holder (Full name)»).
+  final String holderName;
 
   /// Nombre del banco tal como se muestra (kVkBanks).
   final String bank;
@@ -1385,6 +1389,7 @@ class PayAccount {
     String? number,
     String? docId,
     String? phone,
+    String? holderName,
   }) => PayAccount(
     id: id,
     bank: bank ?? this.bank,
@@ -1393,6 +1398,7 @@ class PayAccount {
     docId: docId ?? this.docId,
     phone: phone ?? this.phone,
     label: label ?? this.label,
+    holderName: holderName ?? this.holderName,
     isDefault: isDefault ?? this.isDefault,
   );
 
@@ -1404,6 +1410,7 @@ class PayAccount {
     'docId': docId,
     'phone': phone,
     'label': label,
+    'holderName': holderName,
     'isDefault': isDefault,
   };
 
@@ -1420,6 +1427,7 @@ class PayAccount {
       docId: sOf(j['docId']).trim(),
       phone: sOf(j['phone']).trim(),
       label: sOf(j['label']).trim(),
+      holderName: sOf(j['holderName']).trim(),
       isDefault: j['isDefault'] == true,
     );
   }

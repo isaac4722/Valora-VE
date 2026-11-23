@@ -1,5 +1,32 @@
 # Changelog
 
+## v27.1 — REA del APK de CalculaYa 1.1.0: logos reales, titular y precisión BCV
+
+Se analizó el APK `CalculaYa-1.1.0.apks` (base + splits) con ingeniería
+inversa: unzip de assets, strings del AOT y revisión de los 27 PNG de
+`assets/banks/`. Hallazgos aplicados:
+
+- **Logos reales de los 27 bancos**: se copiaron y normalizaron a 128×128
+  sobre fondo blanco (`assets/banks/`), con el nombre exacto del catálogo.
+  La fila de cuentas y la hoja de Pago Móvil los usan; el monograma original
+  queda como respaldo si el PNG tarda en decodificar.
+- **Sistema de cuentas de CalculaYa**: además del alias y la cuenta
+  principal de v27, cada cuenta guarda el **titular** («Account holder» del
+  APK), banco, tipo, número, cédula y teléfono. El mensaje de cobro incluye
+  al titular; el alta lo pide con etiqueta propia.
+- **Precisión BCV (REA)**: el APK alterna «Decimales» y «Redondear»; el modo
+  decimales usa todos los decimales de la tasa BCV. La app ahora arranca en
+  4 decimales (BCV publica 4) y el ajuste permite 2, 3 o 4. Se aplicó a la
+  tasa del Inicio, a las filas de Tasas y al resultado del conversor.
+- **Investigación de herramientas**: impeccable (lenguaje de diseño y
+  antipatrones), humanizer (patrones de escritura IA) y EGM (Google
+  Elephant-Goldfish Model: SDD con brief, design doc, review, drift). Se
+  aplicó el espíritu EGM: evidencia del repo, diseño por fases, revisión y
+  gate visual; REA MCP se usó de forma manual (unzip/strings) porque el
+  servidor no está instalado en el sandbox.
+- Gates: analyze 0 · **322/322** tests (más 2 capturas visuales del gate) ·
+  auditoría de prohibiciones VERDE.
+
 ## v27 — GUI/UX reconstruida: Inicio de verdad, hub «Más», Ajustes en capas y precisión CalculaYa (orden del dueño)
 
 Encargo: «reconstruir las GUI/UX de la app móvil de la forma más completa

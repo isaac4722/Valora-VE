@@ -581,7 +581,7 @@ Future<void> main() async {
       // Ficha 10 → resultado fiel con decimales.
       await tester.tap(ficha('10'));
       await tester.pumpAndSettle();
-      expect(find.text('432,50'), findsWidgets);
+      expect(find.text('432,5000'), findsWidgets);
       // Cambiar a Redondear: el resultado pasa a entero (la línea «≈»
       // conserva la cifra exacta).
       await tester.tap(find.text('Redondear'));
@@ -591,7 +591,7 @@ Future<void> main() async {
       // Volver a Decimales restaura la vista fiel.
       await tester.tap(find.text('Decimales'));
       await tester.pumpAndSettle();
-      expect(find.text('432,50'), findsWidgets);
+      expect(find.text('432,5000'), findsWidgets);
       expect(store.data.settings.numMode, 'decimales');
     });
 
@@ -645,12 +645,12 @@ Future<void> main() async {
         await escribir(tester, fields.first, '1000');
         await tester.pump();
         expect(find.text('1.000'), findsOneWidget);
-        expect(find.text('40.000,00'), findsOneWidget);
+        expect(find.text('40.000,0000'), findsOneWidget);
         // BIDIRECCIONAL: tocar ABAJO y escribir 80.000 → arriba 2.000.
         await escribir(tester, fields.at(1), '80000');
         await tester.pump();
         expect(find.text('80.000'), findsOneWidget);
-        expect(find.text('2.000,00'), findsOneWidget);
+        expect(find.text('2.000,0000'), findsOneWidget);
         // Elegir la divisa del OTRO lado INTERCAMBIA (jamás USD → USD).
         final fromCode = store.data.converter.from;
         final toCode = store.data.converter.to;

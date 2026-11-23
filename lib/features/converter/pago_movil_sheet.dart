@@ -22,6 +22,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 /// Texto plano, sin marcas — lo pega cualquier chat.
 String pagoMovilMessage(double montoBs, PayAccount a) {
   final buf = StringBuffer('Pago Móvil · Bs ${fmtNum(montoBs, decimals: 2)}');
+  if (a.holderName.trim().isNotEmpty) {
+    buf.write('\nTitular: ${a.holderName.trim()}');
+  }
   buf.write('\nBanco: ${a.bank}');
   buf.write('\nCuenta ${a.typeLabel.toLowerCase()}: ${a.number}');
   if (a.docId.isNotEmpty) buf.write('\nCI: ${a.docId}');

@@ -11,11 +11,11 @@ void main() {
   group('Precisión decimal (REA CalculaYa)', () {
     test('default 2 · setPrecision clamp 2..4 · persiste en JSON', () {
       const s = Settings(onboarded: true);
-      expect(s.precision, 2);
+      expect(s.precision, 4);
       expect(s.copyWith(precision: 4).toJson()['precision'], 4);
       final parsed = Settings.fromJson({'precision': 9});
       expect(parsed.precision, 4);
-      expect(Settings.fromJson(const {}).precision, 2);
+      expect(Settings.fromJson(const {}).precision, 4);
     });
 
     test('AppStore.setPrecision actualiza el ajuste', () {
@@ -35,12 +35,14 @@ void main() {
         type: 'ahorro',
         number: '0134',
         label: 'Principal',
+        holderName: 'María Pérez',
         isDefault: true,
       );
       final parsed = PayAccount.tryParse(Map<String, dynamic>.from(a.toJson()));
       expect(parsed!.label, 'Principal');
       expect(parsed.isDefault, isTrue);
       expect(parsed.displayLabel, 'Principal');
+      expect(parsed.holderName, 'María Pérez');
       expect(parsed.typeLabel, 'Ahorro');
     });
 
@@ -96,11 +98,13 @@ void main() {
   });
 
   group('Insignias de banco', () {
-    test('27 bancos con asset original y claves exactas', () {
+    test('27 bancos con asset real y color de respaldo', () {
       expect(kVkBanks.length, 27);
+      expect(kBankBadgeAssets.length, 27);
       expect(kBankBadgeColors.length, 27);
       for (final b in kVkBanks) {
-        expect(kBankBadgeColors[b], isNotNull, reason: b);
+        expect(kBankBadgeAssets[b], isNotNull, reason: b);
+        expect(kBankBadgeAssets[b], startsWith('assets/banks/'));
         expect(kBankBadgeColors[b], greaterThan(0xFF000000));
       }
     });
