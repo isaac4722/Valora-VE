@@ -150,6 +150,9 @@ class MainShell extends ConsumerWidget {
     final bool chosenOffline = ref.watch(
       appStoreProvider.select((s) => s.settings.offlineMode),
     );
+    final bool cacheMode = ref.watch(
+      appStoreProvider.select((s) => s.settings.cacheMode),
+    );
     final int cartCount = ref.watch(
       appStoreProvider.select(
         (s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity),
@@ -165,7 +168,9 @@ class MainShell extends ConsumerWidget {
     );
     final manualActive =
         RateSource.of(sourceId)?.category == SourceCategory.manual;
-    final showHealth = !manualActive && !chosenOffline;
+    // v27.2: en modo caché la tasa está congelada a propósito; el aviso de
+    // «más de 15 min sin refrescar» sería contradictorio.
+    final showHealth = !manualActive && !chosenOffline && !cacheMode;
 
     final bool wide =
         MediaQuery.sizeOf(context).width >= kWideShell &&
