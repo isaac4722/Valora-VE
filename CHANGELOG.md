@@ -1,5 +1,32 @@
 # Changelog
 
+## v27.2 — Modo caché de cálculo (REA CalculaYa) + herramientas instaladas
+
+Investigación REA del APK 1.1.0: `RateCacheValidator`,
+`cached_rates_dolarvzla_v1`, `history_rates_cache_v3`, `isCacheValid`,
+«Invalidando cache y forzando actualización» y «Forzar actualización».
+CalculaYa congela la tasa para calcular con ella y la invalida cuando el
+usuario fuerza la actualización. Se aplicó el mismo concepto, **no** como
+método de pago sino como modo de cálculo:
+
+- **Modo caché**: ajuste persistido `Settings.cacheMode` que congela el
+  tablero (`setRateBoard` no pisa la tasa mientras está activo). Como
+  `contextOf()` alimenta todos los módulos, el conversor, la lista, los
+  productos y el análisis calculan con **la misma tasa congelada**.
+- **Aviso global** `CacheModeBanner` en el shell: «Modo caché · Tasa
+  congelada: hace X» con botón **Actualizar** (apaga el caché, refresca y
+  vuelve a congelar). También hay un chip **Caché** en la línea de fuente
+  del Conversor y un interruptor en Ajustes → General.
+- **Pull-to-refresh y Reintentar** respetan el modo: actualizan el caché
+  en vez de pisarlo.
+- **Herramientas instaladas y verificadas**: skills `impeccable-uxui`,
+  `humanizer`, `egm-lite`, `egm-draft`, `egm-review` y `egm-drift-report`
+  en `.agents/skills/`; CLI **REA 6.10.1** instalada con `npx` (el análisis
+  nativo requiere Ghidra/Hopper, no configurado en el sandbox; la
+  extracción del APK se hizo con unzip/strings). EGM se aplicó como
+  SDD-lite: evidencia, diseño, revisión y drift.
+- Gates: analyze 0 · **325/325** tests · auditoría de prohibiciones VERDE.
+
 ## v27.1 — REA del APK de CalculaYa 1.1.0: logos reales, titular y precisión BCV
 
 Se analizó el APK `CalculaYa-1.1.0.apks` (base + splits) con ingeniería

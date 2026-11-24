@@ -1108,13 +1108,27 @@ class _DualInput extends ConsumerWidget {
             ),
           ),
         ),
-        if (hasOverride)
+        const SizedBox(width: 6),
+        VeChip(
+          dense: true,
+          active: ref.watch(
+            appStoreProvider.select((s) => s.settings.cacheMode),
+          ),
+          onTap: () {
+            final store = ref.read(appStoreProvider);
+            store.setCacheMode(!store.settings.cacheMode);
+          },
+          child: const Text('Caché'),
+        ),
+        if (hasOverride) ...[
+          const SizedBox(width: 6),
           VeBtn(
             variant: VeBtnVariant.ghost,
             size: VeBtnSize.sm,
             onPressed: onClearOverride,
             child: const Text('Seguir global'),
           ),
+        ],
       ],
     );
   }

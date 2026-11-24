@@ -39,7 +39,12 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
       body: RefreshIndicator(
-        onRefresh: () => poller.refreshNow(),
+        onRefresh: () {
+          final store = ref.read(appStoreProvider);
+          return store.settings.cacheMode
+              ? store.refreshCache(poller.refreshNow)
+              : poller.refreshNow();
+        },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
           children: [
@@ -412,7 +417,15 @@ class _RateEmpty extends ConsumerWidget {
               Expanded(
                 child: VeBtn(
                   variant: VeBtnVariant.secondary,
-                  onPressed: poller.loading ? null : () => poller.retryNow(),
+                  onPressed: poller.loading
+                      ? null
+                      : () {
+                          if (store.settings.cacheMode) {
+                            store.refreshCache(poller.retryNow);
+                          } else {
+                            poller.retryNow();
+                          }
+                        },
                   child: const Text('Reintentar'),
                 ),
               ),

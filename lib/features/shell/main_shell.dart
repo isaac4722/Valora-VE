@@ -23,6 +23,7 @@ import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../state/app_state.dart';
 import '../../widgets/app_tour.dart';
+import '../../widgets/cache_banner.dart';
 import '../../widgets/ui.dart';
 import 'command_palette.dart';
 import '../../widgets/app_router.dart' show kNavBarKey;
@@ -179,6 +180,7 @@ class MainShell extends ConsumerWidget {
     // Columna principal compartida: banner de salud + área de navegación.
     final Widget mainColumn = Column(
       children: [
+        const CacheModeBanner(),
         AnimatedSize(
           duration: kLayoutDur,
           curve: kEaseVe,

@@ -23,7 +23,7 @@ teléfono.
 | Módulo | Qué hace |
 |---|---|
 | **Inicio** | la tasa del día con su fuente, cuatro acciones rápidas, tu mes y tu actividad reciente; la cotización completa vive en Tasas y los módulos secundarios en Más |
-| **Conversor** | teclado propio VeKeypad + fichas 1-100 + redondeo, precisión de 2/3/4 decimales (BCV publica 4), puente USD + EUR visible, fecha histórica honesta, notas, recientes y **Pago Móvil** compartible (cuentas propias con titular y logos reales de 27 bancos) |
+| **Conversor** | teclado propio VeKeypad + fichas 1-100 + redondeo, precisión de 2/3/4 decimales (BCV publica 4) y **modo caché** para calcular con la tasa congelada, puente USD + EUR visible, fecha histórica honesta, notas, recientes y **Pago Móvil** compartible (cuentas propias con titular y logos reales de 27 bancos) |
 | **Lista** | presupuesto, plantillas, vuelto, dividir la cuenta, checkout con foto de ticket, **sala en vivo** |
 | **Productos** | libro de precios con tiendas, sparklines, metas con aviso, CSV ⇄, escáner |
 | **Historial** | asientos por compra, filtros, CSV de compras, constancias |

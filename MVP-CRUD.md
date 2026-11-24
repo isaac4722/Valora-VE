@@ -68,6 +68,10 @@ tolerante y merge HMR-safe. `AppData` es el agregado de las 13 claves.
   día sin dato = «sin dato», no relleno.
 - **Ingesta:** polling + SSE opcional (`sse_stream.dart`) comparten
   pipeline.
+- **Modo caché (v27.2 · REA CalculaYa):** `Settings.cacheMode` congela
+  el tablero; como `contextOf()` alimenta todos los módulos, el conversor,
+  la lista, los productos y el análisis calculan con la misma tasa.
+  «Actualizar» apaga el caché, refresca y vuelve a congelar.
 
 ## §4 · Decisiones técnicas
 
