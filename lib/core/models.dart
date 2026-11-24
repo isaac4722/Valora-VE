@@ -890,7 +890,6 @@ class Settings {
   final double? salaryMax; // modo rango: máximo
   final List<String> currencyOrder; // v13 (vacío = canónico, se purga)
   final bool offlineMode; // v17.2: sin NINGUNA consulta a APIs (solo guardadas)
-  final bool cacheMode; // v27.2 · REA CalculaYa: congela la tasa para calcular
   final int pollMinutes; // v17.2: cada cuánto consulta la app las APIs (1..60)
   final bool biometricLock; // 17.7: pedir huella/rostro al abrir la app
   final String
@@ -903,7 +902,6 @@ class Settings {
     this.country = 'VE',
     this.autoRefresh = true,
     this.offlineMode = false,
-    this.cacheMode = false,
     this.pollMinutes = 1,
     this.biometricLock = false,
     this.sseUrl = '',
@@ -934,7 +932,6 @@ class Settings {
     : country = 'VE',
       autoRefresh = true,
       offlineMode = false,
-      cacheMode = false,
       pollMinutes = 1,
       biometricLock = false,
       sseUrl = '',
@@ -962,7 +959,6 @@ class Settings {
     String? country,
     bool? autoRefresh,
     bool? offlineMode,
-    bool? cacheMode,
     int? pollMinutes,
     bool? onboarded,
     String? calcCurrency,
@@ -996,7 +992,6 @@ class Settings {
     country: country ?? this.country,
     autoRefresh: autoRefresh ?? this.autoRefresh,
     offlineMode: offlineMode ?? this.offlineMode,
-    cacheMode: cacheMode ?? this.cacheMode,
     pollMinutes: pollMinutes ?? this.pollMinutes,
     onboarded: onboarded ?? this.onboarded,
     calcCurrency: calcCurrency ?? this.calcCurrency,
@@ -1029,7 +1024,6 @@ class Settings {
     'country': country,
     'autoRefresh': autoRefresh,
     'offlineMode': offlineMode,
-    'cacheMode': cacheMode,
     'pollMinutes': pollMinutes,
     'onboarded': onboarded,
     'calcCurrency': calcCurrency,
@@ -1112,7 +1106,6 @@ class Settings {
       country: CountryX.from(sOf(j['country'], 'VE')).code,
       autoRefresh: j['autoRefresh'] != false,
       offlineMode: j['offlineMode'] == true,
-      cacheMode: j['cacheMode'] == true,
       pollMinutes: (iOf(j['pollMinutes'], 1)).clamp(1, 60),
       biometricLock: j['biometricLock'] == true,
       sseUrl: sOf(j['sseUrl'], '').trim(),

@@ -1,6 +1,31 @@
 # Changelog
 
-## v27.2 — Modo caché de cálculo (REA CalculaYa) + herramientas instaladas
+## v27.3 — Modo Cachea (Cashea) en la Lista + GUI: botones centrados, bordes y teclado
+
+Corrección del encargo anterior: el «Modo Caché» se retira. Lo que el dueño
+pedía era **Modo Cachea**, el esquema de compra con inicial + cuotas
+quincenales sin intereses que Cashea popularizó en Venezuela. Se implementa
+como **utilidad de cálculo**, no como método de pago:
+
+- **Modo Cachea** en la Lista (botón junto al total): total de la compra,
+  inicial 20/30/40/50 % y 3/6/9/12 cuotas; muestra inicial, valor de cada
+  cuota y total a pagar en la moneda de cálculo, con equivalente en USD y
+  bolívares. Aviso claro de que es informativo y no procesa pagos.
+- **Lógica pura** en `lib/core/cachea.dart` con tests de matemática y
+  bordes; hoja en `lib/features/lista/cachea_sheet.dart`.
+- **GUI**: texto centrado en todos los botones (antes los no expandidos
+  arrancaban a la izquierda); borde visible solo en botones secundarios y
+  en los accesos rápidos del Inicio (no en toda la UI). Ajustes vuelve a
+  la cabecera del Inicio como acceso directo, sin quitarlo de «Más».
+- **Teclado**: el shell deja de restar el IME dos veces; la barra inferior
+  se esconde mientras se escribe y el contenido queda pegado al teclado,
+  sin franja vacía. `resizeToAvoidBottomInset: false` + `AnimatedPadding`.
+- **Herramientas**: skills `impeccable-uxui`, `humanizer`, `egm-lite`,
+  `egm-draft`, `egm-review`, `egm-drift-report` instaladas en
+  `.agents/skills/`; REA CLI 6.10.1 verificada.
+- Gates: analyze 0 · **326/326** tests · auditoría de prohibiciones VERDE.
+
+## v27.2 — (RETIRADO en v27.3) Modo caché de cálculo + herramientas instaladas
 
 Investigación REA del APK 1.1.0: `RateCacheValidator`,
 `cached_rates_dolarvzla_v1`, `history_rates_cache_v3`, `isCacheValid`,

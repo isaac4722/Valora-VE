@@ -366,7 +366,6 @@ class SettingsGeneralPage extends ConsumerWidget {
           const SizedBox(height: 4),
           _Precision(store: store),
           const SizedBox(height: 4),
-          _CacheMode(store: store),
           const SizedBox(height: 4),
           _DatosConexion(store: store),
           const SizedBox(height: 4),
@@ -467,63 +466,6 @@ class _AppWidgetsRow extends ConsumerWidget {
             ),
           ),
         ),
-      ],
-    );
-  }
-}
-
-/// Modo caché (v27.2 · REA CalculaYa): congela la tasa del tablero para que
-/// TODOS los cálculos usen la misma cifra. «Actualizar» apaga el caché,
-/// refresca y vuelve a congelar.
-class _CacheMode extends ConsumerWidget {
-  const _CacheMode({required this.store});
-
-  final AppStore store;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final poller = ref.watch(ratesPollerProvider);
-    final scheme = Theme.of(context).colorScheme;
-    final cache = store.settings.cacheMode;
-    final at = store.board.fetchedAt;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const VeEyebrow(
-          hint:
-              'Congela la tasa para que todos los cálculos usen la misma cifra.',
-          child: Text('MODO CACHÉ'),
-        ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          value: cache,
-          onChanged: (v) {
-            store.setCacheMode(v);
-            if (!v) poller.refreshNow();
-          },
-          title: const Text(
-            'Usar la tasa congelada',
-            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
-          ),
-          subtitle: Text(
-            cache
-                ? 'Tasa congelada: ${at == null ? 'sin hora' : timeAgo(at)}.'
-                : 'La app sigue actualizando el tablero en segundo plano.',
-            style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
-          ),
-        ),
-        if (cache)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: VeBtn(
-              variant: VeBtnVariant.ghost,
-              size: VeBtnSize.sm,
-              icon: LucideIcons.refreshCw,
-              onPressed: () => store.refreshCache(poller.refreshNow),
-              child: const Text('Actualizar caché'),
-            ),
-          ),
       ],
     );
   }

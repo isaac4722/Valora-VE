@@ -118,9 +118,6 @@ class AppStore extends ChangeNotifier {
 
   /// setRateBoard: purga sources a ids conocidos; fetchedAt = ahora SIEMPRE.
   void setRateBoard(RateBoard b) {
-    // v27.2 · modo caché: el tablero queda congelado; el cálculo no cambia
-    // aunque llegue una tasa nueva. Se actualiza con «Actualizar caché».
-    if (_data.settings.cacheMode) return;
     final clean = RateBoard(
       sources: {
         for (final e in b.sources.entries)
@@ -259,7 +256,6 @@ class AppStore extends ChangeNotifier {
     bool? onboarded,
     Map<String, String>? rateSourcesByModule,
     bool? offlineMode,
-    bool? cacheMode,
     int? pollMinutes,
     bool? biometricLock,
     String? sseUrl,
@@ -273,7 +269,6 @@ class AppStore extends ChangeNotifier {
       onboarded: onboarded,
       rateSourcesByModule: rateSourcesByModule,
       offlineMode: offlineMode,
-      cacheMode: cacheMode,
       pollMinutes: pollMinutes,
       biometricLock: biometricLock,
       sseUrl: sseUrl,
@@ -290,20 +285,6 @@ class AppStore extends ChangeNotifier {
   /// Modo offline total (v17.2): la app NO consulta ninguna API; todo lo que
   /// se ve sale del libro local (board/snapshots) + tasas manuales.
   void setOfflineMode(bool v) => _patchSettings(offlineMode: v);
-
-  /// Modo caché (v27.2 · REA CalculaYa): congela la tasa del tablero para
-  /// que TODOS los cálculos usen la misma cifra. El tablero sigue vivo en
-  /// segundo plano; al apagarlo se retoma el dato fresco.
-  void setCacheMode(bool v) => _patchSettings(cacheMode: v);
-
-  /// Actualiza el caché: apaga el modo, refresca el tablero y lo vuelve a
-  /// congelar. Así «Actualizar» no deja la app en modo vivo por descuido.
-  Future<void> refreshCache(Future<void> Function() refresh) async {
-    final was = _data.settings.cacheMode;
-    if (was) setCacheMode(false);
-    await refresh();
-    if (was) setCacheMode(true);
-  }
 
   /// Cada cuánto consulta la app las APIs de tasas, en minutos (1..60).
   void setPollMinutes(int m) => _patchSettings(pollMinutes: m.clamp(1, 60));

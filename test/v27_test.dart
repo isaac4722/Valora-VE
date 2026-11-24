@@ -27,59 +27,6 @@ void main() {
     });
   });
 
-  group('Modo caché (v27.2 · REA CalculaYa)', () {
-    test('persiste en JSON y por defecto está apagado', () {
-      const s = Settings(onboarded: true);
-      expect(s.cacheMode, isFalse);
-      expect(s.copyWith(cacheMode: true).toJson()['cacheMode'], isTrue);
-      expect(Settings.fromJson(const {}).cacheMode, isFalse);
-    });
-
-    test('congela el tablero: setRateBoard no pisa la tasa congelada', () {
-      final store = AppStore.withData(const AppData());
-      store.setRateBoard(
-        RateBoard(
-          sources: {
-            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 1, 1)),
-          },
-        ),
-      );
-      store.setCacheMode(true);
-      store.setRateBoard(
-        RateBoard(
-          sources: {
-            'ves-bcv': RateEntry(rate: 50, updatedAt: DateTime(2026, 1, 2)),
-          },
-        ),
-      );
-      expect(store.board.sources['ves-bcv']!.rate, 40);
-      expect(store.settings.cacheMode, isTrue);
-    });
-
-    test('refreshCache apaga, refresca y vuelve a congelar', () async {
-      final store = AppStore.withData(const AppData());
-      store.setRateBoard(
-        RateBoard(
-          sources: {
-            'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime(2026, 1, 1)),
-          },
-        ),
-      );
-      store.setCacheMode(true);
-      await store.refreshCache(() async {
-        store.setRateBoard(
-          RateBoard(
-            sources: {
-              'ves-bcv': RateEntry(rate: 60, updatedAt: DateTime(2026, 1, 3)),
-            },
-          ),
-        );
-      });
-      expect(store.board.sources['ves-bcv']!.rate, 60);
-      expect(store.settings.cacheMode, isTrue);
-    });
-  });
-
   group('Cuentas de cobro (v27)', () {
     test('alias y cuenta principal viajan en el JSON', () {
       const a = PayAccount(

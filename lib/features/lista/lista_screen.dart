@@ -34,6 +34,7 @@ import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/rate_sheet.dart';
 import '../../widgets/ui.dart';
+import 'cachea_sheet.dart';
 import 'checkout_modal.dart';
 import 'item_editor.dart';
 import 'roi_scanner.dart';
@@ -539,6 +540,29 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
                       ],
                     ),
                   ],
+                ),
+              ),
+              // v27.3 · Modo Cachea: simulador de inicial + cuotas quincenales
+              // sin intereses. Cálculo, no pago.
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: VeBtn(
+                    variant: VeBtnVariant.ghost,
+                    size: VeBtnSize.sm,
+                    icon: LucideIcons.wallet,
+                    enabled: totalInCalc > 0,
+                    onPressed: () => showCacheaSheet(
+                      context,
+                      ref: ref,
+                      totalInCalc: totalInCalc,
+                      calcCur: calcCur,
+                      totalUsd: totals.usd,
+                      ctx: ctx,
+                    ),
+                    child: const Text('Modo Cachea'),
+                  ),
                 ),
               ),
               // v20 (orden del dueño): UN panel de control con presupuesto

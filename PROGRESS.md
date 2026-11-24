@@ -6,6 +6,7 @@ Máx ~10 líneas. Al cerrar el turno: las líneas bajan a `PROGRESS_WARM.md`
 justificaciones. Solo se AÑADE.
 Si no hay turno activo, el último cerrado está al final de `PROGRESS_WARM.md`.
 
+2026-11-24 · DONE · v27.3 Modo Cachea — retira el modo caché, simulador de inicial + cuotas (20/30/40/50 % · 3/6/9/12) en la Lista; botones centrados, bordes selectivos, Ajustes directo en Inicio y fix del teclado (barra oculta + padding único) · analyze 0 · 326/326 · auditoría VERDE · 7_PERSIST
 2026-11-24 · DONE · v27.2 modo caché de cálculo — congela la tasa para todos los módulos, aviso global + chip en Conversor + switch en Ajustes, refreshCache; skills impeccable/humanizer/EGM instaladas y REA CLI 6.10.1 verificada · analyze 0 · 325/325 · auditoría VERDE · 7_PERSIST
 2026-11-24 · DONE · v27.1 REA APK CalculaYa 1.1.0 — 27 logos reales normalizados, titular en cuentas, precisión BCV 4 por defecto (2/3/4), investigación impeccable/humanizer/REA MCP/EGM · analyze 0 · 322/322 · auditoría VERDE · 7_PERSIST
 2026-11-24 · DONE · v27 GUI/UX reconstruida — Inicio de verdad (tasa + 4 acciones + tu mes + actividad), hub Más con buscador, Ajustes en 5 subpantallas, precisión 2/3/4 (REA CalculaYa), cuentas con alias/principal e insignias de banco, ETH fuera, textos humanizados · analyze 0 · 322/322 · auditoría VERDE · visual 9/9 · 7_PERSIST

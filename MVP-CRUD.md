@@ -68,10 +68,9 @@ tolerante y merge HMR-safe. `AppData` es el agregado de las 13 claves.
   día sin dato = «sin dato», no relleno.
 - **Ingesta:** polling + SSE opcional (`sse_stream.dart`) comparten
   pipeline.
-- **Modo caché (v27.2 · REA CalculaYa):** `Settings.cacheMode` congela
-  el tablero; como `contextOf()` alimenta todos los módulos, el conversor,
-  la lista, los productos y el análisis calculan con la misma tasa.
-  «Actualizar» apaga el caché, refresca y vuelve a congelar.
+- **Modo Cachea (v27.3):** simulador de compra con inicial + cuotas
+  quincenales sin intereses (3 · 6 · 9 · 12) en la Lista. Es un cálculo,
+  no un método de pago: `lib/core/cachea.dart` y `cachea_sheet.dart`.
 
 ## §4 · Decisiones técnicas
 

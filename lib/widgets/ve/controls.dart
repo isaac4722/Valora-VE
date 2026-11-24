@@ -125,9 +125,9 @@ class VeBtn extends StatelessWidget {
       onPressed: enabled ? onPressed : null,
       height: h,
       width: expands ? double.infinity : null,
-      mainAxisAlignment: expands
-          ? MainAxisAlignment.center
-          : MainAxisAlignment.start,
+      // v27.3 · texto centrado en TODOS los botones (antes los no
+      // expandidos arrancaban a la izquierda y se veían desiguales).
+      mainAxisAlignment: MainAxisAlignment.center,
       backgroundColor: bg,
       hoverBackgroundColor: hoverBg,
       pressedBackgroundColor: pressedBg,
@@ -141,6 +141,7 @@ class VeBtn extends StatelessWidget {
         color: fg,
       ),
       radius: 999,
+      borderColor: variant == VeBtnVariant.secondary ? scheme.border : null,
       leading: icon == null ? null : Icon(icon, size: iconSize ?? isz),
       child: child,
     );
@@ -172,6 +173,7 @@ class _VeRawButton extends StatefulWidget {
     this.gap = 0,
     this.textStyle,
     this.radius = 999,
+    this.borderColor,
     this.leading,
     required this.child,
   });
@@ -188,6 +190,9 @@ class _VeRawButton extends StatefulWidget {
   final double gap;
   final TextStyle? textStyle;
   final double radius;
+
+  /// Borde visible opcional (v27.3: solo botones secundarios).
+  final Color? borderColor;
   final Widget? leading;
   final Widget child;
 
@@ -215,7 +220,12 @@ class _VeRawButtonState extends State<_VeRawButton> {
       onExit: enabled ? (_) => setState(() => _hover = false) : null,
       child: Material(
         color: bg,
-        borderRadius: r,
+        shape: RoundedRectangleBorder(
+          borderRadius: r,
+          side: widget.borderColor == null
+              ? BorderSide.none
+              : BorderSide(color: widget.borderColor!),
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: widget.onPressed,
@@ -467,9 +477,9 @@ class VeChip extends StatelessWidget {
       onPressed: onTap,
       height: 28,
       width: expands ? double.infinity : null,
-      mainAxisAlignment: expands
-          ? MainAxisAlignment.center
-          : MainAxisAlignment.start,
+      // v27.3 · texto centrado en TODOS los botones (antes los no
+      // expandidos arrancaban a la izquierda y se veían desiguales).
+      mainAxisAlignment: MainAxisAlignment.center,
       padding: EdgeInsets.symmetric(horizontal: dense ? 6 : 12),
       // v25 «HOJA»: activo = tinta sólida · inactivo = tonal muted (sin
       // borde, sin discontinuo).

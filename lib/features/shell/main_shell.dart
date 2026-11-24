@@ -23,7 +23,6 @@ import '../../core/theme.dart';
 import '../../data/store.dart';
 import '../../state/app_state.dart';
 import '../../widgets/app_tour.dart';
-import '../../widgets/cache_banner.dart';
 import '../../widgets/ui.dart';
 import 'command_palette.dart';
 import '../../widgets/app_router.dart' show kNavBarKey;
@@ -150,9 +149,6 @@ class MainShell extends ConsumerWidget {
     final bool chosenOffline = ref.watch(
       appStoreProvider.select((s) => s.settings.offlineMode),
     );
-    final bool cacheMode = ref.watch(
-      appStoreProvider.select((s) => s.settings.cacheMode),
-    );
     final int cartCount = ref.watch(
       appStoreProvider.select(
         (s) => s.cart.fold<int>(0, (acc, c) => acc + c.quantity),
@@ -168,10 +164,10 @@ class MainShell extends ConsumerWidget {
     );
     final manualActive =
         RateSource.of(sourceId)?.category == SourceCategory.manual;
-    // v27.2: en modo caché la tasa está congelada a propósito; el aviso de
-    // «más de 15 min sin refrescar» sería contradictorio.
-    final showHealth = !manualActive && !chosenOffline && !cacheMode;
+    final showHealth = !manualActive && !chosenOffline;
 
+    final double keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    final bool keyboardOpen = keyboard > 0;
     final bool wide =
         MediaQuery.sizeOf(context).width >= kWideShell &&
         // v26 (dispositivos nuevos): en un móvil GIRADO el alto útil es
@@ -183,27 +179,44 @@ class MainShell extends ConsumerWidget {
         MediaQuery.sizeOf(context).height >= 500;
 
     // Columna principal compartida: banner de salud + área de navegación.
-    final Widget mainColumn = Column(
-      children: [
-        const CacheModeBanner(),
-        AnimatedSize(
-          duration: kLayoutDur,
-          curve: kEaseVe,
-          alignment: Alignment.topCenter,
-          child: showHealth
-              ? RateHealthBanner(
-                  stale: poller.rateStale,
-                  offline: poller.offlineNet,
-                  onRetry: poller.offlineNet ? null : () => poller.refreshNow(),
-                )
-              : const SizedBox(width: double.infinity),
-        ),
-        const _TourTrigger(),
-        // v20 (orden del dueño): la LUPA flotante móvil SE RETIRA — tapaba
-        // contenido en pantallas que no la necesitan. La paleta ⌘K sigue
-        // en escritorio (sidebar) y teclado físico.
-        Expanded(child: navigationShell),
-      ],
+    // v27.3 · teclado: el padding del IME se aplica AQUÍ, alrededor de toda
+    // la columna. Antes estaba dentro del Expanded y le restaba el doble.
+    final Widget mainColumn = AnimatedPadding(
+      duration: const Duration(milliseconds: 120),
+      curve: kEaseVe,
+      padding: EdgeInsets.only(bottom: keyboard),
+      child: Column(
+        children: [
+          AnimatedSize(
+            duration: kLayoutDur,
+            curve: kEaseVe,
+            alignment: Alignment.topCenter,
+            child: showHealth
+                ? RateHealthBanner(
+                    stale: poller.rateStale,
+                    offline: poller.offlineNet,
+                    onRetry: poller.offlineNet
+                        ? null
+                        : () => poller.refreshNow(),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+          const _TourTrigger(),
+          // v20 (orden del dueño): la LUPA flotante móvil SE RETIRA — tapaba
+          // contenido en pantallas que no la necesitan. La paleta ⌘K sigue
+          // en escritorio (sidebar) y teclado físico.
+          // v27.3 · teclado: el shell YA se redimensiona con el IME; las
+          // pantallas internas no deben volver a restar el mismo inset (eso
+          // dejaba una franja vacía entre el contenido y el teclado).
+          Expanded(
+            child: MediaQuery.removeViewInsets(
+              context: context,
+              removeBottom: true,
+              child: navigationShell,
+            ),
+          ),
+        ],
+      ),
     );
 
     // Contenido protegido del notch (TASK-35 · p2): el fondo ambiental
@@ -244,6 +257,9 @@ class MainShell extends ConsumerWidget {
             ? SystemUiOverlayStyle.light
             : SystemUiOverlayStyle.dark,
         child: Scaffold(
+          // v27.3 · teclado: el shell no resta el IME; el AnimatedPadding
+          // del cuerpo lo hace una sola vez y la barra se esconde.
+          resizeToAvoidBottomInset: false,
           backgroundColor: scheme.surfaceContainerLowest,
           // v25 «HOJA»: fondo PLANO — fuera el ambiente (radiales/puntos),
           // la pantalla es una hoja de papel continua.
@@ -255,7 +271,9 @@ class MainShell extends ConsumerWidget {
             bottom: wide,
             child: content,
           ),
-          bottomNavigationBar: wide
+          // v27.3 · teclado: la barra se esconde mientras se escribe; si
+          // se quedaba, el body se encogía y dejaba una franja vacía.
+          bottomNavigationBar: wide || keyboardOpen
               ? null
               : _MobileTabs(
                   current: current,

@@ -39,12 +39,7 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
       body: RefreshIndicator(
-        onRefresh: () {
-          final store = ref.read(appStoreProvider);
-          return store.settings.cacheMode
-              ? store.refreshCache(poller.refreshNow)
-              : poller.refreshNow();
-        },
+        onRefresh: () => poller.refreshNow(),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
           children: [
@@ -64,7 +59,7 @@ class HomeScreen extends ConsumerWidget {
 }
 
 /// Cabecera: saludo + tres acciones que importan (avisos, búsqueda, tema).
-/// Ajustes vive en Más; la fecha la dice el reloj del teléfono (v26).
+/// Ajustes queda a un toque en la cabecera y también en Más (v27.3).
 class _HomeHeader extends ConsumerWidget {
   const _HomeHeader();
 
@@ -98,7 +93,7 @@ class _HomeHeader extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Tasas, compras y cuentas en orden.',
+                      'Tu dinero, en orden.',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -132,6 +127,14 @@ class _HomeHeader extends ConsumerWidget {
                 size: 36,
                 iconSize: 16,
                 onTap: () => toggleVeTheme(ref),
+              ),
+              const SizedBox(width: 4),
+              VeIconBtn(
+                icon: LucideIcons.settings,
+                label: 'Ajustes',
+                size: 36,
+                iconSize: 16,
+                onTap: () => context.go('/ajustes'),
               ),
             ],
           ),
@@ -417,15 +420,7 @@ class _RateEmpty extends ConsumerWidget {
               Expanded(
                 child: VeBtn(
                   variant: VeBtnVariant.secondary,
-                  onPressed: poller.loading
-                      ? null
-                      : () {
-                          if (store.settings.cacheMode) {
-                            store.refreshCache(poller.retryNow);
-                          } else {
-                            poller.retryNow();
-                          }
-                        },
+                  onPressed: poller.loading ? null : () => poller.retryNow(),
                   child: const Text('Reintentar'),
                 ),
               ),
@@ -561,6 +556,8 @@ class _QuickActionButton extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: context.ve.colorScheme.muted,
                   shape: BoxShape.circle,
+                  // v27.3: límite visible en los accesos rápidos, no en toda la UI.
+                  border: Border.all(color: context.ve.colorScheme.border),
                 ),
                 child: Icon(
                   action.icon,
