@@ -170,7 +170,7 @@ class _RoiScannerScreenState extends State<RoiScannerScreen> {
                         const Text(
                           'Apunta al código de barras — solo se lee el recuadro',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                          style: TextStyle(color: Colors.white70, fontSize: 13.5),
                         ),
                         const SizedBox(height: 10),
                         TextButton(
@@ -256,7 +256,7 @@ class _RoiDarkState extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 15,
+              fontSize: 17,
               fontWeight: FontWeight.w800,
               color: Colors.white,
             ),
@@ -266,7 +266,7 @@ class _RoiDarkState extends StatelessWidget {
             hint,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               height: 1.45,
               color: Colors.white.withValues(alpha: 0.66),
             ),

@@ -340,7 +340,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                 Text(
                   'Toca un producto para ver su precio por tienda, si está disponible y tu meta.',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
@@ -541,28 +541,26 @@ class _ProductRow extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                         product.name,
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 14,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w500,
                           color: scheme.foreground,
                         ),
-                      ),
+                      )),
                       const SizedBox(height: 2),
-                      Text(
+                      FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                         sub,
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 12,
+                          fontSize: 13.5,
                           color: scheme.mutedForeground,
                         ),
-                      ),
+                      )),
                     ],
                   ),
                 ),
@@ -571,7 +569,7 @@ class _ProductRow extends ConsumerWidget {
                   last == null ? '—' : fmtUSD(last.price),
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 16,
+                    fontSize: 17,
                     fontWeight: FontWeight.w600,
                     letterSpacing: -0.2,
                     fontFeatures: const [FontFeature.tabularFigures()],

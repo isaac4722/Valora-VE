@@ -201,7 +201,7 @@ class _ErrorBanner extends ConsumerWidget {
                 msg,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   color: sem.neg,
                 ),
@@ -235,7 +235,7 @@ class _ConnectingCard extends ConsumerWidget {
               'Conectando con la sala…',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 13,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: scheme.foreground,
               ),
@@ -268,7 +268,7 @@ class _ViewerNotice extends ConsumerWidget {
                 'Eres observador: ves la lista en vivo, pero no la tocas.',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 12,
+                  fontSize: 13.5,
                   color: scheme.foreground,
                 ),
               ),
@@ -335,17 +335,16 @@ class _CodigoQrCard extends ConsumerWidget {
               const SizedBox(width: 6),
               if (room.roomName.isNotEmpty)
                 Expanded(
-                  child: Text(
+                  child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     room.roomName,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 13,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                       color: scheme.foreground,
                     ),
-                  ),
+                  )),
                 ),
               VeBadge(child: Text(room.isPublic ? 'pública' : 'privada')),
             ],
@@ -354,7 +353,7 @@ class _CodigoQrCard extends ConsumerWidget {
           Text(
             'CÓDIGO DE LA SALA',
             style: VeText.labelCaps(
-              10.5,
+              11,
               color: scheme.mutedForeground,
               weight: FontWeight.w600,
             ),
@@ -370,7 +369,7 @@ class _CodigoQrCard extends ConsumerWidget {
               room.code.isEmpty ? '—' : room.code,
               style: TextStyle(
                 fontFamily: 'JetBrainsMono',
-                fontSize: 28,
+                fontSize: 30,
                 fontWeight: FontWeight.w500,
                 letterSpacing: 8.4, // tracking-[0.3em] del prototipo
                 color: scheme.foreground,
@@ -381,7 +380,7 @@ class _CodigoQrCard extends ConsumerWidget {
             'toca para copiar',
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 10.5,
+              fontSize: 11,
               color: scheme.mutedForeground,
             ),
           ),
@@ -412,7 +411,7 @@ class _CodigoQrCard extends ConsumerWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 11.5,
+              fontSize: 11,
               height: 1.45,
               color: scheme.mutedForeground,
             ),
@@ -457,7 +456,7 @@ class _MiembrosCard extends ConsumerWidget {
                 child: Text(
                   'MIEMBROS · ${members.length}',
                   style: VeText.labelCaps(
-                    10.5,
+                    11,
                     color: scheme.mutedForeground,
                     weight: FontWeight.w600,
                   ),
@@ -519,7 +518,7 @@ class _MemberTile extends ConsumerWidget {
             m.name.isEmpty ? '?' : m.name.characters.first.toUpperCase(),
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w700,
               color: scheme.foreground,
             ),
@@ -533,17 +532,16 @@ class _MemberTile extends ConsumerWidget {
               Row(
                 children: [
                   Flexible(
-                    child: Text(
+                    child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                       isMe ? '${m.name} · tú' : m.name,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 13.5,
                         fontWeight: FontWeight.w500,
                         color: scheme.foreground,
                       ),
-                    ),
+                    )),
                   ),
                   if (m.typing) ...[
                     const SizedBox(width: 6),
@@ -551,7 +549,7 @@ class _MemberTile extends ConsumerWidget {
                       'escribe…',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 10.5,
+                        fontSize: 11,
                         fontStyle: FontStyle.italic,
                         color: scheme.mutedForeground,
                       ),
@@ -566,7 +564,7 @@ class _MemberTile extends ConsumerWidget {
                     : (m.role == 'viewer' ? 'Observador' : 'Editor'),
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 11.5,
+                  fontSize: 11,
                   color: scheme.mutedForeground,
                 ),
               ),
@@ -580,55 +578,52 @@ class _MemberTile extends ConsumerWidget {
           const VeBadge(tone: VeTone.warn, child: Text('Observador'))
         else
           const VeBadge(tone: VeTone.pos, dot: true, child: Text('Editor')),
-        if (canManage)
-          PopupMenuButton<String>(
-            icon: Icon(
-              LucideIcons.ellipsisVertical,
-              size: 16,
-              color: scheme.mutedForeground,
+        if (canManage) ...[
+          // v28 · acciones INLINE (sin menú flotante): cambiar rol y sacar,
+          // botones de icono identificables con pista de 44 px.
+          VeIconBtn(
+            icon: m.role == 'viewer'
+                ? Icons.edit_note_rounded
+                : Icons.visibility_outlined,
+            label: m.role == 'viewer' ? 'Hacer editor' : 'Hacer observador',
+            size: 32,
+            iconSize: 16,
+            onTap: () => room.setMemberRole(
+              m.id,
+              m.role == 'viewer' ? 'editor' : 'viewer',
             ),
-            onSelected: (v) async {
-              if (v == 'role') {
-                await room.setMemberRole(
-                  m.id,
-                  m.role == 'viewer' ? 'editor' : 'viewer',
-                );
-              } else if (v == 'kick') {
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: Text('¿Sacar a ${m.name}?'),
-                    content: const Text(
-                      'Solo sale esta persona; el resto de la sala sigue.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text('Cancelar'),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.of(context).pop(true),
-                        child: const Text('Sacar'),
-                      ),
-                    ],
-                  ),
-                );
-                if (ok == true) await room.kickMember(m.id);
-              }
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'role',
-                child: Text(
-                  m.role == 'viewer' ? 'Hacer editor' : 'Hacer observador',
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'kick',
-                child: Text('Sacar de la sala'),
-              ),
-            ],
           ),
+          const SizedBox(width: 4),
+          VeIconBtn(
+            icon: Icons.person_remove_rounded,
+            label: 'Sacar de la sala',
+            size: 32,
+            iconSize: 16,
+            danger: true,
+            onTap: () async {
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: Text('¿Sacar a ${m.name}?'),
+                  content: const Text(
+                    'Solo sale esta persona; el resto de la sala sigue.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancelar'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Sacar'),
+                    ),
+                  ],
+                ),
+              );
+              if (ok == true) await room.kickMember(m.id);
+            },
+          ),
+        ],
       ],
     );
   }

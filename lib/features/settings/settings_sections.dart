@@ -27,7 +27,7 @@ class _Pais extends ConsumerWidget {
                 Text(
                   'Tu tablero está en ${country.label}.',
                   style: TextStyle(
-                    fontSize: 14.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                     color: scheme.onSurface,
                   ),
@@ -47,7 +47,7 @@ class _Pais extends ConsumerWidget {
                 const SizedBox(height: 12),
                 Text(
                   'Orden de tus divisas',
-                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 6),
                 for (int i = 0; i < order.length; i++)
@@ -58,7 +58,7 @@ class _Pais extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           order[i].label,
-                          style: const TextStyle(fontSize: 12.5),
+                          style: const TextStyle(fontSize: 13.5),
                         ),
                       ),
                       // v21.2: las flechas mudas hablan — tooltip en hover/
@@ -165,7 +165,7 @@ class _Monedas extends ConsumerWidget {
                   Text(
                     c.label,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -188,7 +188,7 @@ class _Monedas extends ConsumerWidget {
                 ],
                 Text(
                   'Fuente por módulo',
-                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 6),
                 for (final module in RateModule.values)
@@ -202,7 +202,7 @@ class _Monedas extends ConsumerWidget {
                   dense: true,
                   title: const Text(
                     'Refresco automático de tasas',
-                    style: TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13.5),
                   ),
                   subtitle: const Text(
                     'Consulta las tasas al abrir la app',
@@ -214,7 +214,7 @@ class _Monedas extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Tasas manuales',
-                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 4),
                 const _ManualRates(),
@@ -224,7 +224,7 @@ class _Monedas extends ConsumerWidget {
                 // avanzado de siempre, intacto.
                 Text(
                   'Tus tasas',
-                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 4),
                 const _CustomRates(),
@@ -257,28 +257,64 @@ class _ModuleSource extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 12.5))),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 13.5))),
           Text(
             current == null
                 ? 'Global'
                 : (RateSource.of(current)?.label ?? current),
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, size: 16),
-            onSelected: (v) => store.setModuleRateSource(
-              module,
-              Currency.ves,
-              v == 'global' ? null : v,
-            ),
-            itemBuilder: (_) => [
-              const PopupMenuItem(value: 'global', child: Text('Global')),
-              for (final s in RateSource.sourcesFor(Currency.ves))
-                PopupMenuItem(value: s.id, child: Text(s.label)),
-            ],
+          // v28 · sin menú flotante: el selector abre la HOJA inferior
+          // unificada (showVeHalfSheet) con las fuentes disponibles.
+          VeIconBtn(
+            icon: Icons.tune_rounded,
+            label: 'Elegir tasa de $label',
+            size: 32,
+            iconSize: 13.5,
+            onTap: () async {
+              final options = <(String, String)>[
+                ('global', 'Global (tasa activa del país)'),
+                for (final s in RateSource.sourcesFor(Currency.ves))
+                  (s.id, s.label),
+              ];
+              final picked = await showVeHalfSheet<String>(
+                context: context,
+                title: 'Tasa de $label',
+                builder: (ctx) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final (id, name) in options)
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          id == 'global'
+                              ? Icons.public_rounded
+                              : Icons.swap_horiz_rounded,
+                          size: 20,
+                        ),
+                        title: Text(
+                          name,
+                          style: const TextStyle(fontSize: 13.5),
+                        ),
+                        trailing: id == (current ?? 'global')
+                            ? const Icon(Icons.check_rounded, size: 17)
+                            : null,
+                        onTap: () => Navigator.pop(ctx, id),
+                      ),
+                  ],
+                ),
+              );
+              if (picked == null) return;
+              store.setModuleRateSource(
+                module,
+                Currency.ves,
+                picked == 'global' ? null : picked,
+              );
+            },
           ),
         ],
       ),
@@ -337,7 +373,7 @@ class _ManualField extends ConsumerWidget {
                 child: Text(
                   'Tasa manual ${s.currency.code}',
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -345,19 +381,18 @@ class _ManualField extends ConsumerWidget {
               // Flexible: en pantallas angostas achica con ellipsis — NUNCA
               // desborda (el valor con 4 decimales es largo).
               Flexible(
-                child: Text(
+                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                   set
                       ? '1 ${s.base.code} = ${fmtRate(value)} ${s.quote.code}'
                       : 'sin definir',
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.end,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                     color: set ? scheme.onSurface : scheme.onSurfaceVariant,
                   ),
-                ),
+                )),
               ),
               const SizedBox(width: 4),
               Icon(
@@ -398,7 +433,7 @@ class _CustomRates extends ConsumerWidget {
             Text(
               'Zelle, Efectivo, Binance… Aparece en Tasas con su brecha frente al BCV.',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13.5,
                 color: Theme.of(ctx).colorScheme.onSurfaceVariant,
               ),
             ),
@@ -473,7 +508,7 @@ class _CustomRates extends ConsumerWidget {
                   child: Text(
                     r.name,
                     style: const TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -481,7 +516,7 @@ class _CustomRates extends ConsumerWidget {
                 Text(
                   '${fmtRate(r.bsPerUsd)} Bs',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
@@ -575,7 +610,7 @@ class _Apariencia extends ConsumerWidget {
                   ),
                   title: const Text(
                     'Color dinámico del sistema (Material You)',
-                    style: TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13.5),
                   ),
                   subtitle: Text(
                     'Android 12 o superior. Botones y selección usan el color del fondo.',
@@ -608,7 +643,7 @@ class _Apariencia extends ConsumerWidget {
                   },
                   title: const Text(
                     'Bloqueo biométrico al abrir',
-                    style: TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13.5),
                   ),
                   subtitle: Text(
                     'Huella, rostro o PIN al abrir. Se pide una sola vez.',
@@ -780,18 +815,17 @@ class _ThemePreviewCard extends ConsumerWidget {
                 // Flexible + ellipsis: a 320 px la tarjeta mide ~78 px y el
                 // rótulo con icono no siempre cabe entero.
                 Flexible(
-                  child: Text(
+                  child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     label,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 11,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                       color: selected
                           ? scheme.primary
                           : scheme.onSurfaceVariant,
                     ),
-                  ),
+                  )),
                 ),
               ],
             ),
@@ -845,7 +879,7 @@ class _DiagnosticoState extends ConsumerState<_Diagnostico> {
                 Text(
                   'Consulta cada región y mide su respuesta. Si una falla, las demás siguen.',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
@@ -888,7 +922,7 @@ class _DiagnosticoState extends ConsumerState<_Diagnostico> {
                                   r.label,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 13,
+                                    fontSize: 13.5,
                                   ),
                                 ),
                                 Text(
@@ -899,15 +933,14 @@ class _DiagnosticoState extends ConsumerState<_Diagnostico> {
                                   ),
                                 ),
                                 if (r.error != null)
-                                  Text(
+                                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                                     r.error!,
                                     maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 11,
                                       color: ink.neg.withValues(alpha: 0.8),
                                     ),
-                                  ),
+                                  )),
                               ],
                             ),
                           ),
@@ -948,7 +981,7 @@ class _Registros extends ConsumerWidget {
                 Text(
                   'Errores de red y eventos de la sala. Solo en este teléfono; nada sale de aquí.',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),

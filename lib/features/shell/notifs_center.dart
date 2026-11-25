@@ -165,36 +165,34 @@ class _NotifRow extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     n.title,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 13,
+                      fontSize: 13.5,
                       fontWeight: n.read ? FontWeight.w500 : FontWeight.w600,
                       color: scheme.foreground,
                     ),
-                  ),
+                  )),
                   const SizedBox(height: 2),
-                  Text(
+                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     n.body,
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 12.5,
+                      fontSize: 13.5,
                       height: 1.4,
                       color: scheme.mutedForeground,
                     ),
-                  ),
+                  )),
                   const SizedBox(height: 6),
                   Row(
                     children: [
                       Text(
                         _label(n.kind).toUpperCase(),
                         style: VeText.labelCaps(
-                          9,
+                          11,
                           color: _toneFg(context, tone),
                           weight: FontWeight.w700,
                         ),

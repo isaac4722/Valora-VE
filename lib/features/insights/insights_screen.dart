@@ -219,17 +219,16 @@ class _AnchorTab extends ConsumerWidget {
               // píldora. OJO: sin el tracking de labelCaps — con él
               // «Productos» no cabía en 6 pestañas a 390 y quedaba
               // «Produ…» (hallazgo del gate visual).
-              Text(
+              FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                 label,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 9.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.w500,
                   color: selected ? shad.background : scheme.onSurfaceVariant,
                 ),
-              ),
+              )),
             ],
           ),
         ),
@@ -547,13 +546,13 @@ class _DayPanel extends ConsumerWidget {
             children: [
               Text(
                 index == null ? 'ÚLTIMO DÍA' : 'DÍA TOCADO',
-                style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+                style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
               ),
               const Spacer(),
               Text(
                 fmtDate(DateTime.parse(p.date)),
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: scheme.onSurface,
                 ),
@@ -599,7 +598,7 @@ class _DayPanel extends ConsumerWidget {
                 'El paralelo no tiene registro ese día: la brecha necesita ambas '
                 'tasas (>0) el mismo día.',
                 style: TextStyle(
-                  fontSize: 10.5,
+                  fontSize: 11,
                   height: 1.35,
                   color: scheme.onSurfaceVariant,
                 ),
@@ -624,7 +623,7 @@ class _DayPanel extends ConsumerWidget {
         Text(
           label.toUpperCase(),
           style: VeText.labelCaps(
-            8.5,
+            11,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
@@ -638,13 +637,13 @@ class _DayPanel extends ConsumerWidget {
             // compite visualmente con las cifras reales del panel.
             style: dimmed
                 ? TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontStyle: FontStyle.italic,
                     fontWeight: FontWeight.w500,
                     color: color,
                   )
                 : VeText.displayNum(
-                    15,
+                    17,
                     color: color,
                     weight: bold ? FontWeight.w800 : FontWeight.w700,
                   ),
@@ -778,7 +777,7 @@ class _LookupFechaState extends ConsumerState<_LookupFecha> {
                 'que la app consulta tasas. Para tasas remotas de fechas pasadas '
                 'usa el Conversor → fecha histórica.',
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 11,
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -896,7 +895,7 @@ class _InflacionAnchor extends ConsumerWidget {
             child: Text(
               'Costo de la canasta: ${fmtUSD(b.oldCost)} → ${fmtUSD(b.newCost)} · '
               'desde ${fmtDate(b.fromAt)}',
-              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
             ),
           )
         else
@@ -981,7 +980,7 @@ class _InflacionAnchor extends ConsumerWidget {
                       '(φ 0,85 · ${fmtPct(costProj.dailyPct, decimals: 2)}/día). '
                       'Es una lectura del momentum, no una promesa.',
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 11,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
@@ -1004,7 +1003,7 @@ class _InflacionAnchor extends ConsumerWidget {
                     child: Text(
                       'Sin subidas registradas en el rango.',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13.5,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
@@ -1019,7 +1018,7 @@ class _InflacionAnchor extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Text(
                     'MAYORES BAJADAS',
-                    style: VeText.labelCaps(10, color: scheme.onSurfaceVariant),
+                    style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
                   ),
                 ],
                 for (final e in downs.take(5))

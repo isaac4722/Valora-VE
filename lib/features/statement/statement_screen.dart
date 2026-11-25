@@ -191,24 +191,34 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
           ExportFormat(
             icon: Icons.subject_rounded,
             label: 'Texto',
-            hint: 'Resumen legible para pegar o enviar por chat',
-            run: (share) async {
-              await SharePlus.instance.share(
-                ShareParams(text: _plainText(range, label, purchases)),
-              );
-              return null;
+            hint: 'Resumen legible para pegar donde quieras',
+            // v28 · TEXTO: se copia (o se guarda); jamás share nativo.
+            kind: ExportKind.texto,
+            run: (mode) async {
+              final t = _plainText(range, label, purchases);
+              if (mode == ExportMode.guardar) {
+                final path = await downloadText(
+                  t,
+                  fileName: 'constancia-valorave.txt',
+                );
+                return path == null
+                    ? 'No se pudo guardar.'
+                    : 'Guardado en: $path';
+              }
+              return copiarTexto(t, 'Texto copiado');
             },
           ),
           ExportFormat(
             icon: Icons.image_outlined,
             label: 'Imagen PNG',
             hint: 'PNG de la constancia (1080 px) para redes o chat',
-            run: (share) async {
+            kind: ExportKind.archivo,
+            run: (mode) async {
               final bytes = await _renderDocPng(range, label, purchases);
               if (bytes == null) {
                 return 'No se pudo generar la imagen. Intenta de nuevo.';
               }
-              if (share) {
+              if (mode == ExportMode.compartir) {
                 await sharePng(bytes, _pngName);
                 return null;
               }
@@ -222,7 +232,8 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
             icon: Icons.picture_as_pdf_outlined,
             label: 'PDF',
             hint: 'PDF con la tabla del período',
-            run: (share) async {
+            kind: ExportKind.archivo,
+            run: (mode) async {
               final bytes = await _buildPdf(
                 store,
                 range,
@@ -230,7 +241,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                 purchases,
               ).save();
               final file = Uint8List.fromList(bytes);
-              if (share) {
+              if (mode == ExportMode.compartir) {
                 await SharePlus.instance.share(
                   ShareParams(
                     files: [
@@ -271,7 +282,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
         'Total USD: ${fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD))}',
       )
       ..writeln(
-        'Total Bs ponderado: Bs ${fmtNum(purchases.fold<double>(0, (a, p) => a + p.totalBS))}',
+        'Total Bs ponderado: ${fmtNum(purchases.fold<double>(0, (a, p) => a + p.totalBS))} Bs',
       );
     return b.toString();
   }
@@ -342,7 +353,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                   pw.Text(
                     'Constancia de compras · $label',
                     style: const pw.TextStyle(
-                      fontSize: 10,
+                      fontSize: 11,
                       color: PdfColors.grey700,
                     ),
                   ),
@@ -361,7 +372,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
                 child: pw.Text(
                   _scopeLabel.toUpperCase(),
                   style: const pw.TextStyle(
-                    fontSize: 8.5,
+                    fontSize: 11,
                     color: PdfColors.grey700,
                   ),
                 ),
@@ -385,7 +396,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
               pw.SizedBox(width: 10),
               _pdfTotalBox(
                 'Total Bs',
-                'Bs ${fmtNum(purchases.fold<double>(0, (a, p) => a + p.totalBS))}',
+                '${fmtNum(purchases.fold<double>(0, (a, p) => a + p.totalBS))} Bs',
                 0xFF10755A,
               ),
             ],
@@ -395,7 +406,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
           pw.Text(
             breakdownTitle,
             style: pw.TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: pw.FontWeight.bold,
               color: PdfColor.fromInt(0xFF22354E),
             ),
@@ -405,7 +416,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
             pw.Text(
               'Sin compras en este período.',
               style: const pw.TextStyle(
-                fontSize: 10,
+                fontSize: 11,
                 color: PdfColors.grey600,
                 fontStyle: pw.FontStyle.italic,
               ),
@@ -415,14 +426,14 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
               headers: const ['Concepto', 'Monto'],
               data: rows,
               headerStyle: pw.TextStyle(
-                fontSize: 9.5,
+                fontSize: 11,
                 fontWeight: pw.FontWeight.bold,
                 color: PdfColors.white,
               ),
               headerDecoration: pw.BoxDecoration(
                 color: PdfColor.fromInt(0xFF22354E),
               ),
-              cellStyle: const pw.TextStyle(fontSize: 9.5),
+              cellStyle: const pw.TextStyle(fontSize: 11),
               cellAlignment: pw.Alignment.centerLeft,
               columnWidths: const {
                 0: pw.FlexColumnWidth(3),
@@ -437,7 +448,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
           pw.SizedBox(height: 6),
           pw.Text(
             'Generado ${fmtDateTime(DateTime.now())} · ValoraVE $kAppVersionVisible',
-            style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey600),
+            style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
           ),
         ],
       ),
@@ -479,7 +490,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
             pw.Text(
               label.toUpperCase(),
               style: pw.TextStyle(
-                fontSize: 7.5,
+                fontSize: 11,
                 fontWeight: pw.FontWeight.bold,
                 color: c,
               ),
@@ -488,7 +499,7 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
             pw.Text(
               value,
               style: pw.TextStyle(
-                fontSize: 13,
+                fontSize: 13.5,
                 fontWeight: pw.FontWeight.bold,
                 color: c,
               ),
@@ -552,7 +563,7 @@ class StatementDoc extends ConsumerWidget {
                   'V',
                   style: TextStyle(
                     fontFamily: 'SpaceGrotesk',
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
@@ -564,12 +575,12 @@ class StatementDoc extends ConsumerWidget {
                 children: [
                   Text(
                     'ValoraVE',
-                    style: VeText.displayNum(15, color: kInkAccent),
+                    style: VeText.displayNum(17, color: kInkAccent),
                   ),
                   Text(
                     'Constancia de compras',
                     style: const TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 11,
                       color: Colors.black54,
                     ),
                   ),
@@ -579,12 +590,11 @@ class StatementDoc extends ConsumerWidget {
               // Flexible: en trimestral/anual el rótulo supera el ancho del
               // documento a textScale >=1.25 (fix overflow).
               Flexible(
-                child: Text(
+                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                   label.toUpperCase(),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: VeText.labelCaps(9, color: Colors.black54),
-                ),
+                  style: VeText.labelCaps(11, color: Colors.black54),
+                )),
               ),
             ],
           ),
@@ -608,7 +618,7 @@ class StatementDoc extends ConsumerWidget {
             ),
             StatementRow(
               label: 'Total Bs ponderado',
-              value: 'Bs ${fmtNum(totalBs)}',
+              value: '${fmtNum(totalBs)} Bs',
               color: kInkAccent,
             ),
             const SizedBox(height: 10),
@@ -624,7 +634,7 @@ class StatementDoc extends ConsumerWidget {
           // en el PNG compartido (piso WCAG para texto pequeño: 4.5:1).
           Text(
             'Generado ${fmtDateTime(DateTime.now())} · ValoraVE $kAppVersionVisible',
-            style: const TextStyle(fontSize: 9, color: Colors.black54),
+            style: const TextStyle(fontSize: 11, color: Colors.black54),
           ),
         ],
       ),
@@ -656,12 +666,11 @@ class StatementRow extends ConsumerWidget {
           // Flexible + ellipsis: el label es el nombre de tienda (texto
           // libre) y desbordaba el documento a textScale >=1.2 (fix).
           Flexible(
-            child: Text(
+            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
               label,
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
+              style: const TextStyle(fontSize: 13.5, color: Colors.black54),
+            )),
           ),
           const SizedBox(width: 6),
           const Expanded(child: LedgerLine()),
@@ -669,7 +678,7 @@ class StatementRow extends ConsumerWidget {
             value,
             style: TextStyle(
               fontFamily: 'SpaceGrotesk',
-              fontSize: big ? 22 : 15,
+              fontSize: big ? 17 : 13.5,
               fontWeight: FontWeight.w700,
               fontFeatures: const [FontFeature.tabularFigures()],
               color: color,

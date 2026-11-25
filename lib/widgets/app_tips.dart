@@ -21,14 +21,12 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/currencies.dart';
 import '../data/store.dart';
-import 'app_tour.dart' show TourKeys, isTourDone, tourRunning;
-import 'coach_mark.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:valorave/providers/providers.dart';
+import 'app_tour.dart' show TourKeys, isTourDone;
 
 /// Preferencias del motor.
 const String kTipPrefix = 'valorave.tip.';
@@ -148,6 +146,12 @@ bool isTipShown(SharedPreferences prefs, String id) =>
 /// Bajo nivel: muestra UN tip una única vez (id ya visto → no-op). Respeta
 /// los gates del motor; devuelve true si se mostró. Para disparadores
 /// propios (p. ej. la Sala Viva al conectarse).
+///
+/// v28 (regla del dueño «sin sobrecapas»): el motor QUEDA DESACTIVADO — los
+/// tips contextuales eran capas superpuestas sobre el contenido y
+/// complicaban la navegación. La guía vive ahora EN la página (descripción
+/// de cada sección). El catálogo [kTipRules] se conserva intacto por si el
+/// dueño quiere reactivar el motor.
 Future<bool> maybeShowTipOnce(
   BuildContext context, {
   required WidgetRef ref,
@@ -158,82 +162,22 @@ Future<bool> maybeShowTipOnce(
   List<Currency> flags = const <Currency>[],
   bool force = false,
 }) async {
-  final SharedPreferences prefs;
-  try {
-    prefs = ref.read(sharedPreferencesProvider);
-  } catch (_) {
-    // Harness parcial sin override de prefs (mismo trato que el
-    // ProviderNotFoundException del mundo provider): tip no-op.
-    return false;
-  }
-  if (tourRunning || _tipRunning) return false;
-  if (!force && !tipsEngineEnabled(prefs)) return false;
-  if (isTipShown(prefs, id)) return false;
-  // Marca ANTES de mostrar (una sola oportunidad por tip), pero SOLO si
-  // el contexto sigue vivo: marcar tras un desmonte consumía el tip para
-  // siempre sin mostrarlo (y reseteaba el cooldown en vano) (fix orden).
-  if (!context.mounted) return false;
-  await prefs.setBool('$kTipPrefix$id', true);
-  await prefs.setInt(kTipLastAt, DateTime.now().millisecondsSinceEpoch);
-  // Re-check tras los awaits: si el contexto murió en la ventana entre
-  // ambos checks, no hay pantalla donde mostrar (ventana de ~1 ms).
-  if (!context.mounted) return false;
-  _tipRunning = true;
-  try {
-    await showCoachMark(
-      context,
-      anchor: anchor,
-      card: CoachCardData(
-        segment: 'TIP',
-        title: title,
-        body: body,
-        flags: flags,
-        cta: 'Entendido',
-      ),
-    );
-  } finally {
-    _tipRunning = false;
-  }
-  return true;
+  // v28 · sobrecapas fuera: NINGÚN overlay de tips, ni siquiera a pedido.
+  return false;
 }
-
-bool _tipRunning = false;
 
 /// Punto de entrada por pantalla: evalúa las reglas del [scope] contra el
 /// estado vivo y muestra a lo sumo EL PRIMER tip que aplique. Post-frame de
 /// cada pantalla (TipsTrigger) — barato cuando nada aplica.
+///
+/// v28 · sobrecapas fuera: el disparador por pantalla es no-op (ver
+/// [maybeShowTipOnce]). La orientación vive en la descripción de cada sección.
 Future<void> runTipsForScope(
   BuildContext context,
   WidgetRef ref,
   String scope,
 ) async {
-  final SharedPreferences prefs;
-  final AppStore store;
-  try {
-    prefs = ref.read(sharedPreferencesProvider);
-    store = ref.read(appStoreProvider);
-  } catch (_) {
-    // Harness parcial sin override de prefs (mismo trato que el
-    // ProviderNotFoundException del mundo provider): no-op.
-    return;
-  }
-  if (tourRunning || _tipRunning) return;
-  if (!tipsEngineEnabled(prefs)) return;
-  for (final tip in kTipRules) {
-    if (tip.scope != scope) continue;
-    if (isTipShown(prefs, tip.id)) continue;
-    if (!tip.when(store)) continue;
-    await maybeShowTipOnce(
-      context,
-      ref: ref,
-      id: tip.id,
-      title: tip.title,
-      body: tip.body,
-      anchor: tip.anchor,
-      flags: tip.flags,
-    );
-    return; // UN tip por evaluación.
-  }
+  return;
 }
 
 /// Widget de cero píxeles que dispara la evaluación del scope tras el

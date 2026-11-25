@@ -401,7 +401,7 @@ class _VeSidebar extends ConsumerWidget {
                   'ValoraVE',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 14.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     letterSpacing: -0.2,
                     color: scheme.foreground,
@@ -437,7 +437,7 @@ class _VeSidebar extends ConsumerWidget {
                     'LIBRO',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 10.5,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.84,
                       color: scheme.mutedForeground,
@@ -568,7 +568,7 @@ class _SidebarSearch extends ConsumerWidget {
                 'Buscar…',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   color: scheme.mutedForeground,
                 ),
               ),
@@ -635,7 +635,7 @@ class _SideNavButton extends ConsumerWidget {
                   item.label,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w500,
                     color: active ? scheme.foreground : scheme.mutedForeground,
                   ),
@@ -652,7 +652,7 @@ class _SideNavButton extends ConsumerWidget {
                     '$badge',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 10.5,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       fontFeatures: const [FontFeature.tabularFigures()],
                       color: scheme.background,
@@ -695,23 +695,22 @@ class _SidebarRates extends ConsumerWidget {
               child: Row(
                 children: [
                   Flexible(
-                    child: Text(
+                    child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                       it.label,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 12,
+                        fontSize: 13.5,
                         color: scheme.mutedForeground,
                       ),
-                    ),
+                    )),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     fmtNum(it.value),
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 12,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       fontFeatures: const [FontFeature.tabularFigures()],
                       color: scheme.foreground,
@@ -887,7 +886,7 @@ class _TabButton extends ConsumerWidget {
                               badge > 9 ? '9+' : '$badge',
                               style: TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 9.5,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: scheme.background,
                               ),
@@ -897,17 +896,16 @@ class _TabButton extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 3),
-                  Text(
+                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     spec.label,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 10.5,
+                      fontSize: 11,
                       fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                       color: active ? activeColor : inactiveColor,
                     ),
-                  ),
+                  )),
                 ],
               ),
             ),

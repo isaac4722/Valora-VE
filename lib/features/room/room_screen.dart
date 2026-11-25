@@ -172,17 +172,16 @@ class _EnSalaBanner extends ConsumerWidget {
             const VeBadge(tone: VeTone.pos, dot: true, child: Text('En sala')),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
+              child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                 '$title · ${room.visibleMembers.length} en la sala',
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   color: scheme.foreground,
                 ),
-              ),
+              )),
             ),
             Icon(
               LucideIcons.chevronRight,
@@ -217,7 +216,7 @@ class _ErrorBanner extends ConsumerWidget {
               msg,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 12.5,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: sem.neg,
               ),
@@ -251,7 +250,7 @@ class _ConnectingCard extends ConsumerWidget {
               'Conectando por ${room.modeLabel}…',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 13,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: scheme.foreground,
               ),
@@ -286,7 +285,7 @@ class _ModePicker extends ConsumerWidget {
           Text(
             'CÓMO SE CONECTAN',
             style: VeText.labelCaps(
-              10.5,
+              11,
               color: scheme.mutedForeground,
               weight: FontWeight.w600,
             ),
@@ -301,11 +300,10 @@ class _ModePicker extends ConsumerWidget {
                   // tech·hint es LARGO (verificación visual 390: a 1 línea
                   // quedaba «Sin configurar…» «el Hot…» «los tel…» «URL d…»).
                   // 3 líneas explícitas: el texto completo cabe y respira.
-                  sub: Text(
+                  sub: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     '${m.tech} · ${m.hint}',
                     maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  )),
                   onTap: () => room.setMode(m),
                   right: room.mode == m
                       ? Icon(
@@ -364,7 +362,7 @@ class _JoinEntryCard extends ConsumerWidget {
           Text(
             'UNIRSE A UNA SALA',
             style: VeText.labelCaps(
-              10.5,
+              11,
               color: scheme.mutedForeground,
               weight: FontWeight.w600,
             ),
@@ -374,7 +372,7 @@ class _JoinEntryCard extends ConsumerWidget {
             'Con el código o el QR del anfitrión.',
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 11.5,
+              fontSize: 11,
               height: 1.4,
               color: scheme.mutedForeground,
             ),
@@ -525,7 +523,7 @@ class _CreateCardState extends ConsumerState<_CreateCard> {
           Text(
             'CREAR SALA',
             style: VeText.labelCaps(
-              10.5,
+              11,
               color: scheme.mutedForeground,
               weight: FontWeight.w600,
             ),
@@ -535,7 +533,7 @@ class _CreateCardState extends ConsumerState<_CreateCard> {
             'Tu teléfono es el anfitrión: comparte el código de 6 letras.',
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 11.5,
+              fontSize: 11,
               color: scheme.mutedForeground,
             ),
           ),
@@ -636,7 +634,7 @@ class _CreateCardState extends ConsumerState<_CreateCard> {
                           'con el botón de arriba.',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 11.5,
+                  fontSize: 11,
                   height: 1.4,
                   color: scheme.mutedForeground,
                 ),
@@ -699,7 +697,7 @@ class _ToggleRow extends ConsumerWidget {
                   label,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     color: scheme.foreground,
                   ),
@@ -709,7 +707,7 @@ class _ToggleRow extends ConsumerWidget {
                   sub,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 11.5,
+                    fontSize: 11,
                     height: 1.35,
                     color: scheme.mutedForeground,
                   ),
@@ -759,7 +757,7 @@ class _ScanCardState extends ConsumerState<_ScanCard> {
                 child: Text(
                   'SALAS CERCANAS',
                   style: VeText.labelCaps(
-                    10.5,
+                    11,
                     color: scheme.mutedForeground,
                     weight: FontWeight.w600,
                   ),
@@ -784,7 +782,7 @@ class _ScanCardState extends ConsumerState<_ScanCard> {
             'Salas públicas por ${room.modeLabel}. ${room.mode.hint}',
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 11.5,
+              fontSize: 11,
               color: scheme.mutedForeground,
             ),
           ),
@@ -802,7 +800,7 @@ class _ScanCardState extends ConsumerState<_ScanCard> {
                   'Buscando…',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12,
+                    fontSize: 13.5,
                     color: scheme.mutedForeground,
                   ),
                 ),
@@ -813,7 +811,7 @@ class _ScanCardState extends ConsumerState<_ScanCard> {
               'Toca «Escuchar» para ver las salas públicas cerca.',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 12,
+                fontSize: 13.5,
                 color: scheme.mutedForeground,
               ),
             )
@@ -906,7 +904,7 @@ class _ServerCardState extends ConsumerState<_ServerCard> {
             'datos móviles.',
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 11.5,
+              fontSize: 11,
               height: 1.4,
               color: scheme.mutedForeground,
             ),
@@ -971,7 +969,7 @@ class _ServerCardState extends ConsumerState<_ServerCard> {
                 _probeMsg!,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                   color: _probeMsg == 'Conexión OK' ? ink.pos : ink.neg,
                 ),
@@ -989,7 +987,7 @@ class _ServerCardState extends ConsumerState<_ServerCard> {
               'el modo WiFi local con este teléfono como servidor.',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 12,
+                fontSize: 13.5,
                 height: 1.5,
                 color: scheme.mutedForeground,
               ),

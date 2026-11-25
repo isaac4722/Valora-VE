@@ -14,6 +14,23 @@ import 'package:flutter/services.dart';
 /// Curva firma del sistema (EASE [0.16, 1, 0.3, 1]).
 const Cubic kEaseVe = Cubic(0.16, 1.0, 0.3, 1.0);
 
+/// ─── Sistema tipográfico (orden del dueño, v28) ──────────────────────────
+/// La app usa EXACTAMENTE 4 tamaños de texto, en todo el árbol:
+///
+///   [caption] 11   · rótulos, metadatos, sellos y hints (piso legible)
+///   [body]    13.5 · texto y datos (el tamaño de trabajo)
+///   [title]   17   · títulos de sección/tarjeta y botones grandes
+///   [display] 30   · cifras héroe y títulos de pantalla (Space Grotesk)
+///
+/// Ningún otro tamaño existe en `lib/`. Los pesos (w500-w800), la familia
+/// (Inter/Space Grotesk) y el color aportan la jerarquía; el tamaño no varía.
+abstract final class VeType {
+  static const double caption = 11;
+  static const double body = 13.5;
+  static const double title = 17;
+  static const double display = 30;
+}
+
 /// Paleta por rol, light (zinc del prototipo) y dark (grafito zinc).
 ///
 /// Los valores son EXACTOS a los CSS custom properties del prototipo de
@@ -476,7 +493,7 @@ abstract final class AppTheme {
           foregroundColor: effPrimary,
           textStyle: const TextStyle(
             fontFamily: 'Inter',
-            fontSize: 13,
+            fontSize: 13.5,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -491,7 +508,7 @@ abstract final class AppTheme {
         ),
         textStyle: TextStyle(
           fontFamily: 'Inter',
-          fontSize: 12,
+          fontSize: 13.5,
           fontWeight: FontWeight.w600,
           color: isDark ? VeColors.fgDark : Colors.white,
         ),
@@ -504,7 +521,7 @@ abstract final class AppTheme {
         backgroundColor: fg,
         contentTextStyle: TextStyle(
           fontFamily: 'Inter',
-          fontSize: 13,
+          fontSize: 13.5,
           color: bg,
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -519,7 +536,7 @@ abstract final class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: TextStyle(
           fontFamily: 'Inter',
-          fontSize: 16,
+          fontSize: 17,
           fontWeight: FontWeight.w700,
           color: fg,
         ),
@@ -550,7 +567,7 @@ abstract final class AppTheme {
         shape: const StadiumBorder(),
         labelStyle: TextStyle(
           fontFamily: 'Inter',
-          fontSize: 12,
+          fontSize: 13.5,
           fontWeight: FontWeight.w600,
           color: mutedFg,
         ),
@@ -623,17 +640,18 @@ abstract final class VeText {
 
   /// `label-caps` — rótulos técnicos en mayúsculas con tracking amplio.
   ///
-  /// Piso de legibilidad: en móvil ningún rótulo baja de 9.5 px aunque el
-  /// diseño pida menos (evita el «texto demasiado pequeño» en pantallas densas).
+  /// Piso de legibilidad (v28): en móvil ningún rótulo baja de 11 px
+  /// ([VeType.caption]) aunque el diseño pida menos — el tamaño de todo el
+  /// sistema es uno de los 4 canónicos.
   static TextStyle labelCaps(
     double size, {
     required Color color,
     FontWeight weight = FontWeight.w600,
   }) => TextStyle(
     fontFamily: 'Inter',
-    fontSize: size < 9.5 ? 9.5 : size,
+    fontSize: size < VeType.caption ? VeType.caption : size,
     fontWeight: weight,
     color: color,
-    letterSpacing: 0.12 * (size < 9.5 ? 9.5 : size),
+    letterSpacing: 0.12 * (size < VeType.caption ? VeType.caption : size),
   );
 }

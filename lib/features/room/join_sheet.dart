@@ -179,7 +179,7 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
         Text(
           'Paso $_step de 3',
           style: VeText.labelCaps(
-            9.5,
+            11,
             color: scheme.mutedForeground,
             weight: FontWeight.w600,
           ),
@@ -201,7 +201,7 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
                       : 'Sala avistada cerca',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w500,
                     color: scheme.foreground,
                   ),
@@ -305,7 +305,7 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
                 TextSpan(
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12,
+                    fontSize: 13.5,
                     color: scheme.mutedForeground,
                   ),
                   children: [
@@ -336,7 +336,7 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
             'Si el anfitrión pidió PIN, te lo pedirá al conectar.',
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 12.5,
+              fontSize: 13.5,
               color: scheme.mutedForeground,
             ),
           )
@@ -382,7 +382,7 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
                   'Conectando por ${room.modeLabel}…',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     color: scheme.foreground,
                   ),
@@ -413,7 +413,7 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
                   _busyError!,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     color: VeColors.of(context).neg,
                   ),
@@ -444,7 +444,7 @@ class _JoinSheetState extends ConsumerState<_JoinSheet> {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 11.5,
+            fontSize: 11,
             color: scheme.mutedForeground,
           ),
         ),
@@ -468,7 +468,7 @@ class _StepEyebrow extends ConsumerWidget {
       child: Text(
         text,
         style: VeText.labelCaps(
-          10.5,
+          11,
           color: scheme.mutedForeground,
           weight: FontWeight.w600,
         ),
@@ -513,7 +513,7 @@ class _LetterWheel extends ConsumerWidget {
               letter,
               style: TextStyle(
                 fontFamily: 'JetBrainsMono',
-                fontSize: 20,
+                fontSize: 30,
                 fontWeight: FontWeight.w500,
                 color: scheme.foreground,
               ),

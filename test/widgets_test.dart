@@ -1109,7 +1109,7 @@ Future<void> main() async {
       expect(isTourDone(prefs), isTrue);
     });
 
-    testWidgets('arranca tras montar el shell, salta y restaura', (
+    testWidgets('v28 · el tour NUNCA arranca solo (sin sobrecapas)', (
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({});
@@ -1117,7 +1117,9 @@ Future<void> main() async {
       final store = _pumpedStore(tester, dir: 'w10');
       await _initServices(store);
       // Onboarding YA hecho: el router arranca en '/' y el shell monta con
-      // su _TourTrigger (el tour auto-arranca tras la bienvenida real).
+      // su _TourTrigger. Con la regla v28 del dueño («sin sobrecapas»), el
+      // tour automático quedó DESACTIVADO: el shell monta LIMPIO y el flag
+      // se marca para que ningún disparo futuro reintente el overlay.
       store.finishOnboarding();
       store.setRateBoard(
         RateBoard(
@@ -1156,34 +1158,16 @@ Future<void> main() async {
           ),
         ),
       );
-      // El shell monta → _TourTrigger dispara el tour. La cadena
-      // (350 ms de respiro → ensureVisible → overlay) necesita algunos
-      // frames: se espera por condición. El motor propio NO tiene
-      // animaciones infinitas, pero el ticker del shell puede seguir vivo
-      // — por eso condición y no pumpAndSettle.
-      for (
-        var i = 0;
-        i < 30 &&
-            find.text('Tus datos viven en tu teléfono').evaluate().isEmpty;
-        i++
-      ) {
+      // Frames de sobra: si algún overlay intentara montarse, aparecería.
+      for (var i = 0; i < 30; i++) {
         await tester.pump(const Duration(milliseconds: 150));
       }
-      expect(find.text('Tus datos viven en tu teléfono'), findsOneWidget);
-      expect(find.text('1/12'), findsOneWidget);
-      // Se marcó ANTES de mostrarse (una oportunidad, no un bucle).
-      expect(isTourDone(prefs), isTrue);
-      // Saltar corta TODO el tour y restaura la petaña de origen.
-      await tester.tap(find.text('Saltar'));
-      for (
-        var i = 0;
-        i < 30 &&
-            find.text('Tus datos viven en tu teléfono').evaluate().isNotEmpty;
-        i++
-      ) {
-        await tester.pump(const Duration(milliseconds: 150));
-      }
+      // NINGÚN coach mark sobre la pantalla.
       expect(find.text('Tus datos viven en tu teléfono'), findsNothing);
+      expect(find.text('1/12'), findsNothing);
+      // El disparador marcó el tour como visto (una sola oportunidad).
+      expect(isTourDone(prefs), isTrue);
+      // El usuario sigue donde estaba: sin navegación forzada.
       expect(router.routerDelegate.currentConfiguration.uri.toString(), '/');
     });
   });

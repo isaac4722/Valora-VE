@@ -161,21 +161,25 @@ class _VeRowState extends State<VeRow> {
                   fontWeight: FontWeight.w500,
                   color: widget.danger ? ink.neg : scheme.foreground,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                child: widget.label,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: widget.label,
+                ),
               ),
               if (widget.sub != null) ...[
                 const SizedBox(height: 2),
                 DefaultTextStyle(
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12,
+                    fontSize: 13.5,
                     color: scheme.mutedForeground,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  child: widget.sub!,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: widget.sub!,
+                  ),
                 ),
               ],
             ],
@@ -186,7 +190,7 @@ class _VeRowState extends State<VeRow> {
           DefaultTextStyle(
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 13,
+              fontSize: 13.5,
               fontFeatures: const [FontFeature.tabularFigures()],
               color: scheme.mutedForeground,
             ),
@@ -226,7 +230,7 @@ class _VeRowState extends State<VeRow> {
 
 // ──────────────────────────────────────────────────── Jerarquía texto ──────
 
-/// Rótulo de sección en mayúsculas (eyebrow): 10.5 px w600 tracking .08em,
+/// Rótulo de sección en mayúsculas (eyebrow): 11 px w600 tracking .08em,
 /// con slot `right` para acciones de encabezado.
 class VeEyebrow extends StatelessWidget {
   const VeEyebrow({
@@ -259,7 +263,7 @@ class VeEyebrow extends StatelessWidget {
                 child: DefaultTextStyle(
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.84,
                     color: scheme.mutedForeground,
@@ -277,7 +281,7 @@ class VeEyebrow extends StatelessWidget {
                 hint!,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 12,
+                  fontSize: 13.5,
                   height: 1.35,
                   color: scheme.mutedForeground,
                 ),
@@ -327,26 +331,30 @@ class VeTitle extends StatelessWidget {
               children: [
                 DefaultTextStyle(
                   style: VeText.displayNum(
-                    22,
+                    30,
                     color: scheme.foreground,
                     weight: FontWeight.w600,
                   ).copyWith(height: 1.2),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  child: child,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: child,
+                  ),
                 ),
                 if (sub != null) ...[
                   const SizedBox(height: 4),
                   DefaultTextStyle(
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 12.5,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w500,
                       color: scheme.mutedForeground,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    child: sub!,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: sub!,
+                    ),
                   ),
                 ],
               ],
@@ -591,17 +599,16 @@ class _VeHalfChrome extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                         title,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 14,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w600,
                           color: scheme.foreground,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      )),
                     ),
                     if (trailing != null) ...[
                       const SizedBox(width: 8),
@@ -711,17 +718,16 @@ class _VeSheetChrome extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                         title,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 14,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w600,
                           color: scheme.foreground,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      )),
                     ),
                     if (trailing != null) ...[
                       const SizedBox(width: 8),
@@ -849,7 +855,7 @@ class VeEmpty extends StatelessWidget {
             title,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 14,
+              fontSize: 13.5,
               fontWeight: FontWeight.w700,
               color: scheme.foreground,
             ),
@@ -861,7 +867,7 @@ class VeEmpty extends StatelessWidget {
               sub!,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 12.5,
+                fontSize: 13.5,
                 height: 1.5,
                 color: scheme.mutedForeground,
               ),
@@ -974,7 +980,7 @@ class VeNum extends StatelessWidget {
             (style ??
                     TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 13,
+                      fontSize: 13.5,
                       color: scheme.foreground,
                     ))
                 .copyWith(fontFeatures: const [FontFeature.tabularFigures()]),

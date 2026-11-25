@@ -8,7 +8,7 @@
 ///   Btn   sm 36 · md 44 · lg 52 px, píldora 999, primary = tinta sólida
 ///   IconBtn plano · hover tonal circular · pista ≥44
 ///   Chip  h 28 · pill 999 · activo = tinta sólida · inactivo tonal muted
-///   Badge solo-texto caps 10.5px w600 + punto opcional (SIN fondo)
+///   Badge solo-texto caps 11px w600 + punto opcional (SIN fondo)
 ///   Toggle 32×18 · Checkbox circular · Stepper sin caja
 ///   Input 36 SUBRAYADO (reposo 1px · foco 2px tinta)
 library;
@@ -54,7 +54,7 @@ class VeBtn extends StatelessWidget {
   final VeBtnVariant variant;
   final VeBtnSize size;
 
-  /// Icono Lucide a la izquierda del texto (13–16 px según tamaño).
+  /// Icono Lucide a la izquierda del texto — MISMO tamaño que su letra (11/13.5/17 según tamaño).
   final IconData? icon;
 
   /// Tamaño explícito del icono (por defecto se deriva del [size]).
@@ -81,10 +81,11 @@ class VeBtn extends StatelessWidget {
       double isz,
       double gap,
     ) = switch (size) {
-      // v25 «HOJA»: alturas sm 36 · md 44 · lg 52 (regla del dueño).
-      VeBtnSize.sm => (36, 12, 12, 13, 6),
-      VeBtnSize.md => (44, 16, 13.5, 15, 8),
-      VeBtnSize.lg => (52, 18, 14.5, 16, 8),
+      // v28 · tamaños canónicos (VeType): sm 11 · md 13.5 · lg 17; el
+      // icono mide IGUAL que su letra (regla del dueño).
+      VeBtnSize.sm => (36, 12, 11, 11, 6),
+      VeBtnSize.md => (44, 16, 13.5, 13.5, 8),
+      VeBtnSize.lg => (52, 18, 17, 17, 8),
     };
 
     final (
@@ -141,7 +142,13 @@ class VeBtn extends StatelessWidget {
         color: fg,
       ),
       radius: 999,
-      borderColor: variant == VeBtnVariant.secondary ? scheme.border : null,
+      // v28 · clicable identificable: secundario y ghost llevan hairline de
+      // línea (ghost transparente + borde = botón delineado, nunca texto
+      // plano); primario y danger son píldoras sólidas de tinta.
+      borderColor:
+          variant == VeBtnVariant.secondary || variant == VeBtnVariant.ghost
+          ? scheme.border
+          : null,
       leading: icon == null ? null : Icon(icon, size: iconSize ?? isz),
       child: child,
     );
@@ -331,7 +338,7 @@ class VeIconBtn extends StatelessWidget {
     required this.onTap,
     required this.label,
     this.size = 32,
-    this.iconSize = 15,
+    this.iconSize = 16,
     this.dot = false,
     this.danger = false,
   });
@@ -372,6 +379,9 @@ class VeIconBtn extends StatelessWidget {
             foregroundColor: danger ? ink.neg : scheme.foreground,
             radius: 999,
             child: Stack(
+              // v28 · icono PERFECTAMENTE centrado en su caja de acción
+              // (antes el Stack alineaba topStart y el icono quedaba arriba).
+              alignment: Alignment.center,
               clipBehavior: Clip.none,
               children: [
                 Icon(icon, size: iconSize),
@@ -467,7 +477,7 @@ class VeChip extends StatelessWidget {
         : Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 13, color: fg),
+              Icon(icon, size: 13.5, color: fg),
               const SizedBox(width: 5),
               Flexible(child: _chipText(context, fg)),
             ],
@@ -494,7 +504,7 @@ class VeChip extends StatelessWidget {
       radius: 999,
       textStyle: TextStyle(
         fontFamily: 'Inter',
-        fontSize: 12,
+        fontSize: 13.5,
         fontWeight: FontWeight.w500,
         color: fg,
       ),
@@ -530,7 +540,7 @@ class VeChip extends StatelessWidget {
   Widget _chipText(BuildContext context, Color fg) => DefaultTextStyle(
     style: TextStyle(
       fontFamily: 'Inter',
-      fontSize: 12,
+      fontSize: 13.5,
       fontWeight: FontWeight.w500,
       color: fg,
     ),
@@ -543,7 +553,7 @@ class VeChip extends StatelessWidget {
 /// Tono semántico de [VeBadge] (fondo tenue + texto del tono).
 enum VeTone { neutral, pos, neg, warn, info }
 
-/// Badge v25 «HOJA»: SOLO texto de color — caps 10.5 px w600 mayúsculas
+/// Badge v25 «HOJA»: SOLO texto de color — caps 11 px w600 mayúsculas
 /// del tono y punto pulsante opcional. SIN fondo, SIN borde (regla de 3).
 class VeBadge extends StatelessWidget {
   const VeBadge({
@@ -575,7 +585,7 @@ class VeBadge extends StatelessWidget {
       child: DefaultTextStyle(
         style: TextStyle(
           fontFamily: 'Inter',
-          fontSize: 10.5,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.6,
           color: fg,
@@ -876,7 +886,7 @@ class VeSegmented<T> extends StatelessWidget {
                             duration: const Duration(milliseconds: 150),
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 12,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w500,
                               color: i == active
                                   ? scheme.background
@@ -960,7 +970,7 @@ class VeStepper extends StatelessWidget {
                   '$value',
                   style: TextStyle(
                     fontFamily: 'SpaceGrotesk',
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     fontFeatures: const [FontFeature.tabularFigures()],
                     color: scheme.foreground,
@@ -1106,7 +1116,7 @@ class VeField extends StatelessWidget {
           label.toUpperCase(),
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 10.5,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.84,
             color: scheme.mutedForeground,
@@ -1120,7 +1130,7 @@ class VeField extends StatelessWidget {
             hint!,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 11.5,
+              fontSize: 11,
               color: scheme.mutedForeground,
             ),
           ),
@@ -1189,16 +1199,15 @@ class VeSelect<T> extends StatelessWidget {
       children: [
         if (leading != null) ...[leading, const SizedBox(width: 8)],
         Expanded(
-          child: Text(
+          child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
             text,
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 13,
+              fontSize: 13.5,
               color: isPlaceholder ? faint : scheme.foreground,
             ),
-          ),
+          )),
         ),
         Icon(LucideIcons.chevronDown, size: 14, color: scheme.mutedForeground),
       ],
@@ -1231,16 +1240,15 @@ class VeSelect<T> extends StatelessWidget {
                     const SizedBox(width: 8),
                   ],
                   Flexible(
-                    child: Text(
+                    child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                       o.label,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 13,
+                        fontSize: 13.5,
                         color: scheme.foreground,
                       ),
-                    ),
+                    )),
                   ),
                 ],
               ),
@@ -1296,7 +1304,7 @@ class VeKbd extends StatelessWidget {
         style: TextStyle(
           fontFamily: 'JetBrainsMono',
           fontVariations: const [FontVariation('wght', 500)],
-          fontSize: 10,
+          fontSize: 11,
           color: scheme.mutedForeground,
         ),
       ),

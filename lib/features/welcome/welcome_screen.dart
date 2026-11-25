@@ -132,11 +132,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                         onPressed: _index < 3
                             ? () => _go(_index + 1)
                             : () => _finish(store),
-                        child: Text(
+                        child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                           _index < 3 ? 'Siguiente' : 'Comenzar',
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        )),
                       ),
                     ),
                   ),
@@ -177,7 +176,7 @@ class _SlideMarca extends ConsumerWidget {
                 child: RichText(
                   text: TextSpan(
                     style: VeText.displayNum(
-                      44,
+                      30,
                       color: scheme.onSurface,
                       weight: FontWeight.w700,
                     ),
@@ -197,7 +196,7 @@ class _SlideMarca extends ConsumerWidget {
                   'Precios y divisas de Venezuela',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15.5,
+                    fontSize: 17,
                     fontWeight: FontWeight.w600,
                     color: scheme.onSurfaceVariant,
                   ),
@@ -209,7 +208,7 @@ class _SlideMarca extends ConsumerWidget {
                   'El instrumento para registrar, comparar y calcular.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.5,
                     height: 1.45,
                     color: scheme.onSurfaceVariant,
                   ),
@@ -271,7 +270,7 @@ class _FlagPill extends ConsumerWidget {
           currency.code,
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 10.5,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.4,
             color: scheme.onSurfaceVariant,
@@ -356,7 +355,7 @@ class _SlideQueHace extends ConsumerWidget {
               Text(
                 'Lo que hace',
                 style: VeText.displayNum(
-                  24,
+                  30,
                   color: scheme.onSurface,
                   weight: FontWeight.w700,
                 ),
@@ -364,7 +363,7 @@ class _SlideQueHace extends ConsumerWidget {
               const SizedBox(height: 4),
               Text(
                 'Tres cosas, bien hechas.',
-                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(height: 18),
               _WelcomeBullet(
@@ -420,7 +419,7 @@ class _SlideDatos extends ConsumerWidget {
               Text(
                 'Tus datos, tuyos',
                 style: VeText.displayNum(
-                  24,
+                  30,
                   color: scheme.onSurface,
                   weight: FontWeight.w700,
                 ),
@@ -428,7 +427,7 @@ class _SlideDatos extends ConsumerWidget {
               const SizedBox(height: 4),
               Text(
                 'Sin cuentas, sin nube, sin claves.',
-                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(height: 18),
               Builder(
@@ -454,7 +453,7 @@ class _SlideDatos extends ConsumerWidget {
                               child: Text(
                                 'Tasas en vivo, datos tuyos',
                                 style: TextStyle(
-                                  fontSize: 14.5,
+                                  fontSize: 13.5,
                                   fontWeight: FontWeight.w700,
                                   color: scheme.onSurface,
                                 ),
@@ -470,7 +469,7 @@ class _SlideDatos extends ConsumerWidget {
                           'viven solo aquí: sin cuentas ni claves. Sin red la app sigue '
                           'igual y acepta tasas manuales.',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 13.5,
                             height: 1.45,
                             color: scheme.onSurfaceVariant,
                           ),
@@ -516,7 +515,7 @@ class _SlidePais extends ConsumerWidget {
               Text(
                 '¿Desde dónde miras las tasas?',
                 style: VeText.displayNum(
-                  24,
+                  30,
                   color: scheme.onSurface,
                   weight: FontWeight.w700,
                 ),
@@ -524,14 +523,14 @@ class _SlidePais extends ConsumerWidget {
               const SizedBox(height: 4),
               Text(
                 'Define el tablero protagonista.',
-                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(height: 6),
               Text(
                 'Lo puedes cambiar en Ajustes cuando quieras. Al tocar «Comenzar» '
                 'verás el tutorial completo de la app.',
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   height: 1.45,
                   color: scheme.onSurfaceVariant,
                 ),
@@ -645,7 +644,7 @@ class _CountryChip extends ConsumerWidget {
               country.label,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 12.5,
+                fontSize: 13.5,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 color: selected ? shad.background : scheme.onSurface,
               ),
@@ -690,7 +689,7 @@ class _WelcomeBullet extends ConsumerWidget {
                   title,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     color: scheme.onSurface,
                   ),
@@ -700,7 +699,7 @@ class _WelcomeBullet extends ConsumerWidget {
                   body,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     height: 1.4,
                     color: scheme.onSurfaceVariant,
                   ),

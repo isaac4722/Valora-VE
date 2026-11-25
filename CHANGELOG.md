@@ -1,5 +1,48 @@
 # Changelog
 
+## v28 — Reglas globales del dueño: tipografía, envío y sin sobrecapas · Inicio como equivalencia · Tasas en secciones
+
+Ciclo EGM completo (Goldfish → Elephant) sobre el encargo del dueño en la
+rama `v1.1.0-dp4-paridad`. Registro detallado en `HALLAZGOS_v28.md`.
+
+- **Tipografía de 4 tamaños** (`VeType`, core/theme.dart): caption 11 · body
+  13.5 · title 17 · display 30. Barrido completo de `lib/` (47 archivos): el
+  inventario final es EXACTAMENTE esos 4 valores. Piso de `labelCaps` subido
+  a 11.
+- **Cero recortes «…»**: los 85 `TextOverflow.ellipsis` se resolvieron sin
+  segunda línea — `FittedBox(scaleDown)` para datos dinámicos (el texto
+  escala, nunca se corta) y textos cortados corregidos a mano en
+  `DefaultTextStyle`.
+- **Moneda: símbolo SIEMPRE después del número**: `fmtCurrency` produce
+  «915,38 $» / «10.000,00 Bs»; el Conversor mueve el símbolo tras el monto.
+  Punto=miles, coma=decimales (es-VE ya nativo). +3 tests en `fmt_test`.
+- **Dos vías de envío**: COMPARTIR solo archivos (PNG/JPEG/PDF, jamás con
+  texto: el menú del sistema ya no ofrece «enviar texto») y COPIAR para todo
+  texto. `export_sheet.dart` reescrito (`ExportKind`/`ExportMode`); Pago
+  Móvil queda con «Copiar mensaje»; ticket viaja sin texto.
+- **Interfaz**: iconos PERFECTAMENTE centrados en su caja (`VeIconBtn`
+  Stack center; bug topStart) y del tamaño de su letra (sm 11 · md 13.5 ·
+  lg 17); ghost y secondary delineados (nada de texto-plano clicable);
+  chevron en toda fila de tasa; **cero sobrecapas**: 3 PopupMenu fuera
+  (acciones inline / hoja inferior), tips contextuales y tour automático
+  desactivados (la guía vive en la descripción de cada sección).
+- **Inicio**: tarjeta de equivalencia **«1 USD = 922,5637 Bs»** (el «=» como
+  pieza gráfica en tinta primaria) — sin gráfica, sin paralelo, sin brecha:
+  UNA sola moneda (fuente activa del país, BCV por defecto, configurable en
+  Ajustes). Nombre de tasa en UNA forma («BCV · Oficial»; «Oficial» siempre).
+  Composición `VS | ▲/▼ % ayer`.
+- **Tasas**: secciones con jerarquía completa — TÍTULO (bandera + «USD ·
+  Dólar»), DESCRIPCIÓN de una línea, DETALLES (filas) y ACCIÓN («Configurar
+  fuentes»); separadas por espacio en blanco + hairline, sin cajas dentro de
+  cajas; «Tus tasas» gana su propia sección.
+- **Herramientas (Fase 2)**: skills `flutter-unslop`, `unbland`,
+  `anti-slop-design` instaladas en `.agents/skills/` (skills-lock.json
+  actualizado); REA CLI 6.10.1 operativa; EGM aplicado de punta a punta.
+- **Tests**: 329/329 verdes; `rate_sheet_test`, `custom_rates_test`,
+  `tips_test` y `widgets_test` actualizados al contrato v28 (estructura
+  nueva, intención protectora intacta). Gate visual web (Inicio, Tasas,
+  Conversor) sin recortes ni overlays.
+
 ## v27.3 — Modo Cachea (Cashea) en la Lista + GUI: botones centrados, bordes y teclado
 
 Corrección del encargo anterior: el «Modo Caché» se retira. Lo que el dueño

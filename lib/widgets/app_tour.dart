@@ -275,19 +275,19 @@ Future<void> markTourDone(SharedPreferences prefs) =>
 /// Dispara el tour UNA vez por instalación (marca antes de mostrar: si algo
 /// interrumpe, no vuelve a molestar). Tolerante: sin Provider de prefs
 /// (tests/previews) es no-op.
+///
+/// v28 (regla del dueño «sin sobrecapas»): el tour AUTOMÁTICO queda
+/// desactivado — era una capa superpuesta sobre el contenido al abrir la
+/// app. La orientación vive en la descripción de cada sección y en la
+/// bienvenida (pantalla completa, no overlay).
 Future<void> maybeRunTourOnce(BuildContext context, WidgetRef ref) async {
-  final SharedPreferences prefs;
   try {
-    prefs = ref.read(sharedPreferencesProvider);
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool(kTourDoneKey, true);
   } catch (_) {
-    // Harness parcial sin override de prefs (mismo trato que el
-    // ProviderNotFoundException del mundo provider): no-op.
-    return;
+    // Sin prefs (tests/previews): no-op igual.
   }
-  if (isTourDone(prefs)) return;
-  await markTourDone(prefs);
-  if (!context.mounted) return;
-  await runAppTour(context);
+  return;
 }
 
 /// Guard anti-reentrada: jamás dos overlays a la vez (la lección de las

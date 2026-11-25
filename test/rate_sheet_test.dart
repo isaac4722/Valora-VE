@@ -84,9 +84,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
-    // Encabezados de grupo: USD y EUR (banderas + código).
-    expect(find.text('USD'), findsWidgets); // héroe + encabezado de grupo
-    expect(find.text('EUR'), findsOneWidget);
+    // Encabezados de sección (v28): bandera + «USD · Dólar» / «EUR · Euro».
+    expect(find.text('USD · Dólar'), findsOneWidget);
+    expect(find.text('EUR · Euro'), findsOneWidget);
     // Filas: nombre de la fuente + precio con símbolo de la divisa quote.
     expect(find.text('BCV'), findsWidgets); // héroe + fila
     expect(find.text('Paralelo'), findsWidgets);

@@ -6,7 +6,6 @@
 ///
 /// Piezas:
 /// · [RateTile]: la fila reutilizable (Inicio · hoja · donde haga falta).
-/// · [RateGroupHeader]: encabezado «USD» / «EUR» de la lista agrupada.
 /// · [showRateSheet]: hoja modal con las fuentes de UNA divisa (conversor,
 ///   Lista, Ajustes). La fila Manual abre el editor INLINE: la tasa manual
 ///   se fija desde cualquier pantalla, sin ir a Ajustes (encargo del dueño).
@@ -102,9 +101,8 @@ class RateTile extends ConsumerWidget {
                       Row(
                         children: <Widget>[
                           Flexible(
-                            child: Text(
+                            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                               s.edgeName,
-                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w800,
@@ -112,7 +110,7 @@ class RateTile extends ConsumerWidget {
                                     ? scheme.onSurface
                                     : scheme.onSurfaceVariant,
                               ),
-                            ),
+                            )),
                           ),
                           if (selected) ...<Widget>[
                             const SizedBox(width: 6),
@@ -139,7 +137,7 @@ class RateTile extends ConsumerWidget {
                           SourceSeal(s.category),
                           const SizedBox(width: 6),
                           Expanded(
-                            child: Text(
+                            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                               has
                                   ? (freshness ?? s.detail)
                                   : (s.category == SourceCategory.manual
@@ -149,16 +147,15 @@ class RateTile extends ConsumerWidget {
                                         ? 'Fija tu tasa con el lápiz'
                                         : 'Sin tasa aún para esta fuente'),
                               maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 10.5,
+                                fontSize: 11,
                                 color: has
                                     ? scheme.onSurfaceVariant
                                     : scheme.onSurfaceVariant.withValues(
                                         alpha: 0.8,
                                       ),
                               ),
-                            ),
+                            )),
                           ),
                         ],
                       ),
@@ -185,7 +182,7 @@ class RateTile extends ConsumerWidget {
                     Text(
                       s.quote.symbol,
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: ink,
                       ),
@@ -209,7 +206,7 @@ class RateTile extends ConsumerWidget {
                         child: Center(
                           child: Icon(
                             Icons.edit_outlined,
-                            size: 15,
+                            size: 17,
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
@@ -217,58 +214,22 @@ class RateTile extends ConsumerWidget {
                     ),
                   ),
                 ] else
-                  const SizedBox(width: 8),
+                  // v28 · affordance visible: chevron al final de TODA fila
+                  // clicable — nunca parece texto plano (orden del dueño).
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      size: 17,
+                      color: scheme.onSurfaceVariant.withValues(
+                        alpha: has ? 0.7 : 0.35,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Encabezado de grupo de la lista de cotización: bandera + código + regla.
-class RateGroupHeader extends ConsumerWidget {
-  const RateGroupHeader(this.currency, {super.key, this.hint});
-
-  final Currency currency;
-
-  /// Pista del grupo (p. ej. «1 USD = X», «aristas del euro»).
-  final String? hint;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 6, left: 10, right: 10),
-      child: Row(
-        children: <Widget>[
-          Flag(currency, size: 16),
-          const SizedBox(width: 7),
-          Text(
-            currency.code,
-            style: TextStyle(
-              fontFamily: 'SpaceGrotesk',
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.1,
-              color: scheme.onSurface,
-            ),
-          ),
-          if (hint != null) ...<Widget>[
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                hint!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-              ),
-            ),
-          ],
-          const SizedBox(width: 8),
-          const Expanded(child: Divider(height: 1)),
-        ],
       ),
     );
   }
@@ -407,7 +368,7 @@ class _ManualRateDialogState extends ConsumerState<_ManualRateDialog> {
             'Tu tasa vive solo en este teléfono y entra al cálculo al '
             'momento. No necesita conexión.',
             style: TextStyle(
-              fontSize: 11.5,
+              fontSize: 11,
               height: 1.4,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),

@@ -39,7 +39,7 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
                 Text(
                   'Guarda tus datos de cobro una vez y comparte el Pago Móvil desde el Conversor. Todo queda en este teléfono.',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     height: 1.4,
                     color: scheme.onSurfaceVariant,
                   ),
@@ -66,7 +66,7 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
                     dense: true,
                     title: const Text(
                       'Pedir huella para ver mis cuentas',
-                      style: TextStyle(fontSize: 13),
+                      style: TextStyle(fontSize: 13.5),
                     ),
                     subtitle: Text(
                       'Opcional. El candado de la app ya protege todo.',
@@ -103,7 +103,7 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
                         Text(
                           'Tus cuentas están bajo huella',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w600,
                             color: scheme.onSurface,
                           ),
@@ -340,14 +340,14 @@ class _EmptyAccounts extends ConsumerWidget {
           const SizedBox(height: 10),
           Text(
             'Aún no tienes cuentas',
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 3),
           Text(
             'Guarda tu banco, número, cédula y teléfono una vez. El Conversor '
             'arma el mensaje de cobro por ti.',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               height: 1.4,
               color: scheme.onSurfaceVariant,
             ),
@@ -390,61 +390,56 @@ class _AccountTile extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                   account.displayLabel,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                   ),
-                ),
+                )),
                 if (account.holderName.trim().isNotEmpty) ...[
                   const SizedBox(height: 2),
-                  Text(
+                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     account.holderName,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 11,
                       color: scheme.onSurfaceVariant,
                     ),
-                  ),
+                  )),
                 ],
                 const SizedBox(height: 2),
-                Text(
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                   '${account.bank} · ${account.typeLabel}',
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     color: scheme.onSurfaceVariant,
                   ),
-                ),
-                Text(
+                )),
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                   'N.º ${account.number}',
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     fontFeatures: const [FontFeature.tabularFigures()],
                     color: scheme.onSurfaceVariant,
                   ),
-                ),
+                )),
                 if (account.docId.isNotEmpty || account.phone.isNotEmpty)
-                  Text(
+                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     [
                       if (account.docId.isNotEmpty) 'CI ${account.docId}',
                       if (account.phone.isNotEmpty) 'Tel. ${account.phone}',
                     ].join(' · '),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
                       fontFeatures: const [FontFeature.tabularFigures()],
                       color: scheme.onSurfaceVariant,
                     ),
-                  ),
+                  )),
               ],
             ),
           ),
@@ -470,31 +465,35 @@ class _AccountTile extends ConsumerWidget {
                   : () => store.setDefaultAccount(account.id),
             ),
           ),
-          PopupMenuButton<String>(
-            tooltip: 'Más acciones',
-            iconSize: 18,
-            onSelected: (v) {
-              if (v == 'copy') {
-                final text = [
-                  account.displayLabel,
-                  '${account.bank} · ${account.typeLabel}',
-                  'N.º ${account.number}',
-                  if (account.docId.isNotEmpty) 'CI ${account.docId}',
-                  if (account.phone.isNotEmpty) 'Tel. ${account.phone}',
-                ].join('\n');
-                copiarAlPortapapeles(
-                  context,
-                  text,
-                  'Datos de la cuenta copiados',
-                );
-              } else if (v == 'delete') {
-                store.removeAccount(account.id);
-              }
+          // v28 · acciones INLINE (sin menú flotante): copiar y borrar son
+          // botones de icono identificables al lado de la cuenta.
+          VeIconBtn(
+            icon: Icons.copy_rounded,
+            label: 'Copiar datos de la cuenta',
+            size: 32,
+            iconSize: 13.5,
+            onTap: () {
+              final text = [
+                account.displayLabel,
+                '${account.bank} · ${account.typeLabel}',
+                'N.º ${account.number}',
+                if (account.docId.isNotEmpty) 'CI ${account.docId}',
+                if (account.phone.isNotEmpty) 'Tel. ${account.phone}',
+              ].join('\n');
+              copiarAlPortapapeles(
+                context,
+                text,
+                'Datos de la cuenta copiados',
+              );
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'copy', child: Text('Copiar datos')),
-              PopupMenuItem(value: 'delete', child: Text('Borrar cuenta')),
-            ],
+          ),
+          VeIconBtn(
+            icon: Icons.delete_outline_rounded,
+            label: 'Borrar cuenta',
+            size: 32,
+            iconSize: 13.5,
+            danger: true,
+            onTap: () => store.removeAccount(account.id),
           ),
         ],
       ),

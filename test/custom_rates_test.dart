@@ -203,8 +203,8 @@ void main() {
       );
       store.addCustomRate('Zelle', 46.4);
       await pumpRates(tester);
-      // Grupo «TUS TASAS» con el nombre y la brecha (46,4/40 − 1 = +16,0 %).
-      expect(find.text('TUS TASAS'), findsOneWidget);
+      // Sección «Tus tasas» (v28) con el nombre y la brecha (46,4/40 − 1 = +16,0 %).
+      expect(find.text('Tus tasas'), findsOneWidget);
       expect(find.text('Zelle'), findsOneWidget);
       expect(find.text('+16,0 % vs BCV'), findsOneWidget);
       // Tocar la fila aplica por el mecanismo manual y la activa.

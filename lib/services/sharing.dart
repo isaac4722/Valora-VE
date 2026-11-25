@@ -17,16 +17,19 @@ import 'package:share_plus/share_plus.dart';
 import '../core/currencies.dart';
 import '../core/fmt.dart';
 import '../data/store.dart';
+import '../widgets/ui.dart';
 import 'sharing_io.dart'
     if (dart.library.html) 'sharing_io_stub.dart' as io_impl;
 
-/// Comparte el texto de totales de la Lista (shareTotals del web).
-Future<void> shareTotalsText(
+/// Copia el texto de totales de la Lista al PORTAPAPELES (v28 · regla del
+/// dueño: el texto se COPIA, nunca se comparte; Compartir es solo para
+/// imágenes — ver export_sheet.dart).
+void copyTotalsText(
   BuildContext context,
   AppStore store,
   ({double usd, Map<Currency, double> byCurrency, int units}) totals, {
   RateContext? ctx,
-}) async {
+}) {
   final lines = <String>['Mi lista de compras — ValoraVE', ''];
   for (final item in store.cart) {
     lines.add(
@@ -39,7 +42,7 @@ Future<void> shareTotalsText(
     lines.add('Subtotal ${e.key.code}: ${fmtMoney(e.value, e.key)}');
   }
   lines.add('Total USD: ${fmtUSD(totals.usd)}');
-  await SharePlus.instance.share(ShareParams(text: lines.join('\n')));
+  copiarAlPortapapeles(context, lines.join('\n'), 'Lista copiada');
 }
 
 /// Captura un widget (RepaintBoundary) a PNG bytes 1080 px de ancho.
@@ -138,32 +141,13 @@ Future<Uint8List?> renderOffstagePng(
   }
 }
 
-/// Comparte PNG por WebShare nativo de Android.
+/// Comparte PNG por WebShare nativo de Android. SOLO el archivo viaja al
+/// share nativo (v28): sin texto, el menú del sistema nunca ofrece
+/// «enviar texto» — Compartir es para imágenes.
 Future<void> sharePng(Uint8List bytes, String name) async {
   await SharePlus.instance.share(
     ShareParams(
       files: [XFile.fromData(bytes, name: name, mimeType: 'image/png')],
-    ),
-  );
-}
-
-/// Comparte un archivo de texto (CSV/JSON) con nombre sugerido.
-Future<void> showShareFile(BuildContext context, String name, String text) =>
-    shareFile(name, text);
-
-/// Comparte un archivo de texto SIN contexto (v19.8: el componente unificado
-/// de exportación ejecuta fuera del árbol de widgets).
-Future<void> shareFile(String name, String text) async {
-  await SharePlus.instance.share(
-    ShareParams(
-      text: 'ValoraVE · $name',
-      files: [
-        XFile.fromData(
-          Uint8List.fromList(utf8.encode('\ufeff$text')),
-          name: name,
-          mimeType: name.endsWith('.json') ? 'application/json' : 'text/csv',
-        ),
-      ],
     ),
   );
 }

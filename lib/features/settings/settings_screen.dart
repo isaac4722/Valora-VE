@@ -67,7 +67,7 @@ class SettingsScreen extends ConsumerWidget {
             Text(
               'Ajustes',
               style: VeText.displayNum(
-                26,
+                30,
                 color: scheme.onSurface,
                 weight: FontWeight.w600,
               ),
@@ -75,7 +75,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 3),
             Text(
               'La app, a tu manera.',
-              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 6),
             _SettingsGroup(
@@ -213,7 +213,7 @@ class _SettingsGroup extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(2, 18, 2, 2),
           child: Text(
             title.toUpperCase(),
-            style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+            style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
           ),
         ),
         for (final item in items)
@@ -251,15 +251,14 @@ class _SettingsGroup extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
+                          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                             item.value,
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 11,
                               color: scheme.onSurfaceVariant,
                             ),
-                          ),
+                          )),
                         ],
                       ),
                     ),
@@ -331,7 +330,7 @@ class SettingsSubpage extends ConsumerWidget {
             Text(
               title,
               style: VeText.displayNum(
-                26,
+                30,
                 color: scheme.onSurface,
                 weight: FontWeight.w600,
               ),
@@ -339,7 +338,7 @@ class SettingsSubpage extends ConsumerWidget {
             const SizedBox(height: 3),
             Text(
               subtitle,
-              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 4),
             child,
@@ -452,7 +451,7 @@ class _AppWidgetsRow extends ConsumerWidget {
                   child: Text(
                     'Añadir un widget',
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -606,7 +605,7 @@ class _DatosConexion extends ConsumerWidget {
                     title: const Text(
                       'No consultar tasas automáticamente',
                       style: TextStyle(
-                        fontSize: 14.5,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -615,7 +614,7 @@ class _DatosConexion extends ConsumerWidget {
                           ? 'Encendido: la app no consulta ninguna API. Todo sale de tu libro y tus tasas manuales.'
                           : 'Apagado: la app consulta las tasas según el intervalo de abajo.',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13.5,
                         height: 1.4,
                         color: scheme.onSurfaceVariant,
                       ),
@@ -625,7 +624,7 @@ class _DatosConexion extends ConsumerWidget {
                   Text(
                     'Intervalo de consulta de tasas',
                     style: VeText.labelCaps(
-                      9.5,
+                      11,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -702,7 +701,7 @@ class _DatosConexion extends ConsumerWidget {
                     trailing: Text(
                       s.sseUrl.isEmpty ? 'Añadir' : 'Editar',
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -714,7 +713,7 @@ class _DatosConexion extends ConsumerWidget {
                   Text(
                     'Las tasas se guardan en tu teléfono y siguen disponibles sin conexión.',
                     style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 11,
                       height: 1.45,
                       color: scheme.onSurfaceVariant,
                     ),
@@ -752,7 +751,7 @@ class _DatosConexion extends ConsumerWidget {
             const Text(
               'La app se suscribe a /api/rates/stream de ese servidor. Si falla '
               'o lo dejas vacío, el ciclo de consulta normal sigue igual.',
-              style: TextStyle(fontSize: 11.5),
+              style: TextStyle(fontSize: 11),
             ),
           ],
         ),

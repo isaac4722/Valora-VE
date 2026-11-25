@@ -696,7 +696,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
           p.category.label.toUpperCase(),
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 10.5,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.84,
             color: scheme.mutedForeground,
@@ -707,7 +707,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
           controller: _nameCtrl,
           style: TextStyle(
             fontFamily: 'SpaceGrotesk',
-            fontSize: 18,
+            fontSize: 17,
             fontWeight: FontWeight.w700,
             color: scheme.foreground,
             height: 1.15,
@@ -738,14 +738,14 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                 p.barcode!,
                 style: TextStyle(
                   fontFamily: 'JetBrainsMono',
-                  fontSize: 10.5,
+                  fontSize: 11,
                   letterSpacing: 0.6,
                   color: scheme.mutedForeground,
                 ),
               ),
             Text(
               presentationLabel(p),
-              style: TextStyle(fontSize: 11.5, color: scheme.mutedForeground),
+              style: TextStyle(fontSize: 11, color: scheme.mutedForeground),
             ),
           ],
         ),
@@ -759,20 +759,19 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
             const SizedBox(width: 7),
             Text(
               'ÚLTIMA TIENDA',
-              style: VeText.labelCaps(9, color: scheme.mutedForeground),
+              style: VeText.labelCaps(11, color: scheme.mutedForeground),
             ),
             const SizedBox(width: 6),
             Expanded(
-              child: Text(
+              child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                 last == null ? '— sin registros' : _storeOf(last),
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   color: scheme.foreground,
                 ),
-                overflow: TextOverflow.ellipsis,
-              ),
+              )),
             ),
           ],
         ),
@@ -809,7 +808,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
           Text(
             _detailsError!,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
               color: ink.neg,
             ),
@@ -835,14 +834,14 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
             children: [
               Text(
                 '—',
-                style: VeText.displayNum(34, color: scheme.mutedForeground),
+                style: VeText.displayNum(30, color: scheme.mutedForeground),
               ),
               const SizedBox(height: 6),
               Text(
                 'Sin datos: regístrale el primer precio abajo.',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   color: scheme.mutedForeground,
                 ),
               ),
@@ -866,9 +865,8 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                         child: Text(
                           'PRECIO VIGENTE',
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: VeText.labelCaps(
-                            9.5,
+                            11,
                             color: scheme.mutedForeground,
                           ),
                         ),
@@ -890,27 +888,26 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       fmtUSD(last.price),
-                      style: VeText.displayNum(34, color: scheme.foreground),
+                      style: VeText.displayNum(30, color: scheme.foreground),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
+                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     '${timeAgo(last.date)} · ${_storeOf(last)}'
                     '${last.currency != 'USD' ? ' · pagó ${fmtMoney(last.originalPrice, CurrencyX.from(last.currency))}' : ''}',
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 12,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                       color: scheme.foreground.withValues(alpha: 0.75),
                     ),
-                  ),
+                  )),
                   if (perUnit != null) ...[
                     const SizedBox(height: 4),
                     Text(
                       '≈ ${fmtUSD(perUnit)} / ${baseUnitLabel(p)}',
-                      style: VeText.displayNum(12.5, color: ink.pos),
+                      style: VeText.displayNum(13.5, color: ink.pos),
                     ),
                   ],
                 ],
@@ -962,7 +959,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
             child: Text(
               '¡Bajo tu meta! El precio quedó por debajo de ${fmtUSD(p.targetPrice!)}',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: sem.pos,
               ),
@@ -999,7 +996,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                 label.toUpperCase(),
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 10.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.84,
                   color: scheme.mutedForeground,
@@ -1010,7 +1007,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                 value,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 15,
+                  fontSize: 17,
                   fontWeight: FontWeight.w600,
                   color: scheme.foreground,
                 ),
@@ -1085,7 +1082,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                     child: Text(
                       'SE REGISTRA CON FECHA DE HOY · ${fmtDate(DateTime.now()).toUpperCase()}',
                       style: VeText.labelCaps(
-                        8.5,
+                        11,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
@@ -1097,7 +1094,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                 Text(
                   _priceError!,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     color: sem.neg,
                   ),
@@ -1116,7 +1113,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                 Text(
                   'Tu meta para este producto: ${fmtUSD(p.targetPrice!)}',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
@@ -1163,11 +1160,10 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Flexible(
-                      child: Text(
+                      child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                         e.key,
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      )),
                     ),
                     if (i == 0) ...[
                       const SizedBox(width: 6),
@@ -1180,7 +1176,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                   fmtUSD(e.value.price),
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     color: i == 0 ? null : scheme.foreground,
                   ),
@@ -1232,7 +1228,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                           child: Text(
                             total == null ? '—' : fmtPct(total),
                             style: VeText.displayNum(
-                              21,
+                              30,
                               color: scheme.onSurface,
                             ),
                           ),
@@ -1258,7 +1254,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                 Text(
                   'Punteada: precio por ${baseUnitLabel(p)} (eje derecho)',
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
@@ -1283,7 +1279,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                               : 'Con un solo registro no hay curva — añade otro precio.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13.5,
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
@@ -1360,6 +1356,8 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
                   children: [
                     Expanded(
                       child: VeRow(
+                        // v28.1 (hallazgo Goldfish): affordance visible.
+                        showChevron: true,
                         label: Text(_recordLabel(r)),
                         right: Text(fmtUSD(r.price)),
                         onTap: () => _editRecord(context, store, p, r),
@@ -1415,7 +1413,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
             children: [
               Text(
                 'CÓDIGO DE BARRAS',
-                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+                style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(height: 6),
               Row(
@@ -1439,7 +1437,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
               const Divider(height: 22),
               Text(
                 'PRESENTACIÓN',
-                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+                style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -1466,7 +1464,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
               const SizedBox(height: 10),
               Text(
                 'CATEGORÍA',
-                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+                style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -1484,7 +1482,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
               const Divider(height: 22),
               Text(
                 'META DE PRECIO (USD)',
-                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+                style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(height: 6),
               MoneyField(
@@ -1522,7 +1520,7 @@ class ProductSheetState extends ConsumerState<ProductSheet> {
               const Divider(height: 22),
               Text(
                 'TIENDA DEL ÚLTIMO REGISTRO',
-                style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+                style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(height: 6),
               Row(
@@ -1723,7 +1721,7 @@ class _NewProductSheetState extends ConsumerState<NewProductSheet> {
         const SizedBox(height: 12),
         Text(
           'CÓDIGO DE BARRAS',
-          style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+          style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 6),
         Row(
@@ -1748,13 +1746,13 @@ class _NewProductSheetState extends ConsumerState<NewProductSheet> {
           const SizedBox(height: 5),
           Text(
             _barcodeWarn!,
-            style: TextStyle(fontSize: 11.5, color: VeColors.of(context).warn),
+            style: TextStyle(fontSize: 11, color: VeColors.of(context).warn),
           ),
         ],
         const SizedBox(height: 14),
         Text(
           'CATEGORÍA',
-          style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+          style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -1772,7 +1770,7 @@ class _NewProductSheetState extends ConsumerState<NewProductSheet> {
         const SizedBox(height: 12),
         Text(
           'PRESENTACIÓN',
-          style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+          style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -1797,7 +1795,7 @@ class _NewProductSheetState extends ConsumerState<NewProductSheet> {
         const SizedBox(height: 14),
         Text(
           'PRIMER PRECIO (OPCIONAL · FECHA DE HOY)',
-          style: VeText.labelCaps(9, color: scheme.onSurfaceVariant),
+          style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 6),
         Row(
@@ -1827,14 +1825,14 @@ class _NewProductSheetState extends ConsumerState<NewProductSheet> {
         const SizedBox(height: 6),
         Text(
           'Sin precio igual se crea: lo añades después desde su ficha.',
-          style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+          style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
         ),
         if (_error != null) ...[
           const SizedBox(height: 6),
           Text(
             _error!,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w600,
               color: VeColors.of(context).neg,
             ),

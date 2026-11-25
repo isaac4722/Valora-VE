@@ -50,7 +50,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                       child: Text(
                         'Permiso de notificaciones',
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -75,7 +75,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                   dense: true,
                   title: const Text(
                     'Picos de tasa',
-                    style: TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13.5),
                   ),
                   subtitle: Text(
                     'Avisa cuando BCV o paralelo se muevan fuerte. 30 min entre avisos.',
@@ -102,7 +102,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                   dense: true,
                   title: const Text(
                     'Meta de tasa BCV',
-                    style: TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13.5),
                   ),
                   subtitle: Text(
                     store.settings.targetBcv == null
@@ -132,7 +132,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                   dense: true,
                   title: const Text(
                     'Meta de tasa paralelo',
-                    style: TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13.5),
                   ),
                   value: store.settings.targetParallel != null,
                   onChanged: (v) async {
@@ -156,7 +156,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                   dense: true,
                   title: const Text(
                     'Recordatorio diario de precios',
-                    style: TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13.5),
                   ),
                   subtitle: Text(
                     alerts.reminderEnabled
@@ -190,7 +190,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                     Expanded(
                       child: Text(
                         'Brecha BCV↔paralelo > ${fmtNum(alerts.gapThreshold, decimals: 0)} %',
-                        style: const TextStyle(fontSize: 12.5),
+                        style: const TextStyle(fontSize: 13.5),
                       ),
                     ),
                     Slider(
@@ -211,7 +211,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                     Expanded(
                       child: Text(
                         'Cambio diario > ${fmtNum(alerts.dailyThreshold, decimals: 0)} %',
-                        style: const TextStyle(fontSize: 12.5),
+                        style: const TextStyle(fontSize: 13.5),
                       ),
                     ),
                     Slider(
@@ -232,7 +232,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                     Expanded(
                       child: Text(
                         'Subida de producto > ${fmtNum(alerts.productRiseThreshold, decimals: 0)} %',
-                        style: const TextStyle(fontSize: 12.5),
+                        style: const TextStyle(fontSize: 13.5),
                       ),
                     ),
                     Slider(
@@ -290,7 +290,7 @@ class _AlertasState extends ConsumerState<_Alertas> {
                 Text(
                   'El permiso de notificaciones se gestiona aquí.',
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),

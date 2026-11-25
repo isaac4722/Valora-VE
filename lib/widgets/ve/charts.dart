@@ -185,16 +185,15 @@ class VeBars extends StatelessWidget {
                       }
                       return Padding(
                         padding: const EdgeInsets.only(top: 5),
-                        child: Text(
+                        child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                           labels[i],
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 10.5,
+                            fontSize: 11,
                             color: scheme.mutedForeground,
                           ),
-                        ),
+                        )),
                       );
                     },
                   ),
@@ -338,23 +337,22 @@ class VeDonut extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
+                          child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                             labels[i],
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 11.5,
+                              fontSize: 11,
                               color: scheme.mutedForeground,
                             ),
-                          ),
+                          )),
                         ),
                         Text(
                           formatValue?.call(data[i]) ??
                               '${total > 0 ? (data[i] / total * 100).toStringAsFixed(0) : 0} %',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 11.5,
+                            fontSize: 11,
                             fontFeatures: const [FontFeature.tabularFigures()],
                             fontWeight: FontWeight.w500,
                             color: scheme.foreground,
@@ -590,7 +588,7 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
                                         widget.yLabel!(value),
                                         style: TextStyle(
                                           fontFamily: 'Inter',
-                                          fontSize: 10,
+                                          fontSize: 11,
                                           fontFeatures: const [
                                             FontFeature.tabularFigures(),
                                           ],
@@ -632,7 +630,7 @@ class _VeTimelineChartState extends State<VeTimelineChart> {
                                       ),
                                       style: TextStyle(
                                         fontFamily: 'Inter',
-                                        fontSize: 10,
+                                        fontSize: 11,
                                         color: scheme.mutedForeground,
                                       ),
                                     ),
@@ -822,7 +820,7 @@ class _Legend extends StatelessWidget {
                     s.name,
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 10,
+                      fontSize: 11,
                       color: scheme.mutedForeground,
                     ),
                   ),

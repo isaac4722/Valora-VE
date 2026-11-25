@@ -68,7 +68,7 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
         child: Text(
           'Agrega productos a la lista para simular una compra.',
-          style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+          style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
         ),
       );
     }
@@ -93,7 +93,7 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
             'Simula una compra con inicial y cuotas quincenales sin '
             'intereses. Solo cálculo: no se procesa ningún pago.',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               height: 1.4,
               color: scheme.onSurfaceVariant,
             ),
@@ -101,7 +101,7 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
           const SizedBox(height: 12),
           Text(
             'TOTAL DE LA COMPRA',
-            style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+            style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 4),
           Text(
@@ -118,12 +118,12 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
             Text(
               '≈ ${fmtUSD(widget.totalUsd)}'
               '${widget.calcCur != Currency.ves && hasBs ? ' · ${fmtMoney(totalBs, Currency.ves)}' : ''}',
-              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
             ),
           const SizedBox(height: 12),
           Text(
             'PAGO INICIAL',
-            style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+            style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 6),
           Wrap(
@@ -141,7 +141,7 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
           const SizedBox(height: 12),
           Text(
             'CUOTAS QUINCENALES',
-            style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+            style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 6),
           Wrap(
@@ -177,7 +177,7 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
                           Text(
                             'Inicial',
                             style: TextStyle(
-                              fontSize: 10.5,
+                              fontSize: 11,
                               color: scheme.onSurfaceVariant,
                             ),
                           ),
@@ -187,7 +187,7 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
                                 ? fmtMoney(initialCalc, widget.calcCur)
                                 : fmtUSD(initialUsd),
                             style: VeText.displayNum(
-                              22,
+                              30,
                               color: scheme.onSurface,
                               weight: FontWeight.w700,
                             ),
@@ -202,7 +202,7 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
                           Text(
                             '$_quotas cuotas de',
                             style: TextStyle(
-                              fontSize: 10.5,
+                              fontSize: 11,
                               color: scheme.onSurfaceVariant,
                             ),
                           ),
@@ -212,7 +212,7 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
                                 ? fmtMoney(quotaCalc, widget.calcCur)
                                 : fmtUSD(quotaUsd),
                             style: VeText.displayNum(
-                              22,
+                              30,
                               color: ink.pos,
                               weight: FontWeight.w700,
                             ),
@@ -228,7 +228,7 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
                     'Inicial ≈ ${fmtMoney(initialUsd * uVes, Currency.ves)} · '
                     'cuota ≈ ${fmtMoney(quotaUsd * uVes, Currency.ves)}',
                     style: TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 11,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -238,7 +238,7 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
                   'Total a pagar: ${hasCalc ? fmtMoney(widget.totalInCalc, widget.calcCur) : fmtUSD(widget.totalUsd)}'
                   ' · ${quote.payments} pagos · 0 % interés',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: scheme.onSurface,
                   ),
@@ -256,7 +256,7 @@ class _CacheaSheetState extends ConsumerState<_CacheaSheet> {
                   'Cashea es una marca de terceros. Simulación informativa; '
                   'no garantiza aprobación.',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     height: 1.35,
                     color: scheme.onSurfaceVariant,
                   ),

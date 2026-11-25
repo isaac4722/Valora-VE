@@ -14,7 +14,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
@@ -396,19 +395,30 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
             icon: Icons.subject_rounded,
             label: 'Texto',
             hint: 'Cifra y tasa listas para pegar en un chat',
-            run: (share) async {
-              await SharePlus.instance.share(ShareParams(text: text));
-              return null;
+            // v28 · TEXTO: se copia (o se guarda); jamás share nativo.
+            kind: ExportKind.texto,
+            run: (mode) async {
+              if (mode == ExportMode.guardar) {
+                final path = await downloadText(
+                  text,
+                  fileName: 'conversion-valorave.txt',
+                );
+                return path == null
+                    ? 'No se pudo guardar.'
+                    : 'Guardado en: $path';
+              }
+              return copiarTexto(text, 'Texto copiado');
             },
           ),
           ExportFormat(
             icon: Icons.image_outlined,
             label: 'Imagen PNG',
             hint: 'Tarjeta de ValoraVE con la conversión',
-            run: (share) async {
+            kind: ExportKind.archivo,
+            run: (mode) async {
               final png = await _renderCard();
               if (png == null) return 'No pude generar la tarjeta';
-              if (share) {
+              if (mode == ExportMode.compartir) {
                 await sharePng(png, 'conversion-valorave.png');
                 return null;
               }
@@ -974,7 +984,7 @@ class _FechaTasas extends ConsumerWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 SizedBox(width: 8),
-                Text('Buscando tasa…', style: TextStyle(fontSize: 12)),
+                Text('Buscando tasa…', style: TextStyle(fontSize: 13.5)),
               ],
             )
           else
@@ -986,18 +996,17 @@ class _FechaTasas extends ConsumerWidget {
                   Icon(Icons.history, size: 15, color: ink.warn),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
+                    child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                       sinDatos
                           ? 'Sin datos ese día. Elige otro en el calendario.'
                           : 'Tasa $periodo',
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w600,
                         color: ink.warn,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    )),
                   ),
                   VeBtn(
                     variant: VeBtnVariant.ghost,
@@ -1074,11 +1083,11 @@ class _DualInput extends ConsumerWidget {
                     const SizedBox(width: 8),
                   ],
                   Expanded(
-                    child: Text.rich(
+                    child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text.rich(
                       TextSpan(
                         text: label,
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                           color: scheme.onSurface,
                         ),
@@ -1086,7 +1095,7 @@ class _DualInput extends ConsumerWidget {
                           TextSpan(
                             text: ' · $frescura',
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w500,
                               color: scheme.onSurfaceVariant,
                             ),
@@ -1094,8 +1103,7 @@ class _DualInput extends ConsumerWidget {
                         ],
                       ),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    )),
                   ),
                   const SizedBox(width: 4),
                   Icon(
@@ -1141,19 +1149,11 @@ class _DualInput extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     // v24.1: el símbolo de la divisa del lado ACTIVO va en tinta plena —
     // feedback de dónde escribirá el pad, sin abrir ningún teclado.
+    // v28 · símbolo SIEMPRE DESPUÉS del número (orden del dueño).
     final activo = driver != 'to';
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          from.symbol,
-          style: VeText.displayNum(
-            24,
-            color: activo ? scheme.onSurface : scheme.onSurfaceVariant,
-            weight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(width: 8),
         Expanded(
           child: MoneyField(
             controller: fromCtrl,
@@ -1161,7 +1161,7 @@ class _DualInput extends ConsumerWidget {
             onTap: () => onDriverTap('from'),
             maxDecimals: 6,
             style: VeText.displayNum(
-              34,
+              30,
               color: scheme.onSurface,
               weight: FontWeight.w600,
             ),
@@ -1171,6 +1171,15 @@ class _DualInput extends ConsumerWidget {
               isCollapsed: true,
               contentPadding: EdgeInsets.symmetric(vertical: 6),
             ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          from.symbol,
+          style: VeText.displayNum(
+            30,
+            color: activo ? scheme.onSurface : scheme.onSurfaceVariant,
+            weight: FontWeight.w600,
           ),
         ),
         const SizedBox(width: 8),
@@ -1194,7 +1203,7 @@ class _DualInput extends ConsumerWidget {
                 onTap: () => onDriverTap('to'),
                 maxDecimals: 6,
                 style: VeText.displayNum(
-                  40,
+                  30,
                   color: ok ? scheme.onSurface : scheme.onSurfaceVariant,
                 ),
                 decoration: InputDecoration(
@@ -1203,7 +1212,7 @@ class _DualInput extends ConsumerWidget {
                   isCollapsed: true,
                   contentPadding: const EdgeInsets.symmetric(vertical: 6),
                   hintStyle: VeText.displayNum(
-                    40,
+                    30,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
@@ -1215,18 +1224,17 @@ class _DualInput extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.only(left: 4, top: 2),
-          child: Text(
+          child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
             ok
                 ? '≈ ${fmtMoneyPrecise(result, to, precision)}'
                 : 'sin tasa para este par',
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: ok ? 12 : 10.5,
+              fontSize: ok ? 13.5 : 11,
               fontWeight: FontWeight.w600,
               color: scheme.onSurfaceVariant,
             ),
-          ),
+          )),
         ),
       ],
     );

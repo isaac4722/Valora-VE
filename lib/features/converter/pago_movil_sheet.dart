@@ -7,7 +7,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/fmt.dart';
 import '../../core/models.dart';
@@ -91,7 +90,7 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
             const SizedBox(height: 10),
             const Text(
               'Agrega tu cuenta y el mensaje sale solo',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
@@ -99,7 +98,7 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
               'el Conversor arma el cobro por ti.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: 13.5,
                 height: 1.4,
                 color: scheme.onSurfaceVariant,
               ),
@@ -131,16 +130,15 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
           // repetía dentro del cuerpo con estilo propio de 16 w700).
           // El monto manda: cifra grande tabular en ReadWindow del sistema.
           ReadWindow(
-            child: Text(
+            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
               'Bs ${fmtNum(widget.montoBs, decimals: 2)}',
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: VeText.displayNum(
                 30,
                 color: scheme.onSurface,
                 weight: FontWeight.w700,
               ),
-            ),
+            )),
           ),
           const SizedBox(height: 10),
           if (widget.accounts.length > 1)
@@ -176,7 +174,7 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
             child: Text(
               msg,
               style: const TextStyle(
-                fontSize: 12.5,
+                fontSize: 13.5,
                 height: 1.5,
                 fontFeatures: [FontFeature.tabularFigures()],
               ),
@@ -199,33 +197,18 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: VeBtn(
-                  variant: VeBtnVariant.secondary,
-                  icon: LucideIcons.copy,
-                  expands: true,
-                  onPressed: () => copiarAlPortapapeles(
-                    context,
-                    msg,
-                    'Mensaje de cobro copiado',
-                  ),
-                  child: const Text('Copiar'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: VeBtn(
-                  variant: VeBtnVariant.primary,
-                  icon: LucideIcons.share2,
-                  expands: true,
-                  onPressed: () =>
-                      SharePlus.instance.share(ShareParams(text: msg)),
-                  child: const Text('Compartir'),
-                ),
-              ),
-            ],
+          // v28 · regla del dueño: el texto se COPIA (Compartir es solo para
+          // imágenes) — un solo botón primario a todo lo ancho.
+          VeBtn(
+            variant: VeBtnVariant.primary,
+            icon: LucideIcons.copy,
+            expands: true,
+            onPressed: () => copiarAlPortapapeles(
+              context,
+              msg,
+              'Mensaje de cobro copiado',
+            ),
+            child: const Text('Copiar mensaje'),
           ),
         ],
       ),

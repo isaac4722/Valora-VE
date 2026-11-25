@@ -89,7 +89,7 @@ class PinShowCard extends StatelessWidget {
                 child: Text(
                   'PIN DE LA SALA',
                   style: VeText.labelCaps(
-                    10.5,
+                    11,
                     color: scheme.mutedForeground,
                     weight: FontWeight.w600,
                   ),
@@ -119,7 +119,7 @@ class PinShowCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
-                  child: Text(e, style: const TextStyle(fontSize: 24)),
+                  child: Text(e, style: const TextStyle(fontSize: 30)),
                 ),
             ],
           ),
@@ -133,7 +133,7 @@ class PinShowCard extends StatelessWidget {
                       'quien invites.',
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 11.5,
+              fontSize: 11,
               height: 1.45,
               color: scheme.mutedForeground,
             ),
@@ -189,7 +189,7 @@ class PinEmojiPad extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   i < chars.length ? chars[i] : '',
-                  style: const TextStyle(fontSize: 22),
+                  style: const TextStyle(fontSize: 30),
                 ),
               ),
           ],

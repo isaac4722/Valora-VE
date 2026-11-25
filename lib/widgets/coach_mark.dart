@@ -275,7 +275,7 @@ class _CoachCardBody extends StatelessWidget {
                   card.segment!,
                   style: TextStyle(
                     fontFamily: 'SpaceGrotesk',
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.1,
                     color: scheme.primary,
@@ -287,7 +287,7 @@ class _CoachCardBody extends StatelessWidget {
               Text(
                 card.stepLabel!,
                 style: TextStyle(
-                  fontSize: 10.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.w700,
                   fontFeatures: const <FontFeature>[
                     FontFeature.tabularFigures(),
@@ -312,13 +312,13 @@ class _CoachCardBody extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           card.title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 6),
         Text(
           card.body,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 13.5,
             height: 1.5,
             color: scheme.onSurfaceVariant,
           ),

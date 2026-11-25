@@ -319,7 +319,7 @@ class _BiometricLockScreen extends StatelessWidget {
               RichText(
                 text: TextSpan(
                   style: VeText.displayNum(
-                    40,
+                    30,
                     color: scheme.onSurface,
                     weight: FontWeight.w700,
                   ),
@@ -338,7 +338,7 @@ class _BiometricLockScreen extends StatelessWidget {
               Text(
                 'Tus datos viven solo aquí',
                 style: TextStyle(
-                  fontSize: 14.5,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w700,
                   color: scheme.onSurface,
                 ),
@@ -348,7 +348,7 @@ class _BiometricLockScreen extends StatelessWidget {
                 'Desbloquea con tu huella o tu PIN de pantalla para entrar.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   height: 1.45,
                   color: scheme.onSurfaceVariant,
                 ),

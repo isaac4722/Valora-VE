@@ -90,7 +90,7 @@ class ConversionShareCard extends StatelessWidget {
                     text: 'Valora',
                     style: TextStyle(
                       fontFamily: 'SpaceGrotesk',
-                      fontSize: 40,
+                      fontSize: 30,
                       fontWeight: FontWeight.w700,
                       color: _ink,
                     ),
@@ -115,7 +115,7 @@ class ConversionShareCard extends StatelessWidget {
                   child: Text(
                     _fecha(),
                     style: const TextStyle(
-                      fontSize: 24,
+                      fontSize: 30,
                       color: _muted,
                       fontWeight: FontWeight.w500,
                     ),
@@ -159,7 +159,7 @@ class ConversionShareCard extends StatelessWidget {
               'POR ${fmtNum(inputAmount, decimals: 2)} ${from.code}',
               style: const TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 27,
+                fontSize: 30,
                 fontWeight: FontWeight.w600,
                 color: _muted,
                 letterSpacing: 1.2,
@@ -173,7 +173,7 @@ class ConversionShareCard extends StatelessWidget {
                 fmtMoney(resultAmount, to),
                 style: const TextStyle(
                   fontFamily: 'SpaceGrotesk',
-                  fontSize: 118,
+                  fontSize: 30,
                   height: 1.04,
                   fontWeight: FontWeight.w700,
                   color: _ink,
@@ -187,7 +187,7 @@ class ConversionShareCard extends StatelessWidget {
               rateLine,
               style: const TextStyle(
                 fontFamily: 'SpaceGrotesk',
-                fontSize: 38,
+                fontSize: 30,
                 fontWeight: FontWeight.w700,
                 color: _ink,
               ),
@@ -195,7 +195,7 @@ class ConversionShareCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Fuente: $sourceLabel',
-              style: const TextStyle(fontSize: 27, color: _muted),
+              style: const TextStyle(fontSize: 30, color: _muted),
             ),
             const Spacer(),
             // Pie: regla + promesa de marca.
@@ -209,7 +209,7 @@ class ConversionShareCard extends StatelessWidget {
                   child: Text(
                     'Tasas y precios, también sin conexión',
                     style: TextStyle(
-                      fontSize: 26,
+                      fontSize: 30,
                       color: _muted,
                       fontWeight: FontWeight.w500,
                     ),
@@ -219,7 +219,7 @@ class ConversionShareCard extends StatelessWidget {
                   'ValoraVE',
                   style: TextStyle(
                     fontFamily: 'SpaceGrotesk',
-                    fontSize: 26,
+                    fontSize: 30,
                     fontWeight: FontWeight.w700,
                     color: _muted,
                   ),

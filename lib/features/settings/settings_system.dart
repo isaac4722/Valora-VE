@@ -38,7 +38,10 @@ class _Respaldo extends StatelessWidget {
                             icon: Icons.data_object,
                             label: 'JSON',
                             hint: 'Todo tu historial en un archivo',
-                            run: (share) async {
+                            // v28 · JSON = TEXTO: se copia o se guarda;
+                            // jamás abre el share nativo.
+                            kind: ExportKind.texto,
+                            run: (mode) async {
                               final name =
                                   'backup-valorave-${SnapshotPoint.dayKey(DateTime.now())}.json';
                               // v20.4: las fotos-archivo viajan en el
@@ -50,17 +53,16 @@ class _Respaldo extends StatelessWidget {
                                   store.data,
                                 ),
                               );
-                              if (share) {
-                                await shareFile(name, text);
-                                return 'Respaldo compartido';
+                              if (mode == ExportMode.guardar) {
+                                final path = await downloadText(
+                                  text,
+                                  fileName: name,
+                                );
+                                return path == null
+                                    ? 'No se pudo guardar el respaldo.'
+                                    : 'Guardado en: $path';
                               }
-                              final path = await downloadText(
-                                text,
-                                fileName: name,
-                              );
-                              return path == null
-                                  ? 'No se pudo guardar el respaldo.'
-                                  : 'Guardado en: $path';
+                              return copiarTexto(text, 'Respaldo copiado');
                             },
                           ),
                         ],
@@ -76,7 +78,7 @@ class _Respaldo extends StatelessWidget {
                         onPressed: () => _import(context, merge: false),
                         child: const Text(
                           'Reemplazar',
-                          style: TextStyle(fontSize: 12.5),
+                          style: TextStyle(fontSize: 13.5),
                         ),
                       ),
                     ),
@@ -86,7 +88,7 @@ class _Respaldo extends StatelessWidget {
                         onPressed: () => _import(context, merge: true),
                         child: const Text(
                           'Fusionar',
-                          style: TextStyle(fontSize: 12.5),
+                          style: TextStyle(fontSize: 13.5),
                         ),
                       ),
                     ),
@@ -104,7 +106,7 @@ class _Respaldo extends StatelessWidget {
                 Text(
                   'Zona peligro',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                     color: VeColors.of(context).neg,
                   ),
@@ -272,7 +274,7 @@ class _TutorialLegal extends StatelessWidget {
                     child: Text(
                       'Tutorial de la app',
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                         color: scheme.onSurface,
                       ),
@@ -287,15 +289,15 @@ class _TutorialLegal extends StatelessWidget {
                     color: scheme.primary,
                   ),
                   title: const Text(
-                    'Ver el tutorial completo',
-                    style: TextStyle(fontSize: 13),
+                    'Tutorial',
+                    style: TextStyle(fontSize: 13.5),
                   ),
                   subtitle: const Text(
-                    'Un recorrido por toda la app, paso a paso.',
+                    'Retirado (v28): sin capas sobre la pantalla. Cada '
+                    'sección de la app se explica sola.',
                     style: TextStyle(fontSize: 11),
                   ),
-                  trailing: const Icon(Icons.play_arrow_rounded, size: 20),
-                  onTap: () => runAppTour(context),
+                  enabled: false,
                 ),
               ],
             ),
@@ -333,7 +335,7 @@ class _TutorialLegal extends StatelessWidget {
                 ),
                 subtitle: const Text(
                   'APK de cada ronda en GitHub Releases.',
-                  style: TextStyle(fontSize: 11.5),
+                  style: TextStyle(fontSize: 11),
                 ),
                 trailing: const Icon(Icons.chevron_right_rounded, size: 20),
                 onTap: () => context.push('/actualizaciones'),
@@ -348,7 +350,7 @@ class _TutorialLegal extends StatelessWidget {
                   ),
                   subtitle: Text(
                     'ValoraVE $kAppVersionVisible · build ${snap.data?.buildNumber} · es-VE · offline-first',
-                    style: const TextStyle(fontSize: 11.5),
+                    style: const TextStyle(fontSize: 11),
                   ),
                 ),
               ),

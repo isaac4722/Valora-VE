@@ -68,7 +68,7 @@ void main() {
   });
 
   group('Disparo en pantalla', () {
-    testWidgets('conversor: muestra UN tip la primera vez y no repite', (
+    testWidgets('v28 · tips retirados: NUNCA aparece un overlay de tip', (
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
@@ -77,8 +77,8 @@ void main() {
       });
       final prefs = await SharedPreferences.getInstance();
       final store = AppStore.withData(const AppData());
-      // TASK-34 (p6): el Conversor usa el kit «Ve» (shadcn_ui) — necesita
-      // ShadTheme en el árbol, como el ShadApp.custom real de main.dart.
+      // TASK-34 (p6): el Conversor usa el kit «Ve» — necesita VeTheme en el
+      // árbol, como el MaterialApp real de main.dart.
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -91,48 +91,15 @@ void main() {
             ),
         ),
       );
-      // El trigger dispara tras el primer frame; el overlay no tiene
-      // animaciones infinitas → algunos frames y aparece.
-      for (
-        var i = 0;
-        i < 20 &&
-            find.text('Escribe en cualquiera de los dos').evaluate().isEmpty;
-        i++
-      ) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-      expect(find.text('Escribe en cualquiera de los dos'), findsOneWidget);
-      expect(find.text('TIP'), findsOneWidget);
-      // Se marcó ANTES de mostrarse: una sola vez por instalación.
-      expect(isTipShown(prefs, 'conversor.inverso'), isTrue);
-      // Entendido cierra.
-      await tester.tap(find.text('Entendido'));
-      for (
-        var i = 0;
-        i < 20 &&
-            find.text('Escribe en cualquiera de los dos').evaluate().isNotEmpty;
-        i++
-      ) {
+      // v28 (regla del dueño «sin sobrecapas»): el motor de tips está
+      // DESACTIVADO — ningún coach mark sobre la pantalla, jamás.
+      for (var i = 0; i < 20; i++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(find.text('Escribe en cualquiera de los dos'), findsNothing);
-      // Re-montar la pantalla NO vuelve a mostrarlo (id ya visto).
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            appStoreProvider.overrideWith((ref) => store, disposeNotifier: false),
-            sharedPreferencesProvider.overrideWithValue(prefs),
-          ],
-          child: MaterialApp(
-              theme: AppTheme.light(),
-              home: const Scaffold(body: ConverterScreen()),
-            ),
-        ),
-      );
-      for (var i = 0; i < 10; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-      expect(find.text('Escribe en cualquiera de los dos'), findsNothing);
+      expect(find.text('TIP'), findsNothing);
+      // El motor apagado no marca el tip como visto.
+      expect(isTipShown(prefs, 'conversor.inverso'), isFalse);
     });
 
     testWidgets('sin SharedPreferences en el árbol → silencio (no explota)', (

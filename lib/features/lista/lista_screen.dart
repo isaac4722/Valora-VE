@@ -476,7 +476,7 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
                         Text(
                           'TOTAL DE LA COMPRA',
                           style: VeText.labelCaps(
-                            9.5,
+                            11,
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
@@ -506,7 +506,7 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
                             // Héroe: cifra 48 tabular (v23.2: escala única
                             // con el Conversor — la de 64 empujaba todo).
                             style: VeText.displayNum(
-                              48,
+                              30,
                               color: scheme.onSurface,
                             ),
                             decimals: smartDecimals(totalInCalc, calcCur),
@@ -710,7 +710,7 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
                                       child: Text(
                                         '¿Quizá quisiste «$suggestion»?',
                                         style: TextStyle(
-                                          fontSize: 12,
+                                          fontSize: 13.5,
                                           fontWeight: FontWeight.w600,
                                           color: scheme.primary,
                                         ),
@@ -800,7 +800,7 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
                           child: Text(
                             'Sin tasa viva para ${calcCur.code} — el total en esa moneda no se calcula.',
                             style: TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: VeColors.of(context).warn,
                             ),
@@ -828,7 +828,7 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
                       Text(
                         '≈ ${fmtUSD(totals.usd)} · ${store.cart.length} ítems',
                         style: TextStyle(
-                          fontSize: 12.5,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w600,
                           color: scheme.onSurfaceVariant,
                         ),
@@ -912,13 +912,13 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
                                       VeBtn(
                                         variant: VeBtnVariant.secondary,
                                         size: VeBtnSize.sm,
-                                        icon: LucideIcons.share2,
-                                        onPressed: () => shareTotalsText(
+                                        icon: LucideIcons.copy,
+                                        onPressed: () => copyTotalsText(
                                           context,
                                           store,
                                           totals,
                                         ),
-                                        child: const Text('Compartir'),
+                                        child: const Text('Copiar'),
                                       ),
                                     ],
                                   ),
@@ -1109,7 +1109,7 @@ class _FuenteChip extends ConsumerWidget {
               Text(
                 current?.edgeName ?? currentId,
                 style: const TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1146,7 +1146,7 @@ class TotalsDoc extends ConsumerWidget {
                   'ValoraVE · Totales',
                   style: TextStyle(
                     fontFamily: 'SpaceGrotesk',
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1165,7 +1165,7 @@ class TotalsDoc extends ConsumerWidget {
           Text(
             'Total USD: ${fmtUSD(totals.usd)}',
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               fontWeight: FontWeight.w700,
               color: scheme.onSurface,
             ),
@@ -1173,7 +1173,7 @@ class TotalsDoc extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             'ValoraVE $kAppVersionVisible · es-VE',
-            style: TextStyle(fontSize: 9, color: scheme.onSurfaceVariant),
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -1194,7 +1194,7 @@ class _TotalsRow extends ConsumerWidget {
         children: [
           Flag(code, size: 15),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 12.5))),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 13.5))),
         ],
       ),
     );
@@ -1266,10 +1266,9 @@ class _CartRow extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                       item.name,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 13.5,
@@ -1288,18 +1287,17 @@ class _CartRow extends ConsumerWidget {
                             ? scheme.mutedForeground.withValues(alpha: 0.75)
                             : scheme.foreground,
                       ),
-                    ),
+                    )),
                     const SizedBox(height: 2),
-                    Text(
+                    FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                       sub,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 11.5,
+                        fontSize: 11,
                         color: muted,
                       ),
-                    ),
+                    )),
                   ],
                 ),
               ),
@@ -1408,7 +1406,7 @@ class _PanelPresupuesto extends ConsumerWidget {
                   'PRESUPUESTO DEL MES',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.84,
                     color: scheme.mutedForeground,
@@ -1430,7 +1428,7 @@ class _PanelPresupuesto extends ConsumerWidget {
                     : ' · sin tope',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   color: scheme.mutedForeground,
                 ),
               ),
@@ -1458,12 +1456,12 @@ class _PanelPresupuesto extends ConsumerWidget {
             children: [
               Expanded(
                 child: budget.amount > 0
-                    ? Text.rich(
+                    ? FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text.rich(
                         TextSpan(
                           text: over ? 'Excedido ' : 'Restan ',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 12.5,
+                            fontSize: 13.5,
                             color: scheme.mutedForeground,
                           ),
                           children: [
@@ -1471,7 +1469,7 @@ class _PanelPresupuesto extends ConsumerWidget {
                               text: u > 0 ? fmtMoney(diffB.abs(), bCur) : '—',
                               style: TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 12.5,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w600,
                                 color: over ? ink.neg : scheme.foreground,
                               ),
@@ -1479,30 +1477,28 @@ class _PanelPresupuesto extends ConsumerWidget {
                           ],
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      )
+                      ))
                     : Text(
                         'Fija tu tope del mes — toca esta tarjeta',
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 12.5,
+                          fontSize: 13.5,
                           color: scheme.mutedForeground,
                         ),
                       ),
               ),
               const SizedBox(width: 8),
               Flexible(
-                child: Text(
+                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                   cartText,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w500,
                     color: ink.pos,
                   ),
-                ),
+                )),
               ),
             ],
           ),
@@ -1525,10 +1521,9 @@ class _PanelPresupuesto extends ConsumerWidget {
                 child: Text(
                   'Cálculos en',
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w600,
                     color: scheme.foreground,
                   ),
@@ -1630,7 +1625,7 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
           'el total del carrito:',
           style: TextStyle(
             fontFamily: 'Inter',
-            fontSize: 12.5,
+            fontSize: 13.5,
             height: 1.45,
             color: scheme.mutedForeground,
           ),
@@ -1649,7 +1644,7 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
             const SizedBox(width: 7),
             const Text(
               'Dentro del presupuesto',
-              style: TextStyle(fontSize: 11.5),
+              style: TextStyle(fontSize: 11),
             ),
           ],
         ),
@@ -1667,7 +1662,7 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
             const SizedBox(width: 7),
             const Text(
               'Cerca del tope (más del 80 %)',
-              style: TextStyle(fontSize: 11.5),
+              style: TextStyle(fontSize: 11),
             ),
           ],
         ),
@@ -1683,7 +1678,7 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
               ),
             ),
             const SizedBox(width: 7),
-            const Text('Te pasaste del tope', style: TextStyle(fontSize: 11.5)),
+            const Text('Te pasaste del tope', style: TextStyle(fontSize: 11)),
           ],
         ),
         const SizedBox(height: 14),
@@ -1777,17 +1772,16 @@ class _RoomHeader extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     title,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 15,
+                      fontSize: 17,
                       fontWeight: FontWeight.w600,
                       color: scheme.foreground,
                     ),
-                  ),
+                  )),
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -1798,18 +1792,17 @@ class _RoomHeader extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       Flexible(
-                        child: Text(
+                        child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                           'Código ${room.code}',
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontFamily: 'JetBrainsMono',
                             fontVariations: [FontVariation('wght', 500)],
-                            fontSize: 12,
+                            fontSize: 13.5,
                             letterSpacing: 1.8,
                             color: scheme.mutedForeground,
                           ),
-                        ),
+                        )),
                       ),
                     ],
                   ),
@@ -1867,7 +1860,7 @@ class _RoomHeader extends ConsumerWidget {
             initials.length > 2 ? initials.substring(0, 2) : initials,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
               color: scheme.foreground,
             ),

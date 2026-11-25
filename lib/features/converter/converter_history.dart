@@ -89,7 +89,7 @@ class _RecientesState extends ConsumerState<_Recientes> {
                     Flexible(
                       child: VeNum(
                         fmtNum(r.amount, decimals: 2),
-                        style: const TextStyle(fontSize: 12.5),
+                        style: const TextStyle(fontSize: 13.5),
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -254,12 +254,11 @@ class _CalendarioHistoricoState extends ConsumerState<_CalendarioHistorico> {
       children: [
         // v23.3 (pez 2-a P0-1): el título vive en la cabecera del chrome
         // de la hoja (antes se repetía aquí en SpaceGrotesk 15 w800).
-        Text(
+        FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
           'Fuentes: ${widget.sourceLabel}',
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
-        ),
+          style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+        )),
         const SizedBox(height: 12),
         if (_days.isEmpty && _remotosPendientes)
           const Padding(
@@ -272,7 +271,7 @@ class _CalendarioHistoricoState extends ConsumerState<_CalendarioHistorico> {
                   child: CircularProgressIndicator(strokeWidth: 2.4),
                 ),
                 SizedBox(height: 12),
-                Text('Consultando días…', style: TextStyle(fontSize: 12.5)),
+                Text('Consultando días…', style: TextStyle(fontSize: 13.5)),
               ],
             ),
           )
@@ -321,7 +320,7 @@ class _CalendarioHistoricoState extends ConsumerState<_CalendarioHistorico> {
                     child: Text(
                       d,
                       style: VeText.labelCaps(
-                        9.5,
+                        11,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
@@ -399,7 +398,7 @@ class _CalendarioHistoricoState extends ConsumerState<_CalendarioHistorico> {
               child: Text(
                 '$day',
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   fontWeight: elegido || esHoy
                       ? FontWeight.w800
                       : FontWeight.w600,

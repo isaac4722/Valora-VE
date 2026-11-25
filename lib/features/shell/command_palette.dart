@@ -306,7 +306,7 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
                           autofocus: true,
                           onChanged: (v) => setState(() => _query = v),
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 17,
                             color: scheme.onSurface,
                             fontFamily: 'Inter',
                           ),
@@ -391,7 +391,7 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
                       'navegar',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 10.5,
+                        fontSize: 11,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
@@ -402,7 +402,7 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
                       'ejecutar',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 10.5,
+                        fontSize: 11,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
@@ -411,7 +411,7 @@ class _CommandPaletteState extends ConsumerState<_CommandPalette> {
                       '${hits.length} ${hits.length == 1 ? 'resultado' : 'resultados'}',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 10.5,
+                        fontSize: 11,
                         color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
                       ),
                     ),
@@ -456,7 +456,7 @@ class _PaletteRow extends ConsumerWidget {
               // Eyebrow del prototipo: Inter 10.5 w600 con tracking ancho.
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 10.5,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.84,
                 color: scheme.onSurfaceVariant,
@@ -493,27 +493,25 @@ class _PaletteRow extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                             hit.title,
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 13.5,
                               fontWeight: FontWeight.w500,
                               color: shad.foreground,
                             ),
-                          ),
-                          Text(
+                          )),
+                          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                             hit.sub,
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 11.5,
+                              fontSize: 11,
                               color: shad.mutedForeground,
                             ),
-                          ),
+                          )),
                         ],
                       ),
                     ),
@@ -531,7 +529,7 @@ class _PaletteRow extends ConsumerWidget {
                         child: Text(
                           '↵',
                           style: TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: scheme.onSurfaceVariant,
                           ),
@@ -569,7 +567,7 @@ class _KeyHint extends ConsumerWidget {
       child: Text(
         child,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: 11,
           fontWeight: FontWeight.w700,
           color: scheme.onSurfaceVariant,
           fontFamily: 'Inter',

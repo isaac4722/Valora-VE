@@ -195,4 +195,16 @@ void main() {
       expect(presentationLabel(p), '2 L');
     });
   });
+
+  group('Moneda: símbolo SIEMPRE después del número (v28 · orden del dueño)', () {
+    test('USD: «915,38 \$»', () {
+      expect(fmtCurrency(915.38, Currency.usd), '915,38 \$');
+    });
+    test('Bs: «10.000,00 Bs» — punto de miles, coma decimal', () {
+      expect(fmtCurrency(10000, Currency.ves), '10.000,00 Bs');
+    });
+    test('COP 0 decimales: «4.200.000 COP»', () {
+      expect(fmtCurrency(4200000, Currency.cop), '4.200.000 COP');
+    });
+  });
 }

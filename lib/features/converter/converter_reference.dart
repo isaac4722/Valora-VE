@@ -5,7 +5,7 @@
 part of 'converter_screen.dart';
 
 /// Encabezado de sección en el lenguaje del prototipo (TASK-34 · p6):
-/// eyebrow caps 10.5 px con la acción de texto a la derecha. Reemplaza a
+/// eyebrow caps 11 px con la acción de texto a la derecha. Reemplaza a
 /// [SectionTitle] en el conversor conservando el texto en MAYÚSCULAS que
 /// los tests y el tour esperan ver.
 class _SectionEyebrow extends StatelessWidget {
@@ -146,7 +146,7 @@ class _TablaMontos extends StatelessWidget {
                             h,
                             textAlign: i == 0 ? TextAlign.left : TextAlign.right,
                             style: TextStyle(
-                              fontSize: 10.5,
+                              fontSize: 11,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.84,
                               color: scheme.onSurfaceVariant,
@@ -178,7 +178,7 @@ class _TablaMontos extends StatelessWidget {
                     onTap: onAmount == null ? null : () => onAmount!(a),
                     label: VeNum(
                       fmtMoney(a, from),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
                     ),
                     right: Text(fmtCurrency(ctx.convert(a, from, Currency.ves), Currency.ves)),
                   ),
@@ -213,10 +213,10 @@ class _DualRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         child: Row(
           children: [
-            Expanded(child: VeNum('\$${fmtNum(amount, decimals: 0)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500))),
-            Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum(fmtNum(amount * bcv, decimals: 0), style: const TextStyle(fontSize: 12.5)))),
-            Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum(fmtNum(amount * par, decimals: 0), style: const TextStyle(fontSize: 12.5)))),
-            Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum('${diff >= 0 ? '+' : '−'}${fmtNum(diff.abs(), decimals: 0)}', style: TextStyle(fontSize: 12.5, color: ink.warn)))),
+            Expanded(child: VeNum('\$${fmtNum(amount, decimals: 0)}', style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500))),
+            Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum(fmtNum(amount * bcv, decimals: 0), style: const TextStyle(fontSize: 13.5)))),
+            Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum(fmtNum(amount * par, decimals: 0), style: const TextStyle(fontSize: 13.5)))),
+            Expanded(child: Align(alignment: Alignment.centerRight, child: VeNum('${diff >= 0 ? '+' : '−'}${fmtNum(diff.abs(), decimals: 0)}', style: TextStyle(fontSize: 13.5, color: ink.warn)))),
           ],
         ),
       ),

@@ -197,7 +197,7 @@ class Stamp extends StatelessWidget {
             text.toUpperCase(),
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.6,
               color: c,
@@ -265,29 +265,27 @@ class LedgerRow extends StatelessWidget {
         if (leading != null) ...[leading!, const SizedBox(width: 6)],
         if (dots)
           Flexible(
-            child: Text(
+            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
               label,
               // TASK-33 Linear: etiqueta en peso regular — la cifra manda.
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w500,
                 color: scheme.onSurface,
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
+            )),
           )
         else
           Expanded(
-            child: Text(
+            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
               label,
               // TASK-33 Linear: etiqueta en peso regular — la cifra manda.
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w500,
                 color: scheme.onSurface,
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
+            )),
           ),
         if (dots) ...[
           const SizedBox(width: 6),
@@ -301,7 +299,7 @@ class LedgerRow extends StatelessWidget {
         Text(
           value,
           style: VeText.displayNum(
-            14,
+            13.5,
             color: valueColor ?? scheme.onSurface,
             weight: boldValue ? FontWeight.w700 : FontWeight.w600,
           ),
@@ -399,12 +397,12 @@ class SourceSeal extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 10.5, color: c),
+          Icon(icon, size: 11, color: c),
           const SizedBox(width: 4),
           Text(
             word,
             style: TextStyle(
-              fontSize: 8.5,
+              fontSize: 11,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.6,
               color: c,
@@ -435,7 +433,7 @@ class TrendBadge extends StatelessWidget {
       children: [
         Icon(
           flat ? Icons.remove : (up ? Icons.trending_up : Icons.trending_down),
-          size: dense ? 11 : 13,
+          size: dense ? 11 : 13.5,
           color: c,
         ),
         const SizedBox(width: 3),
@@ -443,7 +441,7 @@ class TrendBadge extends StatelessWidget {
           flat ? 'Igual' : fmtPct(pct),
           style: TextStyle(
             fontFamily: 'SpaceGrotesk',
-            fontSize: dense ? 10.5 : 12,
+            fontSize: dense ? 11 : 13.5,
             fontWeight: FontWeight.w700,
             color: c,
           ),
@@ -494,7 +492,7 @@ class ChipTag extends StatelessWidget {
             label,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 12,
+              fontSize: 13.5,
               fontWeight: FontWeight.w500,
               color: selected
                   ? scheme.surfaceContainerLowest
@@ -602,7 +600,7 @@ class SectionTitle extends StatelessWidget {
               // TASK-33 Linear: rótulo de sección en tinta MUTE — las
               // secciones no compiten con el contenido.
               style: VeText.labelCaps(
-                10.5,
+                11,
                 color: scheme.onSurfaceVariant,
                 weight: FontWeight.w700,
               ),
@@ -619,7 +617,7 @@ class SectionTitle extends StatelessWidget {
               child: Text(
                 actionLabel!,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -655,7 +653,7 @@ class PageHeader extends StatelessWidget {
                   title,
                   style: TextStyle(
                     fontFamily: 'SpaceGrotesk',
-                    fontSize: 19,
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.3,
                     color: scheme.onSurface,
@@ -667,7 +665,7 @@ class PageHeader extends StatelessWidget {
                   Text(
                     hint!,
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 13.5,
                       height: 1.4,
                       color: scheme.onSurfaceVariant,
                     ),
@@ -713,14 +711,14 @@ class EmptyState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
             hint,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               height: 1.45,
               color: scheme.onSurfaceVariant,
             ),
@@ -779,7 +777,7 @@ class LoadingState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
           ),
           if (hint != null) ...[
             const SizedBox(height: 6),
@@ -787,7 +785,7 @@ class LoadingState extends StatelessWidget {
               hint!,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: 13.5,
                 height: 1.45,
                 color: scheme.onSurfaceVariant,
               ),
@@ -835,14 +833,14 @@ class ErrorState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
             hint,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               height: 1.45,
               color: scheme.onSurfaceVariant,
             ),
@@ -893,14 +891,14 @@ class OfflineState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
             hint,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               height: 1.45,
               color: scheme.onSurfaceVariant,
             ),
@@ -1005,11 +1003,10 @@ class StatCard extends StatelessWidget {
                 const SizedBox(width: 5),
               ],
               Expanded(
-                child: Text(
+                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                   label.toUpperCase(),
-                  style: VeText.labelCaps(10, color: scheme.onSurfaceVariant),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
+                )),
               ),
             ],
           ),
@@ -1023,7 +1020,7 @@ class StatCard extends StatelessWidget {
             child: Text(
               value,
               maxLines: 1,
-              style: VeText.displayNum(22, color: scheme.onSurface),
+              style: VeText.displayNum(30, color: scheme.onSurface),
             ),
           ),
           if (sub != null) ...[
@@ -1259,25 +1256,24 @@ class RateBadge extends StatelessWidget {
             // Flexible: en pantallas angostas el nombre achica con ellipsis y
             // la cifra NUNCA se sale del pill.
             Flexible(
-              child: Text(
+              child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                 label,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   color: selected
                       ? scheme.surfaceContainerLowest
                       : scheme.onSurface,
                 ),
-              ),
+              )),
             ),
             if (trailing != null) ...[
               const SizedBox(width: 6),
               Text(
                 trailing!,
                 style: VeText.displayNum(
-                  12.5,
+                  13.5,
                   color: selected
                       ? scheme.surfaceContainerLowest
                       : scheme.onSurface,
@@ -1372,15 +1368,14 @@ class CurrencySelect extends StatelessWidget {
               // Flexible + ellipsis: en espacios ajustados (fila del panel
               // de presupuesto) la pill encoge sin desbordar.
               Flexible(
-                child: Text(
+                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                   value.code,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                   ),
-                ),
+                )),
               ),
               const SizedBox(width: 2),
               Icon(
@@ -1448,7 +1443,7 @@ class _CurrencyTile extends StatelessWidget {
                                 '${fuentes == 1 ? 'fuente' : 'fuentes'} de tasa'
                           : currency.code,
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 11,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
@@ -1459,7 +1454,7 @@ class _CurrencyTile extends StatelessWidget {
               Text(
                 currency.symbol,
                 style: VeText.displayNum(
-                  18,
+                  17,
                   weight: FontWeight.w700,
                   color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
                 ),
@@ -1586,29 +1581,27 @@ class PushScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(
+                          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                             title,
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 15.5,
+                              fontSize: 17,
                               fontWeight: FontWeight.w600,
                               letterSpacing: -0.2,
                               color: scheme.onSurface,
                             ),
-                          ),
+                          )),
                           if (subtitle != null)
-                            Text(
+                            FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                               subtitle!,
                               maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 11.5,
+                                fontSize: 11,
                                 color: scheme.onSurfaceVariant,
                               ),
-                            ),
+                            )),
                         ],
                       ),
                     ),
@@ -1926,7 +1919,7 @@ class VeKeypad extends StatelessWidget {
               k,
               style: TextStyle(
                 fontFamily: 'SpaceGrotesk',
-                fontSize: 22,
+                fontSize: 30,
                 fontWeight: FontWeight.w600,
                 fontFeatures: const [FontFeature.tabularFigures()],
                 color: isTool ? quiet : scheme.onSurface,
@@ -1952,7 +1945,7 @@ class VeKeypad extends StatelessWidget {
 
 /// ─── GapChip (v23 · GUI simple · comparativa CalculaYa) ─────────────────────
 /// Brecha porcentual de una tasa propia contra el BCV: «+12,4 % vs BCV».
-/// Texto tabular 10.5 px; tinta warn cuando la prima supera el 5 %,
+/// Texto tabular 11 px; tinta warn cuando la prima supera el 5 %,
 /// neutral si no (§5: el color SOLO significa). Recibe la brecha ya
 /// calculada; null/nan → el chip NO se pinta (sin BCV no hay brecha
 /// honesta, jamás un «NaN»).
@@ -1977,7 +1970,7 @@ class GapChip extends StatelessWidget {
       '$sign${fmtNum(g.abs(), decimals: 1)} % vs BCV',
       style: TextStyle(
         fontFamily: 'Inter',
-        fontSize: 10.5,
+        fontSize: 11,
         fontWeight: FontWeight.w600,
         fontFeatures: const [FontFeature.tabularFigures()],
         color: hot ? ink.warn : scheme.onSurfaceVariant,
@@ -2031,7 +2024,7 @@ class RateHealthBanner extends StatelessWidget {
                   ? 'Sin conexión — tasas guardadas a la vista'
                   : 'Las tasas no se actualizan hace más de 15 min',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13.5,
                 color: netDown ? sem.manual : sem.warn,
                 fontWeight: FontWeight.w600,
               ),
@@ -2045,7 +2038,7 @@ class RateHealthBanner extends StatelessWidget {
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('Reintentar', style: TextStyle(fontSize: 12)),
+              child: const Text('Reintentar', style: TextStyle(fontSize: 13.5)),
             ),
         ],
       ),
@@ -2194,7 +2187,7 @@ void showToast(
               child: Text(
                 msg,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   height: 1.35,
                   color: toastFg,
@@ -2248,7 +2241,7 @@ class CurrencyTag extends StatelessWidget {
     return Text(
       label,
       style: TextStyle(
-        fontSize: 9,
+        fontSize: 11,
         fontWeight: FontWeight.w800,
         letterSpacing: 0.6,
         color: ink,
@@ -2393,21 +2386,20 @@ class MiniRateCard extends StatelessWidget {
               children: [
                 if (leading != null) ...[leading!, const SizedBox(width: 5)],
                 Flexible(
-                  child: Text(
+                  child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     label,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
                       color: scheme.onSurfaceVariant,
                     ),
-                  ),
+                  )),
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
               value,
-              style: VeText.displayNum(18, color: ink ?? scheme.onSurface),
+              style: VeText.displayNum(17, color: ink ?? scheme.onSurface),
             ),
           ],
         ),
@@ -2450,7 +2442,7 @@ class SectionCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         title!,
-                        style: VeText.labelCaps(10.5, color: scheme.primary),
+                        style: VeText.labelCaps(11, color: scheme.primary),
                       ),
                     ),
                   ...actions,
@@ -2538,7 +2530,7 @@ class Paginator extends StatelessWidget {
               child: Text(
                 'Página $page de $totalPages',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                   color: scheme.onSurfaceVariant,
                 ),
@@ -2628,7 +2620,7 @@ class CategoryLegend extends StatelessWidget {
                 Text(
                   label,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

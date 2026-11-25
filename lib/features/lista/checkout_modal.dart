@@ -437,7 +437,7 @@ class CheckoutModalState extends ConsumerState<CheckoutModal> {
       children: [
         Text(
           '${_cart.length} ítems · ${t.units} unidades · ${t.byCurrency.length} monedas',
-          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 10),
         ReadWindow(
@@ -455,14 +455,14 @@ class CheckoutModalState extends ConsumerState<CheckoutModal> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     '${_calcCur.code} ${fmtMoney(_totalInCalc, _calcCur)}',
-                    style: VeText.displayNum(34, color: scheme.onSurface),
+                    style: VeText.displayNum(30, color: scheme.onSurface),
                   ),
                 ),
               ),
               Text(
                 'Total USD: ${fmtUSD(t.usd)}',
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 11,
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -479,15 +479,14 @@ class CheckoutModalState extends ConsumerState<CheckoutModal> {
               // Expanded + ellipsis: nombre de tienda libre del
               // usuario; con ~45 caracteres desbordaba (fix).
               Expanded(
-                child: Text(
+                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                   entry.key,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                   ),
-                ),
+                )),
               ),
             ],
           ),
@@ -510,7 +509,7 @@ class CheckoutModalState extends ConsumerState<CheckoutModal> {
             alignment: Alignment.centerRight,
             child: Text(
               'Subtotal: ${fmtUSD(_groupUsd(entry.value))}',
-              style: VeText.displayNum(13, color: scheme.onSurface),
+              style: VeText.displayNum(13.5, color: scheme.onSurface),
             ),
           ),
           // Multitienda ON: campo de tienda por ítem. v21.5: el PRIMER
@@ -552,7 +551,7 @@ class CheckoutModalState extends ConsumerState<CheckoutModal> {
                         ? 'Cada ítem se asigna a su tienda.'
                         : 'Una sola tienda para toda la compra.',
                     style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 11,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -648,7 +647,7 @@ class CheckoutModalState extends ConsumerState<CheckoutModal> {
               Text(
                 'Ticket adjunto (~200 KB)',
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 11,
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -791,7 +790,7 @@ class _VueltoState extends ConsumerState<_Vuelto> {
                 'Total a cubrir: ${fmtCurrency(widget.totalInCalc, calcCur)}'
                 '${calcCur != Currency.usd ? ' (${fmtUSD(widget.totals.usd)})' : ''}',
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 11,
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -848,7 +847,7 @@ class _VueltoState extends ConsumerState<_Vuelto> {
                       'Sin tasa viva para ${missing.map((m) => m.code).join(', ')}: '
                       'no puedo convertir ese pago — revisa su fuente en Ajustes.',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w600,
                         color: sem.warn,
                       ),
@@ -862,7 +861,7 @@ class _VueltoState extends ConsumerState<_Vuelto> {
                         ? 'Vuelto: ${fmtCurrency(change, calcCur)}'
                         : 'Faltan: ${fmtCurrency(-change, calcCur)}',
                     style: VeText.displayNum(
-                      22,
+                      30,
                       color: change >= 0 ? sem.pos : sem.neg,
                     ),
                   ),
@@ -870,7 +869,7 @@ class _VueltoState extends ConsumerState<_Vuelto> {
                 Text(
                   'Entregado: ${fmtCurrency(delivered, calcCur)}',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
@@ -965,7 +964,7 @@ class _DividirCuentaPanelState extends ConsumerState<DividirCuentaPanel> {
                   Text(
                     'TOTAL',
                     style: VeText.labelCaps(
-                      10.5,
+                      11,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -975,14 +974,14 @@ class _DividirCuentaPanelState extends ConsumerState<DividirCuentaPanel> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       fmtCurrency(widget.totalInCalc, widget.calcCur),
-                      style: VeText.displayNum(26, color: scheme.onSurface),
+                      style: VeText.displayNum(30, color: scheme.onSurface),
                     ),
                   ),
                   if (widget.calcCur != Currency.usd)
                     Text(
                       '≈ ${fmtUSD(widget.totalUsd)}',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13.5,
                         fontFeatures: const [FontFeature.tabularFigures()],
                         color: scheme.onSurfaceVariant,
                       ),
@@ -996,7 +995,7 @@ class _DividirCuentaPanelState extends ConsumerState<DividirCuentaPanel> {
               children: [
                 Text(
                   'PERSONAS',
-                  style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 6),
                 VeStepper(
@@ -1050,14 +1049,14 @@ class _DividirCuentaPanelState extends ConsumerState<DividirCuentaPanel> {
                   const Text(
                     'Propina ya incluida en el total',
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     'Apágalo si la propina se añade encima del total',
                     style: TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 11,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -1083,14 +1082,14 @@ class _DividirCuentaPanelState extends ConsumerState<DividirCuentaPanel> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Cada quien: ${fmtCurrency(perPerson, widget.calcCur)}',
-                  style: VeText.displayNum(19, color: scheme.onSurface),
+                  style: VeText.displayNum(17, color: scheme.onSurface),
                 ),
               ),
               if (widget.calcCur != Currency.usd)
                 Text(
                   '≈ ${fmtUSD(perPersonUsd)} c/u',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
@@ -1146,7 +1145,7 @@ class _MatchRow extends ConsumerWidget {
             Text(
               '«${item.name}» ya existe en $where',
               style: TextStyle(
-                fontSize: 12.5,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w700,
                 color: sem.warn,
               ),

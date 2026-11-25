@@ -140,7 +140,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
             Text(
               'Más',
               style: VeText.displayNum(
-                26,
+                30,
                 color: scheme.onSurface,
                 weight: FontWeight.w600,
               ),
@@ -148,7 +148,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
             const SizedBox(height: 3),
             Text(
               'Todo lo que no cabe en la barra, a un toque.',
-              style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 14),
             VeInput(
@@ -164,7 +164,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
                 child: Text(
                   'Nada con «${_q.text.trim()}». Prueba con «tasas», «lista» o «cuentas».',
                   style: TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
@@ -176,7 +176,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
                   child: Text(
                     g.title.toUpperCase(),
                     style: VeText.labelCaps(
-                      10.5,
+                      11,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -189,7 +189,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
               child: Text(
                 'ValoraVE $kAppVersionVisible',
                 style: TextStyle(
-                  fontSize: 10.5,
+                  fontSize: 11,
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -280,15 +280,14 @@ class _ModuleRow extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
+                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                     item.body,
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 11,
                       color: scheme.onSurfaceVariant,
                     ),
-                  ),
+                  )),
                 ],
               ),
             ),

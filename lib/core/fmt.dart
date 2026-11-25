@@ -54,12 +54,14 @@ int smartDecimals(double v, Currency c) {
   return c.decimals;
 }
 
-/// Monto de divisa con símbolo: «$ 915,38» · «Bs 10.000,00» · «COP 4.200.000».
+/// Monto de divisa con símbolo SIEMPRE después del número (orden del dueño
+/// v28): «915,38 $» · «10.000,00 Bs» · «4.200.000 COP». Punto = miles,
+/// coma = decimales.
 String fmtCurrency(double v, Currency c, {bool withCode = false}) {
   final dec = smartDecimals(v, c);
   final n = fmtNum(v, decimals: dec);
   final sym = withCode ? c.code : c.symbol;
-  return '$sym $n';
+  return '$n $sym';
 }
 
 /// Alias del web: fmtMoney formatea tal cual sin símbolo.

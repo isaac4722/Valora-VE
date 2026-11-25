@@ -252,7 +252,7 @@ class _ActualizacionesScreenState extends State<ActualizacionesScreen> {
           'actualizaciones descargadas por sí misma (fuera de una tienda). '
           'Se concede una vez en «Instalar apps desconocidas» y de ahí en '
           'adelante las rondas nuevas se instalan directo.',
-          style: TextStyle(height: 1.5, fontSize: 13, color: null),
+          style: TextStyle(height: 1.5, fontSize: 13.5, color: null),
         ),
         actions: [
           TextButton(
@@ -352,31 +352,31 @@ class _ActualizacionesScreenState extends State<ActualizacionesScreen> {
               const SizedBox(width: 8),
               const Text(
                 'Hay una actualización',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
               ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
             'v${r.version!.bonito} · publicada el ${_fecha(r.publicada)}',
-            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
           ),
           if (r.notas.trim().isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(
               'QUÉ TRAE',
-              style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+              style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 4),
             Text(
               notasPlanas(r.notas),
-              style: const TextStyle(fontSize: 12.5, height: 1.5),
+              style: const TextStyle(fontSize: 13.5, height: 1.5),
             ),
           ],
           const SizedBox(height: 12),
           Text(
             _instalador.disponible ? 'DESCARGAR E INSTALAR' : 'DESCARGAR APK',
-            style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
+            style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
           ),
           for (final a in apks)
             _FilaApk(
@@ -409,7 +409,7 @@ class _ActualizacionesScreenState extends State<ActualizacionesScreen> {
               icon: const Icon(Icons.open_in_new_rounded, size: 15),
               label: const Text(
                 'Abrir en GitHub',
-                style: TextStyle(fontSize: 12.5),
+                style: TextStyle(fontSize: 13.5),
               ),
               onPressed: () => _abrir(r.paginaUrl),
             ),
@@ -443,7 +443,7 @@ class _TarjetaVersion extends StatelessWidget {
         children: [
           Text(
             'TU VERSIÓN',
-            style: VeText.labelCaps(9.5, color: scheme.primary),
+            style: VeText.labelCaps(11, color: scheme.primary),
           ),
           const SizedBox(height: 6),
           Text(
@@ -453,14 +453,14 @@ class _TarjetaVersion extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             '$texto · instalada desde el canal dev',
-            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
           Text(
             'Cada ronda de trabajo termina en un APK firmado, adjunto a la '
             'Release del repo. Aquí compruebas si salió una más nueva.',
             style: TextStyle(
-              fontSize: 11.5,
+              fontSize: 11,
               height: 1.45,
               color: scheme.onSurfaceVariant,
             ),
@@ -488,7 +488,7 @@ class _TarjetaCargando extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             'Buscando en GitHub…',
-            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+            style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -519,7 +519,7 @@ class _TarjetaError extends StatelessWidget {
               const SizedBox(width: 8),
               const Text(
                 'No se pudo comprobar',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
               ),
             ],
           ),
@@ -527,7 +527,7 @@ class _TarjetaError extends StatelessWidget {
           Text(
             mensaje,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 13.5,
               height: 1.5,
               color: scheme.onSurfaceVariant,
             ),
@@ -537,7 +537,7 @@ class _TarjetaError extends StatelessWidget {
             width: double.infinity,
             child: FilledButton.icon(
               icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Reintentar', style: TextStyle(fontSize: 12.5)),
+              label: const Text('Reintentar', style: TextStyle(fontSize: 13.5)),
               onPressed: onReintentar,
             ),
           ),
@@ -562,14 +562,14 @@ class _TarjetaSinReleases extends StatelessWidget {
         children: [
           const Text(
             'Aún no hay Releases legibles',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           Text(
             'Cuando CI publique la primera con un tag «v…» (o si las que hay '
             'traen tags que no se saben leer), aparecerá aquí.',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13.5,
               height: 1.5,
               color: scheme.onSurfaceVariant,
             ),
@@ -581,7 +581,7 @@ class _TarjetaSinReleases extends StatelessWidget {
               icon: const Icon(Icons.open_in_new_rounded, size: 15),
               label: const Text(
                 'Ver Releases en GitHub',
-                style: TextStyle(fontSize: 12.5),
+                style: TextStyle(fontSize: 13.5),
               ),
               onPressed: () => alAbrir(
                 'https://github.com/isaac4722/Valora-VE/releases',
@@ -618,7 +618,7 @@ class _TarjetaAlDia extends StatelessWidget {
                 const Text(
                   'Estás al día',
                   style: TextStyle(
-                    fontSize: 14.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -627,7 +627,7 @@ class _TarjetaAlDia extends StatelessWidget {
                   'La Release más reciente del canal es $tag, igual o '
                   'anterior a tu build.',
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     height: 1.4,
                     color: scheme.onSurfaceVariant,
                   ),
@@ -658,7 +658,7 @@ class _TarjetaRecientes extends StatelessWidget {
         children: [
           Text(
             'RELEASES RECIENTES',
-            style: VeText.labelCaps(9.5, color: scheme.primary),
+            style: VeText.labelCaps(11, color: scheme.primary),
           ),
           for (final r in releases.take(5))
             // Material transparente: el ListTile pinta su ripple sobre la
@@ -678,14 +678,14 @@ class _TarjetaRecientes extends StatelessWidget {
                 title: Text(
                   r.tag,
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 subtitle: Text(
                   _fecha(r.publicada),
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
@@ -758,7 +758,7 @@ class _FilaApk extends StatelessWidget {
                   '$pct%',
                   textAlign: TextAlign.right,
                   style: TextStyle(
-                    fontSize: 9.5,
+                    fontSize: 11,
                     fontFeatures: const [FontFeature.tabularFigures()],
                     color: scheme.primary,
                   ),
@@ -806,14 +806,13 @@ class _FilaApk extends StatelessWidget {
         leading: Icon(Icons.android_rounded, size: 19, color: scheme.primary),
         title: Text(
           _rotulo(asset.abi),
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
         ),
-        subtitle: Text(
+        subtitle: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
           subtitulo,
           maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
-        ),
+          style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+        )),
         trailing: trailing,
         onTap: enApp ? alInstalar : alAbrir,
       ),

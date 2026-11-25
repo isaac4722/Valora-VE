@@ -152,7 +152,7 @@ class _AppWidgetsSheet extends ConsumerWidget {
           'Android, no aquí adentro. Míralos tal como quedan y añádelos '
           'en un toque.',
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 13.5,
             height: 1.4,
             color: scheme.onSurfaceVariant,
           ),
@@ -175,7 +175,7 @@ class _AppWidgetsSheet extends ConsumerWidget {
                 'de inicio y arrastra el marco de 2×1 a 4×2, y el '
                 'contenido se recompone solo.',
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 11,
                   height: 1.4,
                   color: scheme.onSurfaceVariant,
                 ),
@@ -228,7 +228,7 @@ class _GalleryEntry extends ConsumerWidget {
                     child: Text(
                       spec.title,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -250,7 +250,7 @@ class _GalleryEntry extends ConsumerWidget {
               Text(
                 spec.description,
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 11,
                   height: 1.35,
                   color: scheme.onSurfaceVariant,
                 ),
@@ -313,10 +313,9 @@ class _AppWidgetPreview extends ConsumerWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                   badge,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF8FA7C4),
                     fontSize: 11,
@@ -324,33 +323,31 @@ class _AppWidgetPreview extends ConsumerWidget {
                     // ≈ letterSpacing 0.1 del layout nativo.
                     letterSpacing: 1.1,
                   ),
-                ),
+                )),
               ),
               Text(
                 hora,
-                style: const TextStyle(color: Color(0xFF5F6672), fontSize: 10),
+                style: const TextStyle(color: Color(0xFF5F6672), fontSize: 11),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(
+          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
             hero,
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Color(0xFFECEEF1),
               fontSize: 30,
               fontWeight: FontWeight.w700,
               height: 1.1,
             ),
-          ),
+          )),
           const SizedBox(height: 4),
-          Text(
+          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
             secondary,
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Color(0xFF9AA1AB), fontSize: 11),
-          ),
+          )),
         ],
       ),
     );

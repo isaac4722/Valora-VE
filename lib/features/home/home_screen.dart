@@ -1,9 +1,10 @@
-/// ─── Inicio (v27 · papel-tinta) ────────────────────────────────────────────
-/// Una pantalla de inicio de verdad: el ojo cae en UNA cifra (la tasa del
-/// día), luego en las cuatro acciones que usa la gente y después en su mes.
-/// Lo demás vive donde tiene sentido: la cotización completa en Tasas, los
-/// módulos secundarios en Más, los ajustes en su hub. Sin acordeones ni
-/// secciones escondidas: cada bloque se explica solo y cabe en 390 px.
+/// ─── Inicio (v28 · equivalencia) ──────────────────────────────────────────
+/// Una pantalla de inicio de verdad: el ojo cae en UNA cifra (la equivalencia
+/// «1 USD = X Bs» de la fuente activa del país — BCV por defecto, cambiable
+/// en Ajustes), luego en las cuatro acciones que usa la gente y después en su
+/// mes. Sin gráfica, sin paralelo en pequeño y sin ningún otro dato en la
+/// tarjeta (v28 · orden del dueño). Cada bloque se explica solo y cabe en
+/// 390 px.
 library;
 
 import 'package:flutter/material.dart';
@@ -16,7 +17,6 @@ import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../core/ve_theme.dart';
-import '../../data/rate_history.dart' show snapshotSeries;
 import '../../state/app_state.dart';
 import '../../widgets/app_router.dart' show kHeroRateKey;
 import '../../widgets/app_tips.dart';
@@ -81,23 +81,21 @@ class _HomeHeader extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                       saludo(DateTime.now()),
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: VeText.displayNum(
-                        24,
+                        30,
                         color: scheme.onSurface,
                         weight: FontWeight.w600,
                       ),
-                    ),
+                    )),
                     const SizedBox(height: 2),
                     Text(
                       'Tu dinero, en orden.',
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13.5,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
@@ -144,8 +142,12 @@ class _HomeHeader extends ConsumerWidget {
   }
 }
 
-/// Tarjeta protagonista: la tasa activa del país, su fuente, la chispa real
-/// de 14 días y dos salidas: convertir o ver la cotización completa.
+/// Tarjeta protagonista (v28 · orden del dueño): UNA sola moneda y su
+/// equivalencia — «1 USD = X Bs» — de la fuente activa del país (BCV por
+/// defecto, configurable en Ajustes → Tasas). Sin gráfica, sin paralelo y
+/// sin ningún otro dato: la conversión, la comparación VS ayer y las dos
+/// salidas (Convertir · Ver tasas). El nombre de la tasa aparece UNA sola
+/// vez y en una sola forma, conservando siempre «Oficial».
 class _RateCard extends ConsumerWidget {
   const _RateCard({required this.poller});
 
@@ -169,14 +171,6 @@ class _RateCard extends ConsumerWidget {
     final double displayRate = e?.rate ?? manualRate;
     final DateTime updatedAt = e?.updatedAt ?? DateTime.now();
 
-    final bool isVe = country == Country.VE;
-    final bcv = isVe ? store.board.sources['ves-bcv']?.rate : null;
-    final parallel = isVe ? store.board.sources['ves-parallel']?.rate : null;
-    final gap =
-        (bcv != null && bcv > 0 && displayRate > 0 && activeId != 'ves-bcv')
-        ? (displayRate / bcv - 1) * 100
-        : null;
-
     final dayKey = SnapshotPoint.dayKey(
       DateTime.now().subtract(const Duration(days: 1)),
     );
@@ -189,24 +183,19 @@ class _RateCard extends ConsumerWidget {
         ? (displayRate / yest.last.rate - 1) * 100
         : null;
 
-    final serie = snapshotSeries(
-      store.snapshots,
-      activeId,
-      14,
-    ).map((p) => p.rate).toList(growable: false);
-
-    final detail =
-        s.detail.toLowerCase().startsWith(
-          '${s.category.label.toLowerCase()} · ',
-        )
-        ? s.detail.substring(s.category.label.length + 3)
-        : s.detail;
+    // Nombre ÚNICO en una línea (v28): «BCV · Oficial» o «Paralelo ·
+    // Mercado» — la categoría entra en la MISMA forma, nunca un segundo
+    // nombre debajo. En oficiales la palabra «Oficial» siempre está. Si el
+    // label ya contiene la palabra de categoría no se duplica.
+    final String nombre = s.label.contains(s.category.label)
+        ? s.label
+        : '${s.label} · ${s.category.label}';
 
     return KeyedSubtree(
       key: TourKeys.cotizacion,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         decoration: BoxDecoration(
           color: scheme.surface,
           border: Border.all(color: context.ve.colorScheme.border),
@@ -215,30 +204,25 @@ class _RateCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Nombre de la tasa (una sola forma) + frescura ──
             Row(
               children: [
-                VeBadge(
-                  tone: switch (s.category) {
-                    SourceCategory.official => VeTone.pos,
-                    SourceCategory.parallel => VeTone.neg,
-                    SourceCategory.mixed => VeTone.warn,
-                    SourceCategory.manual => VeTone.info,
-                  },
-                  child: Text(s.category.label.toUpperCase()),
-                ),
-                const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    s.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurfaceVariant,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      nombre,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 if (poller.loading)
                   const SizedBox(
                     width: 14,
@@ -255,96 +239,103 @@ class _RateCard extends ConsumerWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Semantics(
-                    label:
-                        '1 USD igual a ${fmtRatePrecise(displayRate, precision)} ${country.currency.code}',
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              fmtRatePrecise(displayRate, precision),
-                              key: kHeroRateKey,
-                              maxLines: 1,
-                              style:
-                                  VeText.displayNum(
-                                    42,
-                                    color: scheme.onSurface,
-                                  ).copyWith(
-                                    fontFeatures: const [
-                                      FontFeature.tabularFigures(),
-                                    ],
-                                  ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Text(
-                            'USD',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.6,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ],
+            const SizedBox(height: 18),
+            // ── La equivalencia (héroe): 1 USD = 915,38 Bs ──
+            // El «=» como pieza gráfica en tinta primaria compone la
+            // lectura de conversión: jamás se lee «BCV a 900 USD».
+            Semantics(
+              label:
+                  '1 ${s.base.code} igual a ${fmtRatePrecise(displayRate, precision)} ${s.quote.code}',
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  // Baseline (v28.1 · hallazgo Goldfish): la cifra y el «=»
+                  // de 30 comparten línea de base con «1 USD» y «Bs» de 17 —
+                  // lectura tipográfica firme, sin piezas flotando.
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      '1 ${s.base.code}',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
+                        letterSpacing: 0.2,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '=',
+                      style: VeText.displayNum(
+                        30,
+                        color: scheme.primary,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      fmtRatePrecise(displayRate, precision),
+                      key: kHeroRateKey,
+                      style: VeText.displayNum(30, color: scheme.onSurface),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      s.quote.symbol,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                if (serie.length >= 3)
-                  SizedBox(
-                    width: 84,
-                    height: 38,
-                    child: VeSparkline(
-                      data: serie,
-                      tone: serie.last >= serie.first
-                          ? VeChartTone.pos
-                          : VeChartTone.neg,
-                      height: 38,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              detail.isEmpty ? 'Tasa activa del tablero' : detail,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              ),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 14,
-              runSpacing: 6,
+            // ── Composición VS + porcentaje (vs ayer) ──
+            Row(
               children: [
-                if (parallel != null && parallel > 0)
-                  _MiniStat(
-                    label: 'Paralelo',
-                    value: fmtRatePrecise(parallel, precision),
+                Text(
+                  'VS',
+                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(width: 8),
+                if (vsAyer != null) ...[
+                  Container(
+                    width: 1,
+                    height: 12,
+                    color: scheme.outlineVariant,
                   ),
-                if (gap != null) _MiniStat(label: 'Brecha', value: fmtPct(gap)),
-                if (vsAyer != null)
-                  _MiniStat(
-                    label: 'vs ayer',
-                    value: fmtPct(vsAyer, forceSign: true),
-                    tone: vsAyer >= 0 ? VeTone.pos : VeTone.neg,
+                  const SizedBox(width: 8),
+                  TrendBadge(vsAyer),
+                  const SizedBox(width: 6),
+                  Text(
+                    'ayer',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ] else
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'sin dato del día anterior',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -396,13 +387,13 @@ class _RateEmpty extends ConsumerWidget {
         children: [
           Text(
             'Tasa del día',
-            style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+            style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
           Text(
             poller.loading ? 'Buscando tasas…' : 'Sin tasa todavía',
             style: VeText.displayNum(
-              26,
+              30,
               color: scheme.onSurface,
               weight: FontWeight.w600,
             ),
@@ -412,7 +403,7 @@ class _RateEmpty extends ConsumerWidget {
             poller.offlineNet
                 ? 'Sin red. Pega una tasa manual y sigue trabajando.'
                 : 'Cuando llegue el tablero, la cifra aparece aquí.',
-            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
           Row(
@@ -424,55 +415,21 @@ class _RateEmpty extends ConsumerWidget {
                   child: const Text('Reintentar'),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: VeBtn(
-                  variant: VeBtnVariant.ghost,
-                  onPressed: () =>
-                      editManualRate(context, ref, store, manualId),
-                  child: const Text('Tasa manual'),
+              // v28.1 (hallazgo Goldfish): el botón «Tasa manual» SOLO si la
+              // fuente manual existe para la divisa del país (p. ej. no hay
+              // 'usd-manual' para el país Global).
+              if (RateSource.of(manualId) != null) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: VeBtn(
+                    variant: VeBtnVariant.ghost,
+                    onPressed: () =>
+                        editManualRate(context, ref, store, manualId),
+                    child: const Text('Tasa manual'),
+                  ),
                 ),
-              ),
+              ],
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniStat extends ConsumerWidget {
-  const _MiniStat({required this.label, required this.value, this.tone});
-
-  final String label;
-  final String value;
-  final VeTone? tone;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final ink = VeColors.of(context);
-    final color = switch (tone) {
-      VeTone.pos => ink.pos,
-      VeTone.neg => ink.neg,
-      VeTone.warn => ink.warn,
-      _ => scheme.onSurface,
-    };
-    return Text.rich(
-      TextSpan(
-        children: [
-          TextSpan(
-            text: '$label ',
-            style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
-          ),
-          TextSpan(
-            text: value,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
           ),
         ],
       ),
@@ -559,23 +516,24 @@ class _QuickActionButton extends ConsumerWidget {
                   // v27.3: límite visible en los accesos rápidos, no en toda la UI.
                   border: Border.all(color: context.ve.colorScheme.border),
                 ),
+                // v28.1: icono en la escala title (17) — el tamaño canónico
+                // de iconos de acción, centrado en su caja circular.
                 child: Icon(
                   action.icon,
-                  size: 20,
+                  size: 17,
                   color: context.ve.colorScheme.foreground,
                 ),
               ),
               const SizedBox(height: 7),
-              Text(
+              FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                 action.label,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: scheme.onSurface,
                 ),
-              ),
+              )),
             ],
           ),
         ),
@@ -645,16 +603,15 @@ class _MonthSummary extends ConsumerWidget {
                           ),
                     ),
                     const SizedBox(height: 3),
-                    Text(
+                    FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                       '${purchases.length} ${purchases.length == 1 ? 'compra' : 'compras'}'
                       '${top.isEmpty ? '' : ' · ${top.first.key}'}',
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 11,
                         color: scheme.onSurfaceVariant,
                       ),
-                    ),
+                    )),
                   ],
                 ),
               ),
@@ -679,7 +636,7 @@ class _MonthSummary extends ConsumerWidget {
             const SizedBox(height: 5),
             Text(
               'Presupuesto: ${fmtCurrency(budget, budgetCurrency)}',
-              style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
             ),
           ],
         ],
@@ -739,33 +696,31 @@ class _RecentActivity extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                             (p.store ?? '').trim().isEmpty
                                 ? 'Sin tienda'
                                 : p.store!,
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w600,
                             ),
-                          ),
-                          Text(
+                          )),
+                          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                             '${fmtDate(p.date)} · ${p.items.length} artículos',
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 11,
                               color: scheme.onSurfaceVariant,
                             ),
-                          ),
+                          )),
                         ],
                       ),
                     ),
                     Text(
                       fmtUSD(p.totalUSD),
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
@@ -811,7 +766,7 @@ class _EmptyPanel extends ConsumerWidget {
           const SizedBox(height: 2),
           Text(
             body,
-            style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
           VeBtn(

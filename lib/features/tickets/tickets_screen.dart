@@ -106,7 +106,7 @@ class TicketsScreen extends ConsumerWidget {
                 'La foto se comprime al guardarla y queda atada a su compra del historial.',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 12,
+                  fontSize: 13.5,
                   color: shad.mutedForeground,
                 ),
               ),
@@ -185,7 +185,7 @@ class TicketsScreen extends ConsumerWidget {
                 padding: EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
                   'Solo se listan compras que aún no tienen ticket.',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 12),
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 13.5),
                 ),
               ),
             ],
@@ -391,30 +391,28 @@ class _TicketCardState extends ConsumerState<_TicketCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                         widget.purchase.store?.isNotEmpty == true
                             ? widget.purchase.store!
                             : 'Compra',
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 13,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w600,
                           color: shad.foreground,
                         ),
-                      ),
+                      )),
                       const SizedBox(height: 2),
-                      Text(
+                      FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                         '${fmtDate(widget.purchase.date)} · ${fmtUSD(widget.purchase.totalUSD)}',
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 12,
+                          fontSize: 13.5,
                           color: shad.mutedForeground,
                         ),
-                      ),
+                      )),
                     ],
                   ),
                 ),
@@ -460,7 +458,7 @@ class _AddTile extends ConsumerWidget {
                 'Foto del ticket',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   color: shad.mutedForeground,
                 ),
               ),
@@ -472,7 +470,7 @@ class _AddTile extends ConsumerWidget {
                     'Agregar',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 13,
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                       color: shad.foreground,
                     ),
@@ -481,7 +479,7 @@ class _AddTile extends ConsumerWidget {
                     'Zoom 1–8× al abrir',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 12,
+                      fontSize: 13.5,
                       color: shad.mutedForeground,
                     ),
                   ),
@@ -645,28 +643,26 @@ class _TicketViewerState extends ConsumerState<_TicketViewer> {
           children: [
             // maxLines + ellipsis: fecha larga y tienda libre del usuario
             // envolvían y desbordaban la AppBar de 56 px (fix overflow).
-            Text(
+            FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
               fmtDateLong(p.date),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 14.5,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),
-            ),
+            )),
             if (p.store?.isNotEmpty == true)
-              Text(
+              FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                 p.store!,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 11,
                   color: Colors.white.withValues(alpha: 0.72),
                 ),
-              ),
+              )),
           ],
         ),
         actions: [
@@ -700,7 +696,7 @@ class _TicketViewerState extends ConsumerState<_TicketViewer> {
                           'Esta foto ya no está disponible.',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 12.5,
+                            fontSize: 13.5,
                             color: Colors.white.withValues(alpha: 0.72),
                           ),
                         ),
@@ -727,21 +723,21 @@ class _TicketViewerState extends ConsumerState<_TicketViewer> {
                 Text(
                   'TOTAL PAGADO',
                   style: VeText.labelCaps(
-                    9,
+                    11,
                     color: Colors.white.withValues(alpha: 0.55),
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   '${fmtMoney(p.paidUSD, Currency.usd)} · ${fmtMoney(p.totalBS, Currency.ves)} · 1 USD = ${fmtRate(p.rate)}',
-                  style: VeText.displayNum(16, color: Colors.white),
+                  style: VeText.displayNum(17, color: Colors.white),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Zoom con dos dedos hasta 8× · la compra vive en Historial',
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 10.5,
+                    fontSize: 11,
                     color: Colors.white.withValues(alpha: 0.55),
                   ),
                 ),

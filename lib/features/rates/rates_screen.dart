@@ -72,7 +72,7 @@ class _RatesHeader extends ConsumerWidget {
           Text(
             'Tasas',
             style: VeText.displayNum(
-              26,
+              30,
               color: scheme.onSurface,
               weight: FontWeight.w600,
             ),
@@ -80,7 +80,7 @@ class _RatesHeader extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             'Lo que vale tu dinero hoy, según la fuente que elijas.',
-            style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+            style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -100,15 +100,14 @@ class _ProvidersLine extends ConsumerWidget {
     if (providers.isEmpty && degraded.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Text(
+      child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
         [
           if (providers.isNotEmpty) 'Responden: ${providers.join(' · ')}',
           if (degraded.isNotEmpty) 'Sin respuesta: ${degraded.join(' · ')}',
         ].join('  ·  '),
         maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: 10.5, color: scheme.onSurfaceVariant),
-      ),
+        style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+      )),
     );
   }
 }
@@ -155,17 +154,17 @@ class WeekSpark extends ConsumerWidget {
               Expanded(
                 child: Text(
                   'Últimos 7 días',
-                  style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
                 ),
               ),
               Text(
                 'Ayer ',
-                style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+                style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
               ),
               VeNum(
                 fmtRate(ayer),
                 style: VeText.displayNum(
-                  14,
+                  13.5,
                   color: scheme.onSurface,
                   weight: FontWeight.w600,
                 ),
@@ -255,65 +254,87 @@ class RatesBoard extends ConsumerWidget {
               onAction: () => editManualRate(context, ref, store, manualId),
             )
         else
-          // v25 «HOJA»: SIN tarjeta contenedora — eyebrow + filas planas con
-          // hairlines (filas en tinta, seleccionada sin caja).
+          // v28 · SECCIONES con jerarquía completa (orden del dueño): cada
+          // categoría tiene TÍTULO + DESCRIPCIÓN + DETALLES (filas) +
+          // ACCIONES. Sin cajas ni cajas dentro de cajas: el espacio en
+          // blanco y una hairline separan las secciones.
           Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Grupo USD: todas las fuentes «1 USD = X» ──
-              // v20: hint corto — el largo «· toca para activar» se
-              // truncaba con feo (VLM gate); tocar es descubrible.
-              const RateGroupHeader(Currency.usd, hint: '1 USD = X'),
-              ..._withHairlines(
-                _groupRows(context, ref, store, ctx, [
-                  Currency.ves,
-                  Currency.cop,
-                  Currency.brl,
-                  Currency.mxn,
-                ], country.currency),
+              // ── Sección USD: todas las fuentes «1 USD = X» ──
+              _RateSection(
+                currency: Currency.usd,
+                title: 'USD · ${Currency.usd.label}',
+                description: 'Cuánto vale 1 USD. Toca una fila para usarla.',
+                rows: _withHairlines(
+                  _groupRows(context, ref, store, ctx, [
+                    Currency.ves,
+                    Currency.cop,
+                    Currency.brl,
+                    Currency.mxn,
+                  ], country.currency),
+                ),
+                action: VeBtn(
+                  variant: VeBtnVariant.ghost,
+                  size: VeBtnSize.sm,
+                  icon: LucideIcons.settings2,
+                  onPressed: () => context.push('/ajustes/tasas'),
+                  child: const Text('Configurar fuentes'),
+                ),
               ),
               // ── Tus tasas (v23 · comparativa CalculaYa): tasas propias
               // con nombre y brecha vs BCV; tocar = aplicar (mecanismo
               // manual existente, cero cambios en el core).
               if (customRates.isNotEmpty) ...<Widget>[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
-                  child: Text(
-                    'TUS TASAS',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.76,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
+                _sectionDivider(),
+                _RateSection(
+                  currency: country.currency,
+                  title: 'Tus tasas',
+                  description: 'Tasas propias con nombre; tocar las aplica.',
+                  rows: <Widget>[
+                    for (final (i, r) in customRates.indexed) ...[
+                      if (i > 0)
+                        Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: scheme.outlineVariant.withValues(alpha: 0.65),
+                        ),
+                      _CustomRateRow(
+                        rate: r,
+                        bcv: ctx.rate('ves-bcv'),
+                        selected:
+                            ctx.sel(Currency.ves) == 'ves-manual' &&
+                            (store.data.manualRates['ves-manual'] == r.bsPerUsd),
+                        onTap: () => store.applyCustomRate(r),
+                      ),
+                    ],
+                  ],
                 ),
-                for (final (i, r) in customRates.indexed) ...[
-                  if (i > 0)
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: scheme.outlineVariant.withValues(alpha: 0.65),
-                    ),
-                  _CustomRateRow(
-                    rate: r,
-                    bcv: ctx.rate('ves-bcv'),
-                    selected:
-                        ctx.sel(Currency.ves) == 'ves-manual' &&
-                        (store.data.manualRates['ves-manual'] == r.bsPerUsd),
-                    onTap: () => store.applyCustomRate(r),
-                  ),
-                ],
               ],
-              // ── Grupo EUR: aristas del euro (solo si alguna tiene valor) ──
+              // ── Sección EUR: aristas del euro (solo si alguna tiene valor) ──
               if (_visibleSources(ctx, const [
                 Currency.eur,
               ], country.currency).isNotEmpty) ...<Widget>[
-                const RateGroupHeader(Currency.eur, hint: '1 EUR = X'),
-                ..._withHairlines(
-                  _groupRows(context, ref, store, ctx, const [
-                    Currency.eur,
-                  ], country.currency),
+                _sectionDivider(),
+                _RateSection(
+                  currency: Currency.eur,
+                  title: 'EUR · ${Currency.eur.label}',
+                  description: 'Cuánto vale 1 EUR, arista por arista.',
+                  rows: _withHairlines(
+                    _groupRows(context, ref, store, ctx, const [
+                      Currency.eur,
+                    ], country.currency),
+                  ),
+                  // v28.1 (hallazgo Goldfish): el patrón de 4 partes es
+                  // completo en TODA sección — la acción comparte destino
+                  // con la configuración de fuentes.
+                  action: VeBtn(
+                    variant: VeBtnVariant.ghost,
+                    size: VeBtnSize.sm,
+                    icon: LucideIcons.settings2,
+                    onPressed: () => context.push('/ajustes/tasas'),
+                    child: const Text('Configurar fuentes'),
+                  ),
                 ),
               ],
             ],
@@ -385,6 +406,88 @@ class RatesBoard extends ConsumerWidget {
   }
 }
 
+/// Separador ENTRE secciones (v28): espacio en blanco + hairline + espacio.
+/// La frontera se siente sin dibujar una sola caja.
+Widget _sectionDivider() => const Padding(
+  padding: EdgeInsets.symmetric(vertical: 22),
+  child: Divider(height: 1, thickness: 1),
+);
+
+/// Sección de la cotización (v28 · orden del dueño): las cuatro partes en
+/// orden — TÍTULO (bandera + nombre), DESCRIPCIÓN del título, DETALLES (las
+/// filas con la información importante) y BOTONES DE ACCIÓN. La sección NO
+/// dibuja caja alguna: nada de cajas dentro de cajas; la jerarquía la
+/// construyen la tipografía (título display 17), el espacio y las hairlines.
+class _RateSection extends StatelessWidget {
+  const _RateSection({
+    required this.currency,
+    required this.title,
+    required this.description,
+    required this.rows,
+    this.action,
+  });
+
+  final Currency currency;
+  final String title;
+
+  /// Una frase que dice qué es la sección (una línea, sin recorte).
+  final String description;
+  final List<Widget> rows;
+
+  /// Acciones de la sección (p. ej. «Configurar fuentes»), bajo los detalles.
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Flag(currency, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  style: VeText.displayNum(
+                    17,
+                    color: scheme.onSurface,
+                    weight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            description,
+            maxLines: 1,
+            style: TextStyle(
+              fontSize: 13.5,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...rows,
+        if (action != null) ...[
+          const SizedBox(height: 12),
+          action!,
+        ],
+      ],
+    );
+  }
+}
+
 /// Editor manual inline: guarda y ACTIVA la fuente del país (v27).
 Future<void> editManualRate(
   BuildContext context,
@@ -442,10 +545,9 @@ class _CustomRateRow extends ConsumerWidget {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
+                        child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                           rate.name,
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w700,
@@ -453,7 +555,7 @@ class _CustomRateRow extends ConsumerWidget {
                                 ? scheme.onSurface
                                 : scheme.onSurfaceVariant,
                           ),
-                        ),
+                        )),
                       ),
                       if (selected) ...[
                         const SizedBox(width: 6),
@@ -472,7 +574,7 @@ class _CustomRateRow extends ConsumerWidget {
             Text(
               '${fmtRate(rate.bsPerUsd)} Bs',
               style: VeText.displayNum(
-                15,
+                17,
                 color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
                 weight: FontWeight.w700,
               ),

@@ -16,7 +16,6 @@ import '../../core/models.dart';
 import '../../core/theme.dart';
 import '../../data/rate_history.dart';
 import '../../data/store.dart';
-import '../../services/sharing.dart';
 import '../../widgets/ui.dart';
 import 'insights_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,14 +63,13 @@ class KpiTile extends ConsumerWidget {
                 const SizedBox(width: 6),
               ],
               Expanded(
-                child: Text(
+                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                   label,
                   // 9P·Pantalla: 2 líneas — «Brecha BCV ↔ Paralelo» ya no
                   // se corta con «…» en la columna de 3 KPIs del móvil.
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: VeText.labelCaps(9.5, color: scheme.onSurfaceVariant),
-                ),
+                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
+                )),
               ),
             ],
           ),
@@ -85,22 +83,21 @@ class KpiTile extends ConsumerWidget {
             child: Text(
               value,
               maxLines: 1,
-              style: VeText.displayNum(19, color: c),
+              style: VeText.displayNum(17, color: c),
             ),
           ),
           if (sub != null) ...[
             const SizedBox(height: 4),
-            Text(
+            FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
               sub!,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontSize: 10.5,
+                fontSize: 11,
                 height: 1.35,
                 color: scheme.onSurfaceVariant,
               ),
-            ),
+            )),
           ],
         ],
       ),
@@ -168,7 +165,7 @@ class PanelCard extends ConsumerWidget {
                   title.toUpperCase(),
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.84,
                     color: scheme.onSurfaceVariant,
@@ -237,7 +234,7 @@ class InlineHint extends ConsumerWidget {
               child: Text(
                 text,
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 11,
                   height: 1.4,
                   color: scheme.onSurfaceVariant,
                 ),
@@ -253,7 +250,7 @@ class InlineHint extends ConsumerWidget {
                   ),
                   child: Text(
                     actionLabel!,
-                    style: const TextStyle(fontSize: 12),
+                    style: const TextStyle(fontSize: 13.5),
                   ),
                 ),
               ),
@@ -291,11 +288,11 @@ class TipBox extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(main, style: VeText.displayNum(12, color: fg)),
+          Text(main, style: VeText.displayNum(13.5, color: fg)),
           const SizedBox(height: 1),
           Text(
             sub,
-            style: TextStyle(fontSize: 9.5, color: fg.withValues(alpha: 0.85)),
+            style: TextStyle(fontSize: 11, color: fg.withValues(alpha: 0.85)),
           ),
         ],
       ),
@@ -350,7 +347,7 @@ class ProductosAnchor extends ConsumerWidget {
                           contentPadding: EdgeInsets.zero,
                           title: Text(
                             e.$1.name,
-                            style: const TextStyle(fontSize: 13),
+                            style: const TextStyle(fontSize: 13.5),
                           ),
                           trailing: TrendBadge(e.$2, dense: true),
                         ),
@@ -373,7 +370,7 @@ class ProductosAnchor extends ConsumerWidget {
                           contentPadding: EdgeInsets.zero,
                           title: Text(
                             e.$1.name,
-                            style: const TextStyle(fontSize: 13),
+                            style: const TextStyle(fontSize: 13.5),
                           ),
                           trailing: TrendBadge(e.$2, dense: true),
                         ),
@@ -402,7 +399,7 @@ class ProductosAnchor extends ConsumerWidget {
                         ),
                         title: Text(
                           s.store.isEmpty ? 'Sin tienda' : s.store,
-                          style: const TextStyle(fontSize: 13),
+                          style: const TextStyle(fontSize: 13.5),
                         ),
                         subtitle: Text(
                           '${s.count} compras',
@@ -410,7 +407,7 @@ class ProductosAnchor extends ConsumerWidget {
                         ),
                         trailing: Text(
                           fmtUSD(s.totalUSD),
-                          style: VeText.displayNum(13, color: scheme.onSurface),
+                          style: VeText.displayNum(13.5, color: scheme.onSurface),
                         ),
                       ),
                   ],
@@ -460,7 +457,7 @@ class WeekdayRanking extends ConsumerWidget {
                   child: Text(
                     r.day,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13.5,
                       fontWeight: r.totalUSD == maxTotal && maxTotal > 0
                           ? FontWeight.w800
                           : FontWeight.w500,
@@ -491,7 +488,7 @@ class WeekdayRanking extends ConsumerWidget {
                     alignment: Alignment.centerRight,
                     child: Text(
                       r.totalUSD > 0 ? fmtUSD(r.totalUSD) : '—',
-                      style: VeText.displayNum(11.5, color: scheme.onSurface),
+                      style: VeText.displayNum(11, color: scheme.onSurface),
                     ),
                   ),
                 ),
@@ -501,7 +498,7 @@ class WeekdayRanking extends ConsumerWidget {
                     '${r.count}',
                     textAlign: TextAlign.right,
                     style: TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 11,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -536,7 +533,7 @@ class CurrencyRanking extends ConsumerWidget {
                   width: 44,
                   child: Text(
                     r.currency,
-                    style: VeText.displayNum(12, color: scheme.onSurface),
+                    style: VeText.displayNum(13.5, color: scheme.onSurface),
                   ),
                 ),
                 Expanded(
@@ -544,14 +541,14 @@ class CurrencyRanking extends ConsumerWidget {
                     '${fmtMoney(r.totalOriginal, CurrencyX.from(r.currency))} · '
                     '${r.items} ítem${r.items == 1 ? '' : 's'}',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13.5,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ),
                 Text(
                   '≈ ${fmtUSD(r.totalUSD)}',
-                  style: VeText.displayNum(12, color: scheme.onSurface),
+                  style: VeText.displayNum(13.5, color: scheme.onSurface),
                 ),
               ],
             ),
@@ -700,7 +697,7 @@ class _QtyStepper extends ConsumerWidget {
           child: Text(
             '$qty',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
           ),
         ),
         _miniBtn(icon: Icons.add, onTap: () => onChanged(1)),
@@ -1034,7 +1031,7 @@ class _HistoricaAnchorState extends ConsumerState<HistoricaAnchor> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         fmtDate(DateTime.parse(day)),
-                        style: const TextStyle(fontSize: 12.5),
+                        style: const TextStyle(fontSize: 13.5),
                       ),
                       trailing: FittedBox(
                         fit: BoxFit.scaleDown,
@@ -1047,7 +1044,7 @@ class _HistoricaAnchorState extends ConsumerState<HistoricaAnchor> {
                                 child: Text(
                                   _rateForDay(seriesById[selected[k]]!, day),
                                   style: VeText.displayNum(
-                                    13,
+                                    13.5,
                                     color: multi
                                         ? palette[k % palette.length]
                                         : scheme.onSurface,
@@ -1085,10 +1082,12 @@ class _HistoricaAnchorState extends ConsumerState<HistoricaAnchor> {
                             _rateForDay(seriesById[id]!, day, raw: true),
                         ]);
                       }
-                      showShareFile(
+                      // v28 · CSV = TEXTO: se copia al portapapeles (regla
+                      // del dueño — el share nativo es solo para imágenes).
+                      copiarAlPortapapeles(
                         context,
-                        'valorave-historico${multi ? '-multi' : '-${selected.first}'}.csv',
                         toCSV(rows, delimiter: ';'),
+                        'CSV copiado',
                       );
                     },
             ),
@@ -1173,7 +1172,7 @@ class HeatmapCalendar extends ConsumerWidget {
                 children: [
                   Text(
                     '${fmtMesCorto(m.month).toUpperCase()} ${m.year}',
-                    style: VeText.labelCaps(9.5, color: scheme.primary),
+                    style: VeText.labelCaps(11, color: scheme.primary),
                   ),
                   const SizedBox(height: 6),
                   _monthGrid(context, m, byDay, maxAbs, ink),
@@ -1192,21 +1191,21 @@ class HeatmapCalendar extends ConsumerWidget {
               const SizedBox(width: 4),
               Text(
                 'baja',
-                style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(width: 10),
               _legendBox(context, scheme.surfaceContainerHighest),
               const SizedBox(width: 4),
               Text(
                 'sin datos',
-                style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(width: 10),
               _legendBox(context, ink.neg.withValues(alpha: 0.7)),
               const SizedBox(width: 4),
               Text(
                 'subida · más intenso = mayor cambio',
-                style: TextStyle(fontSize: 10, color: scheme.onSurfaceVariant),
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
               ),
             ],
           ),

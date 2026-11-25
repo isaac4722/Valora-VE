@@ -235,6 +235,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         children: [
                           for (final p in items)
                             VeRow(
+                              // v28.1 (hallazgo Goldfish): affordance
+                              // visible — toda fila clicable lleva chevron.
+                              showChevron: true,
                               semantic:
                                   'Compra en ${p.store ?? 'varias tiendas'} por ${fmtUSD(p.totalUSD)}',
                               onTap: () => _openDetail(context, store, p),
@@ -300,7 +303,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 12,
+                                fontSize: 13.5,
                               ),
                             ),
                           ),
@@ -603,7 +606,7 @@ class _DetailBody extends ConsumerWidget {
                   Text(
                     fmtUSD(purchase.totalUSD),
                     style: VeText.displayNum(
-                      32,
+                      30,
                       color: scheme.foreground,
                       weight: FontWeight.w600,
                     ).copyWith(letterSpacing: -0.03),
@@ -615,7 +618,7 @@ class _DetailBody extends ConsumerWidget {
                         : 'Tasa ${fmtRate(purchase.rate)}',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 12,
+                      fontSize: 13.5,
                       color: scheme.mutedForeground,
                     ),
                   ),
@@ -643,7 +646,7 @@ class _DetailBody extends ConsumerWidget {
                     g.$1!,
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 11.5,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
                       color: scheme.mutedForeground,
@@ -753,11 +756,11 @@ class _DetailBody extends ConsumerWidget {
   /// Bytes del ticket: data URL legada o ARCHIVO tickets/x.jpg (v20.4).
   Future<Uint8List?> _ticketBytes() => loadTicketBytes(purchase.ticketPhoto);
 
-  /// Comparte el ticket como JPEG (mismo patrón share_plus del repo).
+  /// Comparte el ticket como JPEG. v28 · SOLO el archivo viaja al share
+  /// nativo (sin texto: el menú del sistema nunca ofrece «enviar texto»).
   Future<void> _shareTicket(Uint8List bytes) async {
     await SharePlus.instance.share(
       ShareParams(
-        text: 'Ticket de compra · ValoraVE',
         files: [
           XFile.fromData(
             bytes,
@@ -784,17 +787,16 @@ class _DetailBody extends ConsumerWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
                         '${purchase.store ?? 'Compra'} · ${fmtDate(purchase.date)} · ${fmtUSD(purchase.totalUSD)}',
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 13,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
-                      ),
+                      )),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, size: 18),

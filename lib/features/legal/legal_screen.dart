@@ -27,7 +27,7 @@ class LegalScreen extends StatelessWidget {
                   Text(
                     'Privacidad',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 17,
                       fontWeight: FontWeight.w800,
                       color: scheme.onSurface,
                     ),
@@ -50,7 +50,7 @@ class LegalScreen extends StatelessWidget {
                     'br.dolarapi.com y respaldos de datos.gov.co y AwesomeAPI). '
                     'Esas consultas son anónimas: llevan la URL y nada más.',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 13.5,
                       height: 1.55,
                       color: scheme.onSurfaceVariant,
                     ),
@@ -69,7 +69,7 @@ class LegalScreen extends StatelessWidget {
                   Text(
                     'Sala en vivo',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 17,
                       fontWeight: FontWeight.w800,
                       color: scheme.onSurface,
                     ),
@@ -82,7 +82,7 @@ class LegalScreen extends StatelessWidget {
                     'y WiFi local entre pares. El código de la sala es lo único que '
                     'compartes; no hay registro.',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 13.5,
                       height: 1.55,
                       color: scheme.onSurfaceVariant,
                     ),
@@ -101,7 +101,7 @@ class LegalScreen extends StatelessWidget {
                   Text(
                     'Licencias',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 17,
                       fontWeight: FontWeight.w800,
                       color: scheme.onSurface,
                     ),
@@ -115,7 +115,7 @@ class LegalScreen extends StatelessWidget {
                     'BSD/MIT correspondiente (Flutter, provider, hive_ce, dio, '
                     'uuid, csv, talker, flutter_local_notifications, entre otros).',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 13.5,
                       height: 1.55,
                       color: scheme.onSurfaceVariant,
                     ),

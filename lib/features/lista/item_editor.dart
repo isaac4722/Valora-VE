@@ -162,7 +162,7 @@ class StoreAutocompleteField extends StatelessWidget {
                       dense: true,
                       visualDensity: VisualDensity.compact,
                       leading: const Icon(Icons.storefront_outlined, size: 16),
-                      title: Text(s, style: const TextStyle(fontSize: 13)),
+                      title: Text(s, style: const TextStyle(fontSize: 13.5)),
                       onTap: () => onSelected(s),
                     ),
                 ],
@@ -332,7 +332,7 @@ class _ItemEditorState extends State<_ItemEditor> {
           editing
               ? 'El detalle viaja con el ítem hasta el historial'
               : 'Todo es opcional salvo nombre y precio',
-          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 14),
         // Nombre.
@@ -377,7 +377,7 @@ class _ItemEditorState extends State<_ItemEditor> {
           children: [
             Text(
               'CANTIDAD',
-              style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+              style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(width: 12),
             VeStepper(
@@ -420,7 +420,7 @@ class _ItemEditorState extends State<_ItemEditor> {
         // Peso / tamaño de la presentación.
         Text(
           'PESO / TAMAÑO',
-          style: VeText.labelCaps(10.5, color: scheme.onSurfaceVariant),
+          style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -495,13 +495,13 @@ class _ItemEditorState extends State<_ItemEditor> {
                 Expanded(
                   child: Text(
                     unitPrice,
-                    style: VeText.displayNum(16, color: scheme.onSurface),
+                    style: VeText.displayNum(17, color: scheme.onSurface),
                   ),
                 ),
                 Text(
                   'por unidad de compra',
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
