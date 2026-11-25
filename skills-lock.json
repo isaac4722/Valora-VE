@@ -1,302 +1,323 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
+    "anti-slop-design": {
+      "source": "Ferousco-dev/anti-slop-design",
+      "commit": "484f99edef59020e564cf28fdf77aaca27b32c3f",
+      "sourceType": "github",
+      "skillPath": "skills/anti-slop-design/SKILL.md",
+      "computedHash": "eb714eaa0d93508ba254128234676746329360ceeb5c143c51f379883a643244"
+    },
     "brandkit": {
       "source": "./.agents/skills/brandkit",
       "sourceType": "local",
-      "computedHash": "b63012f3c3d21197e0185d3e9cc7ec40c589fb10e0b5a32a561739de31aa3f20"
+      "computedHash": "c89a5763a53a705a6fb3a3af83796b10d2aa05faf7b8b8fe1db0589c454ba80e"
     },
     "brutalist-skill": {
       "source": "./.agents/skills/brutalist-skill",
       "sourceType": "local",
-      "computedHash": "8fc355c4aadb7d29c53ca28bc41be3cd6eea765d121e3737c4dc2d0f90a8effa"
+      "computedHash": "5a181aaf5fcacff516dbc4773eca28d8cca472733b2b22687c9bf8d10ea73365"
     },
     "caveman": {
       "source": "./.agents/skills/caveman",
       "sourceType": "local",
-      "computedHash": "fa7c0951349ae3782a20e55c6d1e72e4c23585b7932bb5e021c17c4f8f055a07"
+      "computedHash": "17aef4c2cde3ffde0d4fe1fea98c9bd8511398001ac3b5dccf96e71ce1cd2721"
     },
     "dart-concurrency": {
       "source": "./.agents/skills/dart-concurrency",
       "sourceType": "local",
-      "computedHash": "cd8b98482247bc46724fd3b0ff977dc112a64ac94d92f99869a68e1519032b5a"
+      "computedHash": "ddecf5f1f846891104f7eb0f544f741d7571ed1f5a5a4dbab7b6697d643ba895"
     },
     "dart-language": {
       "source": "./.agents/skills/dart-language",
       "sourceType": "local",
-      "computedHash": "3ffec8acffaf9ff1f006b1772b9ae864e87a6f997353deb2ff065f376495fdf7"
+      "computedHash": "8bf8664be67f485378175abca555c174d4ee3a0cf02c4de4034778227aab545d"
     },
     "flutter": {
       "source": "./.agents/skills/flutter",
       "sourceType": "local",
-      "computedHash": "ed11dfbbb55c677afc622169795e9b6e497d5739ba684e1bc92abcb6a6b287ca"
+      "computedHash": "1adbcc1c84620d718824d55642cf66ecfae71d5ffcdcc8f2be7dfbf48e32a570"
     },
     "flutter-accessibility": {
       "source": "./.agents/skills/flutter-accessibility",
       "sourceType": "local",
-      "computedHash": "77ac987235348020265039ae5afeefcea374e729a6f9e3a565fc54dac32d6b8a"
+      "computedHash": "b339c7a00a042e0402a138912bc7c44dd800024d3d56187d6fe64e69247e02ca"
     },
     "flutter-ai-integration": {
       "source": "./.agents/skills/flutter-ai-integration",
       "sourceType": "local",
-      "computedHash": "23ce38a26e0482fa5144e9206ebf05e323603d34cd4e6fbea7ffd865becc4111"
+      "computedHash": "07f9139e350e1e3b3e59ead277cdd745e30d7a38bcab26c4224099a143635712"
     },
     "flutter-animation": {
       "source": "./.agents/skills/flutter-animation",
       "sourceType": "local",
-      "computedHash": "297773346ad1f34dc67dd49451ebf13bdf155f9ab508f3600d477c41228e7954"
+      "computedHash": "5589c6a2a6252b4a45bc462c188f47e0f4083e3452f8957dc8baf8b4a47e87ab"
     },
     "flutter-app-workflow": {
       "source": "./.agents/skills/flutter-app-workflow",
       "sourceType": "local",
-      "computedHash": "5669afb75bdadb8530c9cfb5d10c545f12bd5d65caf0826629ead027ff166d74"
+      "computedHash": "5bbd42b4813d34789a91926eede9b9d866d79e8d5a7551fe63b4d68d31c6c55f"
     },
     "flutter-architecture": {
       "source": "./.agents/skills/flutter-architecture",
       "sourceType": "local",
-      "computedHash": "55502df8887d61d48a3540977750254b8125131d564b3715bc42d4b0fb942a30"
+      "computedHash": "b45d50ef70650869ba83a83f3d4b72e555f776c8392f33df5ed3a4677fbbeec1"
     },
     "flutter-authentication": {
       "source": "./.agents/skills/flutter-authentication",
       "sourceType": "local",
-      "computedHash": "9cf88ce3a393a6ce787118bcfa23e317d055e99a48f78c32fa2e41fd0031205a"
+      "computedHash": "843a60697b882a30c8364e80ce0ff60e2c98c1ed06e41d821577626528a2f093"
     },
     "flutter-background-execution": {
       "source": "./.agents/skills/flutter-background-execution",
       "sourceType": "local",
-      "computedHash": "330b80be9653edee1473ee6359993bcbdad71bea154f7ab4fa37cb8922351691"
+      "computedHash": "ac33ad17ca1383e14b338d896e38811700dbfd6b48cfd2b26b66ff2ff90c4015"
     },
     "flutter-build-release": {
       "source": "./.agents/skills/flutter-build-release",
       "sourceType": "local",
-      "computedHash": "a92ff12fb8c443132684d1ffd3c67c70a36afb96d3c383311c40095e1f62a275"
+      "computedHash": "1b186229a560ae1019910fbc8702a73dd730549db5cfc201013b0e220713d610"
     },
     "flutter-ci-cd": {
       "source": "./.agents/skills/flutter-ci-cd",
       "sourceType": "local",
-      "computedHash": "4ab2797514b51159a3077a953d3259940953fd4ad9afb077b5ad2ea6773aaf6c"
+      "computedHash": "5ba705e5ac7b684eadfa376121e05b8128909bb8905c3936386e46b6151ffb1b"
     },
     "flutter-code-review": {
       "source": "./.agents/skills/flutter-code-review",
       "sourceType": "local",
-      "computedHash": "0b513117f798973c4a1f5268781ee5e25b016d786cc922ea94b4e37f58eb9c62"
+      "computedHash": "6e5b153bc3a8b5e17264368e984015131f8004b8dad9f70b28a5fbf58e34f094"
     },
     "flutter-dependency-upgrades": {
       "source": "./.agents/skills/flutter-dependency-upgrades",
       "sourceType": "local",
-      "computedHash": "6c30fca060b7adf4aa8b47d33b841c3d144f8cd8dd576b1bacc8ff85428bf880"
+      "computedHash": "a49e0c42c7861b19408566f3f6d0ee3293a3c0711ad4a1974589ad4f8905465f"
     },
     "flutter-device-testing": {
       "source": "./.agents/skills/flutter-device-testing",
       "sourceType": "local",
-      "computedHash": "2df3c9528231ccd82379f7842d72c2797a9679bcaa6212376117cd8ee648f711"
+      "computedHash": "921d652316850bb28a102df94922bdb5dfd48ec57b185325028d61accaa57568"
     },
     "flutter-figma-workflow": {
       "source": "./.agents/skills/flutter-figma-workflow",
       "sourceType": "local",
-      "computedHash": "c9319ac8bc501398cad6b4ee086bf55bd53dca8fc4c1d92c4dc4cbb0c6d9651a"
+      "computedHash": "1c6ef2d243187b3a770171600f1b578f962cfb569b353d6b51b721eea611ba73"
     },
     "flutter-frontend-design": {
       "source": "syeduzaif/flutter-frontend-design",
       "sourceType": "github",
       "skillPath": "SKILL.md",
-      "computedHash": "72526a8023dfd86cadfa5353c4b85aecc33998d8855a4b30e3c8ca18e2048ede"
+      "computedHash": "fa818b43480823adc6313ad9e65a063220e1fe583c758f883ba98a2db947d723"
     },
     "flutter-in-app-purchases": {
       "source": "./.agents/skills/flutter-in-app-purchases",
       "sourceType": "local",
-      "computedHash": "c79c50e31d87890187448885b3462433fe5dfec66b9f6614fe2a3e670b0e77ba"
+      "computedHash": "2fc19db363b3a49d960495965b1ecd2af0b67d768c948196b10e64cb291e53b1"
     },
     "flutter-localization": {
       "source": "./.agents/skills/flutter-localization",
       "sourceType": "local",
-      "computedHash": "b5d2c7d84387aef4e49d4a50a89be0d1d4d95b77e63d1b27cdcf3566f6568a63"
+      "computedHash": "875433ff73d6e87a40cea33a2f239b67db9b07c9bac280aa5e88575f1f627570"
     },
     "flutter-navigation": {
       "source": "./.agents/skills/flutter-navigation",
       "sourceType": "local",
-      "computedHash": "6dc5d96d49e9e03b9a3745601e4a10c09880a18d4e4112c2b005824f91fa39c2"
+      "computedHash": "24c6b3c80e2e19f38add5db8e02993fa94ee3e2b464635b22a73334f9470c154"
     },
     "flutter-networking": {
       "source": "./.agents/skills/flutter-networking",
       "sourceType": "local",
-      "computedHash": "af055834ff7c621a321e53ca3830c9e1d52e893cf1c652f9859aa8c131f3f8d3"
+      "computedHash": "96fbf3217ecc6a6d55c915d407373bf8b296c663f0894bb3ef47f494f0f71890"
     },
     "flutter-notifications": {
       "source": "./.agents/skills/flutter-notifications",
       "sourceType": "local",
-      "computedHash": "8b952c2ad37dc4d6e1174aed302afd008280669ab6413903fd71929bc446deb0"
+      "computedHash": "d68121ec61729cc3e0eba01141a07f334ef60ccba98dc2d9b15ef78fae502116"
     },
     "flutter-observability": {
       "source": "./.agents/skills/flutter-observability",
       "sourceType": "local",
-      "computedHash": "b0f0619d9af32162209a04e26f79b8848c2d4ab51956a7b5503d4ac7cd05034c"
+      "computedHash": "0e1386fa68d3d20bd422e37ff4ec146c1eecb0b4727e98e5eca9781253b7c2c7"
     },
     "flutter-openapi-client": {
       "source": "./.agents/skills/flutter-openapi-client",
       "sourceType": "local",
-      "computedHash": "8845da9fd3dd8c7c35b59dc34fa5bae1f33ab330b7a61946505ea4d81a4ad5e4"
+      "computedHash": "2e528ef6bb5e0f020729610e15167fd177b46a13ac538fba9fa67268a60ca90b"
     },
     "flutter-package-development": {
       "source": "./.agents/skills/flutter-package-development",
       "sourceType": "local",
-      "computedHash": "a76c2e626ea0ec1a5941679f4a83e1d5a56bdd653801cbb80f8120e933bce583"
+      "computedHash": "baf84666e2e7fa197378aa07b80fa609df605fa888e7029dff4e906cb0550215"
     },
     "flutter-performance": {
       "source": "./.agents/skills/flutter-performance",
       "sourceType": "local",
-      "computedHash": "1ec01509c35e9e699ef690e437c689f7a8b0c73cf6419f8d0a3d5d3d98fbb4d5"
+      "computedHash": "d604e8e834c1d6d2f0acc05dedebd3e98d8b781703efbce8cb9ad3393a33abbb"
     },
     "flutter-persistence": {
       "source": "./.agents/skills/flutter-persistence",
       "sourceType": "local",
-      "computedHash": "9c2455807d95a40b9c7c9dba64c373ba5a235acc578c66ef59ae86698fb0eda8"
+      "computedHash": "7c6c9786c772693b7bc64b0a4029cfab1dc0eba208e7787e893c5f7e3f70914b"
     },
     "flutter-platform-integration": {
       "source": "./.agents/skills/flutter-platform-integration",
       "sourceType": "local",
-      "computedHash": "d1ea790664da7c5c36d7015a022fc19dbf4207abad34bd1b09cb01dd91ece591"
+      "computedHash": "e5197816e19236ee15086bdb056358a748bcd0719384f40d3b4d4b8b6365fcd9"
     },
     "flutter-product-analytics": {
       "source": "./.agents/skills/flutter-product-analytics",
       "sourceType": "local",
-      "computedHash": "49007489b87ae07fc7348451cdd0c260596f8760c9f170f9c3ae3a76d7411d20"
+      "computedHash": "2b6021558bcf001ba954ecd6a17a3b0fa14411423f21fc52b557acc9994d8527"
     },
     "flutter-project-creater": {
       "source": "./.agents/skills/flutter-project-creater",
       "sourceType": "local",
-      "computedHash": "33b0ff8efbf4443dbe3c3fa846cf795c9084d2bac5aaa1549288ed6d7ad31cc7"
+      "computedHash": "fd2d69c5ffb65cfa4b60ec0decda2270244c28901430d9dd421b8b68dd3784f3"
     },
     "flutter-responsive-layout": {
       "source": "./.agents/skills/flutter-responsive-layout",
       "sourceType": "local",
-      "computedHash": "fe75b4b212a3aa3db58610b4b41c6ed136115498888749760d4f60f54cb86a51"
+      "computedHash": "3c008edd551a630bdc256d3eb4bd024ae82b29023ed0722b1f09b98fbce3e0e2"
     },
     "flutter-runtime-debugging": {
       "source": "./.agents/skills/flutter-runtime-debugging",
       "sourceType": "local",
-      "computedHash": "2bd3d6df573bb5c46a18c628106600e1268c127cbb70fd015decf4c7346503d2"
+      "computedHash": "34b70209843eda822169c9522de9e7be967b93fc2173f9a584507c1badd91486"
     },
     "flutter-security": {
       "source": "./.agents/skills/flutter-security",
       "sourceType": "local",
-      "computedHash": "263e5f96755239e920f1584e0cf4452ab1e3f1f390c8a46bb76025f36f47f306"
+      "computedHash": "c7954a00a4f9764cf38fb5423c9a69a78a5f6a8854fe35c0ccd9397ce1317ef7"
     },
     "flutter-state-management": {
       "source": "./.agents/skills/flutter-state-management",
       "sourceType": "local",
-      "computedHash": "a2ec60f59f82ac3ba721f10efa1af88feed89689cde96275414faa75659685bf"
+      "computedHash": "117387c56e793f6b1e3e590e9bedbe17e7270b16f1d7a240634c6b75ea34a6a8"
     },
     "flutter-testing": {
       "source": "./.agents/skills/flutter-testing",
       "sourceType": "local",
-      "computedHash": "436f4f4d53c6e3aacf6e02379597bec93a4492907a4235a95357d4a8471caad9"
+      "computedHash": "61942c44058c33a38f94c452ee1618429330992ed5caf9b5a284f6836e697339"
     },
     "flutter-text-rendering": {
       "source": "./.agents/skills/flutter-text-rendering",
       "sourceType": "local",
-      "computedHash": "b9b190938e04506902d33a891532de2e7875b74a4779bfe237321c1d062c233d"
+      "computedHash": "923efabcd158f99ac651ad4c6aeeadfe8d61a2e0239ae5a5df3c6571da36a166"
     },
     "flutter-ui-design": {
       "source": "./.agents/skills/flutter-ui-design",
       "sourceType": "local",
-      "computedHash": "9712b55046da3eedd93a89084b7e7d1b7309d41d1d996da767f2f6142b71b581"
+      "computedHash": "00a722fcd0c383b6e67cdfb6737f27a40404a13803127dfb55db021379283d44"
     },
     "flutter-ui-patterns": {
       "source": "./.agents/skills/flutter-ui-patterns",
       "sourceType": "local",
-      "computedHash": "e841f48e0b41412f120dbbbd4ace918ae1f7b4398e0dca7931bbaa28bff2dc47"
+      "computedHash": "5262c5957bc7bd26e7385969eb9ed0a48d4f93c02f985cd37831694a2f3d5c9d"
+    },
+    "flutter-unslop": {
+      "source": "MBotirjonDev/flutter-unslop",
+      "commit": "51de15f18623676c63129a136c3fabf1e2d5a6ff",
+      "sourceType": "github",
+      "skillPath": "skills/flutter-unslop/SKILL.md",
+      "computedHash": "28ea91ffd0a35af3d64330bb6853f56e88f3319980ec09cfb8000a87cec8a458"
     },
     "flutter-visual-effects": {
       "source": "./.agents/skills/flutter-visual-effects",
       "sourceType": "local",
-      "computedHash": "e3f91a707241b7f4dd6f7d8610ad3af81987d0523317255457199c278ae4a834"
+      "computedHash": "61bcc4f1016c4b04ab6606080efea3dd5af4299741c9b1e7cd76c18ffb6dbb84"
     },
     "flutter-webview": {
       "source": "./.agents/skills/flutter-webview",
       "sourceType": "local",
-      "computedHash": "80afd21eac3e381b024b68a148aa9082ec3e11850a01074b1f2cd0d042851af5"
+      "computedHash": "45633674aa2a0c14c4e7482d4a48401a3f1d82249570222abb2e7b6f7d0b1ab2"
     },
     "gpt-tasteskill": {
       "source": "./.agents/skills/gpt-tasteskill",
       "sourceType": "local",
-      "computedHash": "cc8f0c601d8240a124e1d11634351a2be7b8a72fd807c75e5b6bf7afcd5ddee0"
+      "computedHash": "f0eefce6ce80f76a3645e0ad4cecfd45ef185fed1311e45b1b467d3fedc7bf52"
     },
     "humanizer": {
       "source": "./.agents/skills/humanizer",
       "sourceType": "local",
-      "computedHash": "d70628be4fc857bbc92e94b7397e715e986d13d61663d3a0bfd7f93a5a9d2527"
+      "computedHash": "249c78842e2a81a4e03ab68eff6f2aca6ed81aee560139baca259d5545d4a8f6"
     },
     "image-to-code-skill": {
       "source": "./.agents/skills/image-to-code-skill",
       "sourceType": "local",
-      "computedHash": "58517b03b2a01f4c9ba65861559d03df931400871bbc200978c975b24bb92c73"
+      "computedHash": "95eb38f750f046fafe47f4c053f2a075ed07f2ae1925774a6f435c81f503fba8"
     },
     "imagegen-frontend-mobile": {
       "source": "./.agents/skills/imagegen-frontend-mobile",
       "sourceType": "local",
-      "computedHash": "9ab7f4f6ce66a3cff02bbf5894e5bd5af50bf5d6ef0adffdc88e8fab772fe44f"
+      "computedHash": "bf3296b937c3fd58c9d1531983bb339ec86d612fe6db7eb5bb48935c838b27d3"
     },
     "imagegen-frontend-web": {
       "source": "./.agents/skills/imagegen-frontend-web",
       "sourceType": "local",
-      "computedHash": "65f5ae59fa317567809438310b1c54f78cd133426deb43e4d3d4ca4c8f541628"
+      "computedHash": "5494a06e7bd76130ffad8d1f36d26fe28cdd53f3ba27f2f9f4525e487dc1b1bd"
     },
     "minimalist-skill": {
       "source": "./.agents/skills/minimalist-skill",
       "sourceType": "local",
-      "computedHash": "08873a3131d3be27bef9bf3304b310b16b44ca6e3561aebe532797be3443f6bd"
+      "computedHash": "6fe7616c22141da6f52a9d7d55521d08c519d7de595f154d1d6358ecb988c9be"
     },
     "mobile-design": {
       "source": "sickn33/agentic-awesome-skills",
       "sourceType": "github",
       "skillPath": "skills/mobile-design/SKILL.md",
-      "computedHash": "f66841ab7e6e5f26f91d78d722955bd05caa3af6b8c88c3396a7ab1f1b352afb"
+      "computedHash": ""
     },
     "output-skill": {
       "source": "./.agents/skills/output-skill",
       "sourceType": "local",
-      "computedHash": "26bd29ce4c5e02c7666b2d503609bf466bd32290822e91f0e984147048dbb924"
+      "computedHash": "9f39bf2e92322e91e2446f709b44537aaee222949dd5860c56eccb50d66331b3"
     },
     "redesign-skill": {
       "source": "./.agents/skills/redesign-skill",
       "sourceType": "local",
-      "computedHash": "b405eee0e0e80fc243f731d9aa368bca307e356db7e6157d27101d369dac6726"
+      "computedHash": "a462c359ad5d5d2d96d18f9c1d2abefdf08318a1ec78f7852660d51ae098be4f"
     },
     "rtk": {
       "source": "./.agents/skills/rtk",
       "sourceType": "local",
-      "computedHash": "332bd3c1b55a05a3ebb2be42a0bdb97e7454ac2707ccea907e79750eadb9cb7d"
+      "computedHash": "eace0d8b0282dbf9f17bb3f153665486ea6373ae52aeb899b89da20f0670e400"
     },
     "soft-skill": {
       "source": "./.agents/skills/soft-skill",
       "sourceType": "local",
-      "computedHash": "7db385e4c5370e5a7fca9704a1361b056e4504ea6a03924bb86f33a4f00b5c73"
+      "computedHash": "d5f1d07d14b1e72454e49c4de69adc65022f4eda0126e1902b84a2e0c3fec47b"
     },
     "stitch-skill": {
       "source": "./.agents/skills/stitch-skill",
       "sourceType": "local",
-      "computedHash": "13322f38406cd3abf16ba45e35bdc9b18002d0153a79b4612b97aefc65d5a335"
+      "computedHash": "b0fed0044377622a841738e7742bc99d5afbae288e9e0c0021707cc401bb63b1"
     },
     "taste-skill": {
       "source": "./.agents/skills/taste-skill",
       "sourceType": "local",
-      "computedHash": "6d838b246d0e35d0b53f4f23f98ba7a1dd561937e64f7d0c7553b0928e376c3e"
+      "computedHash": "44f5bbbf437a1d5d08f2540a3db55c2e930395cbdc029276819e942dc158217b"
     },
     "taste-skill-v1": {
       "source": "./.agents/skills/taste-skill-v1",
       "sourceType": "local",
-      "computedHash": "d704ab912c4d0ca954ffa858983da755ae4cd5cad9ba22554db5557382f5bd34"
+      "computedHash": "ee02c3e557cee17595d2e896de2e4e4e142dbc7c20fb7628534e352331634a0c"
     },
     "ui-nice-skill": {
       "source": "./.agents/skills/ui-nice-skill",
       "sourceType": "local",
-      "computedHash": "dbedeecf912664b6dc4f836e9e94a5c5a28ef612ae4b9b1a24314286069420c4"
+      "computedHash": "a1e62f7f656ab2db02dffff0d392c1c06e49f62837592676a7fabe5c40462e88"
+    },
+    "unbland": {
+      "source": "yadavpatle/unbland",
+      "commit": "0c241129fe28a39c5b460b10025c62505faa007a",
+      "sourceType": "github",
+      "skillPath": "skills/unbland/SKILL.md",
+      "computedHash": "a291988dccd75edfd32a49dcecdf66ded687b67e416db7ec43117a997d85b12f"
     },
     "vlm": {
       "source": "./.agents/skills/vlm",
       "sourceType": "local",
-      "computedHash": "e489fc8e0d048e3af546367cb11ed34040661e75ed89c0c23bc38f027344a93b"
+      "computedHash": "3e4ec17a5f0e58d7271663dc49e218c6abec16bc894e7976ccb2283f4f534d54"
     }
   }
 }
