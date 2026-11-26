@@ -139,3 +139,19 @@ la rama estaba en v28 (commit 7dc0265) mientras la documentación local
 - Inventario de tipografía en lib/: SOLO {11, 13.5, 17, 30} (+ helpers
   parametrizados del sistema y el PDF a la misma escala);
   `TextOverflow.ellipsis` en lib/: **0**.
+
+## Validación en el remoto (cierre del ciclo)
+
+- **CI** (Flutter 3.47.4): VERDE en `9ed2975` — gate analyze 0 + suite +
+  auditoría de prohibiciones. (Un primer push paró en 2 warnings de
+  imports muertos que el SDK 3.50 local enmascaraba entre sus infos de
+  deprecación; corregidos al momento — el gate hizo exactamente su
+  trabajo.)
+- **Build** (solo-APK, `9ed2975`): VERDE. Artefactos del run 45753624576:
+  4 APK (`valorave-v1.18.0-beta-build-20261126-arm64-v8a.apk` 32,8 MB ·
+  `armeabi-v7a` 29,3 MB · `x86_64` 35,6 MB · `universal` 84,3 MB) + ZIP
+  todo-en-uno (89,8 MB) + símbolos de ofuscación. **El paquete contiene
+  EXACTAMENTE los 4 APK + LEEME + checksums — cero .aab** (verificado en
+  el listado del job `paquete` y en los logs: 0 menciones).
+- Rama `v1.1.0-dp4-paridad` al día: `9ed2975` (docs: `HALLAZGOS_v31.md`,
+  CHANGELOG v29/v30/v31, pubspec 1.18.0-beta+54, visible 31).
