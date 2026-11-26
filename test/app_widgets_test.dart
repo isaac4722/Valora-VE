@@ -127,12 +127,12 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.scrollUntilVisible(
-      find.text('Añadir un widget'),
+      find.text('Añadir un widget de Android'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pump(const Duration(milliseconds: 200));
-    await tester.tap(find.text('Añadir un widget'));
+    await tester.tap(find.text('Añadir un widget de Android'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byType(AppWidgetsPage), findsOneWidget);

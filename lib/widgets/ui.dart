@@ -1570,6 +1570,10 @@ class PushScreen extends StatelessWidget {
                     VeIconBtn(
                       icon: LucideIcons.chevronLeft,
                       label: 'Volver',
+                      // v32 (orden del dueño): el ATRÁS se ve — 40 visual /
+                      // 20 de glifo, centrado en su caja de 44 de golpe.
+                      size: 40,
+                      iconSize: 20,
                       // v20 (orden del dueño): SIEMPRE hay vuelta — si no hay
                       // stack (deep link, atajo de widget), cae a Inicio.
                       onTap: () {

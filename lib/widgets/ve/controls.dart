@@ -337,8 +337,11 @@ class VeIconBtn extends StatelessWidget {
     required this.icon,
     required this.onTap,
     required this.label,
-    this.size = 32,
-    this.iconSize = 16,
+    // v32 (orden del dueño): el icono se VE más grande — 36 visual / 17 de
+    // glifo (antes 32/16: se leía pequeño junto a inputs de 44 px). La
+    // pista de golpe sigue garantizada en ≥44.
+    this.size = 36,
+    this.iconSize = 17,
     this.dot = false,
     this.danger = false,
   });

@@ -1,5 +1,34 @@
 # Changelog
 
+## v32 — GUI del dueño: soltar las esquinas
+
+Ciclo de GUI sobre el gate visual web 390×844 (orden del dueño: franja
+vacía, títulos solos, Cachea bien ubicada, sin lupa en Inicio, iconos
+grandes y centrados, Sala de nuevo, Ajustes refactor). Registro detallado
+en `HALLAZGOS_v32.md`.
+
+- **Barra pegadiza SIN franja vacía** (G-1): `VeStickyBar` abraza a la
+  barra de tabs — ~20 px de papel muerto eliminados en Lista/Productos/
+  Historial.
+- **Texto jamás microscópico** (G-2): `VeRow.sub` envuelve a varias líneas
+  a 13.5 px reales (adiós FittedBox que encogía los modos de Sala).
+- **Títulos SOLOS** (G-3): Lista y Ajustes sin botones al lado del título;
+  Historial vive en su fila de entrada gemela de Sala en vivo.
+- **Modo Cachea BIEN UBICADO** (G-4): fila delineada a todo lo ancho bajo
+  el total — icono, título, explicación, chevron; ya no una píldora suelta.
+- **Header de Inicio SIN lupa** (G-5): avisos · tema · ajustes a 40/18,
+  centrados contra el saludo.
+- **Iconos que se ven** (G-6): `VeIconBtn` 36/17 por defecto; Escáner
+  (40/18), Atrás de PushScreen (40/20), Tasas (40/18), orden de divisas,
+  acciones de cuenta.
+- **Sala separada y centrada** (G-7): código de invitación centrado (mismo
+  eje que el QR) y puertas «Unirme/Escanear» gemelas.
+- **Ajustes refactor completa** (G-8): un encabezado solo por sección con
+  hint, filas planas del kit, switches Material → VeToggle, sliders con
+  rótulo completo, zona de peligro sin caja, «Acerca de» en VeGroup.
+  Lógica H-43 intacta.
+- Verificación: analyze 0 · **380/380 tests** · gate visual verde.
+
 ## v31 — Revisión integral + exportación PDF/imágenes profesional + solo APKs
 
 Ciclo de revisión ordenado por el dueño («verifica todo desde la Fase 0,

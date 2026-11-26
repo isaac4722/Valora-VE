@@ -59,12 +59,17 @@ class _RatesHeader extends ConsumerWidget {
               VeIconBtn(
                 icon: LucideIcons.arrowLeft,
                 label: 'Volver',
+                // v32: atrás y ajustes grandes y centrados (orden del dueño).
+                size: 40,
+                iconSize: 18,
                 onTap: () => context.canPop() ? context.pop() : context.go('/'),
               ),
               const Spacer(),
               VeIconBtn(
                 icon: LucideIcons.settings2,
                 label: 'Configurar tasas',
+                size: 40,
+                iconSize: 18,
                 onTap: () => context.go('/ajustes'),
               ),
             ],

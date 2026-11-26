@@ -22,7 +22,8 @@ import '../../widgets/app_router.dart' show kHeroRateKey;
 import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/ui.dart';
-import '../shell/command_palette.dart' show showCommandPalette;
+// v32: la lupa salió del header — el import del command palette muere aquí
+// (el sidebar de escritorio sigue teniendo su ⌘K propio).
 import '../shell/main_shell.dart' show toggleVeTheme, veEffectiveDark;
 import '../shell/notifs_center.dart' show showNotificationCenter;
 import '../rates/rates_screen.dart' show editManualRate;
@@ -58,8 +59,9 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-/// Cabecera: saludo + tres acciones que importan (avisos, búsqueda, tema).
-/// Ajustes queda a un toque en la cabecera y también en Más (v27.3).
+/// Cabecera: saludo + acciones que importan (avisos, tema, ajustes).
+/// v32: SIN lupa (orden del dueño). Ajustes queda a un toque en la
+/// cabecera y también en Más (v27.3).
 class _HomeHeader extends ConsumerWidget {
   const _HomeHeader();
 
@@ -106,32 +108,28 @@ class _HomeHeader extends ConsumerWidget {
                 icon: LucideIcons.bell,
                 label: 'Avisos',
                 dot: unread,
-                size: 36,
-                iconSize: 16,
+                // v32 (orden del dueño): header de Inicio SIN lupa — la
+                // búsqueda vive en el sidebar de escritorio (⌘K) y muere en
+                // el móvil. Los iconos que quedan son GRANDES (40/18) y
+                // quedan centrados contra el bloque del saludo.
+                size: 40,
+                iconSize: 18,
                 onTap: () => showNotificationCenter(context, ref),
               ),
-              const SizedBox(width: 4),
-              VeIconBtn(
-                icon: LucideIcons.search,
-                label: 'Buscar',
-                size: 36,
-                iconSize: 16,
-                onTap: () => showCommandPalette(context),
-              ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 2),
               VeIconBtn(
                 icon: dark ? LucideIcons.sun : LucideIcons.moon,
                 label: dark ? 'Tema claro' : 'Tema oscuro',
-                size: 36,
-                iconSize: 16,
+                size: 40,
+                iconSize: 18,
                 onTap: () => toggleVeTheme(ref),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 2),
               VeIconBtn(
                 icon: LucideIcons.settings,
                 label: 'Ajustes',
-                size: 36,
-                iconSize: 16,
+                size: 40,
+                iconSize: 18,
                 onTap: () => context.go('/ajustes'),
               ),
             ],

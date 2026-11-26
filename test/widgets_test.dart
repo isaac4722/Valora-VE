@@ -551,11 +551,15 @@ Future<void> main() async {
       expect(find.text('CUENTAS Y COBRO'), findsOneWidget);
       // La lista es perezosa: se baja hasta cada una para construirla.
       final lista = find.byType(Scrollable).first;
+      // v32: la GUI se refactorizó — cada sección tiene UN encabezado solo
+      // (PAÍS Y DECIMALES · DATOS Y CONEXIÓN · RESPALDO · ACERCA DE) y el
+      // contrato H-42 se mantiene: UNA pantalla, cero subpantallas.
       for (final seccion in [
         'TASAS Y FUENTES',
-        'GENERAL',
+        'PAÍS Y DECIMALES',
         'APARIENCIA',
-        'DATOS Y ACERCA DE',
+        'RESPALDO',
+        'ACERCA DE',
       ]) {
         await tester.scrollUntilVisible(
           find.text(seccion),

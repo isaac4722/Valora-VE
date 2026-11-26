@@ -1,9 +1,15 @@
-/// ─── Ajustes (v30 · H-42 · UNA pantalla por secciones) ─────────────────────/// Ajustes en UNA pantalla por secciones (v30 · H-42, cero reutilización
-/// del hub de fichas): Cuentas y cobro (primero) · Tasas y fuentes ·
-/// General (país · decimales · conexión · widgets) · Apariencia · Datos y
-/// acerca de. Las subpantallas v27 murieron: `/ajustes/general|tasas|
-/// apariencia|datos` REDIRIGEN aquí y solo `/ajustes/cuentas` sobrevive
-/// (deep link del Conversor e Inicio — aterriza en la sección 1).
+/// ─── Ajustes (v30 · H-42 · v32 refactor de GUI) ─────────────────────────────
+/// Ajustes en UNA pantalla por secciones. v32 (orden del dueño): GUI
+/// refactorizada al lenguaje «HOJA» de la app — CADA sección con UN
+/// encabezado SOLO (sin dobles rótulos), filas planas del kit (VeRow /
+/// VeToggle / VeBtn), switches Material fuera, cajas dentro de cajas fuera,
+/// separación uniforme y nada encogido.
+///
+/// Secciones: Cuentas y cobro (primero — el deep link del Conversor e Inicio
+/// aterriza aquí) · Tasas y fuentes · Alertas · Diagnóstico · País y
+/// decimales · Datos y conexión · Apariencia · Respaldo · Acerca de.
+/// Las subpantallas v27 murieron: `/ajustes/general|tasas|apariencia|datos`
+/// REDIRIGEN aquí y solo `/ajustes/cuentas` sobrevive.
 library;
 
 import 'dart:convert';
@@ -43,8 +49,8 @@ part 'settings_alertas.dart';
 part 'settings_system.dart';
 part 'cuentas_pago_movil.dart';
 
-/// Ajustes en UNA pantalla (v30 · H-42): las cinco secciones viven en la
-/// misma hoja — sin hub de fichas ni subpantallas.
+/// Ajustes en UNA pantalla (v30 · H-42) con GUI refactorizada (v32): una
+/// sección = un encabezado solo + filas planas del kit.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -59,6 +65,7 @@ class SettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
+            // ── Título SOLO (v32: los títulos no llevan nada al lado).
             Text(
               'Ajustes',
               style: VeText.displayNum(
@@ -74,26 +81,72 @@ class SettingsScreen extends ConsumerWidget {
             ),
             // ── 1 · Cuentas y cobro (H-42: PRIMERO — el deep link del
             // Conversor e Inicio aterriza directo en esta sección).
-            const VeEyebrow(child: Text('CUENTAS Y COBRO')),
+            const VeEyebrow(
+              hint:
+                  'Guarda tus datos de cobro una vez y comparte el cobro '
+                  'desde el Conversor. Todo queda en este teléfono.',
+              child: Text('CUENTAS Y COBRO'),
+            ),
             const CuentasPagoMovil(),
-            // ── 2 · Tasas y fuentes: monedas por módulo, manuales, propias,
-            // alertas y diagnóstico.
-            const VeEyebrow(child: Text('TASAS Y FUENTES')),
+            // ── 2 · Tasas y fuentes: monedas por módulo, manuales y propias.
+            const VeEyebrow(
+              hint:
+                  'De dónde sale cada tasa: la fuente por divisa y por '
+                  'módulo, más tus tasas manuales.',
+              child: Text('TASAS Y FUENTES'),
+            ),
             _Monedas(store: store),
+            // ── 3 · Alertas: permiso + picos + metas + recordatorio.
+            const VeEyebrow(
+              hint:
+                  'Avisos útiles sin ruido: picos de tasa, metas que tú '
+                  'fijas y el recordatorio de precios.',
+              child: Text('ALERTAS'),
+            ),
             _Alertas(store: store),
+            // ── 4 · Diagnóstico: salud de las fuentes, a pedido.
+            const VeEyebrow(
+              hint: 'Consulta cada región y mide su respuesta. Si una falla, '
+                  'las demás siguen.',
+              child: Text('DIAGNÓSTICO DE FUENTES'),
+            ),
             const _Diagnostico(),
-            // ── 3 · General: país · decimales · conexión · widgets.
-            const VeEyebrow(child: Text('GENERAL')),
+            // ── 5 · País y decimales: el foco del tablero y la escala.
+            const VeEyebrow(
+              hint: 'Tu tablero en tu país y la escala decimal que quieres '
+                  'ver.',
+              child: Text('PAÍS Y DECIMALES'),
+            ),
             _Pais(store: store),
             _Precision(store: store),
+            // ── 6 · Datos y conexión: offline, intervalo, en vivo, widgets.
+            const VeEyebrow(
+              hint:
+                  'Cuándo consulta la app y qué hace sin red. Las tasas se '
+                  'guardan en tu teléfono.',
+              child: Text('DATOS Y CONEXIÓN'),
+            ),
             _DatosConexion(store: store),
             const _AppWidgetsRow(),
-            // ── 4 · Apariencia: tema, Material You, biometría.
-            const VeEyebrow(child: Text('APARIENCIA')),
+            // ── 7 · Apariencia: tema, Material You, biometría.
+            const VeEyebrow(
+              hint: 'El tono de la app y el candado al abrir.',
+              child: Text('APARIENCIA'),
+            ),
             const _Apariencia(),
-            // ── 5 · Datos y acerca de: respaldo, registros, tutorial/legal.
-            const VeEyebrow(child: Text('DATOS Y ACERCA DE')),
+            // ── 8 · Respaldo: exportar, importar y zona de peligro.
+            const VeEyebrow(
+              hint:
+                  'Tus datos viven en este teléfono: respalda y recupera '
+                  'cuando cambies de equipo.',
+              child: Text('RESPALDO'),
+            ),
             _Respaldo(store: store),
+            // ── 9 · Acerca de: registros, bienvenida, actualizaciones, legal.
+            const VeEyebrow(
+              hint: 'La versión, los registros y los papeles de la casa.',
+              child: Text('ACERCA DE'),
+            ),
             const _Registros(),
             _TutorialLegal(store: store),
           ],
@@ -103,9 +156,69 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
+/// v32 · Fila plana de INTERRUPTOR del kit — sustituye a los
+/// SwitchListTile de Material: título 13.5 w600, sub 11 muda con altura
+/// cómoda y el VeToggle de la app a la derecha, centrado. Sin cajas.
+class _FilaSwitch extends StatelessWidget {
+  const _FilaSwitch({
+    required this.titulo,
+    required this.value,
+    required this.onChanged,
+    this.sub,
+  });
+
+  final String titulo;
+  final String? sub;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                if (sub != null && sub!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    sub!,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      height: 1.35,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          VeToggle(value: value, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+}
+
 /// Precisión decimal (v27 · REA CalculaYa): 2, 3 o 4 decimales. La API
-/// Precisión decimal (v27 · REA CalculaYa): 2, 3 o 4 decimales. La API
-/// publica 4; el usuario elige cuántos ver en tasas y resultados.
+/// publica 4; el usuario elige cuántos ver en tasas y resultados. v32: fila
+/// plana — chips a lo ancho y nota muda, sin caja.
 class _Precision extends ConsumerWidget {
   const _Precision({required this.store});
 
@@ -117,10 +230,7 @@ class _Precision extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const VeEyebrow(
-          hint: 'Las tasas llegan con cuatro decimales. Tú eliges cuántos ver.',
-          child: Text('DECIMALES'),
-        ),
+        const SizedBox(height: 10),
         Row(
           children: [
             for (final d in const [2, 3, 4]) ...[
@@ -158,16 +268,13 @@ class _AppWidgetsRow extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const VeEyebrow(
-          hint:
-              'Tasa BCV, paralelo y brecha en la pantalla de inicio de Android.',
-          child: Text('WIDGETS DE ANDROID'),
-        ),
+        const SizedBox(height: 4),
+        // v32: fila plana del kit — icono · título · chevron, sin caja.
         InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () => showAppWidgetGallery(context),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 10),
             child: Row(
               children: [
                 Icon(
@@ -178,7 +285,7 @@ class _AppWidgetsRow extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Añadir un widget',
+                    'Añadir un widget de Android',
                     style: const TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
@@ -198,22 +305,10 @@ class _AppWidgetsRow extends ConsumerWidget {
     );
   }
 }
-/// Sección de Ajustes v25 «HOJA»: PLANA — solo el ancestro Material
-/// transparente que exigen los ListTiles/SwitchListTiles Material de las
-/// secciones; la separación entre secciones la pone el aire, no una caja.
-class _VeSettingsCard extends ConsumerWidget {
-  const _VeSettingsCard({required this.child});
 
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Material(type: MaterialType.transparency, child: child);
-  }
-}
-
-/// Datos y conexión (v17.2): modo offline total + cada cuánto se consultan
-/// las APIs. Todo vive en Settings (store) y el poller lo lee en vivo.
+/// Datos y conexión (v17.2 · v32 GUI plana): modo offline total + cada
+/// cuánto se consultan las APIs + el empujón SSE opcional. Todo vive en
+/// Settings (store) y el poller lo lee en vivo. Switches del kit.
 class _DatosConexion extends ConsumerWidget {
   const _DatosConexion({required this.store});
   final AppStore store;
@@ -230,151 +325,145 @@ class _DatosConexion extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final s = store.settings;
-    final poller = ref.read(ratesPollerProvider);
+    final poller = ref.watch(ratesPollerProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const VeEyebrow(child: Text('DATOS Y CONEXIÓN')),
-        // Ancla del tour (v17.8): el paso «Datos y conexión» enfoca este card.
+        // Ancla del tour (v17.8): el paso «Datos y conexión» enfoca este bloque.
         KeyedSubtree(
           key: TourKeys.conexion,
-          child: _VeSettingsCard(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: s.offlineMode,
-                    onChanged: (v) {
-                      store.setOfflineMode(v);
-                      if (v) {
-                        poller.stopAuto(); // offline total: sin más consultas
-                      } else {
-                        poller.markActive(); // reanuda el ciclo ya
-                        poller.refreshNow();
-                      }
-                    },
-                    title: const Text(
-                      'No consultar tasas automáticamente',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _FilaSwitch(
+                titulo: 'No consultar tasas automáticamente',
+                sub: s.offlineMode
+                    ? 'Encendido: la app no consulta ninguna API. Todo sale '
+                          'de tu libro y tus tasas manuales.'
+                    : 'Apagado: la app consulta las tasas según el intervalo '
+                          'de abajo.',
+                value: s.offlineMode,
+                onChanged: (v) {
+                  store.setOfflineMode(v);
+                  if (v) {
+                    poller.stopAuto(); // offline total: sin más consultas
+                  } else {
+                    poller.markActive(); // reanuda el ciclo ya
+                    poller.refreshNow();
+                  }
+                },
+              ),
+              if (!s.offlineMode) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Intervalo de consulta de tasas',
+                  style: VeText.labelCaps(
+                    11,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final e in _intervalos.entries)
+                      ChipTag(
+                        e.value,
+                        selected: s.pollMinutes == e.key,
+                        onTap: () {
+                          store.setPollMinutes(e.key);
+                          poller.markActive(); // reprograma el ciclo
+                        },
                       ),
-                    ),
-                    subtitle: Text(
-                      s.offlineMode
-                          ? 'Encendido: la app no consulta ninguna API. Todo sale de tu libro y tus tasas manuales.'
-                          : 'Apagado: la app consulta las tasas según el intervalo de abajo.',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        height: 1.4,
-                        color: scheme.onSurfaceVariant,
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        // SSE en vivo (17.7): fila plana con LED de estado honesto.
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: s.offlineMode ? null : () => _askSseUrl(context, store),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Tooltip(
+                  message: s.sseUrl.isEmpty
+                      ? 'Sin servidor configurado'
+                      : (poller.sseConnected
+                            ? 'Conectado en vivo'
+                            : 'Sin conexión; sigue el ciclo normal'),
+                  child: Semantics(
+                    label: s.sseUrl.isEmpty
+                        ? 'Estado: sin servidor configurado'
+                        : (poller.sseConnected
+                              ? 'Estado: conectado en vivo'
+                              : 'Estado: sin conexión'),
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: s.sseUrl.isEmpty
+                            ? scheme.outlineVariant
+                            : (poller.sseConnected
+                                  ? VeColors.of(context).pos
+                                  : VeColors.of(context).warn),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Intervalo de consulta de tasas',
-                    style: VeText.labelCaps(
-                      11,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (final e in _intervalos.entries)
-                        ChipTag(
-                          e.value,
-                          selected: !s.offlineMode && s.pollMinutes == e.key,
-                          onTap: s.offlineMode
-                              ? null
-                              : () {
-                                  store.setPollMinutes(e.key);
-                                  poller.markActive(); // reprograma el ciclo
-                                },
+                      const Text(
+                        'Actualización en vivo (opcional)',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
                         ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        s.sseUrl.isEmpty
+                            ? 'Apagado. Si tienes un servidor ValoraVE, pega '
+                                  'su URL: las tasas llegan al instante.'
+                            : '${s.sseUrl} · ${poller.sseConnected ? 'stream conectado' : 'sin conexión; el ciclo normal sigue'}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 1.35,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  // SSE en vivo (17.7): push opcional del despliegue web ValoraVE.
-                  // El polling SIEMPRE sigue como latido — esto lo acelera.
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    // v21.2: el LED de estado ya no es un punto mudo —
-                    // tooltip y etiqueta semántica según su color real.
-                    leading: Tooltip(
-                      message: s.sseUrl.isEmpty
-                          ? 'Sin servidor configurado'
-                          : (poller.sseConnected
-                                ? 'Conectado en vivo'
-                                : 'Sin conexión; sigue el ciclo normal'),
-                      child: Semantics(
-                        label: s.sseUrl.isEmpty
-                            ? 'Estado: sin servidor configurado'
-                            : (poller.sseConnected
-                                  ? 'Estado: conectado en vivo'
-                                  : 'Estado: sin conexión'),
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          margin: const EdgeInsets.only(top: 4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: s.sseUrl.isEmpty
-                                ? scheme.outlineVariant
-                                : (poller.sseConnected
-                                      ? VeColors.of(context).pos
-                                      : VeColors.of(context).warn),
-                          ),
-                        ),
-                      ),
-                    ),
-                    title: const Text(
-                      'Actualización en vivo (opcional)',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    subtitle: Text(
-                      s.sseUrl.isEmpty
-                          ? 'Apagado. Si tienes un servidor ValoraVE, pega su URL: las tasas llegan al instante.'
-                          : '${s.sseUrl} · ${poller.sseConnected ? 'stream conectado' : 'sin conexión; el ciclo normal sigue'}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        height: 1.35,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    trailing: Text(
-                      s.sseUrl.isEmpty ? 'Añadir' : 'Editar',
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    onTap: s.offlineMode
-                        ? null
-                        : () => _askSseUrl(context, store),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  s.sseUrl.isEmpty ? 'Añadir' : 'Editar',
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Las tasas se guardan en tu teléfono y siguen disponibles sin conexión.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      height: 1.45,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Las tasas se guardan en tu teléfono y siguen disponibles sin conexión.',
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.45,
+            color: scheme.onSurfaceVariant,
           ),
         ),
       ],

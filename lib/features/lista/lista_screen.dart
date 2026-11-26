@@ -434,25 +434,34 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
+          // v32 (orden del dueño): el TÍTULO VA SOLO — sin iconos a la
+          // derecha (el Historial tiene su fila de entrada abajo, junto a
+          // Sala en vivo). Separación requerida bajo el título.
           VeTitle(
             sub: Text('Presupuesto y vuelto'),
-            right: VeIconBtn(
-              icon: LucideIcons.receiptText,
-              onTap: () => context.push('/historial'),
-              label: 'Historial',
-            ),
             child: Text('Lista de compras'),
           ),
           const TipsTrigger(scope: 'lista'),
-          // v29 (H-37): entrada propia de la Sala en vivo bajo el título —
-          // fila delineada (icono · título · descripción · chevron); con
-          // sala activa muestra nombre, «En vivo», código y personas.
-          // Ancla del tour conservada.
+          // v29 (H-37) · v32: entrada propia de la Sala en vivo — fila
+          // delineada (icono · título · descripción · chevron); con sala
+          // activa muestra nombre, «En vivo», código y personas. Ancla del
+          // tour conservada. El Historial vive SU fila gemela debajo (v32:
+          // salió del título — títulos solos).
           KeyedSubtree(
             key: TourKeys.listaSala,
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 10),
               child: _SalaEntry(room: room, onTap: () => _openRoom(context)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _FilaEntrada(
+              icon: LucideIcons.receiptText,
+              title: 'Historial de compras',
+              sub: 'Tus compras cerradas, con su tasa y su tienda.',
+              semantic: 'Historial de compras',
+              onTap: () => context.push('/historial'),
             ),
           ),
           // v29 (H-31): el VALOR GRANDE vive en su TARJETA — tono de
@@ -552,26 +561,28 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
               ),
             ),
           ),
-          // v27.3 · Modo Cachea: simulador de inicial + cuotas quincenales
-          // sin intereses. Cálculo, no pago.
+          // v27.3 · v32 · Modo Cachea BIEN UBICADO (orden del dueño): ya no
+          // es una píldora suelta — es una FILA delineada a todo lo ancho,
+          // gemela de Sala/Historial, bajo la tarjeta del total: icono,
+          // título, explicación y chevron. Sin carrito queda honesta y
+          // deshabilitada.
           Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: VeBtn(
-                variant: VeBtnVariant.ghost,
-                size: VeBtnSize.sm,
-                icon: LucideIcons.wallet,
-                enabled: totalInCalc > 0,
-                onPressed: () => showCacheaSheet(
-                  context,
-                  ref: ref,
-                  totalInCalc: totalInCalc,
-                  calcCur: calcCur,
-                  totalUsd: totals.usd,
-                  ctx: ctx,
-                ),
-                child: const Text('Modo Cachea'),
+            padding: const EdgeInsets.only(top: 10, bottom: 4),
+            child: _FilaEntrada(
+              icon: LucideIcons.wallet,
+              title: 'Modo Cachea',
+              sub: totalInCalc > 0
+                  ? 'Simula inicial + cuotas quincenales, sin intereses.'
+                  : 'Agrega productos y simula inicial + cuotas.',
+              semantic: 'Modo Cachea',
+              enabled: totalInCalc > 0,
+              onTap: () => showCacheaSheet(
+                context,
+                ref: ref,
+                totalInCalc: totalInCalc,
+                calcCur: calcCur,
+                totalUsd: totals.usd,
+                ctx: ctx,
               ),
             ),
           ),
@@ -647,8 +658,12 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
                             ),
                           ),
                           const SizedBox(width: 8),
+                          // v32 (orden del dueño): el ESCANER se ve — 40
+                          // visual / 18 de glifo, centrado contra el input.
                           VeIconBtn(
                             icon: LucideIcons.scanBarcode,
+                            size: 40,
+                            iconSize: 18,
                             onTap: () => _scanItem(store),
                             label: 'Escanear código de barras',
                           ),
@@ -1524,6 +1539,93 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
 /// vivo» · «Comparte la lista en tiempo real» · chevron). Con sala activa
 /// muestra nombre, «En vivo», código y personas. Tocar abre la sala viva
 /// (o el lobby si aún no hay sala). Ancla del tour conservada arriba.
+/// v32 · Fila de ENTRADA delineada a todo lo ancho — el lenguaje común de
+/// las puertas de la Lista (Historial · Modo Cachea; Sala usa su propia
+/// variante con estado en vivo, mismo lenguaje). Icono · título ·
+/// descripción · chevron, todo separado y centrado verticalmente.
+class _FilaEntrada extends StatelessWidget {
+  const _FilaEntrada({
+    required this.icon,
+    required this.title,
+    required this.sub,
+    required this.semantic,
+    required this.onTap,
+    this.enabled = true,
+  });
+
+  final IconData icon;
+  final String title;
+  final String sub;
+  final String semantic;
+  final VoidCallback onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: semantic,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.55,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: enabled ? onTap : null,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.ve.colorScheme.border),
+              ),
+              child: Row(
+                children: [
+                  Icon(icon, size: 17, color: scheme.onSurface),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          sub,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13.5,
+                            height: 1.3,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    LucideIcons.chevronRight,
+                    size: 15,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SalaEntry extends StatelessWidget {
   const _SalaEntry({required this.room, required this.onTap});
 

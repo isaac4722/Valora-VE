@@ -11,4 +11,4 @@ library;
 /// plantillas con sala propia, Análisis en 4 secciones, Más sin
 /// duplicados, Ajustes en UNA pantalla con cuentas por tipo de cobro —
 /// más exportación PDF/imágenes profesional y builds solo APK).
-const String kAppVersionVisible = '31';
+const String kAppVersionVisible = '32';

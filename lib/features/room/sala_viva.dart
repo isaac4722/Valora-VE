@@ -354,8 +354,9 @@ class _AvisoObservador extends StatelessWidget {
   }
 }
 
-/// Código GRANDE mono que copia al tocar (H-38): tracking amplio del
-/// prototipo, un solo renglón.
+/// Código GRANDE mono que copia al tocar (H-38 · v32 centrado): tracking
+/// amplio del prototipo, un solo renglón, CENTRADO en la pantalla — es el
+/// protagonista de la sección INVITAR, junto al QR que también va centrado.
 class _CodigoSala extends StatelessWidget {
   const _CodigoSala({required this.room});
 
@@ -365,7 +366,9 @@ class _CodigoSala extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = context.ve.colorScheme;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      // v32 (orden del dueño): la sala se crea SEPARADA y CENTRADA — el
+      // código y el QR comparten el eje del papel.
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         InkWell(
           borderRadius: BorderRadius.circular(10),
@@ -375,7 +378,6 @@ class _CodigoSala extends StatelessWidget {
           },
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
             child: Text(
               room.code.isEmpty ? '—' : room.code,
               style: TextStyle(

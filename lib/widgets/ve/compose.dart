@@ -173,13 +173,14 @@ class _VeRowState extends State<VeRow> {
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 13.5,
+                    height: 1.35,
                     color: scheme.mutedForeground,
                   ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: widget.sub!,
-                  ),
+                  // v32 (orden del dueño): el sub LARGO ENVUELVE a varias
+                  // líneas — FittedBox.scaleDown lo encogía hasta texto
+                  // microscópico (modos de Sala, filas de Ajustes). El
+                  // texto se lee COMPLETO, a su tamaño real.
+                  child: widget.sub!,
                 ),
               ],
             ],
@@ -800,9 +801,13 @@ class VeStickyBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        minimum: const EdgeInsets.only(bottom: 8),
+        // v32 (orden del dueño): SIN franja vacía bajo los botones — la
+        // barra abraza a la barra de tabs (el respiro inferior lo da la
+        // propia barra de tabs con su SafeArea). Antes: mínimo 8 + padding
+        // 12 = ~20 px de papel muerto entre los botones y las tabs.
+        minimum: EdgeInsets.zero,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
           child: Row(
             children: [
               for (var i = 0; i < children.length; i++) ...[

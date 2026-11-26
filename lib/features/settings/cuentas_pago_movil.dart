@@ -29,104 +29,80 @@ class _CuentasPagoMovilState extends ConsumerState<CuentasPagoMovil> {
     // es un puente a local_auth.
     final biometric = BiometricService();
 
-    return _VeSettingsCard(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Guarda tus datos de cobro una vez y comparte el cobro desde el '
-              'Conversor. Todo queda en este teléfono.',
-              style: TextStyle(
-                fontSize: 13.5,
-                height: 1.4,
-                color: scheme.onSurfaceVariant,
+    // v32: GUI plana — el intro lo pone el encabezado de la sección en la
+    // pantalla principal; aquí solo cuentas, alta y candado, sin caja.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!store.settings.accountsBiometric || _abierta) ...[
+          for (final a in store.data.accounts) _AccountTile(account: a),
+          if (store.data.accounts.isEmpty)
+            _EmptyAccounts(onAdd: () => _abrirAlta(context, store))
+          else if (store.data.accounts.length < AppStore.kMaxAccounts)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: VeBtn(
+                variant: VeBtnVariant.ghost,
+                size: VeBtnSize.sm,
+                icon: LucideIcons.plus,
+                onPressed: () => _abrirAlta(context, store),
+                child: const Text('Agregar cuenta'),
               ),
             ),
-            const SizedBox(height: 10),
-            if (!store.settings.accountsBiometric || _abierta) ...[
-              for (final a in store.data.accounts) _AccountTile(account: a),
-              if (store.data.accounts.isEmpty)
-                _EmptyAccounts(onAdd: () => _abrirAlta(context, store))
-              else if (store.data.accounts.length < AppStore.kMaxAccounts)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: VeBtn(
-                    variant: VeBtnVariant.ghost,
-                    size: VeBtnSize.sm,
-                    icon: LucideIcons.plus,
-                    onPressed: () => _abrirAlta(context, store),
-                    child: const Text('Agregar cuenta'),
-                  ),
+          const SizedBox(height: 8),
+          _FilaSwitch(
+            titulo: 'Pedir huella para ver mis cuentas',
+            sub: 'Opcional. El candado de la app ya protege todo.',
+            value: store.settings.accountsBiometric,
+            onChanged: (v) async {
+              if (v) {
+                final ok = await biometric.authenticate(
+                  reason: 'Activar el candado de tus cuentas',
+                );
+                if (!ok) return;
+              }
+              store.setAccountsBiometric(v);
+              setState(() => _abierta = !v || true);
+            },
+          ),
+        ] else
+          // Puerta biométrica: mismo patrón que la puerta de marca
+          // al abrir la app (§12) — sin soporte no bloquea. v32: centrado.
+          Center(
+            child: Column(
+              children: [
+                const SizedBox(height: 6),
+                Icon(
+                  LucideIcons.fingerprint,
+                  size: 30,
+                  color: scheme.onSurfaceVariant,
                 ),
-              const Divider(height: 16),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text(
-                  'Pedir huella para ver mis cuentas',
-                  style: TextStyle(fontSize: 13.5),
-                ),
-                subtitle: Text(
-                  'Opcional. El candado de la app ya protege todo.',
+                const SizedBox(height: 8),
+                Text(
+                  'Tus cuentas están bajo huella',
                   style: TextStyle(
-                    fontSize: 11,
-                    color: scheme.onSurfaceVariant,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
                   ),
                 ),
-                value: store.settings.accountsBiometric,
-                onChanged: (v) async {
-                  if (v) {
+                const SizedBox(height: 10),
+                VeBtn(
+                  variant: VeBtnVariant.secondary,
+                  icon: LucideIcons.fingerprint,
+                  onPressed: () async {
                     final ok = await biometric.authenticate(
-                      reason: 'Activar el candado de tus cuentas',
+                      reason: 'Ver tus cuentas y datos de cobro',
                     );
-                    if (!ok) return;
-                  }
-                  store.setAccountsBiometric(v);
-                  setState(() => _abierta = !v || true);
-                },
-              ),
-            ] else
-              // Puerta biométrica: mismo patrón que la puerta de marca
-              // al abrir la app (§12) — sin soporte no bloquea.
-              Center(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 6),
-                    Icon(
-                      LucideIcons.fingerprint,
-                      size: 30,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tus cuentas están bajo huella',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    VeBtn(
-                      variant: VeBtnVariant.secondary,
-                      icon: LucideIcons.fingerprint,
-                      onPressed: () async {
-                        final ok = await biometric.authenticate(
-                          reason: 'Ver tus cuentas y datos de cobro',
-                        );
-                        if (ok) setState(() => _abierta = true);
-                      },
-                      child: const Text('Desbloquear'),
-                    ),
-                    const SizedBox(height: 6),
-                  ],
+                    if (ok) setState(() => _abierta = true);
+                  },
+                  child: const Text('Desbloquear'),
                 ),
-              ),
-          ],
-        ),
-      ),
+                const SizedBox(height: 6),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -437,7 +413,6 @@ class _AccountTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
-    final ink = VeColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -489,30 +464,24 @@ class _AccountTile extends ConsumerWidget {
             label: account.isDefault
                 ? 'Cuenta principal'
                 : 'Marcar ${account.displayLabel} como cuenta principal',
-            child: IconButton(
-              tooltip: account.isDefault
+            child: VeIconBtn(
+              icon: account.isDefault
+                  ? Icons.star_rounded
+                  : Icons.star_border_rounded,
+              label: account.isDefault
                   ? 'Cuenta principal'
                   : 'Marcar como principal',
-              visualDensity: VisualDensity.compact,
-              icon: Icon(
-                account.isDefault
-                    ? Icons.star_rounded
-                    : Icons.star_border_rounded,
-                size: 20,
-                color: account.isDefault ? ink.warn : scheme.onSurfaceVariant,
-              ),
-              onPressed: account.isDefault
+              onTap: account.isDefault
                   ? null
                   : () => store.setDefaultAccount(account.id),
             ),
           ),
           // v28 · acciones INLINE (sin menú flotante): copiar y borrar son
-          // botones de icono identificables al lado de la cuenta.
+          // botones de icono identificables al lado de la cuenta. v32: al
+          // tamaño común del kit (36/17).
           VeIconBtn(
             icon: Icons.copy_rounded,
             label: 'Copiar datos de la cuenta',
-            size: 32,
-            iconSize: 13.5,
             onTap: () {
               // La copia = título + las líneas del tipo (misma fuente).
               final text = [
@@ -529,8 +498,6 @@ class _AccountTile extends ConsumerWidget {
           VeIconBtn(
             icon: Icons.delete_outline_rounded,
             label: 'Borrar cuenta',
-            size: 32,
-            iconSize: 13.5,
             danger: true,
             onTap: () => store.removeAccount(account.id),
           ),

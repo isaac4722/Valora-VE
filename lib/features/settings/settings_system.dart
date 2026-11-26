@@ -1,6 +1,8 @@
 /// ─── Ajustes · respaldo y tutorial/legal (parte de settings_screen.dart) ───
 /// Respaldo JSON (replace/merge) + zona de peligro + tutorial/legal + acerca.
 /// Parte del archivo principal: comparte privacidad e imports.
+/// v32: GUI plana — botones del kit a todo lo ancho, filas del kit para el
+/// bloque «Acerca de», zona de peligro en tinta negativa sin caja.
 part of 'settings_screen.dart';
 
 /// Ancla respaldo: export/import (replace|merge) + zona peligro.
@@ -11,145 +13,135 @@ class _Respaldo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final ink = VeColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const VeEyebrow(child: Text('RESPALDO')),
-        _VeSettingsCard(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    icon: const Icon(Icons.ios_share, size: 16),
-                    label: const Text('Exportar respaldo JSON'),
-                    onPressed: () => showExportSheet(
-                      context,
-                      ExportSpec(
-                        title: 'Respaldo de tus datos',
-                        subtitle:
-                            'JSON completo: listas, productos y '
-                            'preferencias',
-                        formats: [
-                          ExportFormat(
-                            icon: Icons.data_object,
-                            label: 'JSON',
-                            hint: 'Todo tu historial en un archivo',
-                            // v28 · JSON = TEXTO: se copia o se guarda;
-                            // jamás abre el share nativo.
-                            kind: ExportKind.texto,
-                            run: (mode) async {
-                              final name =
-                                  'backup-valorave-${SnapshotPoint.dayKey(DateTime.now())}.json';
-                              // v20.4: las fotos-archivo viajan en el
-                              // bloque ticketFiles (el JSON de estado queda
-                              // como siempre; las fotos no se pierden).
-                              final text = exportBackupJson(
-                                store.data,
-                                ticketFiles: await collectTicketFiles(
-                                  store.data,
-                                ),
-                              );
-                              if (mode == ExportMode.guardar) {
-                                final path = await downloadText(
-                                  text,
-                                  fileName: name,
-                                );
-                                return path == null
-                                    ? 'No se pudo guardar el respaldo.'
-                                    : 'Guardado en: $path';
-                              }
-                              return copiarTexto(text, 'Respaldo copiado');
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: VeBtn(
+            variant: VeBtnVariant.primary,
+            icon: LucideIcons.share,
+            onPressed: () => showExportSheet(
+              context,
+              ExportSpec(
+                title: 'Respaldo de tus datos',
+                subtitle:
+                    'JSON completo: listas, productos y preferencias',
+                formats: [
+                  ExportFormat(
+                    icon: Icons.data_object,
+                    label: 'JSON',
+                    hint: 'Todo tu historial en un archivo',
+                    // v28 · JSON = TEXTO: se copia o se guarda; jamás abre
+                    // el share nativo.
+                    kind: ExportKind.texto,
+                    run: (mode) async {
+                      final name =
+                          'backup-valorave-${SnapshotPoint.dayKey(DateTime.now())}.json';
+                      // v20.4: las fotos-archivo viajan en el bloque
+                      // ticketFiles (el JSON de estado queda como siempre;
+                      // las fotos no se pierden).
+                      final text = exportBackupJson(
+                        store.data,
+                        ticketFiles: await collectTicketFiles(store.data),
+                      );
+                      if (mode == ExportMode.guardar) {
+                        final path = await downloadText(
+                          text,
+                          fileName: name,
+                        );
+                        return path == null
+                            ? 'No se pudo guardar el respaldo.'
+                            : 'Guardado en: $path';
+                      }
+                      return copiarTexto(text, 'Respaldo copiado');
+                    },
                   ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => _import(context, merge: false),
-                        child: const Text(
-                          'Reemplazar',
-                          style: TextStyle(fontSize: 13.5),
-                        ),
-                      ),
+                ],
+              ),
+            ),
+            child: const Text('Exportar respaldo JSON'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: VeBtn(
+                variant: VeBtnVariant.secondary,
+                onPressed: () => _import(context, merge: false),
+                child: const Text('Reemplazar'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: VeBtn(
+                variant: VeBtnVariant.secondary,
+                onPressed: () => _import(context, merge: true),
+                child: const Text('Fusionar'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Fusionar suma por id y no toca tu carrito ni tus ajustes. '
+          'Reemplazar conserva el tablero vivo.',
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.4,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 16),
+        // ── Zona peligro (v32: tinta negativa sobre el papel, sin caja).
+        Text(
+          'Zona peligro',
+          style: TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+            color: ink.neg,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: VeBtn(
+            variant: VeBtnVariant.secondary,
+            icon: LucideIcons.trash2,
+            onPressed: () {
+              showDialog<void>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('¿Borrar todo?'),
+                  content: const Text(
+                    'Se borran productos, compras, lista y plantillas. El '
+                    'tablero de tasas se conserva.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancelar'),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => _import(context, merge: true),
-                        child: const Text(
-                          'Fusionar',
-                          style: TextStyle(fontSize: 13.5),
-                        ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: ink.neg,
                       ),
+                      onPressed: () {
+                        store.resetAll();
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text('Borrar todo'),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  'Fusionar suma por id y no toca tu carrito ni tus ajustes. Reemplazar conserva el tablero vivo.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                const Divider(height: 24),
-                Text(
-                  'Zona peligro',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: VeColors.of(context).neg,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: VeColors.of(context).neg,
-                    ),
-                    icon: const Icon(Icons.delete_forever, size: 16),
-                    label: const Text('Borrar todos mis datos'),
-                    onPressed: () {
-                      showDialog<void>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('¿Borrar todo?'),
-                          content: const Text(
-                            'Se borran productos, compras, lista y plantillas. El tablero de tasas se conserva.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Cancelar'),
-                            ),
-                            FilledButton(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: VeColors.of(context).neg,
-                              ),
-                              onPressed: () {
-                                store.resetAll();
-                                Navigator.pop(ctx);
-                              },
-                              child: const Text('Borrar todo'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+              );
+            },
+            child: Text(
+              'Borrar todos mis datos',
+              style: TextStyle(color: ink.neg),
             ),
           ),
         ),
@@ -245,7 +237,7 @@ class _Respaldo extends StatelessWidget {
   }
 }
 
-/// Ancla tutorial + legal + versión.
+/// Ancla tutorial + legal + versión (v32 filas del kit).
 /// v17.8: UN solo tutorial completo (rejugable) — la lista de recorridos por
 /// módulo se retiró con el nuevo motor (orden del dueño: no una lista, un
 /// único walkthrough completo).
@@ -259,62 +251,19 @@ class _TutorialLegal extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const VeEyebrow(child: Text('TUTORIAL Y LEGAL')),
+        const SizedBox(height: 10),
         // Ancla del tour (v17.8): el paso final explica este mismo sitio.
         KeyedSubtree(
           key: TourKeys.tutorial,
-          child: _VeSettingsCard(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Tutorial de la app',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
-                ListTile(
-                  dense: true,
-                  leading: Icon(
-                    Icons.school_outlined,
-                    size: 19,
-                    color: scheme.primary,
-                  ),
-                  title: const Text(
-                    'Tutorial',
-                    style: TextStyle(fontSize: 13.5),
-                  ),
-                  subtitle: const Text(
-                    'Retirado (v28): sin capas sobre la pantalla. Cada '
-                    'sección de la app se explica sola.',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  enabled: false,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        _VeSettingsCard(
-          child: Column(
+          child: VeGroup(
+            semantic: 'Acerca de ValoraVE',
             children: [
-              ListTile(
-                leading: Icon(
-                  Icons.waving_hand_outlined,
-                  color: scheme.primary,
-                ),
-                title: const Text(
-                  'Volver a ver la bienvenida',
-                  style: TextStyle(fontSize: 13.5),
-                ),
+              // El tutorial clásico se retiró (v28): cada sección se
+              // explica sola — la fila muerta de «Tutorial» se fue con él.
+              VeRow(
+                label: const Text('Volver a ver la bienvenida'),
+                showChevron: true,
+                semantic: 'Volver a ver la bienvenida',
                 onTap: () {
                   store.reopenTutorial();
                   context.go('/bienvenida');
@@ -323,45 +272,40 @@ class _TutorialLegal extends StatelessWidget {
               // Canal dev (v22.3): la app se entera de las Releases de
               // GitHub del repo — comprueba si hay APK más nuevo que el
               // build instalado y deja descargarlo desde el navegador.
-              ListTile(
-                leading: Icon(
-                  Icons.system_update_outlined,
-                  color: scheme.primary,
-                ),
-                title: const Text(
-                  'Buscar actualizaciones',
-                  style: TextStyle(fontSize: 13.5),
-                ),
-                subtitle: const Text(
-                  'APK de cada ronda en GitHub Releases.',
-                  style: TextStyle(fontSize: 11),
-                ),
-                trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+              VeRow(
+                label: const Text('Buscar actualizaciones'),
+                sub: const Text('APK de cada ronda en GitHub Releases.'),
+                showChevron: true,
+                semantic: 'Buscar actualizaciones',
                 onTap: () => context.push('/actualizaciones'),
+              ),
+              VeRow(
+                label: const Text('Licencias y privacidad'),
+                showChevron: true,
+                semantic: 'Licencias y privacidad',
+                onTap: () => context.push('/legal'),
               ),
               FutureBuilder<PackageInfo>(
                 future: PackageInfo.fromPlatform(),
-                builder: (context, snap) => ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: const Text(
-                    'Acerca de ValoraVE',
-                    style: TextStyle(fontSize: 13.5),
-                  ),
-                  subtitle: Text(
-                    'ValoraVE $kAppVersionVisible · build ${snap.data?.buildNumber} · es-VE · offline-first',
-                    style: const TextStyle(fontSize: 11),
+                builder: (context, snap) => VeRow(
+                  label: const Text('Acerca de ValoraVE'),
+                  sub: Text(
+                    'ValoraVE $kAppVersionVisible · build '
+                    '${snap.data?.buildNumber} · es-VE · offline-first',
                   ),
                 ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.gavel_outlined),
-                title: const Text(
-                  'Licencias y privacidad',
-                  style: TextStyle(fontSize: 13.5),
-                ),
-                onTap: () => context.push('/legal'),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ValoraVE es un libro de precios y divisas de Venezuela: todo lo '
+          'que guardas vive en este teléfono.',
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.4,
+            color: scheme.onSurfaceVariant,
           ),
         ),
       ],

@@ -2,6 +2,8 @@
 /// País · monedas y tasas (por módulo + manuales) · apariencia (tema,
 /// Material You, biometría) · diagnóstico de fuentes · registros. Parte
 /// del archivo principal (v30 · H-42: UNA pantalla por secciones).
+/// v32: GUI plana — sin cajas, encabezado ÚNICO por sección (lo pone la
+/// pantalla principal), filas del kit y switches del kit.
 part of 'settings_screen.dart';
 
 /// Ancla país: protagonista + foco 6 + orden subir/bajar/reset.
@@ -17,86 +19,80 @@ class _Pais extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const VeEyebrow(child: Text('PAÍS')),
-        _VeSettingsCard(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Tu tablero está en ${country.label}.',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 6,
-                  children: [
-                    for (final c in Country.values)
-                      ChipTag(
-                        c.label,
-                        selected: country == c,
-                        onTap: () => store.setCountry(c),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Orden de tus divisas',
-                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 6),
-                for (int i = 0; i < order.length; i++)
-                  Row(
-                    children: [
-                      Flag(order[i], size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          order[i].label,
-                          style: const TextStyle(fontSize: 13.5),
-                        ),
-                      ),
-                      // v21.2: las flechas mudas hablan — tooltip en hover/
-                      // long-press y etiqueta semántica para screen readers.
-                      IconButton(
-                        icon: const Icon(Icons.arrow_upward, size: 15),
-                        tooltip: 'Subir ${order[i].label}',
-                        onPressed: i == 0
-                            ? null
-                            : () => _move(context, order, i, i - 1),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_downward, size: 15),
-                        tooltip: 'Bajar ${order[i].label}',
-                        onPressed: i == order.length - 1
-                            ? null
-                            : () => _move(context, order, i, i + 1),
-                      ),
-                    ],
-                  ),
-                TextButton(
-                  onPressed: () =>
-                      store.setSetting('currencyOrder', <String>[]),
-                  child: const Text('Restaurar orden'),
-                ),
-                // Espejo del Home: quitar el sueldo guardado (con confirmación).
-                if (store.settings.effectiveSalary() != null)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => _confirmQuitSalary(context),
-                      icon: const Icon(Icons.payments_outlined, size: 16),
-                      label: const Text('Quitar sueldo'),
-                    ),
-                  ),
-              ],
-            ),
+        const SizedBox(height: 10),
+        Text(
+          'Tu tablero está en ${country.label}.',
+          style: TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+            color: scheme.onSurface,
           ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 6,
+          children: [
+            for (final c in Country.values)
+              ChipTag(
+                c.label,
+                selected: country == c,
+                onTap: () => store.setCountry(c),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Orden de tus divisas',
+          style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 6),
+        for (int i = 0; i < order.length; i++)
+          Row(
+            children: [
+              Flag(order[i], size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  order[i].label,
+                  style: const TextStyle(fontSize: 13.5),
+                ),
+              ),
+              // v21.2: las flechas hablan — tooltip + semántica. v32:
+              // botones de icono del kit, grandes y centrados.
+              VeIconBtn(
+                icon: Icons.arrow_upward,
+                size: 36,
+                iconSize: 15,
+                label: 'Subir ${order[i].label}',
+                onTap: i == 0 ? null : () => _move(context, order, i, i - 1),
+              ),
+              VeIconBtn(
+                icon: Icons.arrow_downward,
+                size: 36,
+                iconSize: 15,
+                label: 'Bajar ${order[i].label}',
+                onTap: i == order.length - 1
+                    ? null
+                    : () => _move(context, order, i, i + 1),
+              ),
+            ],
+          ),
+        // Espejo del Home: restaurar el orden (con confirmación) y quitar
+        // el sueldo guardado.
+        Row(
+          children: [
+            GhostButton(
+              'Restaurar orden',
+              onPressed: () => store.setSetting('currencyOrder', <String>[]),
+            ),
+            const SizedBox(width: 10),
+            if (store.settings.effectiveSalary() != null)
+              GhostButton(
+                'Quitar sueldo',
+                icon: Icons.payments_outlined,
+                onPressed: () => _confirmQuitSalary(context),
+              ),
+          ],
         ),
       ],
     );
@@ -151,88 +147,68 @@ class _Monedas extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final ctx = store.contextOf();
-    // v30 (H-42): la sección «TASAS Y FUENTES» ya titula — sin eyebrow
-    // interno redundante.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _VeSettingsCard(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final c in CurrencyX.focusMain) ...[
-                  Text(
-                    c.label,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  SourcePills(
-                    sources: RateSource.sourcesFor(c).map((s) => s.id).toList(),
-                    value: store.sourceFor(c),
-                    onChanged: (id) => store.setRateSource(c, id),
-                  ),
-                  const SizedBox(height: 4),
-                  if (ctx.rate(store.sourceFor(c)) > 0)
-                    Text(
-                      'Activa: ${fmtRate(ctx.rate(store.sourceFor(c)))}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  const SizedBox(height: 10),
-                ],
-                Text(
-                  'Fuente por módulo',
-                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 6),
-                for (final module in RateModule.values)
-                  _ModuleSource(store: store, module: module),
-                const Divider(height: 18),
-                // Leyenda de categorías (dp6): color = tipo de fuente.
-                const CategoryLegend(),
-                const SizedBox(height: 4),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  title: const Text(
-                    'Refresco automático de tasas',
-                    style: TextStyle(fontSize: 13.5),
-                  ),
-                  subtitle: const Text(
-                    'Consulta las tasas al abrir la app',
-                    style: TextStyle(fontSize: 11),
-                  ),
-                  value: store.settings.autoRefresh,
-                  onChanged: (v) => store.setSetting('autoRefresh', v),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Tasas manuales',
-                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 4),
-                const _ManualRates(),
-                const Divider(height: 18),
-                // v23: tasas propias con nombre (comparativa CalculaYa) —
-                // el atajo cotidiano; las manuales por fuente son el modo
-                // avanzado de siempre, intacto.
-                Text(
-                  'Tus tasas',
-                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 4),
-                const _CustomRates(),
-              ],
+        const SizedBox(height: 10),
+        for (final c in CurrencyX.focusMain) ...[
+          Text(
+            c.label,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
             ),
           ),
+          const SizedBox(height: 6),
+          SourcePills(
+            sources: RateSource.sourcesFor(c).map((s) => s.id).toList(),
+            value: store.sourceFor(c),
+            onChanged: (id) => store.setRateSource(c, id),
+          ),
+          const SizedBox(height: 4),
+          if (ctx.rate(store.sourceFor(c)) > 0)
+            Text(
+              'Activa: ${fmtRate(ctx.rate(store.sourceFor(c)))}',
+              style: TextStyle(
+                fontSize: 11,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          const SizedBox(height: 12),
+        ],
+        Text(
+          'Fuente por módulo',
+          style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
         ),
+        const SizedBox(height: 4),
+        for (final module in RateModule.values)
+          _ModuleSource(store: store, module: module),
+        const SizedBox(height: 8),
+        // Leyenda de categorías (dp6): color = tipo de fuente.
+        const CategoryLegend(),
+        _FilaSwitch(
+          titulo: 'Refresco automático de tasas',
+          sub: 'Consulta las tasas al abrir la app',
+          value: store.settings.autoRefresh,
+          onChanged: (v) => store.setSetting('autoRefresh', v),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Tasas manuales',
+          style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 4),
+        const _ManualRates(),
+        const SizedBox(height: 12),
+        // v23: tasas propias con nombre (comparativa CalculaYa) —
+        // el atajo cotidiano; las manuales por fuente son el modo
+        // avanzado de siempre, intacto.
+        Text(
+          'Tus tasas',
+          style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 4),
+        const _CustomRates(),
       ],
     );
   }
@@ -272,9 +248,9 @@ class _ModuleSource extends ConsumerWidget {
           // unificada (showVeHalfSheet) con las fuentes disponibles.
           VeIconBtn(
             icon: Icons.tune_rounded,
+            size: 36,
+            iconSize: 15,
             label: 'Elegir tasa de $label',
-            size: 32,
-            iconSize: 13.5,
             onTap: () async {
               final options = <(String, String)>[
                 ('global', 'Global (tasa activa del país)'),
@@ -573,7 +549,7 @@ class _CustomRates extends ConsumerWidget {
   }
 }
 
-/// Ancla apariencia.
+/// Ancla apariencia (v32 plana): previews de tema + switches del kit.
 class _Apariencia extends ConsumerWidget {
   const _Apariencia();
 
@@ -581,82 +557,52 @@ class _Apariencia extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ref.watch(themeControllerProvider);
     final store = ref.watch(appStoreProvider);
-    final scheme = Theme.of(context).colorScheme;
-    // v30 (H-42): la sección «APARIENCIA» ya titula — sin eyebrow interno.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _VeSettingsCard(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // TASK-33 Linear: selector de tema con PREVIEWS (patrón
-                // Vercel/Linear) — los dos temas de la app se ven antes de
-                // elegir. Sustituye a los chips planos.
-                ThemePreviewRow(
-                  value: theme.mode,
-                  onChanged: (v) =>
-                      theme.setMode(v, ref.read(sharedPreferencesProvider)),
-                ),
-                // Material You (dp6 · mejora 2): opt-in. Solo tiñe acciones y
-                // selección; superficies y semántica de dinero siguen de marca.
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: theme.dynamicColor,
-                  onChanged: (v) => theme.setDynamicColor(
-                    v,
-                    ref.read(sharedPreferencesProvider),
-                  ),
-                  title: const Text(
-                    'Color dinámico del sistema (Material You)',
-                    style: TextStyle(fontSize: 13.5),
-                  ),
-                  subtitle: Text(
-                    'Android 12 o superior. Botones y selección usan el color del fondo.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                // Bloqueo biométrico (17.7): local_auth ya vivía como servicio;
-                // ahora con toggle. Al activar verifica soporte real primero.
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: store.settings.biometricLock,
-                  onChanged: (v) async {
-                    if (v) {
-                      final ok = await BiometricService().canCheck;
-                      if (!ok) {
-                        if (context.mounted) {
-                          showToast(
-                            context,
-                            'Este equipo no tiene biometría ni PIN de bloqueo configurados',
-                            kind: ToastKind.warn,
-                          );
-                        }
-                        return; // no se activa sin soporte real
-                      }
-                    }
-                    store.setBiometricLock(v);
-                  },
-                  title: const Text(
-                    'Bloqueo biométrico al abrir',
-                    style: TextStyle(fontSize: 13.5),
-                  ),
-                  subtitle: Text(
-                    'Huella, rostro o PIN al abrir. Se pide una sola vez.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        const SizedBox(height: 10),
+        // TASK-33 Linear: selector de tema con PREVIEWS (patrón
+        // Vercel/Linear) — los dos temas de la app se ven antes de
+        // elegir. Sustituye a los chips planos.
+        ThemePreviewRow(
+          value: theme.mode,
+          onChanged: (v) =>
+              theme.setMode(v, ref.read(sharedPreferencesProvider)),
+        ),
+        // Material You (dp6 · mejora 2): opt-in. Solo tiñe acciones y
+        // selección; superficies y semántica de dinero siguen de marca.
+        _FilaSwitch(
+          titulo: 'Color dinámico del sistema (Material You)',
+          sub: 'Android 12 o superior. Botones y selección usan el color '
+              'del fondo.',
+          value: theme.dynamicColor,
+          onChanged: (v) => theme.setDynamicColor(
+            v,
+            ref.read(sharedPreferencesProvider),
           ),
+        ),
+        // Bloqueo biométrico (17.7): local_auth ya vivía como servicio;
+        // ahora con toggle. Al activar verifica soporte real primero.
+        _FilaSwitch(
+          titulo: 'Bloqueo biométrico al abrir',
+          sub: 'Huella, rostro o PIN al abrir. Se pide una sola vez.',
+          value: store.settings.biometricLock,
+          onChanged: (v) async {
+            if (v) {
+              final ok = await BiometricService().canCheck;
+              if (!ok) {
+                if (context.mounted) {
+                  showToast(
+                    context,
+                    'Este equipo no tiene biometría ni PIN de bloqueo configurados',
+                    kind: ToastKind.warn,
+                  );
+                }
+                return; // no se activa sin soporte real
+              }
+            }
+            store.setBiometricLock(v);
+          },
         ),
       ],
     );
@@ -839,7 +785,7 @@ class _ThemePreviewCard extends ConsumerWidget {
 
 /// Diagnóstico de fuentes (dp6 · mejora 8): consulta cada región en vivo y
 /// mide latencia y fuentes obtenidas. El data layer (diagnoseRegions) ya
-/// vivía en board.dart — aquí solo la vista honesta.
+/// vivía en board.dart — aquí solo la vista honesta. v32: plano, sin caja.
 class _Diagnostico extends ConsumerStatefulWidget {
   const _Diagnostico();
 
@@ -870,89 +816,72 @@ class _DiagnosticoState extends ConsumerState<_Diagnostico> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const VeEyebrow(child: Text('DIAGNÓSTICO DE FUENTES')),
-        _VeSettingsCard(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Consulta cada región y mide su respuesta. Si una falla, las demás siguen.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (_running)
-                  const Row(
-                    children: [
-                      SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2.2),
-                      ),
-                      SizedBox(width: 12),
-                      Text('Consultando regiones…'),
-                    ],
-                  )
-                else
-                  GhostButton(
-                    'Ejecutar diagnóstico',
-                    icon: Icons.network_check_rounded,
-                    onPressed: _run,
-                  ),
-                if (_result != null) ...[
-                  const SizedBox(height: 12),
-                  for (final r in _result!)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Stamp(
-                            r.ok ? 'OK' : 'Sin respuesta',
-                            color: r.ok ? ink.pos : ink.neg,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  r.label,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13.5,
-                                  ),
-                                ),
-                                Text(
-                                  '${r.sources} fuentes · ${r.latencyMs} ms',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                if (r.error != null)
-                                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                                    r.error!,
-                                    maxLines: 2,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: ink.neg.withValues(alpha: 0.8),
-                                    ),
-                                  )),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ],
-            ),
+        const SizedBox(height: 10),
+        // (scheme e ink: usados por las filas de resultado abajo)
+        if (_running)
+          const Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2.2),
+              ),
+              SizedBox(width: 12),
+              Text('Consultando regiones…'),
+            ],
+          )
+        else
+          GhostButton(
+            'Ejecutar diagnóstico',
+            icon: Icons.network_check_rounded,
+            onPressed: _run,
           ),
-        ),
+        if (_result != null) ...[
+          const SizedBox(height: 12),
+          for (final r in _result!)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Stamp(
+                    r.ok ? 'OK' : 'Sin respuesta',
+                    color: r.ok ? ink.pos : ink.neg,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          r.label,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13.5,
+                          ),
+                        ),
+                        Text(
+                          '${r.sources} fuentes · ${r.latencyMs} ms',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (r.error != null)
+                          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
+                            r.error!,
+                            maxLines: 2,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: ink.neg.withValues(alpha: 0.8),
+                            ),
+                          )),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -972,35 +901,27 @@ class _Registros extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const VeEyebrow(child: Text('REGISTROS DE LA APP')),
-        _VeSettingsCard(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Errores de red y eventos de la sala. Solo en este teléfono; nada sale de aquí.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                GhostButton(
-                  'Ver registros',
-                  icon: Icons.receipt_long_outlined,
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => TalkerScreen(
-                        talker: veTalker,
-                        appBarTitle: 'Registros de la app',
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+        const SizedBox(height: 10),
+        GhostButton(
+          'Ver registros',
+          icon: Icons.receipt_long_outlined,
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => TalkerScreen(
+                talker: veTalker,
+                appBarTitle: 'Registros de la app',
+              ),
             ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Errores de red y eventos de la sala. Solo en este teléfono; nada '
+          'sale de aquí.',
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.35,
+            color: scheme.onSurfaceVariant,
           ),
         ),
       ],

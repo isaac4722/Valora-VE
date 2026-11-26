@@ -369,7 +369,11 @@ class _FlujoUnirse extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // v32 (orden del dueño): las dos puertas JEMELAS — mismo ancho
+        // (Expanded) y misma altura, separadas y centradas. Antes el botón
+        // secundario flotaba a su medida y la fila se veía torcida.
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: VeBtn(
@@ -381,12 +385,14 @@ class _FlujoUnirse extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            VeBtn(
-              variant: VeBtnVariant.secondary,
-              icon: LucideIcons.scanLine,
-              enabled: !busy,
-              onPressed: busy ? null : () => _scanQr(context),
-              child: const Text('Escanear QR'),
+            Expanded(
+              child: VeBtn(
+                variant: VeBtnVariant.secondary,
+                icon: LucideIcons.scanLine,
+                enabled: !busy,
+                onPressed: busy ? null : () => _scanQr(context),
+                child: const Text('Escanear QR'),
+              ),
             ),
           ],
         ),
