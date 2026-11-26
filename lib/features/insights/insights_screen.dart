@@ -1,11 +1,12 @@
 /// ─── Análisis (v19.8 · rediseño web-first) ─────────────────────────────────
-/// Tablero de análisis rediseñado como un dashboard web: barra de anclas
-/// segmentada, fila de KPIs arriba de cada panel, tarjetas-panel con
-/// cabecera consistente (título + acción a la derecha), rango de tiempo
-/// integrado a la barra y exportación UNIFICADA (el mismo componente en
-/// todos los módulos). 6 anclas: Divisas · Inflación · Productos · Canasta
-/// · Gastos · Tasa. La lógica de datos no cambia (misma matemática
-/// testeada); cambia la PRESENTACIÓN.
+/// Tablero de análisis (v30 · H-39/H-40): CUATRO secciones — Divisas ·
+/// Inflación · Canasta · Gastos — en la MISMA barra segmentada de 44 px
+/// del Conversor (píldora deslizante, a todo lo ancho del contenido). El
+/// rango `VeSegmented` vive a todo lo ancho SOLO en las secciones que lo
+/// usan (Canasta no tiene rango). H-40: «Tasa» y «Productos» salieron
+/// (repetían el Conversor y el desglose de Inflación/Gastos);
+/// `CurrencyRanking` emigró a Gastos. La lógica de datos no cambia (misma
+/// matemática testeada).
 library;
 
 import 'package:flutter/material.dart';
@@ -24,7 +25,6 @@ import 'insights_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:valorave/core/ve_theme.dart';
 import 'package:intl/intl.dart';
 
 class InsightsScreen extends ConsumerStatefulWidget {
@@ -35,25 +35,19 @@ class InsightsScreen extends ConsumerStatefulWidget {
 }
 
 class _InsightsScreenState extends ConsumerState<InsightsScreen> {
-  int _anchor =
-      0; // 0 divisas · 1 inflación · 2 productos · 3 canasta · 4 gastos · 5 tasa
+  int _anchor = 0; // 0 divisas · 1 inflación · 2 canasta · 3 gastos
   int _days = 30; // 1 M · 6 M · 1 Año · Máximo (3650 = todo lo que haya)
 
-  static const _anchors = [
-    (Icons.currency_exchange, 'Divisas'),
-    (Icons.local_fire_department_outlined, 'Inflación'),
-    (Icons.inventory_2_outlined, 'Productos'),
-    (Icons.shopping_basket_outlined, 'Canasta'),
-    (Icons.payments_outlined, 'Gastos'),
-    (Icons.history, 'Tasa'),
+  static const _anchors = <VeSegment<int>>[
+    VeSegment(value: 0, label: 'Divisas'),
+    VeSegment(value: 1, label: 'Inflación'),
+    VeSegment(value: 2, label: 'Canasta'),
+    VeSegment(value: 3, label: 'Gastos'),
   ];
 
-  static const _ranges = <(int, String)>[
-    (30, '1 M'),
-    (183, '6 M'),
-    (365, '1 Año'),
-    (3650, 'Máximo'),
-  ];
+  /// Secciones que usan el rango (H-39): Canasta es un CRUD sin ventana
+  /// de tiempo — la barra del rango no existe ahí.
+  bool get _rangoAplica => _anchor != 2;
 
   @override
   Widget build(BuildContext context) {
@@ -82,63 +76,41 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ── Barra de anclas (v19.8): segmentada, 6 vistas del
-                  // tablero. TASK-34 p9: cromática del segmentado Ve
-                  // (muted + borde), píldora activa card + borde + sombra
-                  // corta — sin pérdida de iconos (la superioridad táctil
-                  // de la app).
+                  // ── Barra de secciones (v30 · H-39): el MISMO control
+                  // del Conversor — VeSegmented de 44 px con píldora
+                  // deslizante, a todo lo ancho del contenido. Cuatro
+                  // secciones respiran; las 6 anclas viejas quedaban
+                  // apretadas y desalineadas.
                   KeyedSubtree(
                     key: TourKeys.anclas,
-                    child: Builder(
-                      builder: (barCtx) {
-                        final shad = barCtx.ve.colorScheme;
-                        return Container(
-                          padding: const EdgeInsets.all(4),
-                          // v25 «HOJA»: pista del segmentado TONAL muted y
-                          // SIN borde — la activa es la píldora de tinta.
-                          decoration: BoxDecoration(
-                            color: shad.muted,
-                            borderRadius: BorderRadius.circular(
-                              kVeControlRadius,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              for (var i = 0; i < _anchors.length; i++)
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 2,
-                                    ),
-                                    child: _AnchorTab(
-                                      icon: _anchors[i].$1,
-                                      label: _anchors[i].$2,
-                                      selected: _anchor == i,
-                                      onTap: () => setState(() => _anchor = i),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      },
+                    child: VeSegmented<int>(
+                      value: _anchor,
+                      height: 44,
+                      onChanged: (i) => setState(() => _anchor = i),
+                      segments: _anchors,
                     ),
                   ),
-                  // ── Rango: chips del prototipo pegados a la barra de anclas.
-                  const SizedBox(height: 8),
-                  KeyedSubtree(
-                    key: TourKeys.rango,
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final (d, label) in _ranges)
-                          VeChip(
-                            active: _days == d,
-                            onTap: () => setState(() => _days = d),
-                            child: Text(label),
-                          ),
-                      ],
+                  // ── Rango (H-39): VeSegmented a todo lo ancho, SOLO en
+                  // las secciones que lo usan. R-30f: Offstage — montado
+                  // SIEMPRE (el paso del tour enfoca su rect), invisible
+                  // cuando no aplica (Canasta).
+                  Offstage(
+                    offstage: !_rangoAplica,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: KeyedSubtree(
+                        key: TourKeys.rango,
+                        child: VeSegmented<int>(
+                          value: _days,
+                          onChanged: (d) => setState(() => _days = d),
+                          segments: const [
+                            VeSegment(value: 30, label: '1 M'),
+                            VeSegment(value: 183, label: '6 M'),
+                            VeSegment(value: 365, label: '1 Año'),
+                            VeSegment(value: 3650, label: 'Máximo'),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -152,85 +124,15 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                     0 => _DivisasAnchor(days: _days),
                     1 => _InflacionAnchor(
                       days: _days,
-                      onGoToBasket: () => setState(() => _anchor = 3),
+                      onGoToBasket: () => setState(() => _anchor = 2),
                     ),
-                    2 => ProductosAnchor(days: _days),
-                    3 => const CanastaAnchor(),
-                    4 => GastosAnchor(days: _days),
-                    _ => HistoricaAnchor(days: _days),
+                    2 => const CanastaAnchor(),
+                    _ => GastosAnchor(days: _days),
                   },
                 ],
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Tab de ancla: icono + etiqueta en columna, fondo píldora cuando activo
-/// (el segmented-control de la web, táctil).
-class _AnchorTab extends ConsumerWidget {
-  const _AnchorTab({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final shad = context.ve.colorScheme;
-    final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      // v23.3 (pez 2-a): el lector de pantalla anuncia la vista y su
-      // estado (antes el InkWell era mudo para TalkBack).
-      button: true,
-      selected: selected,
-      label: 'Vista $label',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          // v25 «HOJA»: píldora activa de TINTA sólida — sin borde ni
-          // sombra; el contenido invierte a color papel.
-          decoration: BoxDecoration(
-            color: selected ? shad.primary : null,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                size: 15,
-                color: selected ? shad.background : scheme.onSurfaceVariant,
-              ),
-              const SizedBox(height: 3),
-              // v23.3 (pez 2-a): una línea con elipsis + Semantics — a
-              // textScale ≥1.3 «Inflación» ya no envuelve y descuadra la
-              // píldora. OJO: sin el tracking de labelCaps — con él
-              // «Productos» no cabía en 6 pestañas a 390 y quedaba
-              // «Produ…» (hallazgo del gate visual).
-              FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                label,
-                maxLines: 1,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: selected ? shad.background : scheme.onSurfaceVariant,
-                ),
-              )),
-            ],
-          ),
         ),
       ),
     );
@@ -362,14 +264,11 @@ class _DivisasAnchorState extends ConsumerState<_DivisasAnchor> {
         KpiRow(
           tiles: [
             KpiTile(
-              // v21 (GUI superior): «Brecha» a secas — el par queda escrito
-              // en el panel que sigue («BCV ↔ PARALELO») y en móvil la
-              // etiqueta larga se cortaba con «…» aunque pidiera 2 líneas.
+              // v21 (GUI superior) + v30 (H-40): «Brecha» a secas — sin
+              // adjetivos redundantes («brecha alta»): el par queda
+              // escrito en el panel que sigue («BCV ↔ PARALELO»).
               label: 'Brecha',
               value: gap == null ? '—' : fmtPct(gap),
-              sub: gap != null && gap.abs() >= 15
-                  ? 'brecha alta'
-                  : (gap != null ? 'brecha normal' : null),
               icon: LucideIcons.arrowLeftRight,
               color: gap == null ? scheme.onSurface : ink.warn,
             ),
@@ -502,9 +401,6 @@ class _DivisasAnchorState extends ConsumerState<_DivisasAnchor> {
               ],
             ),
           ),
-        // Lookup por fecha (compacto: una tarjeta, no una sección gigante).
-        const SizedBox(height: 10),
-        const _LookupFecha(),
       ],
     );
   }
@@ -650,140 +546,6 @@ class _DayPanel extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _LookupFecha extends ConsumerStatefulWidget {
-  const _LookupFecha();
-
-  @override
-  ConsumerState<_LookupFecha> createState() => _LookupFechaState();
-}
-
-class _LookupFechaState extends ConsumerState<_LookupFecha> {
-  DateTime _date = DateTime.now().subtract(const Duration(days: 1));
-  double? _rateB;
-  double? _rateP;
-  bool _searched = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final ink = VeColors.of(context);
-    return PanelCard(
-      title: 'Consultar tasa por fecha',
-      subtitle:
-          'Tus snapshots locales — desde el día que la app empezó a '
-          'consultar tasas',
-      child: Column(
-        children: [
-          // v20 (VLM gate): el selector de fecha es un CAMPO de verdad —
-          // píldora tocable con icono de calendario y chevron (antes era
-          // texto plano + botón «Elegir» que nadie veía).
-          InkWell(
-            onTap: () async {
-              final d = await showDatePicker(
-                context: context,
-                initialDate: _date,
-                firstDate: DateTime(2023, 1, 3),
-                lastDate: DateTime.now(),
-                locale: const Locale('es'),
-              );
-              if (d == null || !context.mounted) return;
-              final store = ref.read(appStoreProvider);
-              final day = SnapshotPoint.dayKey(d);
-              final b = store.snapshots
-                  .where((p) => p.sourceId == 'ves-bcv' && p.day == day)
-                  .firstOrNull;
-              final p = store.snapshots
-                  .where((x) => x.sourceId == 'ves-parallel' && x.day == day)
-                  .firstOrNull;
-              setState(() {
-                _date = d;
-                _rateB = b?.rate;
-                _rateP = p?.rate;
-                _searched = true;
-              });
-            },
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              // v25 «HOJA»: selector de fecha PLANO — icono + fecha +
-              // chevron, sin caja.
-              child: Row(
-                children: [
-                  Icon(
-                    LucideIcons.calendarDays,
-                    size: 15,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Text(
-                      fmtDate(_date),
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    LucideIcons.chevronDown,
-                    size: 15,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_rateB != null)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => copiarAlPortapapeles(
-                  context,
-                  'BCV ${fmtDate(_date)}: ${fmtRate(_rateB!)}',
-                  'Tasa copiada',
-                ),
-                child: const Text('Copiar'),
-              ),
-            ),
-          if (_rateB != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: LedgerRow(
-                label: 'BCV · ${fmtDate(_date)}',
-                value: '${fmtRate(_rateB!)} Bs/USD',
-                valueColor: ink.pos,
-                boldValue: true,
-              ),
-            ),
-          if (_rateP != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: LedgerRow(
-                label: 'Paralelo · ${fmtDate(_date)}',
-                value: '${fmtRate(_rateP!)} Bs/USD',
-                valueColor: ink.neg,
-                boldValue: true,
-              ),
-            ),
-          if (_searched && _rateB == null && _rateP == null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Sin registro local para esa fecha: los snapshots empiezan el día '
-                'que la app consulta tasas. Para tasas remotas de fechas pasadas '
-                'usa el Conversor → fecha histórica.',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }

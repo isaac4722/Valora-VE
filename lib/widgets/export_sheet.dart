@@ -135,6 +135,42 @@ ExportFormat pngFormat({
   );
 }
 
+/// PDF (v31) — ARCHIVO: se comparte o se guarda, igual que el PNG pero con
+/// su MIME de documento (el receptor abre un PDF, no una imagen). La
+/// generación [build] devuelve bytes o null: ante fallo el mensaje es
+/// humano («No pude generar el PDF»), jamás una excepción sin tratar.
+ExportFormat pdfFormat({
+  required String hint,
+  required String fileName,
+  required Future<Uint8List?> Function() build,
+}) {
+  return ExportFormat(
+    icon: Icons.picture_as_pdf_outlined,
+    label: 'PDF',
+    hint: hint,
+    kind: ExportKind.archivo,
+    run: (mode) async {
+      Uint8List? bytes;
+      try {
+        bytes = await build();
+      } catch (_) {
+        bytes = null; // la generación de un documento jamás tumba la app
+      }
+      if (bytes == null || bytes.isEmpty) {
+        return 'No pude generar el PDF. Intenta de nuevo.';
+      }
+      if (mode == ExportMode.compartir) {
+        await sharePdf(bytes, fileName);
+        return null;
+      }
+      final path = await downloadBytes(bytes, fileName: fileName);
+      return path == null
+          ? 'No se pudo guardar el PDF.'
+          : 'Guardado en: $path';
+    },
+  );
+}
+
 /// Texto plano (resúmenes, enlaces, respaldos legibles) — TEXTO: copiar/guardar.
 ExportFormat textFormat({
   required String hint,
@@ -249,7 +285,15 @@ Future<void> showExportSheet(BuildContext context, ExportSpec spec) async {
   );
   if (chosen == null || !context.mounted) return;
 
-  final msg = await fmt.run(chosen);
+  // v31: la ejecución también se protege — si el share nativo o el guardado
+  // fallan (sin manejador de compartir, almacenamiento caído…), el usuario
+  // recibe un aviso humano en vez de un error sin tratar.
+  String? msg;
+  try {
+    msg = await fmt.run(chosen);
+  } catch (_) {
+    msg = 'No se pudo completar la exportación. Intenta de nuevo.';
+  }
   if (msg != null && context.mounted) {
     showToast(context, msg);
   }

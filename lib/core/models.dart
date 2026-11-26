@@ -11,9 +11,6 @@ const int kDataVersion = 12;
 /// Límite duro de listas importadas (mergeBackupData del web §4).
 const int kMaxPerList = 10000;
 
-/// Máximo de plantillas (§2.4).
-const int kMaxTemplates = 20;
-
 // ─── Utilidades de parsing tolerante ───────────────────────────────────────
 
 double dOf(dynamic v, [double fallback = 0]) {
@@ -752,80 +749,10 @@ class Purchase {
   );
 }
 
-// ─── 1.7 ShoppingTemplate / ShoppingTemplateItem / BasketItem ──────────────
-
-class ShoppingTemplateItem {
-  final String name;
-  final int quantity;
-  final double price; // congelado
-  final String currency;
-  final String? productId;
-  final String? barcode;
-
-  const ShoppingTemplateItem({
-    required this.name,
-    required this.quantity,
-    required this.price,
-    required this.currency,
-    this.productId,
-    this.barcode,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'name': name,
-    'quantity': quantity,
-    'price': price,
-    'currency': currency,
-    'productId': productId,
-    'barcode': barcode,
-  };
-
-  factory ShoppingTemplateItem.fromJson(Map<String, dynamic> j) =>
-      ShoppingTemplateItem(
-        name: sOf(j['name']),
-        quantity: iOf(j['quantity'], 1).clamp(1, 999),
-        price: dOf(j['price']),
-        currency: sOf(j['currency'], 'USD'),
-        productId: j['productId'] as String?,
-        barcode: j['barcode'] as String?,
-      );
-}
-
-class ShoppingTemplate {
-  final String id;
-  final String name;
-  final DateTime createdAt;
-  final List<ShoppingTemplateItem> items;
-
-  const ShoppingTemplate({
-    required this.id,
-    required this.name,
-    required this.createdAt,
-    required this.items,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'createdAt': createdAt.toIso8601String(),
-    'items': items.map((e) => e.toJson()).toList(),
-  };
-
-  factory ShoppingTemplate.fromJson(Map<String, dynamic> j) => ShoppingTemplate(
-    id: sOf(j['id']),
-    name: sOf(j['name']),
-    createdAt: dtOf(j['createdAt']) ?? DateTime.now(),
-    items: (j['items'] is List
-        ? (j['items'] as List)
-              .whereType<Map>()
-              .map(
-                (e) =>
-                    ShoppingTemplateItem.fromJson(Map<String, dynamic>.from(e)),
-              )
-              .toList()
-        : const <ShoppingTemplateItem>[]),
-  );
-}
+// ─── 1.7 BasketItem ───────────────────────────────────────────────────────
+// v29 (H-35): ShoppingTemplate/ShoppingTemplateItem se ELIMINARON por
+// completo (chip, widget, store, respaldo y tests). Los respaldos viejos
+// con la clave «templates» cargan sin romper: fromJson la ignora.
 
 class BasketItem {
   final String productId;
@@ -895,7 +822,9 @@ class Settings {
   final String
   sseUrl; // 17.7: SSE en vivo opcional de un despliegue web ('' = off)
   final String numMode; // v23 'decimales' | 'redondeo' (vista del resultado)
-  final int precision; // v27 · precisión decimal 2..4 (REA CalculaYa)
+  // v27 · precisión decimal; v29 (H-26): escala única 2..6 — «Completo» = 6
+  // (todos los decimales reales, sin ceros de relleno).
+  final int precision;
   final bool accountsBiometric; // v23: huella para ver Cuentas y Pago Móvil
 
   const Settings({
@@ -1140,7 +1069,9 @@ class Settings {
       numMode: sOf(j['numMode'], 'decimales') == 'redondeo'
           ? 'redondeo'
           : 'decimales',
-      precision: (iOf(j['precision'], 4)).clamp(2, 4),
+      // v29 (H-26 · R-29a): clamp 2..6 también en fromJson — el tercer sitio
+      // del clamp (con setPrecision y _patchSettings): «Completo» jamás rebota.
+      precision: (iOf(j['precision'], 4)).clamp(2, 6),
       accountsBiometric: j['accountsBiometric'] == true,
     );
   }
@@ -1329,17 +1260,46 @@ class CustomRate {
   }
 }
 
-/// Cuenta bancaria propia para compartir el cobro por Pago Móvil (v23 ·
-/// comparativa CalculaYa): banco, tipo, número, CI y teléfono. v27: alias
-/// («Cuenta principal») y marca de cuenta predeterminada, igual que el
-/// sistema de cuentas de CalculaYa. Dato SENSIBLE: vive SOLO en el teléfono
-/// (allowBackup=false desde v20.4) y puede blindarse con huella.
+/// Tipo de cuenta de cobro (v30 · H-43): el tipo DECIDE los datos —
+/// Pago Móvil (banco + cédula + teléfono), Transferencia (banco + tipo +
+/// número de 20 + cédula) o Zelle (titular + email/teléfono de EE. UU.).
+enum PayAccountKind {
+  pagoMovil('Pago Móvil'),
+  transferencia('Transferencia'),
+  zelle('Zelle');
+
+  const PayAccountKind(this.label);
+
+  /// Nombre corto para UI (picker del alta, fila de la cuenta).
+  final String label;
+
+  /// Valor estable del JSON (tryParse tolera además los respaldos viejos
+  /// SIN kind: con número → transferencia; sin número y con teléfono →
+  /// pago móvil — sin pérdida de datos).
+  String get wire => name;
+
+  static PayAccountKind? tryParseKind(String? raw) => switch (raw?.trim()) {
+    'pagoMovil' => PayAccountKind.pagoMovil,
+    'transferencia' => PayAccountKind.transferencia,
+    'zelle' => PayAccountKind.zelle,
+    _ => null,
+  };
+}
+
+/// Cuenta propia de cobro (v23 · comparativa CalculaYa; v30 · H-43 el tipo
+/// decide los datos): **Pago Móvil** (banco + cédula + teléfono — SIN tipo
+/// ni número), **Transferencia** (banco + tipo + número de 20 + cédula) o
+/// **Zelle** (titular + email/teléfono US). La fila, la copia, el mensaje
+/// de cobro y la tarjeta 1080×1080 renderizan EXACTAMENTE las líneas del
+/// tipo ([dataLines], única fuente de verdad). Dato SENSIBLE: vive SOLO en
+/// el teléfono (allowBackup=false desde v20.4) y puede blindarse con huella.
 class PayAccount {
   const PayAccount({
     required this.id,
-    required this.bank,
-    required this.type,
-    required this.number,
+    required this.kind,
+    this.bank = '',
+    this.type = 'corriente',
+    this.number = '',
     this.docId = '',
     this.phone = '',
     this.label = '',
@@ -1349,25 +1309,30 @@ class PayAccount {
 
   final String id;
 
+  /// El tipo de cobro — decide qué campos existen (v30 · H-43).
+  final PayAccountKind kind;
+
   /// Alias corto que el usuario le pone a la cuenta (v27).
   final String label;
 
-  /// Titular de la cuenta (REA CalculaYa: «Account holder (Full name)»).
+  /// Titular (Zelle: el nombre del dueño de la cuenta US).
   final String holderName;
 
-  /// Nombre del banco tal como se muestra (kVkBanks).
+  /// Nombre del banco tal como se muestra (kVkBanks) — pago móvil y
+  /// transferencia; el Zelle no lleva banco.
   final String bank;
 
-  /// 'corriente' | 'ahorro'.
+  /// 'corriente' | 'ahorro' — SOLO transferencia.
   final String type;
 
-  /// Número de cuenta (20 dígitos en la mayoría de los bancos).
+  /// Número de cuenta — SOLO transferencia (20 dígitos en la mayoría de
+  /// los bancos).
   final String number;
 
-  /// Cédula (V/E + dígitos).
+  /// Cédula (V/E + dígitos) — pago móvil y transferencia.
   final String docId;
 
-  /// Teléfono vinculado al pago móvil.
+  /// Teléfono vinculado al pago móvil — o el email/teléfono US del Zelle.
   final String phone;
 
   /// Cuenta que el Conversor usa por defecto al armar un cobro (v27).
@@ -1377,11 +1342,72 @@ class PayAccount {
 
   String get typeLabel => isSavings ? 'Ahorro' : 'Corriente';
 
-  /// Lo que se muestra como título: alias si existe, si no banco + tipo.
-  String get displayLabel =>
-      label.trim().isEmpty ? '$bank · $typeLabel' : label.trim();
+  /// ¿Cobra en bolívares? (v30 · H-43): la hoja de Pago Móvil del
+  /// Conversor solo arma cobros en Bs — el Zelle (USD) no entra.
+  bool get cobraEnBs => kind != PayAccountKind.zelle;
+
+  /// Lo que se muestra como título: alias si existe; si no, la identidad
+  /// natural del tipo.
+  String get displayLabel {
+    final alias = label.trim();
+    if (alias.isNotEmpty) return alias;
+    return switch (kind) {
+      PayAccountKind.pagoMovil => '$bank · ${PayAccountKind.pagoMovil.label}',
+      PayAccountKind.transferencia => '$bank · $typeLabel',
+      PayAccountKind.zelle =>
+        holderName.trim().isEmpty
+            ? PayAccountKind.zelle.label
+            : '${PayAccountKind.zelle.label} · ${holderName.trim()}',
+    };
+  }
+
+  /// Las líneas EXACTAS del tipo (v30 · H-43): única fuente de verdad de la
+  /// fila, la copia, el mensaje de cobro y la tarjeta 1080×1080. Ningún
+  /// campo cruzado fuera (R-30b: la transferencia NO renderiza «Teléfono»);
+  /// los campos vacíos (respaldos viejos migrados) no pintan línea.
+  List<(String, String)> get dataLines => [
+    for (final (label, value) in switch (kind) {
+      PayAccountKind.pagoMovil => [
+        ('Banco', bank),
+        ('Cédula', docId),
+        ('Teléfono', phone),
+      ],
+      PayAccountKind.transferencia => [
+        ('Banco', bank),
+        ('Cuenta ${typeLabel.toLowerCase()}', number),
+        ('Cédula', docId),
+      ],
+      PayAccountKind.zelle => [
+        ('Titular', holderName.trim()),
+        ('Zelle', phone),
+      ],
+    })
+      if (value.trim().isNotEmpty) (label, value),
+  ];
+
+  /// Validación dura POR TIPO (v30 · R-30c/R-30d): qué falta para que la
+  /// cuenta exista. Pago móvil exige banco AND cédula AND teléfono (los
+  /// tres identifican el cobro); transferencia, banco + número + cédula;
+  /// Zelle, titular + contacto. Vacía = cuenta válida.
+  List<String> get missingFields => switch (kind) {
+    PayAccountKind.pagoMovil => [
+      if (bank.trim().isEmpty) 'el banco',
+      if (docId.trim().isEmpty) 'la cédula',
+      if (phone.trim().isEmpty) 'el teléfono',
+    ],
+    PayAccountKind.transferencia => [
+      if (bank.trim().isEmpty) 'el banco',
+      if (number.trim().isEmpty) 'el número de cuenta',
+      if (docId.trim().isEmpty) 'la cédula',
+    ],
+    PayAccountKind.zelle => [
+      if (holderName.trim().isEmpty) 'el titular',
+      if (phone.trim().isEmpty) 'el correo o teléfono de EE. UU.',
+    ],
+  };
 
   PayAccount copyWith({
+    PayAccountKind? kind,
     String? label,
     bool? isDefault,
     String? bank,
@@ -1392,6 +1418,7 @@ class PayAccount {
     String? holderName,
   }) => PayAccount(
     id: id,
+    kind: kind ?? this.kind,
     bank: bank ?? this.bank,
     type: type ?? this.type,
     number: number ?? this.number,
@@ -1404,6 +1431,7 @@ class PayAccount {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'kind': kind.wire,
     'bank': bank,
     'type': type,
     'number': number,
@@ -1414,18 +1442,41 @@ class PayAccount {
     'isDefault': isDefault,
   };
 
+  /// Parsea el JSON de Hive/respaldo. Migración de respaldos VIEJOS sin
+  /// `kind` (v30 · H-43, sin pérdida de datos — única vía en Hive y
+  /// respaldo): con número → transferencia; sin número y con teléfono →
+  /// pago móvil.
   static PayAccount? tryParse(Map j) {
     final id = sOf(j['id']);
+    if (id.isEmpty) return null;
     final bank = sOf(j['bank']).trim();
     final number = sOf(j['number']).trim();
-    if (id.isEmpty || bank.isEmpty || number.isEmpty) return null;
+    final phone = sOf(j['phone']).trim();
+    final kind =
+        PayAccountKind.tryParseKind(sOf(j['kind'])) ??
+        (number.isNotEmpty
+            ? PayAccountKind.transferencia
+            : (phone.isNotEmpty ? PayAccountKind.pagoMovil : null));
+    if (kind == null) return null;
+    // Lo esencial por tipo (el resto viaja tal cual — nada se pierde).
+    switch (kind) {
+      case PayAccountKind.pagoMovil:
+        if (bank.isEmpty && phone.isEmpty) return null;
+      case PayAccountKind.transferencia:
+        if (bank.isEmpty || number.isEmpty) return null;
+      case PayAccountKind.zelle:
+        if (phone.isEmpty && sOf(j['holderName']).trim().isEmpty) {
+          return null;
+        }
+    }
     return PayAccount(
       id: id,
+      kind: kind,
       bank: bank,
       type: sOf(j['type'], 'corriente') == 'ahorro' ? 'ahorro' : 'corriente',
       number: number,
       docId: sOf(j['docId']).trim(),
-      phone: sOf(j['phone']).trim(),
+      phone: phone,
       label: sOf(j['label']).trim(),
       holderName: sOf(j['holderName']).trim(),
       isDefault: j['isDefault'] == true,
@@ -1447,7 +1498,6 @@ class AppData {
   final Budget budget;
   final List<BasketItem> basket;
   final List<String> stores;
-  final List<ShoppingTemplate> templates;
   final Settings settings;
   final List<CustomRate> customRates; // v23: tasas propias con nombre (máx 8)
   final List<PayAccount> accounts; // v23: cuentas y Pago Móvil (máx 4)
@@ -1472,7 +1522,6 @@ class AppData {
     this.budget = const Budget(),
     this.basket = const [],
     this.stores = const [],
-    this.templates = const [],
     this.settings = const Settings(),
     this.customRates = const [],
     this.accounts = const [],
@@ -1499,7 +1548,6 @@ class AppData {
     Budget? budget,
     List<BasketItem>? basket,
     List<String>? stores,
-    List<ShoppingTemplate>? templates,
     Settings? settings,
     List<CustomRate>? customRates,
     List<PayAccount>? accounts,
@@ -1516,7 +1564,6 @@ class AppData {
     budget: budget ?? this.budget,
     basket: basket ?? this.basket,
     stores: stores ?? this.stores,
-    templates: templates ?? this.templates,
     settings: settings ?? this.settings,
     customRates: customRates ?? this.customRates,
     accounts: accounts ?? this.accounts,
@@ -1535,7 +1582,6 @@ class AppData {
     'budget': budget.toJson(),
     'basket': basket.map((e) => e.toJson()).toList(),
     'stores': stores,
-    'templates': templates.map((e) => e.toJson()).toList(),
     'settings': settings.toJson(),
     'customRates': customRates.map((e) => e.toJson()).toList(),
     'accounts': accounts.map((e) => e.toJson()).toList(),
@@ -1591,14 +1637,8 @@ class AppData {
               .toList()
         : const <BasketItem>[]),
     stores: sListOf(j['stores']),
-    templates: (j['templates'] is List
-        ? (j['templates'] as List)
-              .whereType<Map>()
-              .map(
-                (e) => ShoppingTemplate.fromJson(Map<String, dynamic>.from(e)),
-              )
-              .toList()
-        : const <ShoppingTemplate>[]),
+    // v29 (H-35): la clave «templates» de respaldos viejos se IGNORA —
+    // el modelo ya no la lee ni la escribe (carga sin romper).
     settings: j['settings'] is Map
         ? Settings.fromJson(Map<String, dynamic>.from(j['settings'] as Map))
         : const Settings(),

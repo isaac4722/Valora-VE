@@ -1,12 +1,18 @@
-/// ─── Sala Viva (v19.0 → TASK-35 p4: lenguaje «Ve» del prototipo) ───────────
-/// La sala EN VIVO: código + QR para invitar, miembros con roles, gobierno
-/// del anfitrión (renombrar, expulsar, roles, cerrar) y salida limpia. Sin
-/// PIN: el código de 6 letras ES el secreto (reescritura v19.0). Si la
-/// conexión se cae, vuelve sola a la Lista — nunca un limbo.
+/// ─── Sala Viva (v29 · H-38: reconstruida desde cero) ────────────────────────
+/// La sala EN VIVO en el lenguaje de secciones v28/v29: TÍTULO + descripción
+/// de una línea + detalles con hairlines, separadas por espacio en blanco,
+/// cero cajas dentro de cajas.
 ///
-/// Diseño: como el InviteSheet del prototipo (código en mono con tracking
-/// amplio, QR centrado, miembros como filas divididas con badge de estado)
-/// pero como PANTALLA completa con cabecera Ve y gobierno del anfitrión.
+/// · INVITAR — código grande mono que copia al tocar + QR con deep link +
+///   notas de LAN/PIN.
+/// · MIEMBROS — filas con rol, «escribe…» y gobierno inline del anfitrión
+///   (rol/expulsar en cada fila).
+/// · ACCIONES — renombrar y cerrar (anfitrión) o salir (invitado).
+///
+/// Sin PIN obligatorio: el código de 6 letras ES el secreto; el PIN de
+/// emojis es el candado opcional. Si la conexión se cae, vuelve sola a la
+/// Lista — nunca un limbo. Funcionalidad íntegra: modos P2P, servidor
+/// propio, PIN, escaneo y deep links.
 library;
 
 import 'package:flutter/material.dart';
@@ -145,67 +151,108 @@ class _SalaVivaScreenState extends ConsumerState<SalaVivaScreen> {
     return PushScreen(
       title: title,
       subtitle: 'En vivo · ${room.modeLabel}',
-      // Salida siempre a la mano (anfitrión cierra, invitado sale).
-      action: VeIconBtn(
-        icon: LucideIcons.doorOpen,
-        label: room.isHost ? 'Cerrar sala' : 'Salir de la sala',
-        onTap: _confirmLeave,
-      ),
       child: VeEntry(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
-            if (room.lastError != null) _ErrorBanner(msg: room.lastError!),
+            if (room.lastError != null) _AvisoPlano(msg: room.lastError!),
             if (!room.connected) ...[
-              const _ConnectingCard(),
+              const _Conectando(),
               const SizedBox(height: 12),
             ],
-            if (room.isViewer) const _ViewerNotice(),
-            if (room.canAdmin)
-              _AdminBar(onRename: _renameDialog, onClose: _confirmLeave),
-            _CodigoQrCard(room: room),
-            if (room.isHost && room.hasPin)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: PinShowCard(pin: room.pinEmoji, compact: true),
-              ),
+            if (room.isViewer) const _AvisoObservador(),
+
+            // ── INVITAR ─────────────────────────────────────────────────
+            VeEyebrow(
+              hint:
+                  'Comparte el código o el QR — el QR abre la app de quien lo '
+                  'escanee${room.hasPin ? ' y pide el PIN de emojis' : ''}.',
+              child: const Text('INVITAR'),
+            ),
+            _CodigoSala(room: room),
             const SizedBox(height: 10),
-            _MiembrosCard(room: room, members: members),
-          ],
-        ),
-      ),
-    );
-  }
-}
+            _QrSala(room: room),
+            // Notas de LAN/PIN (H-38): lo que el anfitrión debe saber para
+            // que entren — dirección del teléfono-sala y candado de emojis.
+            if (room.isHost && room.lanAddress.isNotEmpty)
+              _NotaLan(address: room.lanAddress),
+            if (room.isHost && room.hasPin) ...[
+              const SizedBox(height: 10),
+              PinShowCard(pin: room.pinEmoji, compact: true),
+            ],
 
-class _ErrorBanner extends ConsumerWidget {
-  const _ErrorBanner({required this.msg});
+            // ── MIEMBROS ────────────────────────────────────────────────
+            VeEyebrow(
+              hint:
+                  'El rol dice quién toca la lista: el anfitrión administra '
+                  'desde cada fila.',
+              child: Text('MIEMBROS · ${members.length}'),
+            ),
+            VeGroup(
+              semantic: 'Miembros de la sala',
+              children: [
+                for (final m in members)
+                  _FilaMiembro(
+                    room: room,
+                    m: m,
+                    isMe: m.id == room.myId || (m.id == 'host' && room.isHost),
+                  ),
+              ],
+            ),
 
-  final String msg;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final sem = VeColors.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      // v25 «HOJA»: aviso PLANO — icono + texto en neg, sin fill ni borde.
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(LucideIcons.circleAlert, size: 15, color: sem.neg),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                msg,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: sem.neg,
+            // ── ACCIONES ─────────────────────────────────────────────────
+            VeEyebrow(
+              hint: room.isHost
+                  ? 'Al cerrar, todos vuelven a su lista con lo último '
+                        'sincronizado.'
+                  : 'El anfitrión y el resto siguen en la sala.',
+              child: const Text('ACCIONES'),
+            ),
+            VeGroup(
+              children: [
+                if (room.canAdmin)
+                  VeRow(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          LucideIcons.pencil,
+                          size: 14,
+                          color: context.ve.colorScheme.foreground,
+                        ),
+                        const SizedBox(width: 6),
+                        const Text('Renombrar sala'),
+                      ],
+                    ),
+                    sub: const Text('El nombre se sincroniza con todos'),
+                    showChevron: true,
+                    semantic: 'Renombrar sala',
+                    onTap: _renameDialog,
+                  ),
+                VeRow(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        LucideIcons.doorOpen,
+                        size: 14,
+                        color: Theme.of(context).extension<VeInk>()!.neg,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(room.isHost ? 'Cerrar sala' : 'Salir de la sala'),
+                    ],
+                  ),
+                  sub: Text(
+                    room.isHost
+                        ? 'Los invitados vuelven a su lista'
+                        : 'Vuelves a tu lista local',
+                  ),
+                  danger: true,
+                  showChevron: true,
+                  semantic: room.isHost ? 'Cerrar sala' : 'Salir de la sala',
+                  onTap: _confirmLeave,
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -214,29 +261,89 @@ class _ErrorBanner extends ConsumerWidget {
   }
 }
 
-/// Conectando… (la sala aparece cuando el hello/welcome termine).
-class _ConnectingCard extends ConsumerWidget {
-  const _ConnectingCard();
+/// Aviso plano (v25 «HOJA»): icono + texto en neg, sin fill ni borde.
+class _AvisoPlano extends StatelessWidget {
+  const _AvisoPlano({required this.msg});
+
+  final String msg;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = context.ve.colorScheme;
-    return VeCard(
+  Widget build(BuildContext context) {
+    final sem = VeColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-          const SizedBox(width: 12),
+          Icon(LucideIcons.circleAlert, size: 15, color: sem.neg),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Conectando con la sala…',
+              msg,
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
+                color: sem.neg,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Conectando… (la sala aparece cuando el hello/welcome termine).
+class _Conectando extends StatelessWidget {
+  const _Conectando();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.ve.colorScheme;
+    return Row(
+      children: [
+        const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            'Conectando con la sala…',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: scheme.foreground,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Aviso de observador (rol de solo lectura).
+class _AvisoObservador extends StatelessWidget {
+  const _AvisoObservador();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.ve.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(LucideIcons.eye, size: 14, color: scheme.foreground),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Eres observador: ves la lista en vivo, pero no la tocas.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13.5,
                 color: scheme.foreground,
               ),
             ),
@@ -247,124 +354,28 @@ class _ConnectingCard extends ConsumerWidget {
   }
 }
 
-/// Aviso de observador (rol de solo lectura).
-class _ViewerNotice extends ConsumerWidget {
-  const _ViewerNotice();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = context.ve.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      // v25 «HOJA»: aviso PLANO — icono + texto muted, sin fill ni borde.
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            Icon(LucideIcons.eye, size: 14, color: scheme.foreground),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Eres observador: ves la lista en vivo, pero no la tocas.',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13.5,
-                  color: scheme.foreground,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Barra de gobierno del anfitrión: renombrar y cerrar.
-class _AdminBar extends ConsumerWidget {
-  const _AdminBar({required this.onRename, required this.onClose});
-
-  final VoidCallback onRename;
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: VeBtn(
-              variant: VeBtnVariant.secondary,
-              icon: LucideIcons.pencil,
-              onPressed: onRename,
-              child: const Text('Renombrar'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: VeBtn(
-              variant: VeBtnVariant.danger,
-              icon: LucideIcons.doorClosed,
-              onPressed: onClose,
-              child: const Text('Cerrar sala'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Código + QR + modo: lo que se comparte para invitar (patrón InviteSheet:
-/// código mono con tracking amplio, «toca para copiar», QR centrado).
-class _CodigoQrCard extends ConsumerWidget {
-  const _CodigoQrCard({required this.room});
+/// Código GRANDE mono que copia al tocar (H-38): tracking amplio del
+/// prototipo, un solo renglón.
+class _CodigoSala extends StatelessWidget {
+  const _CodigoSala({required this.room});
 
   final RoomController room;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final scheme = context.ve.colorScheme;
-    return VeCard(
-      child: Column(
-        children: [
-          Row(
-            children: [
-              VeBadge(tone: VeTone.pos, child: Text(room.modeLabel)),
-              const SizedBox(width: 6),
-              if (room.roomName.isNotEmpty)
-                Expanded(
-                  child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                    room.roomName,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.foreground,
-                    ),
-                  )),
-                ),
-              VeBadge(child: Text(room.isPublic ? 'pública' : 'privada')),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'CÓDIGO DE LA SALA',
-            style: VeText.labelCaps(
-              11,
-              color: scheme.mutedForeground,
-              weight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: room.code));
-              showToast(context, 'Código copiado', kind: ToastKind.ok);
-            },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: room.code));
+            showToast(context, 'Código copiado', kind: ToastKind.ok);
+          },
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
             child: Text(
               room.code.isEmpty ? '—' : room.code,
               style: TextStyle(
@@ -376,113 +387,81 @@ class _CodigoQrCard extends ConsumerWidget {
               ),
             ),
           ),
-          Text(
-            'toca para copiar',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 11,
-              color: scheme.mutedForeground,
-            ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'toca para copiar',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 11,
+            color: scheme.mutedForeground,
           ),
-          const SizedBox(height: 14),
-          if (room.code.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: scheme.muted,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: QrImageView(
-                // Deep link (v19.8): QR escaneado con la cámara del teléfono
-                // → abre ValoraVE → hoja de unirse (modo · nombre · PIN).
-                data:
-                    'valorave://sala?c=${room.code}&m=${room.mode.id}'
-                    '&p=${room.hasPin ? 1 : 0}',
-                version: QrVersions.auto,
-                size: 170,
-                backgroundColor: Colors.transparent,
-              ),
-            ),
-          const SizedBox(height: 10),
-          Text(
-            'Comparte el código o el QR — el QR abre la app de quien lo '
-            'escanee${room.hasPin ? ' y pide el PIN de emojis' : ''}. La '
-            'tecnología es ${room.modeLabel}.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 11,
-              height: 1.45,
-              color: scheme.mutedForeground,
-            ),
-          ),
-          if (room.isHost && room.lanAddress.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Este teléfono es la sala: ${room.lanAddress}',
-              textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
+
+/// QR con deep link (v19.8): escaneado con la cámara del teléfono abre
+/// ValoraVE → hoja de unirse (modo · nombre · PIN). El lienzo del QR lleva
+/// fondo propio: es el área de silencio que el escáner necesita, no una caja
+/// decorativa.
+class _QrSala extends StatelessWidget {
+  const _QrSala({required this.room});
+
+  final RoomController room;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.ve.colorScheme;
+    if (room.code.isEmpty) return const SizedBox.shrink();
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: scheme.muted,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: QrImageView(
+          data:
+              'valorave://sala?c=${room.code}&m=${room.mode.id}'
+              '&p=${room.hasPin ? 1 : 0}',
+          version: QrVersions.auto,
+          size: 170,
+          backgroundColor: Colors.transparent,
+        ),
+      ),
+    );
+  }
+}
+
+/// Nota de LAN (H-38): en los modos sin internet, este teléfono ES la sala.
+class _NotaLan extends StatelessWidget {
+  const _NotaLan({required this.address});
+
+  final String address;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.ve.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(LucideIcons.wifi, size: 13, color: scheme.mutedForeground),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Este teléfono es la sala: comparte la red y entra desde '
+              '$address.',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: scheme.foreground,
+                height: 1.45,
+                color: scheme.mutedForeground,
               ),
             ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Miembros con roles (filas divididas del prototipo); el anfitrión
-/// administra (expulsar · editor/observador) desde el menú de cada fila.
-class _MiembrosCard extends ConsumerWidget {
-  const _MiembrosCard({required this.room, required this.members});
-
-  final RoomController room;
-  final List<RoomMember> members;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = context.ve.colorScheme;
-    return VeCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'MIEMBROS · ${members.length}',
-                  style: VeText.labelCaps(
-                    11,
-                    color: scheme.mutedForeground,
-                    weight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              if (room.connected)
-                VeBtn(
-                  variant: VeBtnVariant.ghost,
-                  size: VeBtnSize.sm,
-                  icon: LucideIcons.messageCircle,
-                  onPressed: room.sendTyping,
-                  child: const Text('Avisar que escribo'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          VeGroup(
-            semantic: 'Miembros de la sala',
-            children: [
-              for (final m in members)
-                _MemberTile(
-                  room: room,
-                  m: m,
-                  isMe: m.id == room.myId || (m.id == 'host' && room.isHost),
-                ),
-            ],
           ),
         ],
       ),
@@ -490,8 +469,10 @@ class _MiembrosCard extends ConsumerWidget {
   }
 }
 
-class _MemberTile extends ConsumerWidget {
-  const _MemberTile({required this.room, required this.m, required this.isMe});
+/// Miembro: fila con rol y «escribe…»; el anfitrión gobierna INLINE
+/// (cambiar rol · sacar) desde la propia fila (v28: sin menús flotantes).
+class _FilaMiembro extends ConsumerWidget {
+  const _FilaMiembro({required this.room, required this.m, required this.isMe});
 
   final RoomController room;
   final RoomMember m;
@@ -532,16 +513,20 @@ class _MemberTile extends ConsumerWidget {
               Row(
                 children: [
                   Flexible(
-                    child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                      isMe ? '${m.name} · tú' : m.name,
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w500,
-                        color: scheme.foreground,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        isMe ? '${m.name} · tú' : m.name,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w500,
+                          color: scheme.foreground,
+                        ),
                       ),
-                    )),
+                    ),
                   ),
                   if (m.typing) ...[
                     const SizedBox(width: 6),

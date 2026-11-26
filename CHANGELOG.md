@@ -1,5 +1,59 @@
 # Changelog
 
+## v31 — Revisión integral + exportación PDF/imágenes profesional + solo APKs
+
+Ciclo de revisión ordenado por el dueño («verifica todo desde la Fase 0,
+corrige, mejora PDF/imágenes, builds solo APK, documenta»). Registro
+detallado en `HALLAZGOS_v31.md`. Incluye la **recuperación de v29/v30**,
+cuyo código se perdió con el sandbox y nunca llegó al remoto.
+
+- **v29/v30 RECUPERADOS**: la punta de la rama estaba en v28; las Partes
+  3, 4 y 5 se re-implementaron desde su especificación con la suite como
+  gate (332 → 380 tests verdes). Detalle por hallazgo en
+  `HALLAZGOS_v29.md` y `HALLAZGOS_v30.md`.
+- **Exportación PDF/imágenes reconstruida** (`constancia_pdf.dart` +
+  `VePdfFonts` + `pdfFormat`): fuentes de marca Inter/SpaceGrotesk
+  embebidas (degradación honesta a Helvetica), encabezado de marca y pie
+  con «Página n» en TODAS las hojas, márgenes uniformes 44 pt, tabla con
+  cabecera repetida al saltar de página, y manejo de errores en tres
+  capas (generación / share / imprimir) con mensajes en cristiano.
+- **FIX CRÍTICO**: el PDF de la constancia estaba ROTO en producción —
+  `Row(crossAxisAlignment: stretch)` dentro de `MultiPage` mide altura
+  infinita y mataba `doc.save()`. Regresión cubierta por test.
+- **Convención única de rasterizado**: todo PNG compartible se compone a
+  360 px lógicos (tipografía real de la app) y se rasteriza ×3 → 1080 px.
+  Tarjetas de marca recompuestas (antes: 1080 lógicos con texto diminuto);
+  constancia a 4:5 EXACTO 1080×1350 con lienzo fijo; dimensiones medidas
+  del IHDR del PNG real en tests.
+- **UNA tubería de render** (`renderSharePng` → `renderOffstagePng`):
+  boundary a prueba de keys compuestos, espera de frames acotada y
+  overlay siempre retirado. `sharePdf` con MIME de documento.
+- **Builds SOLO APK**: job AAB retirado del CI — 1 universal +
+  arm64-v8a/armeabi-v7a/x86_64; paquete, LEEME, checksums y Release sin
+  ningún binario no instalable.
+- Tareas programadas revisadas (sin cambios necesarios para ValoraVE);
+  versión 1.18.0-beta+54 · visible 31.
+
+## v29 — Parte 3 (Conversor) y Parte 4 (Lista) del dueño *(recuperado)*
+
+Reconstruido en v31 tras perderse el ciclo original. Conversor: título
+solo, fecha con protagonismo **Ayer · Hoy · Mañana · Fecha**, campos
+gemelos, selector de tasa obvio, atajos fuera, precisión UNA escala
+(X,XX · X,XXX · X,XXXX · Completo), swap con la regla del 0, Pago Móvil
+con Compartir-imagen/Copiar-texto y patrón sin scroll. Lista: barra
+pegadiza en `bottomNavigationBar` (antes tapaba los campos), tarjeta de
+valor con FittedBox, presupuesto de una línea, plantillas y toggle «más»
+eliminados, Sala en vivo reubicada y reconstruida.
+
+## v30 — Parte 5 (Análisis · Más · Ajustes) del dueño *(recuperado)*
+
+Reconstruido en v31. Análisis en 4 secciones (Divisas · Inflación ·
+Canasta · Gastos) sin duplicados; Más con solo Productos · Tickets ·
+Ajustes · Actualizaciones · Privacidad; Ajustes en UNA pantalla con
+cuentas por TIPO de cobro (pago móvil = banco+cédula+teléfono;
+transferencia = banco+tipo+número+cédula; zelle = titular+contacto US),
+`dataLines` única fuente y migración de respaldos sin pérdida.
+
 ## v28 — Reglas globales del dueño: tipografía, envío y sin sobrecapas · Inicio como equivalencia · Tasas en secciones
 
 Ciclo EGM completo (Goldfish → Elephant) sobre el encargo del dueño en la

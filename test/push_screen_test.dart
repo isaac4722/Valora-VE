@@ -85,13 +85,15 @@ void main() {
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
     for (
       var i = 0;
-      i < 10 && find.text('Tu servidor (socket.io)').evaluate().isEmpty;
+      i < 10 && find.text('TU SERVIDOR (SOCKET.IO)').evaluate().isEmpty;
       i++
     ) {
       await tester.drag(find.byType(ListView), const Offset(0, -250));
       await tester.pumpAndSettle(const Duration(milliseconds: 60));
     }
-    expect(find.text('Tu servidor (socket.io)'), findsOneWidget);
+    // v29 (H-38): la config del servidor es una SECCIÓN (eyebrow caps),
+    // ya no una tarjeta.
+    expect(find.text('TU SERVIDOR (SOCKET.IO)'), findsOneWidget);
     // TASK-35 (p4): los campos URL + token son VeInput (kit Ve).
     expect(find.byType(VeInput), findsAtLeastNWidgets(2));
     expect(find.text('Probar conexión'), findsOneWidget);

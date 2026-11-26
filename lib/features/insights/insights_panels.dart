@@ -1,27 +1,23 @@
 /// ─── Análisis · paneles (v19.8 · rediseño web-first) ────────────────────────
-/// Segunda mitad del tablero de Análisis: Productos · Canasta · Gastos ·
-/// Tasa + los widgets COMPARTIDOS del rediseño (KpiTile, PanelCard,
-/// InlineHint, TipBox, HeatmapCalendar). Pensado como un dashboard web:
-/// fila de KPIs arriba, tarjetas-panel con cabecera y acción a la derecha,
-/// estados vacíos compactos y honestos (nunca pantallas rotas).
+/// Segunda mitad del tablero de Análisis (v30): Canasta · Gastos +
+/// `CurrencyRanking` (emigró a Gastos — es analítica de gastos) + los
+/// widgets COMPARTIDOS (KpiTile, PanelCard, InlineHint, TipBox,
+/// HeatmapCalendar). Estados vacíos compactos y honestos (nunca pantallas
+/// rotas). H-40: Productos · Tasa · WeekdayRanking retirados.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/analytics.dart' as an;
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
-import '../../data/rate_history.dart';
-import '../../data/store.dart';
 import '../../widgets/ui.dart';
 import 'insights_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:intl/intl.dart';
 
 // ─────────────────────────── Widgets compartidos ───────────────────────────
 
@@ -300,219 +296,10 @@ class TipBox extends ConsumerWidget {
   }
 }
 
-// ───────────────────────── Ancla 3: Productos ───────────────────────────────
-
-/// Ancla 3: rankings de productos (en el rango) y tiendas.
-class ProductosAnchor extends ConsumerWidget {
-  const ProductosAnchor({super.key, required this.days});
-  final int days;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final store = ref.watch(appStoreProvider);
-    final scheme = Theme.of(context).colorScheme;
-    final measured = <(Product, double)>[];
-    for (final p in store.products) {
-      final v = variationInRange(p, days);
-      if (v != null) measured.add((p, v));
-    }
-    final up = [...measured.where((e) => e.$2 > 0)]
-      ..sort((a, b) => b.$2.compareTo(a.$2));
-    final down = [...measured.where((e) => e.$2 < 0)]
-      ..sort((a, b) => a.$2.compareTo(b.$2));
-    final storeStats = an.storeStats(store.purchases).take(5).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (up.isEmpty && down.isEmpty)
-          InlineHint(
-            'Sin subidas ni bajadas registradas dentro del rango elegido: '
-            'registra precios en Productos y los rankings aparecen aquí.',
-            icon: Icons.trending_flat,
-          )
-        else ...[
-          PanelCard(
-            title: 'Mayores subidas',
-            subtitle:
-                '${up.length} ${up.length == 1 ? 'producto al alza' : 'productos al alza'} en ${rangeName(days)}',
-            child: up.isEmpty
-                ? const Text('Ninguna subida en el rango.')
-                : Column(
-                    children: [
-                      for (final e in up.take(5))
-                        ListTile(
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            e.$1.name,
-                            style: const TextStyle(fontSize: 13.5),
-                          ),
-                          trailing: TrendBadge(e.$2, dense: true),
-                        ),
-                    ],
-                  ),
-          ),
-          const SizedBox(height: 10),
-          PanelCard(
-            title: 'Mayores bajadas',
-            subtitle:
-                '${down.length} ${down.length == 1 ? 'producto a la baja' : 'productos a la baja'} en ${rangeName(days)}',
-            child: down.isEmpty
-                ? const Text('Ninguna bajada en el rango.')
-                : Column(
-                    children: [
-                      for (final e in down.take(5))
-                        ListTile(
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            e.$1.name,
-                            style: const TextStyle(fontSize: 13.5),
-                          ),
-                          trailing: TrendBadge(e.$2, dense: true),
-                        ),
-                    ],
-                  ),
-          ),
-        ],
-        const SizedBox(height: 10),
-        PanelCard(
-          title: 'Gasto por tienda',
-          subtitle: storeStats.isEmpty
-              ? 'Sin compras guardadas todavía'
-              : 'Top ${storeStats.length} por total USD',
-          child: storeStats.isEmpty
-              ? const SizedBox.shrink()
-              : Column(
-                  children: [
-                    for (final s in storeStats)
-                      ListTile(
-                        dense: true,
-                        visualDensity: VisualDensity.compact,
-                        contentPadding: EdgeInsets.zero,
-                        leading: StoreAvatar(
-                          s.store.isEmpty ? 'Sin Tienda' : s.store,
-                          size: 30,
-                        ),
-                        title: Text(
-                          s.store.isEmpty ? 'Sin tienda' : s.store,
-                          style: const TextStyle(fontSize: 13.5),
-                        ),
-                        subtitle: Text(
-                          '${s.count} compras',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                        trailing: Text(
-                          fmtUSD(s.totalUSD),
-                          style: VeText.displayNum(13.5, color: scheme.onSurface),
-                        ),
-                      ),
-                  ],
-                ),
-        ),
-        // ── Rankings de compras (§9.7): por día de semana y por moneda ──
-        if (store.purchases.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          PanelCard(
-            title: 'Compras por día de la semana',
-            child: WeekdayRanking(purchases: store.purchases),
-          ),
-          const SizedBox(height: 10),
-          PanelCard(
-            title: 'Compras por divisa',
-            child: CurrencyRanking(purchases: store.purchases),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-/// Distribución del gasto por día de la semana (Lun→Dom) con el día fuerte
-/// señalado — el «ranking» honesto: total USD efectivo + nº de compras.
-class WeekdayRanking extends ConsumerWidget {
-  const WeekdayRanking({super.key, required this.purchases});
-  final List<Purchase> purchases;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final rows = weekdaySpend(purchases);
-    final maxTotal = rows.fold<double>(
-      0,
-      (m, e) => e.totalUSD > m ? e.totalUSD : m,
-    );
-    return Column(
-      children: [
-        for (final r in rows)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 34,
-                  child: Text(
-                    r.day,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: r.totalUSD == maxTotal && maxTotal > 0
-                          ? FontWeight.w800
-                          : FontWeight.w500,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: LinearProgressIndicator(
-                      value: maxTotal > 0 ? r.totalUSD / maxTotal : 0,
-                      minHeight: 6,
-                      backgroundColor: scheme.surfaceContainerHighest,
-                      color: scheme.primary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // FittedBox: a textScale >=1.3 «$ 1.234,56» (≈91 px)
-                // envolvía en 2 líneas dentro del box fijo de 74 px y
-                // descuadraba la fila del ranking (fix a11y).
-                SizedBox(
-                  width: 74,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      r.totalUSD > 0 ? fmtUSD(r.totalUSD) : '—',
-                      style: VeText.displayNum(11, color: scheme.onSurface),
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 30,
-                  child: Text(
-                    '${r.count}',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// Gasto por divisa: lo pagado en CADA moneda (precio original de los ítems)
-/// con su equivalente USD — el orden del ranking es por USD (comparable).
+/// Gasto por divisa (v30 · H-40/R-30e): lo pagado en CADA moneda (precio
+/// original de los ítems) con su equivalente USD — el orden del ranking es
+/// por USD (comparable). Emigró a Gastos (es analítica de gastos) y
+/// respeta el RANGO de esa sección: recibe las compras `inRange`.
 class CurrencyRanking extends ConsumerWidget {
   const CurrencyRanking({super.key, required this.purchases});
   final List<Purchase> purchases;
@@ -560,8 +347,8 @@ class CurrencyRanking extends ConsumerWidget {
 
 // ───────────────────────── Ancla 4: Canasta ─────────────────────────────────
 
-/// Ancla 4: canasta básica (CRUD) — vive aquí: la inflación personal del
-/// ancla Inflación se calcula con ESTA canasta.
+/// Sección 3: canasta básica (CRUD) — vive aquí: la inflación personal de
+/// la sección Inflación se calcula con ESTA canasta.
 class CanastaAnchor extends ConsumerWidget {
   const CanastaAnchor({super.key});
 
@@ -731,11 +518,13 @@ class _QtyStepper extends ConsumerWidget {
 
 // ───────────────────────── Ancla 5: Gastos ─────────────────────────────────
 
-/// Ancla 5 (v17.8): GASTOS de las compras de Lista — vista resumida que
+/// Sección 4 (v17.8): GASTOS de las compras de Lista — vista resumida que
 /// reemplaza los gráficos del módulo Finanzas. Se alimenta AUTOMÁTICA de
 /// las compras guardadas (cero carga manual, cero duplicar datos): total
-/// del rango + donut por tienda + barras por mes, con la cobertura real
-/// de datos siempre a la vista (§ honesto).
+/// del rango + donut por tienda + barras por mes + compras por divisa
+/// (v30 · H-40/R-30e: `CurrencyRanking` emigró aquí y usa el MISMO
+/// `inRange` de la sección), con la cobertura real de datos siempre a la
+/// vista (§ honesto).
 class GastosAnchor extends ConsumerWidget {
   const GastosAnchor({super.key, required this.days});
   final int days;
@@ -840,272 +629,19 @@ class GastosAnchor extends ConsumerWidget {
               ),
             ),
           ],
-        ],
-      ],
-    );
-  }
-}
-
-// ───────────────────────── Ancla 6: Tasa ───────────────────────────────────
-
-/// Ancla 6: registros propios por fuente (selector MULTI-DIVISA: hasta 3
-/// fuentes superpuestas) + gráfica interactiva + tabla + export por columnas.
-class HistoricaAnchor extends ConsumerStatefulWidget {
-  const HistoricaAnchor({super.key, required this.days});
-  final int days;
-
-  @override
-  ConsumerState<HistoricaAnchor> createState() => _HistoricaAnchorState();
-}
-
-class _HistoricaAnchorState extends ConsumerState<HistoricaAnchor> {
-  /// Selección múltiple (historial multi-divisa, §9.7): hasta 3 fuentes.
-  final Set<String> _selected = {};
-
-  /// Fuentes CON snapshots locales (sin manuales ni USD: no tienen historial).
-  List<String> _sources(AppStore store) {
-    final ids = store.snapshots.map((s) => s.sourceId).toSet();
-    return [
-      for (final s in RateSource.all)
-        if (ids.contains(s.id) &&
-            s.currency != Currency.usd &&
-            s.category != SourceCategory.manual)
-          s.id,
-    ];
-  }
-
-  void _toggle(String id, List<String> sources) {
-    setState(() {
-      if (_selected.contains(id)) {
-        // Nunca queda vacío: la última fuente no se desmarca.
-        if (_selected.length > 1) _selected.remove(id);
-      } else {
-        if (_selected.length >= 3) return; // tope legible de 3 series
-        _selected.add(id);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final store = ref.watch(appStoreProvider);
-    final scheme = Theme.of(context).colorScheme;
-    final ink = VeColors.of(context);
-    final sources = _sources(store);
-    // Selección efectiva: la guardada (válida) o el default honesto.
-    final selected = <String>[
-      for (final id in _selected.where(sources.contains))
-        if (sources.contains(id)) id,
-    ];
-    if (selected.isEmpty) {
-      final def = sources.contains('ves-bcv')
-          ? 'ves-bcv'
-          : (sources.isNotEmpty ? sources.first : '');
-      if (def.isNotEmpty) selected.add(def);
-    }
-    final multi = selected.length > 1;
-    // Serie por fuente seleccionada.
-    final seriesById = <String, List<SnapshotPoint>>{
-      for (final id in selected)
-        id: snapshotSeries(store.snapshots, id, widget.days),
-    };
-    final allSeries = seriesById.values.expand((s) => s).toList();
-    final firstDay = allSeries.isEmpty
-        ? null
-        : DateTime.tryParse(
-            (allSeries.map((p) => p.day).toList()..sort()).first,
-          );
-    final covPoints = allSeries.map((p) => p.day).toSet().length;
-    // Paleta por índice (máx 3): las divisas se distinguen por curva.
-    final palette = [scheme.primary, ink.neg, ink.warn];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (sources.isEmpty)
-          VeEmpty(
-            icon: LucideIcons.history,
-            title: 'Sin historial local aún',
-            sub:
-                'Cada día que la app consulta tasas guarda un punto por fuente (máx 180 días). '
-                'Entra a Inicio y actualiza para empezar tu libro de tasas.',
-            action: VeBtn(
-              size: VeBtnSize.sm,
-              variant: VeBtnVariant.secondary,
-              onPressed: () => context.go('/'),
-              child: const Text('Ir a Inicio'),
-            ),
-          )
-        else ...[
+          // ── Compras por divisa (v30 · H-40): `CurrencyRanking` emigró de
+          // Productos a Gastos — es analítica de gastos. R-30e: usa el
+          // MISMO `inRange` de la sección (antes cuadraba con TODO el
+          // historial y no con el rango elegido).
+          const VeEyebrow(child: Text('COMPRAS POR DIVISA')),
           PanelCard(
-            title: 'Fuentes',
-            subtitle: multi
-                ? 'Hasta 3 superpuestas · toca para sumar o quitar'
-                : 'Toca para sumar otra divisa a la gráfica',
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final id in sources)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: ChipTag(
-                        RateSource.of(id)?.label ?? id,
-                        selected: selected.contains(id),
-                        onTap: () => _toggle(id, sources),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+            title: 'Compras por divisa',
+            subtitle: 'Lo pagado en cada moneda en ${rangeName(days)}',
+            child: CurrencyRanking(purchases: inRange),
           ),
-          const SizedBox(height: 10),
-          if (allSeries.length >= 2)
-            PanelCard(
-              title: multi ? 'Tasas superpuestas' : 'Tasa en el rango',
-              subtitle: coverageText(
-                rangeLabel: rangeName(widget.days),
-                requestedDays: widget.days,
-                points: covPoints,
-                first: firstDay,
-                sinceSubject: null,
-              ),
-              // v20.4: VeTimelineChart — hasta 3 tasas superpuestas con
-              // leyenda cuando hay varias y chip con TODOS los valores de
-              // la fecha tocada (antes: un valor suelto por toque).
-              child: VeTimelineChart(
-                height: 184,
-                margin: EdgeInsets.zero,
-                legend: multi,
-                xLabel: (t) => DateFormat('dd/MM').format(t),
-                yLabel: (v) => fmtNum(v, decimals: 0),
-                semantic: 'Tasas en el rango',
-                tooltipBuilder: (t, rows) => TipBox(
-                  main: rows.map((r) => r.$2).join(' · '),
-                  sub: fmtDayLabel(t),
-                  bg: scheme.primary,
-                  fg: scheme.onPrimary,
-                ),
-                series: [
-                  for (var k = 0; k < selected.length; k++)
-                    VeTimelineSeries(
-                      name: RateSource.of(selected[k])?.label ?? selected[k],
-                      points: [
-                        for (final p in seriesById[selected[k]]!)
-                          VeTimelinePoint(DateTime.parse(p.day), p.rate),
-                      ],
-                      color: palette[k % palette.length],
-                      width: 1.8,
-                      format: (v) => fmtRate(v),
-                    ),
-                ],
-              ),
-            )
-          else if (allSeries.length == 1)
-            InlineHint(
-              'Solo 1 punto con datos (${fmtDate(DateTime.parse(allSeries.first.day))}): '
-              'se necesitan al menos 2 fechas para mostrar variación.',
-              icon: Icons.hourglass_empty,
-            )
-          else
-            InlineHint(
-              'Aún no hay snapshots de las fuentes elegidas. Profundidad local total: '
-              '${snapshotDepth(store.snapshots)} días (máx 180).',
-              icon: Icons.hourglass_empty,
-            ),
-          if (allSeries.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            PanelCard(
-              title: 'Últimos días',
-              subtitle: 'Hasta 10 fechas recientes con datos',
-              child: Column(
-                children: [
-                  // Tabla por día: una columna por fuente (multi-divisa real).
-                  for (final day
-                      in (allSeries.map((p) => p.day).toSet().toList()..sort())
-                          .reversed
-                          .take(10))
-                    ListTile(
-                      dense: true,
-                      visualDensity: VisualDensity.compact,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        fmtDate(DateTime.parse(day)),
-                        style: const TextStyle(fontSize: 13.5),
-                      ),
-                      trailing: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            for (var k = 0; k < selected.length; k++)
-                              Padding(
-                                padding: EdgeInsets.only(left: k == 0 ? 0 : 10),
-                                child: Text(
-                                  _rateForDay(seriesById[selected[k]]!, day),
-                                  style: VeText.displayNum(
-                                    13.5,
-                                    color: multi
-                                        ? palette[k % palette.length]
-                                        : scheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.table_view, size: 14),
-              label: Text(
-                multi
-                    ? 'Exportar histórico CSV (${selected.length} fuentes)'
-                    : 'Exportar histórico CSV',
-              ),
-              onPressed: allSeries.isEmpty
-                  ? null
-                  : () {
-                      // CSV multi-divisa: Día + una columna por fuente elegida.
-                      final days = allSeries.map((p) => p.day).toSet().toList()
-                        ..sort();
-                      final rows = <List<String>>[
-                        ['Dia', for (final id in selected) id],
-                      ];
-                      for (final day in days) {
-                        rows.add([
-                          day,
-                          for (final id in selected)
-                            _rateForDay(seriesById[id]!, day, raw: true),
-                        ]);
-                      }
-                      // v28 · CSV = TEXTO: se copia al portapapeles (regla
-                      // del dueño — el share nativo es solo para imágenes).
-                      copiarAlPortapapeles(
-                        context,
-                        toCSV(rows, delimiter: ';'),
-                        'CSV copiado',
-                      );
-                    },
-            ),
-          ],
         ],
       ],
     );
-  }
-
-  /// Tasa de [series] en [day]: formateada o cruda (CSV); '—' si no hay.
-  String _rateForDay(
-    List<SnapshotPoint> series,
-    String day, {
-    bool raw = false,
-  }) {
-    final p = series.where((x) => x.day == day).firstOrNull;
-    if (p == null) return raw ? '' : '—';
-    return raw ? p.rate.toStringAsFixed(4) : fmtRate(p.rate);
   }
 }
 

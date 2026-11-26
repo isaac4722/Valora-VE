@@ -191,180 +191,168 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
-      body: Stack(
+      // v30 (V-1): la barra de alta vive en bottomNavigationBar — el cuerpo
+      // se acota a su medida y nada queda tapado (antes flotaba en un
+      // Positioned sobre el ListView).
+      bottomNavigationBar: VeStickyBar(
         children: [
-          ListView(
-            // Padding inferior extra para no tapar el contenido con la
-            // VeStickyBar («Agregar producto»).
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 104),
-            children: [
-              VeTitle(
-                sub: Text('${store.products.length} en tu libro'),
-                right: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    VeIconBtn(
-                      icon: LucideIcons.upload,
-                      onTap: () => _importCsv(context, store),
-                      label: 'Importar CSV',
-                    ),
-                    const SizedBox(width: 8),
-                    VeBtn(
-                      size: VeBtnSize.sm,
-                      icon: LucideIcons.download,
-                      onPressed: () => _exportCsv(context, store),
-                      child: const Text('CSV'),
-                    ),
-                  ],
+          VeBtn(
+            variant: VeBtnVariant.primary,
+            size: VeBtnSize.lg,
+            expands: true,
+            icon: LucideIcons.plus,
+            onPressed: () => showNewProductSheet(context),
+            child: const Text('Agregar producto'),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          VeTitle(
+            sub: Text('${store.products.length} en tu libro'),
+            right: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                VeIconBtn(
+                  icon: LucideIcons.upload,
+                  onTap: () => _importCsv(context, store),
+                  label: 'Importar CSV',
                 ),
-                child: Text('Productos'),
-              ),
-              const TipsTrigger(scope: 'productos'),
-              // Buscador + escáner (ancla del tour v17.8).
-              KeyedSubtree(
-                key: TourKeys.prodBusqueda,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: VeInput(
-                        controller: _searchCtrl,
-                        placeholder: 'Buscar producto…',
-                        onChanged: (v) {
-                          setState(() {
-                            _query = v;
-                            _page = 0;
-                          });
-                        },
-                        semantic: 'Buscar producto',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    VeIconBtn(
-                      icon: LucideIcons.scanBarcode,
-                      onTap: _scanCode,
-                      label: 'Escanear código de barras',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Chips de categoría (activo = tinta invertida). v23.2:
-              // UNA línea con deslazo horizontal — dejan de comer 2 filas.
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                clipBehavior: Clip.none,
-                child: Row(
-                  spacing: 8,
-                  children: [
-                    VeChip(
-                      active: _cat == null,
-                      onTap: () => setState(() {
-                        _cat = null;
-                        _page = 0;
-                      }),
-                      child: const Text('Todas'),
-                    ),
-                    for (final c in ProductCategory.values)
-                      VeChip(
-                        active: _cat == c,
-                        onTap: () => setState(() {
-                          _cat = c;
-                          _page = 0;
-                        }),
-                        child: Text(c.label),
-                      ),
-                    VeChip(
-                      active: _onlyUnavailable,
-                      onTap: () => setState(() {
-                        _onlyUnavailable = !_onlyUnavailable;
-                        _page = 0;
-                      }),
-                      child: const Text('No disponibles'),
-                    ),
-                    VeChip(
-                      active: _onlyTarget,
-                      onTap: () => setState(() {
-                        _onlyTarget = !_onlyTarget;
-                        _page = 0;
-                      }),
-                      child: const Text('Con meta'),
-                    ),
-                  ],
-                ),
-              ),
-              if (list.isEmpty) ...[
-                const SizedBox(height: 14),
-                VeEmpty(
-                  // Con búsqueda activa el vacío queda solo-texto: el
-                  // medallón de catálogo solo tiene sentido sin filtro.
-                  icon: _query.isEmpty ? LucideIcons.scanBarcode : null,
-                  title: 'Sin productos',
-                  sub: _query.isEmpty
-                      ? 'Agrega uno nuevo o importa un CSV con «Nombre» y «Código».'
-                      : 'Sin resultados para «$_query». Prueba con otra palabra o revisa los filtros.',
-                  action: VeBtn(
-                    size: VeBtnSize.sm,
-                    icon: LucideIcons.plus,
-                    onPressed: () => showNewProductSheet(context),
-                    child: const Text('Agregar producto'),
-                  ),
-                ),
-              ] else ...[
-                const SizedBox(height: 12),
-                VeGroup(
-                  children: [
-                    for (final p in pageItems)
-                      _ProductRow(
-                        product: p,
-                        onTap: () => showProductSheet(context, p),
-                      ),
-                  ],
-                ),
-                if (pages > 1)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      '${list.length} ${list.length == 1 ? 'producto' : 'productos'}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                Paginator(
-                  page: _page + 1,
-                  totalPages: pages,
-                  onPage: (p) => setState(() => _page = p - 1),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Toca un producto para ver su precio por tienda, si está disponible y tu meta.',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                const SizedBox(width: 8),
+                VeBtn(
+                  size: VeBtnSize.sm,
+                  icon: LucideIcons.download,
+                  onPressed: () => _exportCsv(context, store),
+                  child: const Text('CSV'),
                 ),
               ],
-            ],
+            ),
+            child: Text('Productos'),
           ),
-          // Barra inferior del prototipo: alta de producto siempre a mano.
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: VeStickyBar(
+          const TipsTrigger(scope: 'productos'),
+          // Buscador + escáner (ancla del tour v17.8).
+          KeyedSubtree(
+            key: TourKeys.prodBusqueda,
+            child: Row(
               children: [
-                VeBtn(
-                  variant: VeBtnVariant.primary,
-                  size: VeBtnSize.lg,
-                  expands: true,
-                  icon: LucideIcons.plus,
-                  onPressed: () => showNewProductSheet(context),
-                  child: const Text('Agregar producto'),
+                Expanded(
+                  child: VeInput(
+                    controller: _searchCtrl,
+                    placeholder: 'Buscar producto…',
+                    onChanged: (v) {
+                      setState(() {
+                        _query = v;
+                        _page = 0;
+                      });
+                    },
+                    semantic: 'Buscar producto',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                VeIconBtn(
+                  icon: LucideIcons.scanBarcode,
+                  onTap: _scanCode,
+                  label: 'Escanear código de barras',
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          // Chips de categoría (activo = tinta invertida). v23.2:
+          // UNA línea con deslazo horizontal — dejan de comer 2 filas.
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            child: Row(
+              spacing: 8,
+              children: [
+                VeChip(
+                  active: _cat == null,
+                  onTap: () => setState(() {
+                    _cat = null;
+                    _page = 0;
+                  }),
+                  child: const Text('Todas'),
+                ),
+                for (final c in ProductCategory.values)
+                  VeChip(
+                    active: _cat == c,
+                    onTap: () => setState(() {
+                      _cat = c;
+                      _page = 0;
+                    }),
+                    child: Text(c.label),
+                  ),
+                VeChip(
+                  active: _onlyUnavailable,
+                  onTap: () => setState(() {
+                    _onlyUnavailable = !_onlyUnavailable;
+                    _page = 0;
+                  }),
+                  child: const Text('No disponibles'),
+                ),
+                VeChip(
+                  active: _onlyTarget,
+                  onTap: () => setState(() {
+                    _onlyTarget = !_onlyTarget;
+                    _page = 0;
+                  }),
+                  child: const Text('Con meta'),
+                ),
+              ],
+            ),
+          ),
+          if (list.isEmpty) ...[
+            const SizedBox(height: 14),
+            VeEmpty(
+              // Con búsqueda activa el vacío queda solo-texto: el
+              // medallón de catálogo solo tiene sentido sin filtro.
+              icon: _query.isEmpty ? LucideIcons.scanBarcode : null,
+              title: 'Sin productos',
+              sub: _query.isEmpty
+                  ? 'Agrega uno nuevo o importa un CSV con «Nombre» y «Código».'
+                  : 'Sin resultados para «$_query». Prueba con otra palabra o revisa los filtros.',
+              action: VeBtn(
+                size: VeBtnSize.sm,
+                icon: LucideIcons.plus,
+                onPressed: () => showNewProductSheet(context),
+                child: const Text('Agregar producto'),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            VeGroup(
+              children: [
+                for (final p in pageItems)
+                  _ProductRow(
+                    product: p,
+                    onTap: () => showProductSheet(context, p),
+                  ),
+              ],
+            ),
+            if (pages > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  '${list.length} ${list.length == 1 ? 'producto' : 'productos'}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            Paginator(
+              page: _page + 1,
+              totalPages: pages,
+              onPage: (p) => setState(() => _page = p - 1),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Toca un producto para ver su precio por tienda, si está disponible y tu meta.',
+              style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
+            ),
+          ],
         ],
       ),
     );
@@ -541,26 +529,34 @@ class _ProductRow extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                        product.name,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w500,
-                          color: scheme.foreground,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          product.name,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w500,
+                            color: scheme.foreground,
+                          ),
                         ),
-                      )),
+                      ),
                       const SizedBox(height: 2),
-                      FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                        sub,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13.5,
-                          color: scheme.mutedForeground,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          sub,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13.5,
+                            color: scheme.mutedForeground,
+                          ),
                         ),
-                      )),
+                      ),
                     ],
                   ),
                 ),

@@ -260,7 +260,7 @@ void main() {
     });
   });
 
-  group('Carrito, presupuesto y plantillas (§2.3/2.4)', () {
+  group('Carrito y presupuesto (§2.3)', () {
     test('addToCart: dedupe suma quantity', () {
       store.addToCart(
         const CartItem(
@@ -282,40 +282,6 @@ void main() {
       );
       expect(store.cart.length, 1);
       expect(store.cart.first.quantity, 3);
-    });
-
-    test('saveTemplate: null con carrito vacío; máx 20', () {
-      expect(store.saveTemplate('Vacía'), isNull);
-      for (int i = 0; i < 25; i++) {
-        store.addToCart(
-          CartItem(
-            id: '',
-            name: 'Item $i',
-            quantity: 1,
-            price: i.toDouble(),
-            currency: 'USD',
-          ),
-        );
-        store.saveTemplate('Plantilla $i');
-      }
-      expect(store.templates.length, kMaxTemplates);
-    });
-
-    test('applyTemplate merge con regla addToCart', () {
-      store.addToCart(
-        const CartItem(
-          id: '',
-          name: 'Pan',
-          quantity: 1,
-          price: 10,
-          currency: 'VES',
-        ),
-      );
-      final id = store.saveTemplate('Base');
-      store.clearCart();
-      expect(store.applyTemplate(id!), 1);
-      store.applyTemplate(id);
-      expect(store.cart.first.quantity, 2);
     });
 
     test('setBudget 0 limpia el monto pero CONSERVA la moneda (v19)', () {

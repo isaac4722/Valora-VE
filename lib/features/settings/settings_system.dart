@@ -226,7 +226,6 @@ class _Respaldo extends StatelessWidget {
         budget: incoming.budget,
         basket: incoming.basket,
         stores: incoming.stores,
-        templates: incoming.templates,
         settings: incoming.settings,
         // v23.3 (pez 2-b P0-1): las listas v23 viajan con el respaldo en
         // replace — antes caían a [] y se perdían en silencio.

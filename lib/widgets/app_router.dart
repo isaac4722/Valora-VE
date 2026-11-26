@@ -1,9 +1,13 @@
 /// ─── Router declarativo (GUI dp4: shell 5 pestañas móvil + 7 rutas) ─────────
 /// home:/ · conversor:/conversor · lista:/lista · productos:/productos ·
 /// análisis:/analisis · historial:/historial · ajustes:/ajustes
-/// (+ push: sala, constancia, escáner, legal, ticket, actualizaciones).
+/// (+ push: sala, constancia, legal, ticket, actualizaciones).
 /// v17.8: la pestaña Finanzas se retiró (orden del dueño) — los gastos
 /// viven en Análisis → «Gastos», alimentados por las compras de Lista.
+/// v30 (H-41/H-42): la ruta huérfana `/escanear` salió del router (el
+/// escáner vive donde se usa: captura de Lista y ficha de Productos) y
+/// las subpantallas de Ajustes murieron — solo `/ajustes/cuentas`
+/// sobrevive como deep link (redirige a la pantalla única).
 ///
 /// ⚠️ CONTRATO DE CICLO DE VIDA: el GoRouter se crea UNA SOLA VEZ por sesión
 /// (desde ValoraApp, nunca dentro de build()) — recrearlo en cada rebuild
@@ -32,7 +36,6 @@ import '../features/products/products_screen.dart';
 import '../features/rates/rates_screen.dart';
 import '../features/room/room_screen.dart';
 import '../features/room/sala_viva.dart';
-import '../features/scanner/scanner_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/shell/main_shell.dart';
 import '../features/tickets/tickets_screen.dart';
@@ -86,6 +89,15 @@ void captureWebEntryRoute(Uri base) {
   webEntryRoute ??= _deepRouteOf(ruta);
 }
 
+/// Subpantallas de Ajustes retiradas (v30 · H-42): redirigen a la
+/// pantalla única `/ajustes`.
+const Set<String> _kAjustesLegacy = <String>{
+  '/ajustes/general',
+  '/ajustes/tasas',
+  '/ajustes/apariencia',
+  '/ajustes/datos',
+};
+
 GoRouter buildRouter({required AppStore store}) {
   // v24.1 — Deep link web: el histórico por defecto (hash) del framework
   // reescribe la URL (/conversor → '/') ANTES de que el router exista, así
@@ -111,6 +123,9 @@ GoRouter buildRouter({required AppStore store}) {
       final inWelcome = state.matchedLocation == '/bienvenida';
       if (!onboarded && !inWelcome) return '/bienvenida';
       if (onboarded && inWelcome) return '/';
+      // v30 (H-42): las subpantallas de Ajustes murieron — sus rutas
+      // redirigen a la pantalla única (deep links viejos incluidos).
+      if (_kAjustesLegacy.contains(state.matchedLocation)) return '/ajustes';
       return null;
     },
     routes: [
@@ -184,36 +199,13 @@ GoRouter buildRouter({required AppStore store}) {
         path: '/tasas',
         pageBuilder: (context, s) => vePage(context, s, const RatesScreen()),
       ),
-      // v27 · Ajustes en subpantallas (hub → grupo).
-      GoRoute(
-        path: '/ajustes/general',
-        pageBuilder: (context, s) =>
-            vePage(context, s, const SettingsGeneralPage()),
-      ),
-      GoRoute(
-        path: '/ajustes/tasas',
-        pageBuilder: (context, s) =>
-            vePage(context, s, const SettingsTasasPage()),
-      ),
+      // v30 (H-42): deep link de cuentas — la pantalla única de Ajustes
+      // con «Cuentas y cobro» PRIMERO. Las subpantallas v27
+      // (general|tasas|apariencia|datos) redirigen arriba en el redirect.
       GoRoute(
         path: '/ajustes/cuentas',
         pageBuilder: (context, s) =>
-            vePage(context, s, const SettingsCuentasPage()),
-      ),
-      GoRoute(
-        path: '/ajustes/apariencia',
-        pageBuilder: (context, s) =>
-            vePage(context, s, const SettingsAparienciaPage()),
-      ),
-      GoRoute(
-        path: '/ajustes/datos',
-        pageBuilder: (context, s) =>
-            vePage(context, s, const SettingsDatosPage()),
-      ),
-      // v27 · Escáner directo desde Más.
-      GoRoute(
-        path: '/escanear',
-        pageBuilder: (context, s) => vePage(context, s, const ScannerScreen()),
+            vePage(context, s, const SettingsScreen()),
       ),
       GoRoute(
         path: '/legal',

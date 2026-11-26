@@ -1,16 +1,18 @@
 /// ─── Lista / «Calculadora de compras» (§9.3 · TASK-34 lenguaje Ve) ──────────
-/// Hero total (odómetro) · tasas de cálculo (moneda + FUENTE del módulo) ·
-/// barra de presupuesto tappable (total/techo + progreso + «En carrito») ·
-/// alta rápida por nombre (libro de precios o editor) · captura manual con
-/// detalle (precio, cantidad, tienda, escáner ROI) · filas con checkbox +
-/// stepper + total tabular · «Agregar sin escribir» (frecuentes del libro) ·
-/// checkout en SHEET Ve con multitienda, «ya existe» y foto de ticket ·
-/// vuelto MULTI-DIVISA · dividir con propina.
+/// Hero total (odómetro) en TARJETA de superficie (v29 H-31) · presupuesto
+/// de UNA línea de estado (H-32) · sección propia «CÁLCULOS DE LA LISTA»
+/// con selector de tasa GRANDE (H-33) · captura por espacios lógicos
+/// QUÉ·CUÁNTO·DÓNDE (H-34) · sala en vivo como entrada propia bajo el
+/// título (H-37) · barra pegadiza en bottomNavigationBar (v30 V-1: jamás
+/// tapa los campos) · alta rápida por nombre (libro de precios o editor) ·
+/// captura manual con detalle (precio, cantidad, tienda, escáner ROI) ·
+/// filas con checkbox + stepper + total tabular · checkout en SHEET Ve con
+/// multitienda, «ya existe» y foto de ticket · vuelto MULTI-DIVISA ·
+/// dividir con propina.
 ///
-/// TASK-34 (p7): presentación del prototipo web «modern minimal SaaS» con el
-/// kit Ve (VeTitle/VeChip/VeCard/VeGroup/VeStepper/VeBadge/VeStickyBar/
-/// VeEmpty) sobre TODA la lógica previa: RoomController (sala viva), escáner
-/// ROI, plantillas, totales compartibles y flujo de checkout intactos.
+/// v29 (H-35/H-36): plantillas y toggle «Más» ELIMINADOS — nada se esconde:
+/// las frecuentes las cubre el alta rápida + el picker del estado vacío y
+/// los totales son la constancia del checkout.
 ///
 /// Decisiones de iconos (v17.2): escanear = Lucide scanBarcode, historial =
 /// Lucide receiptText, sala = Lucide users.
@@ -25,11 +27,9 @@ import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
-import '../../core/version.dart';
 import '../../data/store.dart';
 import '../../room/room_controller.dart';
 import '../../services/quick_actions.dart' show scanRequest;
-import '../../services/sharing.dart';
 import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/rate_sheet.dart';
@@ -58,12 +58,6 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
   final _quickCtrl = TextEditingController();
   final _storeCtrl =
       TextEditingController(); // tienda sugerida (anti-duplicado)
-  final _totalsKey = GlobalKey(); // RepaintBoundary de Totales → PNG
-  final _plantillasKey = GlobalKey(); // ancla de scroll del chip «Plantillas»
-
-  /// v23.2: despliegue progresivo — frecuentes/totales/plantillas tras
-  /// «Más» (patrón del Home): la captura y el carrito quedan a la vista.
-  bool _showMore = false;
   String _addCurrency = 'VES';
   String _storeName = '';
 
@@ -399,112 +393,126 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
-      body: Stack(
-        children: [
-          ListView(
-            // Padding inferior extra para no tapar el contenido con la
-            // VeStickyBar (checkout/dividir).
-            padding: EdgeInsets.fromLTRB(16, 8, 16, hasCart ? 112 : 24),
-            children: [
-              VeTitle(
-                sub: Text('Presupuesto y vuelto'),
-                child: Text('Lista de compras'),
-              ),
-              const TipsTrigger(scope: 'lista'),
-              // Fila de acciones de cabecera (prototipo): chips «Sala en
-              // vivo» + «Plantillas» (ancla del tour en la sala) e historial.
-              // En 320 px no caben dentro del VeTitle: fila propia.
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    KeyedSubtree(
-                      key: TourKeys.listaSala,
-                      child: VeChip(
-                        active: room.connected,
-                        onTap: () => _openRoom(context),
-                        child: const Text('Sala en vivo'),
-                      ),
+      // v30 (V-1): la barra pegadiza vive en bottomNavigationBar — el cuerpo
+      // se acota a su medida y NADA queda tapado (antes flotaba en un
+      // Positioned sobre el ListView y cortaba la fila Cant./Precio/moneda).
+      bottomNavigationBar: hasCart
+          ? VeStickyBar(
+              children: [
+                // FittedBox scaleDown: con montos largos o pantallas
+                // angostas la etiqueta se REDUCE antes que desbordar.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: VeBtn(
+                    variant: VeBtnVariant.secondary,
+                    size: VeBtnSize.lg,
+                    icon: LucideIcons.splitSquareHorizontal,
+                    onPressed: () => _openDividirSheet(
+                      ctx,
+                      calcCur,
+                      totalInCalc,
+                      totals.usd,
                     ),
-                    const SizedBox(width: 8),
-                    VeChip(
-                      active: _showMore,
-                      onTap: () {
-                        setState(() => _showMore = !_showMore);
-                        // v23.3 (pez 2-a P1-4): el chip promete llevar a las
-                        // plantillas — al expandir, el ancla entra al
-                        // viewport (la GlobalKey existía pero nadie la usaba;
-                        // plegar no scrollea: el carrito queda a la vista).
-                        if (_showMore) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            final anchorCtx = _plantillasKey.currentContext;
-                            if (anchorCtx != null) {
-                              Scrollable.ensureVisible(
-                                anchorCtx,
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeOutCubic,
-                              );
-                            }
-                          });
-                        }
-                      },
-                      child: const Text('Plantillas'),
-                    ),
-                    const Spacer(),
-                    VeIconBtn(
-                      icon: LucideIcons.receiptText,
-                      onTap: () => context.push('/historial'),
-                      label: 'Historial',
-                    ),
-                  ],
+                    child: const Text('Dividir cuenta'),
+                  ),
                 ),
-              ),
-              // v18.0 · Sala Viva: si estás en sala, la lista lo sabe — la
-              // cabecera de sala vive arriba de TODO y lleva a la sala.
-              _RoomHeader(room: room),
-              // Hero total (v19, orden del dueño): el número grande en la
-              // moneda principal de cálculo y, como extra al lado, su
-              // equivalente en USD.
-              ReadWindow(
-                semanticLabel:
-                    'Total de la compra: ${fmtMoney(totalInCalc, calcCur)} ${calcCur.code}',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'TOTAL DE LA COMPRA',
-                          style: VeText.labelCaps(
-                            11,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                        // v23.3 (gate visual): 8 de respiro — a 6 el badge
-                        // «Bs» se pegaba al rótulo a 390.
-                        const SizedBox(width: 8),
-                        // Divisa de cálculo SIEMPRE visible junto a la cifra
-                        // (v17.5).
-                        CurrencyTag(calcCur.code),
-                        const Spacer(),
-                        // Contador de ítems VISIBLE (fix): antes un LiveBadge
-                        // con live:false — que colapsa a SizedBox.shrink() y
-                        // jamás se pintaba (elemento muerto en el héroe).
-                        Stamp(
-                          '${store.cart.length} '
-                          '${store.cart.length == 1 ? 'ítem' : 'ítems'}',
-                        ),
-                      ],
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: VeBtn(
+                    variant: VeBtnVariant.primary,
+                    size: VeBtnSize.lg,
+                    icon: LucideIcons.wallet,
+                    onPressed: () => showCheckoutSheet(context),
+                    child: Text(
+                      'Cerrar compra · ${fmtMoney(totalInCalc, calcCur)}',
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
+                  ),
+                ),
+              ],
+            )
+          : null,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          VeTitle(
+            sub: Text('Presupuesto y vuelto'),
+            right: VeIconBtn(
+              icon: LucideIcons.receiptText,
+              onTap: () => context.push('/historial'),
+              label: 'Historial',
+            ),
+            child: Text('Lista de compras'),
+          ),
+          const TipsTrigger(scope: 'lista'),
+          // v29 (H-37): entrada propia de la Sala en vivo bajo el título —
+          // fila delineada (icono · título · descripción · chevron); con
+          // sala activa muestra nombre, «En vivo», código y personas.
+          // Ancla del tour conservada.
+          KeyedSubtree(
+            key: TourKeys.listaSala,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _SalaEntry(room: room, onTap: () => _openRoom(context)),
+            ),
+          ),
+          // v29 (H-31): el VALOR GRANDE vive en su TARJETA — tono de
+          // superficie, radio 14. La cifra va envuelta en FittedBox
+          // (scaleDown): si los caracteres crecen, el tamaño se reduce
+          // gradualmente, jamás rompe a una segunda línea. El número grande
+          // en la moneda de cálculo y, como extra al lado, su equivalente
+          // en USD.
+          ReadWindow(
+            semanticLabel:
+                'Total de la compra: ${fmtMoney(totalInCalc, calcCur)} ${calcCur.code}',
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'TOTAL DE LA COMPRA',
+                        style: VeText.labelCaps(
+                          11,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      // v23.3 (gate visual): 8 de respiro — a 6 el badge
+                      // «Bs» se pegaba al rótulo a 390.
+                      const SizedBox(width: 8),
+                      // Divisa de cálculo SIEMPRE visible junto a la cifra
+                      // (v17.5).
+                      CurrencyTag(calcCur.code),
+                      const Spacer(),
+                      // Contador de ítems VISIBLE (fix): antes un LiveBadge
+                      // con live:false — que colapsa a SizedBox.shrink() y
+                      // jamás se pintaba (elemento muerto en el héroe).
+                      Stamp(
+                        '${store.cart.length} '
+                        '${store.cart.length == 1 ? 'ítem' : 'ítems'}',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        // H-31: escala gradual — la cifra display 30 cede
+                        // tamaño antes que romper la línea.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
                           child: AnimatedNumber(
                             totalInCalc,
-                            // Héroe: cifra 48 tabular (v23.2: escala única
-                            // con el Conversor — la de 64 empujaba todo).
+                            // Héroe: cifra 30 tabular (v23.2: escala única
+                            // con el Conversor).
                             style: VeText.displayNum(
                               30,
                               color: scheme.onSurface,
@@ -512,487 +520,312 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
                             decimals: smartDecimals(totalInCalc, calcCur),
                           ),
                         ),
-                        // Extra USD al lado (si la moneda de cálculo NO es
-                        // USD).
-                        if (calcCur != Currency.usd && totals.usd > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 10, bottom: 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                      ),
+                      // Extra USD al lado (si la moneda de cálculo NO es
+                      // USD).
+                      if (calcCur != Currency.usd && totals.usd > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 10, bottom: 4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const Flag(Currency.usd, size: 14),
+                              const SizedBox(height: 2),
+                              Text(
+                                '≈ ${fmtUSD(totals.usd)}',
+                                textAlign: TextAlign.end,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // v27.3 · Modo Cachea: simulador de inicial + cuotas quincenales
+          // sin intereses. Cálculo, no pago.
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: VeBtn(
+                variant: VeBtnVariant.ghost,
+                size: VeBtnSize.sm,
+                icon: LucideIcons.wallet,
+                enabled: totalInCalc > 0,
+                onPressed: () => showCacheaSheet(
+                  context,
+                  ref: ref,
+                  totalInCalc: totalInCalc,
+                  calcCur: calcCur,
+                  totalUsd: totals.usd,
+                  ctx: ctx,
+                ),
+                child: const Text('Modo Cachea'),
+              ),
+            ),
+          ),
+          // v29 (H-32): presupuesto de UNA línea de estado — toca la tarjeta
+          // para fijar el tope (la barra se llena con el total del carrito).
+          Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: _PanelPresupuesto(
+              store: store,
+              ctx: ctx,
+              totalUsd: totals.usd,
+            ),
+          ),
+          // v29 (H-33): CÁLCULOS DE LA LISTA — sección propia fuera del
+          // presupuesto: en qué moneda se suma la lista y con qué tasa (es
+          // cosa de TODA la pantalla, no del tope del mes). El selector
+          // GRANDE habla el mismo lenguaje del Conversor (H-24).
+          _CalculosLista(
+            store: store,
+            calcCur: calcCur,
+            onCalcCurrency: (c) => store.setSetting('calcCurrency', c.code),
+          ),
+          // ── Zona de captura (ancla del tour v17.8) ─────────────────
+          KeyedSubtree(
+            key: TourKeys.listaAgregar,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                VeEyebrow(child: const Text('AGREGAR PRODUCTO')),
+                // Alta rápida por nombre (prototipo): libro de precios o
+                // editor prellenado.
+                Row(
+                  children: [
+                    Expanded(
+                      child: VeInput(
+                        controller: _quickCtrl,
+                        placeholder: 'Agregar producto…',
+                        onSubmitted: (_) => _quickAdd(store),
+                        semantic: 'Agregar producto',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    VeBtn(
+                      variant: VeBtnVariant.primary,
+                      size: VeBtnSize.sm,
+                      icon: LucideIcons.plus,
+                      onPressed: () => _quickAdd(store),
+                      semantic: 'Agregar',
+                      child: const SizedBox(width: 13),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // Captura manual con detalle: nombre · cantidad ·
+                // escáner · precio + moneda · tienda (sugerencia).
+                VeCard(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+                      // v29 (H-34): captura por espacios lógicos — QUÉ
+                      // (Producto · escáner) · CUÁNTO (Cant. · Precio ·
+                      // moneda) · DÓNDE (Tienda en fila propia) · acción
+                      // a todo lo ancho.
+                      // ── QUÉ ──
+                      Row(
+                        children: [
+                          Expanded(
+                            child: VeInput(
+                              key: const Key('lista-nombre'),
+                              controller: _nameCtrl,
+                              placeholder: 'Producto',
+                              semantic: 'Nombre del producto',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          VeIconBtn(
+                            icon: LucideIcons.scanBarcode,
+                            onTap: () => _scanItem(store),
+                            label: 'Escanear código de barras',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // ── CUÁNTO ──
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 64,
+                            child: VeInput(
+                              key: const Key('lista-cant'),
+                              controller: _qtyCtrl,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              placeholder: 'Cant.',
+                              semantic: 'Cantidad',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: VeInput(
+                              key: const Key('lista-precio'),
+                              controller: _priceCtrl,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              placeholder: 'Precio',
+                              semantic: 'Precio unitario',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          CurrencySelect(
+                            value: CurrencyX.from(_addCurrency),
+                            onChanged: (c) =>
+                                setState(() => _addCurrency = c.code),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // ── DÓNDE ──
+                      VeInput(
+                        key: const Key('lista-tienda'),
+                        controller: _storeCtrl,
+                        onChanged: (v) => setState(() => _storeName = v),
+                        placeholder: 'Tienda',
+                        semantic: 'Tienda',
+                      ),
+                      if (suggestion != null)
+                        // Sugerencia PASIVA anti-duplicado: nunca bloquea
+                        // el alta.
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: TapScale(
+                            onTap: () {
+                              _storeCtrl.text = suggestion;
+                              setState(() => _storeName = suggestion);
+                            },
+                            child: Row(
                               children: [
-                                const Flag(Currency.usd, size: 14),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '≈ ${fmtUSD(totals.usd)}',
-                                  textAlign: TextAlign.end,
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700,
-                                    fontFeatures: const [
-                                      FontFeature.tabularFigures(),
-                                    ],
-                                    color: scheme.onSurfaceVariant,
+                                Icon(
+                                  LucideIcons.lightbulb,
+                                  size: 13,
+                                  color: scheme.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    '¿Quizá quisiste «$suggestion»?',
+                                    style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: scheme.primary,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // v27.3 · Modo Cachea: simulador de inicial + cuotas quincenales
-              // sin intereses. Cálculo, no pago.
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: VeBtn(
-                    variant: VeBtnVariant.ghost,
-                    size: VeBtnSize.sm,
-                    icon: LucideIcons.wallet,
-                    enabled: totalInCalc > 0,
-                    onPressed: () => showCacheaSheet(
-                      context,
-                      ref: ref,
-                      totalInCalc: totalInCalc,
-                      calcCur: calcCur,
-                      totalUsd: totals.usd,
-                      ctx: ctx,
-                    ),
-                    child: const Text('Modo Cachea'),
+                        ),
+                      const SizedBox(height: 12),
+                      VeBtn(
+                        variant: VeBtnVariant.primary,
+                        expands: true,
+                        icon: LucideIcons.plus,
+                        onPressed: () => _addItem(store),
+                        child: const Text('Agregar a la lista'),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              // v20 (orden del dueño): UN panel de control con presupuesto
-              // + moneda de cálculo — antes eran un Wrap suelto de pills
-              // («no se vea mal las monedas de cálculo») y una barra
-              // aislada que nadie entendía cómo usar.
-              Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: _PanelPresupuesto(
-                  store: store,
-                  ctx: ctx,
-                  totalUsd: totals.usd,
-                  calcCur: calcCur,
-                  onCalcCurrency: (c) =>
-                      store.setSetting('calcCurrency', c.code),
+              ],
+            ),
+          ),
+          // ── Lista de compras ────────────────────────────────────────
+          if (!hasCart)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: VeEmpty(
+                icon: LucideIcons.shoppingCart,
+                title: 'Lista vacía',
+                sub:
+                    'Escribe el producto, escanea su código o elige de '
+                    'tu libro de precios.',
+                action: VeBtn(
+                  size: VeBtnSize.sm,
+                  variant: VeBtnVariant.secondary,
+                  icon: LucideIcons.listPlus,
+                  onPressed: () => _openProductPicker(store),
+                  child: const Text('Elegir de mis productos'),
                 ),
               ),
-              // ── Zona de captura (ancla del tour v17.8) ─────────────────
-              KeyedSubtree(
-                key: TourKeys.listaAgregar,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    VeEyebrow(child: const Text('AGREGAR PRODUCTO')),
-                    // Alta rápida por nombre (prototipo): libro de precios o
-                    // editor prellenado.
-                    Row(
-                      children: [
-                        Expanded(
-                          child: VeInput(
-                            controller: _quickCtrl,
-                            placeholder: 'Agregar producto…',
-                            onSubmitted: (_) => _quickAdd(store),
-                            semantic: 'Agregar producto',
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        VeBtn(
-                          variant: VeBtnVariant.primary,
-                          size: VeBtnSize.sm,
-                          icon: LucideIcons.plus,
-                          onPressed: () => _quickAdd(store),
-                          semantic: 'Agregar',
-                          child: const SizedBox(width: 13),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    // Captura manual con detalle: nombre · cantidad ·
-                    // escáner · precio + moneda · tienda (sugerencia).
-                    VeCard(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        children: [
-                          // v23.2: captura en 2 filas — nombre+cant+escáner
-                          // arriba, precio+moneda+tienda abajo (la tienda
-                          // ya no roba una fila entera).
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: VeInput(
-                                  key: const Key('lista-nombre'),
-                                  controller: _nameCtrl,
-                                  placeholder: 'Producto',
-                                  semantic: 'Nombre del producto',
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                width: 56,
-                                child: VeInput(
-                                  key: const Key('lista-cant'),
-                                  controller: _qtyCtrl,
-                                  keyboardType: TextInputType.number,
-                                  textAlign: TextAlign.center,
-                                  placeholder: 'Cant.',
-                                  semantic: 'Cantidad',
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              VeIconBtn(
-                                icon: LucideIcons.scanBarcode,
-                                onTap: () => _scanItem(store),
-                                label: 'Escanear código de barras',
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 2,
-                                child: VeInput(
-                                  key: const Key('lista-precio'),
-                                  controller: _priceCtrl,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                  placeholder: 'Precio',
-                                  semantic: 'Precio unitario',
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              CurrencySelect(
-                                value: CurrencyX.from(_addCurrency),
-                                onChanged: (c) =>
-                                    setState(() => _addCurrency = c.code),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                flex: 2,
-                                child: VeInput(
-                                  key: const Key('lista-tienda'),
-                                  controller: _storeCtrl,
-                                  onChanged: (v) =>
-                                      setState(() => _storeName = v),
-                                  placeholder: 'Tienda',
-                                  semantic: 'Tienda',
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (suggestion != null)
-                            // Sugerencia PASIVA anti-duplicado: nunca bloquea
-                            // el alta.
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: TapScale(
-                                onTap: () {
-                                  _storeCtrl.text = suggestion;
-                                  setState(() => _storeName = suggestion);
-                                },
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      LucideIcons.lightbulb,
-                                      size: 13,
-                                      color: scheme.primary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        '¿Quizá quisiste «$suggestion»?',
-                                        style: TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: scheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          const SizedBox(height: 12),
-                          VeBtn(
-                            variant: VeBtnVariant.primary,
-                            expands: true,
-                            icon: LucideIcons.plus,
-                            onPressed: () => _addItem(store),
-                            child: const Text('Agregar a la lista'),
-                          ),
-                        ],
+            )
+          else ...[
+            VeEyebrow(
+              right: VeBtn(
+                variant: VeBtnVariant.ghost,
+                size: VeBtnSize.sm,
+                onPressed: () => store.clearCart(),
+                child: const Text('Vaciar'),
+              ),
+              child: const Text('EN LA LISTA'),
+            ),
+            VeGroup(
+              children: [
+                for (final item in store.cart)
+                  _CartRow(
+                    item: item,
+                    ctx: ctx,
+                    onChecked: (v, by) => store.updateCartItem(
+                      item.id,
+                      item.copyWith(
+                        checked: v,
+                        checkedBy: v ? (by ?? '') : null,
+                        clearCheckedBy: !v,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              // ── Lista de compras ────────────────────────────────────────
-              if (!hasCart)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: VeEmpty(
-                    icon: LucideIcons.shoppingCart,
-                    title: 'Lista vacía',
-                    sub: 'Agrega productos o usa una plantilla.',
-                    action: VeBtn(
-                      size: VeBtnSize.sm,
-                      variant: VeBtnVariant.secondary,
-                      icon: LucideIcons.listPlus,
-                      onPressed: () => _openProductPicker(store),
-                      child: const Text('Elegir de mis productos'),
+                    onQty: (q) => store.updateCartItem(
+                      item.id,
+                      item.copyWith(quantity: q.clamp(1, 999)),
                     ),
-                  ),
-                )
-              else ...[
-                VeEyebrow(
-                  right: VeBtn(
-                    variant: VeBtnVariant.ghost,
-                    size: VeBtnSize.sm,
-                    onPressed: () => store.clearCart(),
-                    child: const Text('Vaciar'),
-                  ),
-                  child: const Text('EN LA LISTA'),
-                ),
-                VeGroup(
-                  children: [
-                    for (final item in store.cart)
-                      _CartRow(
-                        item: item,
-                        ctx: ctx,
-                        onChecked: (v, by) => store.updateCartItem(
-                          item.id,
-                          item.copyWith(
-                            checked: v,
-                            checkedBy: v ? (by ?? '') : null,
-                            clearCheckedBy: !v,
-                          ),
-                        ),
-                        onQty: (q) => store.updateCartItem(
-                          item.id,
-                          item.copyWith(quantity: q.clamp(1, 999)),
-                        ),
-                        onRemove: () => store.removeFromCart(item.id),
-                        onEdit: () => _editCartItem(store, item),
-                      ),
-                  ],
-                ),
-                // Aviso honesto de tasa faltante para la divisa de cálculo.
-                if (uCalc <= 0 && calcCur != Currency.usd)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Row(
-                      children: [
-                        Icon(
-                          LucideIcons.triangleAlert,
-                          size: 13,
-                          color: VeColors.of(context).warn,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Sin tasa viva para ${calcCur.code} — el total en esa moneda no se calcula.',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: VeColors.of(context).warn,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    onRemove: () => store.removeFromCart(item.id),
+                    onEdit: () => _editCartItem(store, item),
                   ),
               ],
-              // v23.2 (despliegue progresivo, patrón del Home): frecuentes,
-              // totales por moneda y plantillas viven tras «Más» — con un
-              // carrito de 1 ítem la pantalla completa queda a la vista.
+            ),
+            // Aviso honesto de tasa faltante para la divisa de cálculo.
+            if (uCalc <= 0 && calcCur != Currency.usd)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: 10),
                 child: Row(
                   children: [
-                    VeChip(
-                      active: _showMore,
-                      icon: LucideIcons.chevronDown,
-                      onTap: () => setState(() => _showMore = !_showMore),
-                      child: const Text('Más'),
+                    Icon(
+                      LucideIcons.triangleAlert,
+                      size: 13,
+                      color: VeColors.of(context).warn,
                     ),
-                    const SizedBox(width: 8),
-                    if (hasCart)
-                      Text(
-                        '≈ ${fmtUSD(totals.usd)} · ${store.cart.length} ítems',
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Sin tasa viva para ${calcCur.code} — el total en esa moneda no se calcula.',
                         style: TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: scheme.onSurfaceVariant,
+                          color: VeColors.of(context).warn,
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),
-              AnimatedSize(
-                duration: kLayoutDur,
-                curve: kEaseVe,
-                alignment: Alignment.topCenter,
-                child: !_showMore
-                    ? const SizedBox(width: double.infinity)
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // «Agregar sin escribir» (prototipo): frecuentes del
-                          // libro + picker completo.
-                          VeEyebrow(child: const Text('AGREGAR SIN ESCRIBIR')),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final p in _quickProducts(store))
-                                VeChip(
-                                  onTap: () => _addFromBook(store, p),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Opacity(
-                                        opacity: 0.6,
-                                        child: Text(
-                                          '+',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(p.name),
-                                    ],
-                                  ),
-                                ),
-                              VeChip(
-                                dashed: true,
-                                onTap: () => _openProductPicker(store),
-                                child: const Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 12),
-                                  child: Text('Elegir de mis productos'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          // Totales por moneda + compartir (texto y PNG).
-                          if (hasCart) ...[
-                            VeEyebrow(child: const Text('TOTALES')),
-                            VeCard(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                children: [
-                                  // Preview en pantalla (v18.0): el PNG del
-                                  // generador compone el MISMO TotalsDoc
-                                  // off-stage — el share no depende de que la
-                                  // tarjeta siga montada tras el scroll.
-                                  RepaintBoundary(
-                                    key: _totalsKey,
-                                    child: TotalsDoc(totals: totals),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: [
-                                      VeBtn(
-                                        variant: VeBtnVariant.secondary,
-                                        size: VeBtnSize.sm,
-                                        icon: LucideIcons.image,
-                                        onPressed: _shareTotalsPng,
-                                        child: const Text('Compartir PNG'),
-                                      ),
-                                      VeBtn(
-                                        variant: VeBtnVariant.secondary,
-                                        size: VeBtnSize.sm,
-                                        icon: LucideIcons.copy,
-                                        onPressed: () => copyTotalsText(
-                                          context,
-                                          store,
-                                          totals,
-                                        ),
-                                        child: const Text('Copiar'),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          // Plantillas.
-                          _Plantillas(anchorKey: _plantillasKey),
-                        ],
-                      ),
-              ),
-            ],
-          ),
-          // v19 (orden del dueño): Vuelto y Dividir la cuenta viven en el
-          // modal de «Finalizar compra» — la barra inferior lanza el reparto
-          // y el checkout.
-          if (hasCart)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: VeStickyBar(
-                children: [
-                  // FittedBox scaleDown: con montos largos o pantallas
-                  // angostas la etiqueta se REDUCE antes que desbordar.
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: VeBtn(
-                      variant: VeBtnVariant.secondary,
-                      size: VeBtnSize.lg,
-                      icon: LucideIcons.splitSquareHorizontal,
-                      onPressed: () => _openDividirSheet(
-                        ctx,
-                        calcCur,
-                        totalInCalc,
-                        totals.usd,
-                      ),
-                      child: const Text('Dividir cuenta'),
-                    ),
-                  ),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: VeBtn(
-                      variant: VeBtnVariant.primary,
-                      size: VeBtnSize.lg,
-                      icon: LucideIcons.wallet,
-                      onPressed: () => showCheckoutSheet(context),
-                      child: Text(
-                        'Cerrar compra · ${fmtMoney(totalInCalc, calcCur)}',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          ],
         ],
       ),
     );
-  }
-
-  /// Frecuentes del libro (hasta 6): con precio vigente y sin copia en la
-  /// lista (por producto o por nombre).
-  List<Product> _quickProducts(AppStore store) {
-    return [
-      for (final p in store.products)
-        if (p.latestRecord != null &&
-            !store.cart.any(
-              (c) =>
-                  c.productId == p.id ||
-                  fold(c.name.toLowerCase()) == fold(p.name.toLowerCase()),
-            ))
-          p,
-    ].take(6).toList();
   }
 
   /// Picker de productos del libro (prototipo PickSheet): busca, agrega con
@@ -1003,34 +836,6 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
       title: 'Mis productos',
       builder: (_) => _ProductPicker(store: store),
     );
-  }
-
-  /// Totales actuales del carrito (recalculados para el render off-stage:
-  /// el PNG se genera desde el estado vivo, no desde el último build).
-  ({double usd, Map<Currency, double> byCurrency, int units}) _totalsOf() {
-    final store = ref.read(appStoreProvider);
-    final ctx = store.contextOf(module: RateModule.calculator);
-    return cartTotals(store.cart, ctx);
-  }
-
-  /// Comparte los Totales como PNG (v18.0): compone el documento
-  /// OFF-STAGE — causa raíz del «No pude generar la imagen» era capturar el
-  /// boundary VISIBLE de una tarjeta que el scroll ya recicló. Fallback al
-  /// boundary visible si el off-stage no estuviera disponible.
-  Future<void> _shareTotalsPng() async {
-    final totals = _totalsOf();
-    final off = await renderOffstagePng(
-      context,
-      TotalsDoc(totals: totals),
-      width: 360,
-    );
-    final bytes = off ?? await captureWidget(_totalsKey);
-    if (!mounted) return;
-    if (bytes == null) {
-      showToast(context, 'No pude generar la imagen', kind: ToastKind.error);
-      return;
-    }
-    await sharePng(bytes, 'valorave-totales.png');
   }
 
   /// Editar ítem → editor con detalle (tienda, código, peso) en sheet Ve.
@@ -1060,142 +865,200 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
   }
 }
 
-/// Selector de FUENTE de tasa dependiente de la moneda de cálculo (requisito
-/// A): v19 — la hoja visual de toda la app (RateTile con bandera, precio y
-/// categoría; la Manual con editor inline). Valor = fuente del módulo Lista
-/// (RateModule.calculator — el override por módulo §9.3; sin override cae a
-/// la global, cuyo default es la oficial). Cambia con setModuleRateSource
-/// para no alterar el Conversor ni las fichas de producto.
-class _FuenteChip extends ConsumerWidget {
-  const _FuenteChip({required this.store, required this.currency});
+/// ─── Cálculos de la lista (v29 · H-33) ──────────────────────────────────────
+/// Sección propia FUERA del presupuesto: en qué MONEDA se suma la lista y
+/// con qué TASA — cosa general de toda la pantalla. El selector de tasa es
+/// el control GRANDE del Conversor (H-24): delineado a todo lo ancho con
+/// sello + nombre en tinta plena («BCV · Oficial», el «Oficial» siempre en
+/// oficiales) + «1 USD = X VES · hace 16 h» + chevron; al tocar abre la
+/// hoja de fuentes del módulo Lista (RateModule.calculator — el override
+/// por módulo §9.3; sin override cae a la global). Con cálculo en USD no
+/// hay tasa que elegir: el dólar es la base de toda la app.
+class _CalculosLista extends StatelessWidget {
+  const _CalculosLista({
+    required this.store,
+    required this.calcCur,
+    required this.onCalcCurrency,
+  });
+
+  final AppStore store;
+  final Currency calcCur;
+  final ValueChanged<Currency> onCalcCurrency;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        VeEyebrow(child: const Text('CÁLCULOS DE LA LISTA')),
+        // Moneda en que se suma TODO lo capturado.
+        Row(
+          children: [
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'La lista se suma en',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            CurrencySelect(value: calcCur, onChanged: onCalcCurrency),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (RateSource.sourcesFor(calcCur).isNotEmpty)
+          _SelectorTasa(store: store, currency: calcCur)
+        else
+          // USD: la base del cálculo — no hay tasa que elegir.
+          Row(
+            children: [
+              Icon(LucideIcons.info, size: 13, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'El cálculo en USD es directo — el dólar es la base de la app.',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+/// v29 (H-33): selector de tasa GRANDE — el mismo lenguaje del Conversor
+/// (H-24): control delineado a todo lo ancho, sello + nombre + tasa viva +
+/// frescura + chevron. Abre la hoja de fuentes (todas las opciones con su
+/// cifra, la activa marcada).
+class _SelectorTasa extends ConsumerWidget {
+  const _SelectorTasa({required this.store, required this.currency});
 
   final AppStore store;
   final Currency currency;
+
+  /// Nombre ÚNICO en una sola forma, con «Oficial» siempre en oficiales
+  /// (v28 home / v29 H-33: mismo lenguaje en toda la app).
+  String _nombreFuente(RateSource? src) {
+    if (src == null) return currency.code;
+    return src.label.contains(src.category.label)
+        ? src.label
+        : '${src.label} · ${src.category.label}';
+  }
+
+  Future<void> _openSourcesSheet(BuildContext context, WidgetRef ref) async {
+    final currentId = store.sourceFor(currency, module: RateModule.calculator);
+    await showRateSheet(
+      context,
+      ref: ref,
+      currency: currency,
+      ctx: store.contextOf(module: RateModule.calculator),
+      currentId: currentId,
+      title: 'Tasa del módulo Lista · ${currency.label}',
+      onPick: (id) =>
+          store.setModuleRateSource(RateModule.calculator, currency, id),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final currentId = store.sourceFor(currency, module: RateModule.calculator);
     final current = RateSource.of(currentId);
-    return TapScale(
-      onTap: () async {
-        await showRateSheet(
-          context,
-          ref: ref,
-          currency: currency,
-          ctx: store.contextOf(module: RateModule.calculator),
-          currentId: currentId,
-          title: 'Tasa del módulo Lista · ${currency.label}',
-          onPick: (id) =>
-              store.setModuleRateSource(RateModule.calculator, currency, id),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        // v25 «HOJA»: selector plano SIN caja — el sello + nombre + chevron
-        // bastan para identificar el control (el gesto de tap lo confirma).
-        // scaleDown: si el espacio aprieta (Ahem · textScale alto), el
-        // selector se REDUCE proporcionalmente en vez de desbordar — igual
-        // que los botones de la barra pegadiza.
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (current != null) ...[
-                SourceSeal(current.category),
-                const SizedBox(width: 6),
-              ],
-              Text(
-                current?.edgeName ?? currentId,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(width: 2),
-              Icon(Icons.expand_more, size: 15, color: scheme.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+    final ctx = store.contextOf(module: RateModule.calculator);
+    final rate = ctx.unitsPerUSD(currency) ?? 0;
+    final entry = store.board.sources[currentId];
+    final when = entry?.updatedAt ?? store.board.fetchedAt;
+    final frescura = current?.category == SourceCategory.manual
+        ? 'tu tasa manual'
+        : (when != null ? timeAgo(when) : 'sin fecha aún');
 
-/// ─── Documento de Totales (v18.0: público y reutilizable) ──────────────────
-/// El MISMO widget sirve de preview en la tarjeta de Totales Y de fuente del
-/// PNG off-stage: lo que se ve es lo que se comparte.
-class TotalsDoc extends ConsumerWidget {
-  const TotalsDoc({super.key, required this.totals});
-
-  final ({double usd, Map<Currency, double> byCurrency, int units}) totals;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      color: scheme.surface,
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'ValoraVE · Totales',
-                  style: TextStyle(
-                    fontFamily: 'SpaceGrotesk',
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
+    return Semantics(
+      button: true,
+      label: 'Tasa de cálculo de la lista',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openSourcesSheet(context, ref),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.ve.colorScheme.border),
+            ),
+            child: Row(
+              children: [
+                if (current != null) ...[
+                  SourceSeal(current.category),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _nombreFuente(current),
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          rate > 0
+                              ? '1 USD = ${fmtRatePrecise(rate, store.settings.precision)} ${currency.code} · $frescura'
+                              : 'Sin tasa disponible para ${currency.code}',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w500,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              Text(
-                fmtDate(DateTime.now()),
-                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          for (final e in totals.byCurrency.entries)
-            _TotalsRow(text: fmtCurrency(e.value, e.key), code: e.key),
-          const RuleDouble(),
-          const SizedBox(height: 6),
-          Text(
-            'Total USD: ${fmtUSD(totals.usd)}',
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurface,
+                const SizedBox(width: 8),
+                Icon(
+                  LucideIcons.chevronDown,
+                  size: 17,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'ValoraVE $kAppVersionVisible · es-VE',
-            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TotalsRow extends ConsumerWidget {
-  const _TotalsRow({required this.text, required this.code});
-  final String text;
-  final Currency code;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Flag(code, size: 15),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 13.5))),
-        ],
+        ),
       ),
     );
   }
@@ -1266,38 +1129,46 @@ class _CartRow extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                      item.name,
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w500,
-                        // v20 (orden del dueño): tachado MEJORADO — línea
-                        // más gruesa y bien trazada sobre texto atenuado;
-                        // el nombre se lee igual (no desaparece).
-                        decoration: item.checked
-                            ? TextDecoration.lineThrough
-                            : null,
-                        decorationThickness: item.checked ? 1.8 : null,
-                        decorationColor: scheme.mutedForeground.withValues(
-                          alpha: 0.85,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        item.name,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w500,
+                          // v20 (orden del dueño): tachado MEJORADO — línea
+                          // más gruesa y bien trazada sobre texto atenuado;
+                          // el nombre se lee igual (no desaparece).
+                          decoration: item.checked
+                              ? TextDecoration.lineThrough
+                              : null,
+                          decorationThickness: item.checked ? 1.8 : null,
+                          decorationColor: scheme.mutedForeground.withValues(
+                            alpha: 0.85,
+                          ),
+                          color: item.checked
+                              ? scheme.mutedForeground.withValues(alpha: 0.75)
+                              : scheme.foreground,
                         ),
-                        color: item.checked
-                            ? scheme.mutedForeground.withValues(alpha: 0.75)
-                            : scheme.foreground,
                       ),
-                    )),
+                    ),
                     const SizedBox(height: 2),
-                    FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                      sub,
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 11,
-                        color: muted,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        sub,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          color: muted,
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
@@ -1335,31 +1206,26 @@ class _CartRow extends ConsumerWidget {
   }
 }
 
-/// ─── Panel de presupuesto + cálculo (v20 · orden del dueño) ──────────────────
-/// UNA tarjeta que explica sola cómo funciona el presupuesto:
-/// · Fila 1: eyebrow «Presupuesto del mes» + total de la lista sobre el
-///   tope («de Bs 5.000» · «sin tope»).
+/// ─── Presupuesto de UNA línea de estado (v29 · H-32) ───────────────────────
+/// La tarjeta que fija el tope del mes:
+/// · Eyebrow «PRESUPUESTO DEL MES».
 /// · Barra de progreso h6 (tinta normal · warn > 80 % · neg excedido).
-/// · Fila 2: «Restan/Excedido X» + «En carrito Y».
-/// · Divisor y fila de CÁLCULO: en qué moneda se suma la lista y con qué
-///   fuente de tasa — dos pills compactas (bandera+código · sello+nombre),
-///   no el Wrap suelto de textos que había antes.
-/// Tocar el cuerpo abre el editor del presupuesto; las pills abren sus
-/// propias hojas (moneda / fuente).
+/// · UNA línea de estado («Restan X» / «Excedido X» / «Tu tope de gasto —
+///   toca para fijarlo», con FittedBox anti-rotura) + el tope o «sin tope»
+///   a la derecha.
+/// · El pulso del carrito («En carrito…») en su propia línea.
+/// Tocar el cuerpo abre la hoja que fija el tope. La hoja explica SOLO lo
+/// necesario en dos líneas (qué hace + qué significan ámbar/rojo).
 class _PanelPresupuesto extends ConsumerWidget {
   const _PanelPresupuesto({
     required this.store,
     required this.ctx,
     required this.totalUsd,
-    required this.calcCur,
-    required this.onCalcCurrency,
   });
 
   final AppStore store;
   final RateContext ctx;
   final double totalUsd;
-  final Currency calcCur;
-  final ValueChanged<Currency> onCalcCurrency;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1373,9 +1239,8 @@ class _PanelPresupuesto extends ConsumerWidget {
     final pct = budgetUsd > 0 ? (totalUsd / budgetUsd * 100) : 0.0;
     final over = budgetUsd > 0 && totalUsd > budgetUsd;
     final fill = over ? ink.neg : (pct > 80 ? ink.warn : scheme.foreground);
+    final hasTope = budget.amount > 0;
 
-    // Total de la compra en la divisa del presupuesto (si hay tasa).
-    final String totalText = u > 0 ? fmtMoney(totalUsd * u, bCur) : '—';
     // «En carrito»: ítems marcados + su monto convertido.
     var cartUsd = 0.0;
     var cartCount = 0;
@@ -1397,42 +1262,9 @@ class _PanelPresupuesto extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Expanded(
-                child: Text(
-                  'PRESUPUESTO DEL MES',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.84,
-                    color: scheme.mutedForeground,
-                  ),
-                ),
-              ),
-              VeNum(
-                totalText,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.foreground,
-                ),
-              ),
-              Text(
-                budget.amount > 0
-                    ? ' de ${fmtMoney(budget.amount, bCur)}'
-                    : ' · sin tope',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13.5,
-                  color: scheme.mutedForeground,
-                ),
-              ),
-            ],
+          Text(
+            'PRESUPUESTO DEL MES',
+            style: VeText.labelCaps(11, color: scheme.mutedForeground),
           ),
           const SizedBox(height: 10),
           // Barra h6 redondeada: pista subtle; tinta / warn / neg.
@@ -1452,95 +1284,81 @@ class _PanelPresupuesto extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 10),
+          // H-32: UNA línea de estado + el tope (o «sin tope») a la derecha.
           Row(
             children: [
               Expanded(
-                child: budget.amount > 0
-                    ? FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text.rich(
-                        TextSpan(
-                          text: over ? 'Excedido ' : 'Restan ',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 13.5,
-                            color: scheme.mutedForeground,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: u > 0 ? fmtMoney(diffB.abs(), bCur) : '—',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w600,
-                                color: over ? ink.neg : scheme.foreground,
-                              ),
-                            ),
-                          ],
-                        ),
-                        maxLines: 1,
-                      ))
-                    : Text(
-                        'Fija tu tope del mes — toca esta tarjeta',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13.5,
-                          color: scheme.mutedForeground,
-                        ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text.rich(
+                    TextSpan(
+                      text: hasTope ? (over ? 'Excedido ' : 'Restan ') : null,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 13.5,
+                        color: scheme.mutedForeground,
                       ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                  cartText,
-                  maxLines: 1,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
-                    color: ink.pos,
+                      children: hasTope
+                          ? [
+                              TextSpan(
+                                text: u > 0 ? fmtMoney(diffB.abs(), bCur) : '—',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: over ? ink.neg : scheme.foreground,
+                                ),
+                              ),
+                            ]
+                          : [
+                              TextSpan(
+                                text: 'Tu tope de gasto — toca para fijarlo',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13.5,
+                                  color: scheme.mutedForeground,
+                                ),
+                              ),
+                            ],
+                    ),
+                    maxLines: 1,
                   ),
-                )),
+                ),
               ),
-            ],
-          ),
-          // ── Divisor + fila de cálculo (v20): moneda y fuente, compactas.
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Divider(height: 24, color: scheme.border),
-          ),
-          Row(
-            children: [
-              Icon(
-                LucideIcons.calculator,
-                size: 14,
-                color: scheme.mutedForeground,
-              ),
-              const SizedBox(width: 7),
-              // Expanded + ellipsis: la etiqueta cede antes que romper la
-              // fila (Ahem/textScale extremos no desbordan).
-              Expanded(
+              const SizedBox(width: 10),
+              FittedBox(
+                fit: BoxFit.scaleDown,
                 child: Text(
-                  'Cálculos en',
+                  hasTope
+                      ? 'tope ${fmtMoney(budget.amount, bCur)}'
+                      : 'sin tope',
                   maxLines: 1,
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
-                    color: scheme.foreground,
+                    color: hasTope ? scheme.foreground : scheme.mutedForeground,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: CurrencySelect(
-                  value: calcCur,
-                  onChanged: onCalcCurrency,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: _FuenteChip(store: store, currency: calcCur),
-              ),
             ],
+          ),
+          const SizedBox(height: 6),
+          // H-32: el pulso del carrito, en su propia línea.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              cartText,
+              maxLines: 1,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: ink.pos,
+              ),
+            ),
           ),
         ],
       ),
@@ -1613,16 +1431,15 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
   Widget build(BuildContext context) {
     final budget = widget.store.data.budget;
     final scheme = context.ve.colorScheme;
-    final VeInk ink = Theme.of(context).extension<VeInk>()!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // v20 (orden del dueño): cómo se USA — una línea de qué hace y
-        // leyenda de los tres estados de la barra.
+        // v29 (H-32): la hoja explica SOLO lo necesario en DOS líneas —
+        // qué hace el tope y qué significan ámbar/rojo.
         Text(
-          'Es tu tope de gasto del mes. La barra de la Lista se llena con '
-          'el total del carrito:',
+          'Es tu tope de gasto del mes: la barra de la Lista se llena con '
+          'el total del carrito.',
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 13.5,
@@ -1630,56 +1447,16 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
             color: scheme.mutedForeground,
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Container(
-              width: 22,
-              height: 4,
-              decoration: BoxDecoration(
-                color: scheme.foreground,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(width: 7),
-            const Text(
-              'Dentro del presupuesto',
-              style: TextStyle(fontSize: 11),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Container(
-              width: 22,
-              height: 4,
-              decoration: BoxDecoration(
-                color: ink.warn,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(width: 7),
-            const Text(
-              'Cerca del tope (más del 80 %)',
-              style: TextStyle(fontSize: 11),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Container(
-              width: 22,
-              height: 4,
-              decoration: BoxDecoration(
-                color: ink.neg,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(width: 7),
-            const Text('Te pasaste del tope', style: TextStyle(fontSize: 11)),
-          ],
+        const SizedBox(height: 4),
+        Text(
+          'Ámbar avisa que pasaste el 80 % del tope; rojo, que ya te '
+          'excediste.',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 13.5,
+            height: 1.45,
+            color: scheme.mutedForeground,
+          ),
         ),
         const SizedBox(height: 14),
         Row(
@@ -1742,142 +1519,121 @@ class _BudgetSheetState extends ConsumerState<_BudgetSheet> {
   }
 }
 
-/// ─── Cabecera de sala activa (v18.0 · prototipo: sala en vivo) ──────────────
-/// Badge «En vivo» + código en mono + avatares superpuestos de los miembros
-/// (con punto de presencia) → abre la Sala Viva.
-class _RoomHeader extends ConsumerWidget {
-  const _RoomHeader({required this.room});
+/// ─── Entrada de Sala en vivo (v29 · H-37) ───────────────────────────────────
+/// Entrada propia y clara bajo el título: fila delineada (icono · «Sala en
+/// vivo» · «Comparte la lista en tiempo real» · chevron). Con sala activa
+/// muestra nombre, «En vivo», código y personas. Tocar abre la sala viva
+/// (o el lobby si aún no hay sala). Ancla del tour conservada arriba.
+class _SalaEntry extends StatelessWidget {
+  const _SalaEntry({required this.room, required this.onTap});
 
   final RoomController room;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!room.connected) return const SizedBox.shrink();
-    final shad = context.ve;
-    final scheme = shad.colorScheme;
-    final VeInk ink = Theme.of(context).extension<VeInk>()!;
-    final title = room.roomName.isNotEmpty
-        ? room.roomName
-        : 'Sala ${room.code}';
-    final members = room.visibleMembers.take(4).toList();
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final live = room.connected;
+    final title = live
+        ? (room.roomName.isNotEmpty
+              ? room.roomName
+              : (room.code.isNotEmpty ? 'Sala ${room.code}' : 'Sala en vivo'))
+        : 'Sala en vivo';
+    final people = room.visibleMembers.length;
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 4, bottom: 10),
-      child: VeCard(
-        onTap: () => context.push('/sala-viva'),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                    title,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.foreground,
-                    ),
-                  )),
-                  const SizedBox(height: 6),
-                  Row(
+    return Semantics(
+      button: true,
+      label: 'Sala en vivo',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.ve.colorScheme.border),
+            ),
+            child: Row(
+              children: [
+                Icon(LucideIcons.users, size: 17, color: scheme.onSurface),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      VeBadge(
-                        tone: VeTone.pos,
-                        dot: true,
-                        child: Text('En vivo'),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                          'Código ${room.code}',
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          title,
                           maxLines: 1,
                           style: TextStyle(
-                            fontFamily: 'JetBrainsMono',
-                            fontVariations: [FontVariation('wght', 500)],
-                            fontSize: 13.5,
-                            letterSpacing: 1.8,
-                            color: scheme.mutedForeground,
+                            fontFamily: 'Inter',
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
                           ),
-                        )),
+                        ),
                       ),
+                      const SizedBox(height: 2),
+                      if (live)
+                        Row(
+                          children: [
+                            VeBadge(
+                              tone: VeTone.pos,
+                              dot: true,
+                              child: const Text('En vivo'),
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Código ${room.code} · $people '
+                                  '${people == 1 ? 'persona' : 'personas'}',
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Comparte la lista en tiempo real',
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w500,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Avatares superpuestos (32 px, iniciales, borde de fondo).
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < members.length; i++)
-                  Padding(
-                    padding: EdgeInsets.only(left: i == 0 ? 0 : -10),
-                    child: _avatar(
-                      context,
-                      members[i].id == room.myId
-                          ? 'TÚ'
-                          : members[i].name.trim().toUpperCase(),
-                      online: members[i].online,
-                      ink: ink,
-                    ),
-                  ),
+                ),
+                const SizedBox(width: 10),
+                Icon(
+                  LucideIcons.chevronRight,
+                  size: 16,
+                  color: scheme.onSurfaceVariant,
+                ),
               ],
             ),
-            const SizedBox(width: 10),
-            Icon(
-              LucideIcons.chevronRight,
-              size: 16,
-              color: scheme.mutedForeground,
-            ),
-          ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _avatar(
-    BuildContext context,
-    String initials, {
-    required bool online,
-    required VeInk ink,
-  }) {
-    final scheme = context.ve.colorScheme;
-    return Container(
-      width: 32,
-      height: 32,
-      // v25 «HOJA»: medallón SIN anillo.
-      decoration: BoxDecoration(color: scheme.muted, shape: BoxShape.circle),
-      alignment: Alignment.center,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Text(
-            initials.length > 2 ? initials.substring(0, 2) : initials,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: scheme.foreground,
-            ),
-          ),
-          Positioned(
-            right: -4,
-            bottom: -4,
-            child: Container(
-              width: 9,
-              height: 9,
-              decoration: BoxDecoration(
-                color: online ? ink.pos : ink.warn,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1980,118 +1736,6 @@ class _ProductPickerState extends ConsumerState<_ProductPicker> {
             ],
           ),
       ],
-    );
-  }
-}
-
-class _Plantillas extends ConsumerWidget {
-  const _Plantillas({required this.anchorKey});
-
-  /// Ancla de scroll del chip «Plantillas» de la cabecera.
-  final GlobalKey anchorKey;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final store = ref.watch(appStoreProvider);
-    return KeyedSubtree(
-      key: anchorKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          VeEyebrow(
-            right: VeBtn(
-              variant: VeBtnVariant.ghost,
-              size: VeBtnSize.sm,
-              onPressed: () async {
-                final nameCtrl = TextEditingController();
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Guardar plantilla'),
-                    content: TextField(
-                      controller: nameCtrl,
-                      autofocus: true,
-                      decoration: const InputDecoration(
-                        hintText: 'Nombre de la plantilla',
-                      ),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Cancelar'),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Guardar'),
-                      ),
-                    ],
-                  ),
-                );
-                // Fix leak: dispose del controller tras leer su texto.
-                final name = nameCtrl.text;
-                nameCtrl.dispose();
-                if (ok == true) {
-                  final id = store.saveTemplate(name);
-                  if (id == null && context.mounted) {
-                    showToast(
-                      context,
-                      'La lista está vacía: no hay nada que guardar',
-                      kind: ToastKind.warn,
-                    );
-                  }
-                }
-              },
-              child: const Text('Guardar carrito'),
-            ),
-            child: const Text('PLANTILLAS'),
-          ),
-          if (store.templates.isEmpty)
-            const VeEmpty(
-              title: 'Sin plantillas',
-              sub:
-                  'Congela tu lista repetida (máx 20) y aplícala con un toque.',
-            )
-          else
-            VeGroup(
-              children: [
-                for (final t in store.templates)
-                  VeRow(
-                    label: Text(t.name),
-                    sub: Text(
-                      '${t.items.length} '
-                      '${t.items.length == 1 ? 'ítem' : 'ítems'} · '
-                      '${fmtDate(t.createdAt)}',
-                    ),
-                    right: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        VeBtn(
-                          size: VeBtnSize.sm,
-                          onPressed: () {
-                            final qty = store.applyTemplate(t.id);
-                            showToast(
-                              context,
-                              qty > 0
-                                  ? 'Plantilla aplicada: $qty unidades'
-                                  : 'Plantilla vacía',
-                              kind: qty > 0 ? ToastKind.ok : ToastKind.info,
-                            );
-                          },
-                          child: const Text('Aplicar'),
-                        ),
-                        const SizedBox(width: 6),
-                        VeIconBtn(
-                          icon: LucideIcons.x,
-                          onTap: () => store.deleteTemplate(t.id),
-                          label: 'Eliminar plantilla',
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-        ],
-      ),
     );
   }
 }

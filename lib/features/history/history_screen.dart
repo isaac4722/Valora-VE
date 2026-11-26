@@ -102,253 +102,244 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     }.toList()..sort();
 
     return Scaffold(
-      body: Stack(
+      // v30 (V-1): la barra de export vive en bottomNavigationBar — el
+      // cuerpo se acota a su medida y nada queda tapado (antes flotaba en
+      // un Positioned sobre el ListView).
+      bottomNavigationBar: VeStickyBar(
+        // Prototipo: Btn lg flex-1 SOLO texto (sin icono — a 390 px
+        // icono+etiqueta desbordaba 1.4 px el Row interno del botón).
+        // VeStickyBar YA envuelve a cada hijo en Expanded: fills=true
+        // extiende el botón dentro de su celda (ExpandED doble =
+        // ParentData conflictivo — lo que esta auditoría descubrió).
         children: [
-          VeEntry(
-            child: Builder(
-              builder: (listCtx) {
-                final scheme = listCtx.ve.colorScheme;
-                return ListView(
-                  // Padding inferior extra: la barra pegadiza de export siempre
-                  // presente puede tapar la última fila + el paginador.
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 116),
-                  children: [
-                    // v20 (orden del dueño): botón VOLVER — Historial se
-                    // abre con go() desde Inicio (sin stack) y con push()
-                    // desde Lista: siempre hay salida.
-                    VeTitle(
-                      leading: VeIconBtn(
-                        icon: LucideIcons.chevronLeft,
-                        label: 'Volver',
-                        onTap: () {
-                          final go = GoRouter.of(context);
-                          if (go.canPop()) {
-                            go.pop();
-                          } else {
-                            go.go('/');
-                          }
-                        },
-                      ),
-                      sub: Text(
-                        '${filtered.length} '
-                        '${filtered.length == 1 ? 'compra' : 'compras'} · '
-                        '${fmtUSD(sum)}',
-                      ),
-                      right: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          VeIconBtn(
-                            icon: LucideIcons.images,
-                            onTap: () => context.push('/tickets'),
-                            label: 'Galería de tickets',
-                          ),
-                          const SizedBox(width: 4),
-                          VeIconBtn(
-                            icon: LucideIcons.fileText,
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const StatementScreen(),
-                              ),
-                            ),
-                            label: 'Constancia mensual',
-                          ),
-                        ],
-                      ),
-                      child: const Text('Historial'),
-                    ),
-                    // ── Chips de periodo (scroll horizontal como el prototipo).
-                    SizedBox(
-                      height: 30,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          for (final p in kPeriods)
-                            Padding(
-                              padding: EdgeInsets.only(
-                                right: p == kPeriods.last ? 0 : 8,
-                              ),
-                              child: VeChip(
-                                active: _period == p,
-                                onTap: () => setState(() {
-                                  _period = p;
-                                  _page = 0;
-                                }),
-                                child: Text(_periodLabel(p)),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    VeInput(
-                      placeholder: 'Buscar por producto, tienda o nota',
-                      onChanged: (v) => setState(() {
-                        _search = v;
-                        _page = 0;
-                      }),
-                    ),
-                    // ── Por tienda: chips (requisito I: cubre también ítems de
-                    // compras multitienda). Solo si hay tiendas que mostrar.
-                    if (storesInPurchases.isNotEmpty) ...[
-                      VeEyebrow(child: const Text('POR TIENDA')),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          VeChip(
-                            active: _storeFilter == null,
-                            onTap: () => setState(() {
-                              _storeFilter = null;
-                              _page = 0;
-                            }),
-                            child: const Text('Todas'),
-                          ),
-                          for (final s in storesInPurchases.take(8))
-                            VeChip(
-                              active: _storeFilter == s,
-                              onTap: () => setState(() {
-                                _storeFilter = s;
-                                _page = 0;
-                              }),
-                              child: Text(s),
-                            ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    // ── Asientos: grupo dividido con una fila por compra.
-                    if (items.isEmpty)
-                      VeEmpty(
-                        icon: LucideIcons.receiptText,
-                        title: 'Sin compras',
-                        sub:
-                            'No hay compras con este filtro. Cierra una compra desde Lista.',
-                        action: VeBtn(
-                          size: VeBtnSize.sm,
-                          onPressed: () => context.go('/lista'),
-                          child: const Text('Ir a Lista'),
-                        ),
-                      )
-                    else
-                      VeGroup(
-                        semantic: 'Compras del historial',
-                        children: [
-                          for (final p in items)
-                            VeRow(
-                              // v28.1 (hallazgo Goldfish): affordance
-                              // visible — toda fila clicable lleva chevron.
-                              showChevron: true,
-                              semantic:
-                                  'Compra en ${p.store ?? 'varias tiendas'} por ${fmtUSD(p.totalUSD)}',
-                              onTap: () => _openDetail(context, store, p),
-                              label: Text(
-                                p.store?.isNotEmpty == true
-                                    ? p.store!
-                                    : 'Compra multitienda',
-                              ),
-                              sub: Text(
-                                '${fmtDate(p.date)} · ${p.items.length} '
-                                '${p.items.length == 1 ? 'ítem' : 'ítems'}'
-                                '${p.ticketPhoto != null && p.ticketPhoto!.isNotEmpty ? ' · con ticket' : ''}',
-                              ),
-                              right: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // v23.3 (pez 2-a P1-3): cifras tabulares
-                                  // (VeNum) — el ojo compara renglón a
-                                  // renglón y con Inter proporcional los
-                                  // anchos bailan.
-                                  VeNum(
-                                    fmtUSD(p.totalUSD),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: scheme.foreground,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  if (p.ticketPhoto != null &&
-                                      p.ticketPhoto!.isNotEmpty)
-                                    const VeBadge(
-                                      tone: VeTone.pos,
-                                      child: Text('Ticket'),
-                                    )
-                                  else if (p.rateSourceId != null)
-                                    VeBadge(
-                                      child: Text(
-                                        RateSource.of(p.rateSourceId!)?.label ??
-                                            p.rateSourceId!,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    // ── Paginador del prototipo: Anterior · Página X de Y ·
-                    // Siguiente (compacto, centrado, con botones Ve).
-                    if (items.isNotEmpty) ...[
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          VeBtn(
-                            size: VeBtnSize.sm,
-                            enabled: cur > 0,
-                            onPressed: () => setState(() => _page = cur - 1),
-                            child: const Text('Anterior'),
-                          ),
-                          Expanded(
-                            child: Text(
-                              'Página ${cur + 1} de $pages · 20 por página',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13.5,
-                              ),
-                            ),
-                          ),
-                          VeBtn(
-                            size: VeBtnSize.sm,
-                            enabled: cur < pages - 1,
-                            onPressed: () => setState(() => _page = cur + 1),
-                            child: const Text('Siguiente'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                );
-              },
-            ),
+          VeBtn(
+            size: VeBtnSize.lg,
+            expands: true,
+            onPressed: () => _exportPurchases(context, filtered),
+            child: const Text('CSV compras'),
           ),
-          // ── Barra pegadiza: el canal unificado de export del prototipo.
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: VeStickyBar(
-              // Prototipo: Btn lg flex-1 SOLO texto (sin icono — a 390 px
-              // icono+etiqueta desbordaba 1.4 px el Row interno del botón).
-              // VeStickyBar YA envuelve a cada hijo en Expanded: fills=true
-              // extiende el botón dentro de su celda (ExpandED doble =
-              // ParentData conflictivo — lo que esta auditoría descubrió).
-              children: [
-                VeBtn(
-                  size: VeBtnSize.lg,
-                  expands: true,
-                  onPressed: () => _exportPurchases(context, filtered),
-                  child: const Text('CSV compras'),
-                ),
-                VeBtn(
-                  size: VeBtnSize.lg,
-                  expands: true,
-                  onPressed: () => _exportMovements(context, store),
-                  child: const Text('CSV movimientos'),
-                ),
-              ],
-            ),
+          VeBtn(
+            size: VeBtnSize.lg,
+            expands: true,
+            onPressed: () => _exportMovements(context, store),
+            child: const Text('CSV movimientos'),
           ),
         ],
+      ),
+      body: VeEntry(
+        child: Builder(
+          builder: (listCtx) {
+            final scheme = listCtx.ve.colorScheme;
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                // v20 (orden del dueño): botón VOLVER — Historial se
+                // abre con go() desde Inicio (sin stack) y con push()
+                // desde Lista: siempre hay salida.
+                VeTitle(
+                  leading: VeIconBtn(
+                    icon: LucideIcons.chevronLeft,
+                    label: 'Volver',
+                    onTap: () {
+                      final go = GoRouter.of(context);
+                      if (go.canPop()) {
+                        go.pop();
+                      } else {
+                        go.go('/');
+                      }
+                    },
+                  ),
+                  sub: Text(
+                    '${filtered.length} '
+                    '${filtered.length == 1 ? 'compra' : 'compras'} · '
+                    '${fmtUSD(sum)}',
+                  ),
+                  right: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      VeIconBtn(
+                        icon: LucideIcons.images,
+                        onTap: () => context.push('/tickets'),
+                        label: 'Galería de tickets',
+                      ),
+                      const SizedBox(width: 4),
+                      VeIconBtn(
+                        icon: LucideIcons.fileText,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const StatementScreen(),
+                          ),
+                        ),
+                        label: 'Constancia mensual',
+                      ),
+                    ],
+                  ),
+                  child: const Text('Historial'),
+                ),
+                // ── Chips de periodo (scroll horizontal como el prototipo).
+                SizedBox(
+                  height: 30,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (final p in kPeriods)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            right: p == kPeriods.last ? 0 : 8,
+                          ),
+                          child: VeChip(
+                            active: _period == p,
+                            onTap: () => setState(() {
+                              _period = p;
+                              _page = 0;
+                            }),
+                            child: Text(_periodLabel(p)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                VeInput(
+                  placeholder: 'Buscar por producto, tienda o nota',
+                  onChanged: (v) => setState(() {
+                    _search = v;
+                    _page = 0;
+                  }),
+                ),
+                // ── Por tienda: chips (requisito I: cubre también ítems de
+                // compras multitienda). Solo si hay tiendas que mostrar.
+                if (storesInPurchases.isNotEmpty) ...[
+                  VeEyebrow(child: const Text('POR TIENDA')),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      VeChip(
+                        active: _storeFilter == null,
+                        onTap: () => setState(() {
+                          _storeFilter = null;
+                          _page = 0;
+                        }),
+                        child: const Text('Todas'),
+                      ),
+                      for (final s in storesInPurchases.take(8))
+                        VeChip(
+                          active: _storeFilter == s,
+                          onTap: () => setState(() {
+                            _storeFilter = s;
+                            _page = 0;
+                          }),
+                          child: Text(s),
+                        ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 16),
+                // ── Asientos: grupo dividido con una fila por compra.
+                if (items.isEmpty)
+                  VeEmpty(
+                    icon: LucideIcons.receiptText,
+                    title: 'Sin compras',
+                    sub:
+                        'No hay compras con este filtro. Cierra una compra desde Lista.',
+                    action: VeBtn(
+                      size: VeBtnSize.sm,
+                      onPressed: () => context.go('/lista'),
+                      child: const Text('Ir a Lista'),
+                    ),
+                  )
+                else
+                  VeGroup(
+                    semantic: 'Compras del historial',
+                    children: [
+                      for (final p in items)
+                        VeRow(
+                          // v28.1 (hallazgo Goldfish): affordance
+                          // visible — toda fila clicable lleva chevron.
+                          showChevron: true,
+                          semantic:
+                              'Compra en ${p.store ?? 'varias tiendas'} por ${fmtUSD(p.totalUSD)}',
+                          onTap: () => _openDetail(context, store, p),
+                          label: Text(
+                            p.store?.isNotEmpty == true
+                                ? p.store!
+                                : 'Compra multitienda',
+                          ),
+                          sub: Text(
+                            '${fmtDate(p.date)} · ${p.items.length} '
+                            '${p.items.length == 1 ? 'ítem' : 'ítems'}'
+                            '${p.ticketPhoto != null && p.ticketPhoto!.isNotEmpty ? ' · con ticket' : ''}',
+                          ),
+                          right: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // v23.3 (pez 2-a P1-3): cifras tabulares
+                              // (VeNum) — el ojo compara renglón a
+                              // renglón y con Inter proporcional los
+                              // anchos bailan.
+                              VeNum(
+                                fmtUSD(p.totalUSD),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.foreground,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              if (p.ticketPhoto != null &&
+                                  p.ticketPhoto!.isNotEmpty)
+                                const VeBadge(
+                                  tone: VeTone.pos,
+                                  child: Text('Ticket'),
+                                )
+                              else if (p.rateSourceId != null)
+                                VeBadge(
+                                  child: Text(
+                                    RateSource.of(p.rateSourceId!)?.label ??
+                                        p.rateSourceId!,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                // ── Paginador del prototipo: Anterior · Página X de Y ·
+                // Siguiente (compacto, centrado, con botones Ve).
+                if (items.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      VeBtn(
+                        size: VeBtnSize.sm,
+                        enabled: cur > 0,
+                        onPressed: () => setState(() => _page = cur - 1),
+                        child: const Text('Anterior'),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Página ${cur + 1} de $pages · 20 por página',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13.5,
+                          ),
+                        ),
+                      ),
+                      VeBtn(
+                        size: VeBtnSize.sm,
+                        enabled: cur < pages - 1,
+                        onPressed: () => setState(() => _page = cur + 1),
+                        child: const Text('Siguiente'),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -787,16 +778,20 @@ class _DetailBody extends ConsumerWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                        '${purchase.store ?? 'Compra'} · ${fmtDate(purchase.date)} · ${fmtUSD(purchase.totalUSD)}',
-                        maxLines: 1,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '${purchase.store ?? 'Compra'} · ${fmtDate(purchase.date)} · ${fmtUSD(purchase.totalUSD)}',
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
-                      )),
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, size: 18),

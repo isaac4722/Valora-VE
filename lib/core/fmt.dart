@@ -88,14 +88,46 @@ String fmtEurRate(double v) => fmtNum(v, decimals: 4);
 /// v27 · precisión elegida por el usuario (REA CalculaYa: la API publica
 /// tasas con 4 decimales). Se usa donde la tasa es la protagonista y el
 /// usuario pidió ver más (o menos) detalle.
-String fmtRatePrecise(double v, int precision) =>
-    fmtNum(v, decimals: precision.clamp(2, 6));
+///
+/// v29 (H-26 · escala UNA): la escala viaja clamp 2..6 y «Completo» (6)
+/// muestra TODOS los decimales reales del número, sin ceros de relleno.
+String fmtRatePrecise(double v, int precision) {
+  final dec = precision.clamp(2, 6);
+  if (dec >= 6) return fmtNumFull(v);
+  return fmtNum(v, decimals: dec);
+}
+
+/// v29 (H-26 · «Completo»): todos los decimales REALES del número (máx. 6,
+/// el techo del sistema), SIN ceros de relleno — «40,00» → «40» ·
+/// «922,5637» → «922,5637». Es la forma «exacta» de la línea «≈» (V-2).
+String fmtNumFull(double v) {
+  var s = fmtNum(v, decimals: 6);
+  if (s.contains(',')) {
+    s = s.replaceFirst(RegExp(r'0+$'), '');
+    s = s.replaceFirst(RegExp(r',$'), '');
+  }
+  return s;
+}
+
+/// Decimales REALES del número tal como los pinta [fmtNumFull] (los que
+/// sobreviven al recorte de ceros) — la medida del «recorte de la vista»
+/// de la línea «≈» (V-2): la vista recorta cuando este número SUPERA los
+/// decimales que muestra.
+int realDecimals(double v) {
+  final s = fmtNumFull(v);
+  final i = s.indexOf(',');
+  return i < 0 ? 0 : s.length - i - 1;
+}
 
 /// Monto con la precisión elegida; COP conserva 0 decimales por formato
 /// local (§3.3), sin importar el modo.
+///
+/// v29 (H-26): escala clamp 2..6 con «Completo» (6) sin relleno.
 String fmtMoneyPrecise(double v, Currency c, int precision) {
   if (c == Currency.cop) return fmtNum(v, decimals: 0);
-  return fmtNum(v, decimals: precision.clamp(2, 4));
+  final dec = precision.clamp(2, 6);
+  if (dec >= 6) return fmtNumFull(v);
+  return fmtNum(v, decimals: dec);
 }
 
 /// Porcentaje con signo: «+2,1 %».

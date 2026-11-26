@@ -380,8 +380,9 @@ void main() {
   });
 
   group('Buscar sala (UI del lobby · v19.4)', () {
-    // El campo de búsqueda vive dentro de la tarjeta CREAR SALA.
-    // TASK-35 (p4): la tarjeta es VeCard y el campo es VeInput (kit Ve).
+    // v29 (H-38): la búsqueda vive dentro del flujo CREAR (Key 'lobby-crear'
+    // — el lobby ya no tiene tarjetas: secciones con hairlines). El campo
+    // sigue siendo VeInput del kit Ve.
     final searchField = find.byWidgetPredicate(
       (w) =>
           w is VeInput &&
@@ -395,15 +396,10 @@ void main() {
         )
         .first;
 
-    /// Aserciones de la BÚSQUEDA scopeadas a la tarjeta CREAR SALA: la
-    /// misma sala puede vivir también en «Salas cercanas» (otra puerta).
+    /// Aserciones de la BÚSQUEDA scopeadas al flujo CREAR: la misma sala
+    /// puede vivir también en «Salas cercanas» (otra puerta).
     Finder enBusqueda(Finder f) => find.descendant(
-      of: find
-          .ancestor(
-            of: find.text('CREAR SALA'),
-            matching: find.byType(VeCard),
-          )
-          .first,
+      of: find.byKey(const Key('lobby-crear')),
       matching: f,
     );
 
@@ -427,7 +423,7 @@ void main() {
       // se elige la intención antes de buscar (scroll: el segmentado puede
       // quedar bajo el doblez del viewport de prueba).
       await tester.scrollUntilVisible(
-        find.text('Crear una sala'),
+        find.text('Crear'),
         300,
         scrollable: lobbyScroll,
       );
@@ -435,7 +431,7 @@ void main() {
       // tap central pica fuera del viewport.
       await tester.drag(lobbyScroll, const Offset(0, -140));
       await tester.pump();
-      await tester.tap(find.text('Crear una sala'));
+      await tester.tap(find.text('Crear'));
       await tester.pump();
       await tester.scrollUntilVisible(
         searchField,
@@ -505,7 +501,7 @@ void main() {
       );
       // v20 (orden del dueño): la búsqueda vive SOLO en el flujo CREAR.
       await tester.scrollUntilVisible(
-        find.text('Crear una sala'),
+        find.text('Crear'),
         300,
         scrollable: lobbyScroll,
       );
@@ -513,7 +509,7 @@ void main() {
       // tap central pica fuera del viewport.
       await tester.drag(lobbyScroll, const Offset(0, -140));
       await tester.pump();
-      await tester.tap(find.text('Crear una sala'));
+      await tester.tap(find.text('Crear'));
       await tester.pump();
       await tester.scrollUntilVisible(
         searchField,
@@ -535,10 +531,8 @@ void main() {
         enBusqueda(find.textContaining('Sin salas con ese nombre')),
         findsNothing,
       );
-      // La sala SÍ sigue en Salas cercanas — que viven en el flujo UNIRME
-      // (v20: flujos exclusivos, no todo a la vez).
-      await tester.tap(find.text('Unirme a una sala'));
-      await tester.pump();
+      // La sala SÍ sigue en Salas cercanas — sección propia del lobby que
+      // vive SIEMPRE visible (H-38: cercanas ya no dependen del flujo).
       await tester.scrollUntilVisible(
         find.text('SALAS CERCANAS'),
         300,
@@ -546,8 +540,27 @@ void main() {
       );
       expect(find.text('SALAS CERCANAS'), findsOneWidget);
       expect(find.text('Mercado del barrio'), findsAtLeastNWidgets(1));
-      // Y la búsqueda YA NO existe en este flujo.
+      // Y la búsqueda YA NO existe en el flujo Unirme: se vuelve arriba
+      // (a la intención) y el campo — vivo solo en CREAR — desaparece.
+      // Se regresa por el rótulo «TU INTENCIÓN»: «Unirme» queda bajo la
+      // cabecera fija del PushScreen (recortado) y scrollUntilVisible lo
+      // cree visible.
+      await tester.scrollUntilVisible(
+        find.text('TU INTENCIÓN'),
+        -300,
+        scrollable: lobbyScroll,
+      );
+      await tester.pump();
+      await tester.tap(find.text('Unirme'));
+      await tester.pump();
       expect(searchField, findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('lobby-crear')),
+          matching: find.text('Mercado del barrio'),
+        ),
+        findsNothing,
+      );
     });
   });
 

@@ -1,135 +1,58 @@
-/// ─── Más (v27) ─────────────────────────────────────────────────────────────
-/// El hub de todo lo que no cabe en la barra: módulos de dinero, herramientas
-/// de compartir y la configuración de la app. Un buscador local filtra por
-/// nombre o descripción, así ningún módulo queda escondido detrás de un
-/// icono que hay que adivinar.
+/// ─── Más (v30 · H-41) ──────────────────────────────────────────────────────
+/// El hub de lo que no vive en la barra: SOLO los módulos autónomos —
+/// Productos · Tickets · Ajustes · Actualizaciones · Privacidad y
+/// licencias. Análisis, Historial, Sala en vivo y Cuentas viven en sus
+/// sitios (pestaña · Lista · Lista · Ajustes e Inicio) y Escanear vive
+/// donde se usa (captura de Lista y ficha de Productos). Sin buscador:
+/// cinco módulos no lo necesitan.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../core/ve_theme.dart';
 import '../../core/version.dart';
-import '../../widgets/ui.dart';
 
-class MoreScreen extends ConsumerStatefulWidget {
+class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
-
-  @override
-  ConsumerState<MoreScreen> createState() => _MoreScreenState();
-}
-
-class _MoreScreenState extends ConsumerState<MoreScreen> {
-  final _q = TextEditingController();
-
-  @override
-  void dispose() {
-    _q.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final query = _q.text.trim().toLowerCase();
-
-    final groups = <_ModuleGroup>[
-      _ModuleGroup(
-        title: 'Tu dinero',
-        items: const [
-          _ModuleItem(
-            icon: LucideIcons.chartColumn,
-            title: 'Análisis',
-            body: 'Brecha, devaluación, inflación y tus gastos.',
-            route: '/analisis',
-          ),
-          _ModuleItem(
-            icon: LucideIcons.package,
-            title: 'Productos',
-            body: 'Tu libro de precios por tienda y tus metas.',
-            route: '/productos',
-          ),
-          _ModuleItem(
-            icon: LucideIcons.history,
-            title: 'Historial',
-            body: 'Compras, constancias y exportaciones.',
-            route: '/historial',
-          ),
-          _ModuleItem(
-            icon: LucideIcons.receipt,
-            title: 'Tickets',
-            body: 'Las fotos de tus recibos, en orden.',
-            route: '/tickets',
-          ),
-        ],
+    final modules = const <_ModuleItem>[
+      _ModuleItem(
+        icon: LucideIcons.package,
+        title: 'Productos',
+        body: 'Tu libro de precios por tienda y tus metas.',
+        route: '/productos',
       ),
-      _ModuleGroup(
-        title: 'Compartir',
-        items: const [
-          _ModuleItem(
-            icon: LucideIcons.radio,
-            title: 'Sala en vivo',
-            body: 'Crea o únete a una lista compartida.',
-            route: '/sala',
-          ),
-          _ModuleItem(
-            icon: LucideIcons.landmark,
-            title: 'Cuentas y Pago Móvil',
-            body: 'Tus datos de cobro, listos para compartir.',
-            route: '/ajustes/cuentas',
-          ),
-          _ModuleItem(
-            icon: LucideIcons.scanLine,
-            title: 'Escanear',
-            body: 'Lee un código o la etiqueta de un producto.',
-            route: '/escanear',
-          ),
-        ],
+      _ModuleItem(
+        icon: LucideIcons.receipt,
+        title: 'Tickets',
+        body: 'Las fotos de tus recibos, en orden.',
+        route: '/tickets',
       ),
-      _ModuleGroup(
-        title: 'La app',
-        items: const [
-          _ModuleItem(
-            icon: LucideIcons.settings,
-            title: 'Ajustes',
-            body: 'Tasas, apariencia, respaldos y privacidad.',
-            route: '/ajustes',
-          ),
-          _ModuleItem(
-            icon: LucideIcons.download,
-            title: 'Actualizaciones',
-            body: 'La versión nueva, descargada desde GitHub.',
-            route: '/actualizaciones',
-          ),
-          _ModuleItem(
-            icon: LucideIcons.gavel,
-            title: 'Privacidad y licencias',
-            body: 'Qué vive en tu teléfono y qué no.',
-            route: '/legal',
-          ),
-        ],
+      _ModuleItem(
+        icon: LucideIcons.settings,
+        title: 'Ajustes',
+        body: 'Cuentas, tasas, conexión, apariencia y datos.',
+        route: '/ajustes',
+      ),
+      _ModuleItem(
+        icon: LucideIcons.download,
+        title: 'Actualizaciones',
+        body: 'La versión nueva, descargada desde GitHub.',
+        route: '/actualizaciones',
+      ),
+      _ModuleItem(
+        icon: LucideIcons.gavel,
+        title: 'Privacidad y licencias',
+        body: 'Qué vive en tu teléfono y qué no.',
+        route: '/legal',
       ),
     ];
-
-    final visible = <_ModuleGroup>[
-      for (final g in groups)
-        if (query.isEmpty)
-          g
-        else
-          _ModuleGroup(
-            title: g.title,
-            items: g.items
-                .where(
-                  (i) =>
-                      i.title.toLowerCase().contains(query) ||
-                      i.body.toLowerCase().contains(query),
-                )
-                .toList(),
-          ),
-    ]..removeWhere((g) => g.items.isEmpty);
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
@@ -151,39 +74,8 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
               style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 14),
-            VeInput(
-              controller: _q,
-              placeholder: 'Buscar módulo',
-              semantic: 'Buscar módulo',
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 4),
-            if (visible.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Text(
-                  'Nada con «${_q.text.trim()}». Prueba con «tasas», «lista» o «cuentas».',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              )
-            else
-              for (final g in visible) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(2, 18, 2, 2),
-                  child: Text(
-                    g.title.toUpperCase(),
-                    style: VeText.labelCaps(
-                      11,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                for (final item in g.items)
-                  _ModuleRow(item: item, last: g.items.last == item),
-              ],
+            for (final item in modules)
+              _ModuleRow(item: item, last: modules.last == item),
             const SizedBox(height: 18),
             Center(
               child: Text(
@@ -201,13 +93,6 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
   }
 }
 
-class _ModuleGroup {
-  const _ModuleGroup({required this.title, required this.items});
-
-  final String title;
-  final List<_ModuleItem> items;
-}
-
 class _ModuleItem {
   const _ModuleItem({
     required this.icon,
@@ -222,18 +107,19 @@ class _ModuleItem {
   final String route;
 }
 
-class _ModuleRow extends ConsumerWidget {
+class _ModuleRow extends StatelessWidget {
   const _ModuleRow({required this.item, required this.last});
 
   final _ModuleItem item;
   final bool last;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: () {
-        const branches = {'/ajustes', '/productos', '/historial', '/analisis'};
+        // Pestañas del shell: cambio de rama (go); el resto se apila (push).
+        const branches = {'/ajustes', '/productos'};
         if (branches.contains(item.route)) {
           context.go(item.route);
         } else {
@@ -280,14 +166,18 @@ class _ModuleRow extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                    item.body,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: scheme.onSurfaceVariant,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      item.body,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
-                  )),
+                  ),
                 ],
               ),
             ),

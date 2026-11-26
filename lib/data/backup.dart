@@ -16,7 +16,6 @@ class MergeCounts {
   final int records;
   final int transactions;
   final int purchases;
-  final int templates;
   final int stores;
 
   /// v23.3 (pez 2-b P2-9): las listas v23 también se cuentan — el toast de
@@ -29,7 +28,6 @@ class MergeCounts {
     this.records = 0,
     this.transactions = 0,
     this.purchases = 0,
-    this.templates = 0,
     this.stores = 0,
     this.customRates = 0,
     this.accounts = 0,
@@ -40,7 +38,6 @@ class MergeCounts {
     'records': records,
     'transactions': transactions,
     'purchases': purchases,
-    'templates': templates,
     'stores': stores,
     'customRates': customRates,
     'accounts': accounts,
@@ -60,13 +57,12 @@ class BackupMergeResult {
 String exportBackupJson(
   AppData data, {
   Map<String, String> ticketFiles = const {},
-}) =>
-    const JsonEncoder.withIndent('  ').convert({
-      'version': kDataVersion,
-      'data': data.toJson(),
-      if (ticketFiles.isNotEmpty) 'ticketFiles': ticketFiles,
-      'savedAt': DateTime.now().toIso8601String(),
-    });
+}) => const JsonEncoder.withIndent('  ').convert({
+  'version': kDataVersion,
+  'data': data.toJson(),
+  if (ticketFiles.isNotEmpty) 'ticketFiles': ticketFiles,
+  'savedAt': DateTime.now().toIso8601String(),
+});
 
 /// Fusión pura (testeable sin IO): local + incoming → fusionado + conteos.
 BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
@@ -169,20 +165,8 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
     }
   }
 
-  // ── Templates: unión por id.
-  final templates = <String, ShoppingTemplate>{};
-  for (final t in local.templates) {
-    templates[t.id] = t;
-  }
-  int addedTemplates = 0;
-  for (final t in incoming.templates) {
-    if (!templates.containsKey(t.id) && t.id.isNotEmpty) {
-      if (templates.length < kMaxTemplates) {
-        templates[t.id] = t;
-        addedTemplates++;
-      }
-    }
-  }
+  // ── Templates: v29 (H-35) ELIMINADAS — la clave «templates» de respaldos
+  // viejos se IGNORA sin romper (AppData.fromJson ya no la lee).
 
   // ── Stores: unión case-insensitive.
   final seen = <String>{};
@@ -240,7 +224,6 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
       ..sort((a, b) => b.date.compareTo(a.date)),
     purchases: purchases.values.toList()
       ..sort((a, b) => b.date.compareTo(a.date)),
-    templates: templates.values.toList(),
     stores: stores,
     customRates: customRates.values.take(AppStore.kMaxCustomRates).toList(),
     accounts: accounts.values.take(AppStore.kMaxAccounts).toList(),
@@ -257,7 +240,6 @@ BackupMergeResult mergeBackupData(AppData local, AppData incoming) {
       records: addedRecords,
       transactions: addedTransactions,
       purchases: addedPurchases,
-      templates: addedTemplates,
       stores: addedStores,
       customRates: addedCustomRates,
       accounts: addedAccounts,
@@ -314,7 +296,6 @@ BackupResult importBackup(AppData local, String raw, {required bool merge}) {
     budget: incoming.budget,
     basket: incoming.basket,
     stores: incoming.stores,
-    templates: incoming.templates,
     settings: incoming.settings,
     // v23.3 (pez 2-b P0-1): el replace sustituye el estado COMPLETO —
     // las tasas propias y cuentas Pago Móvil viajan con el respaldo
@@ -334,7 +315,6 @@ BackupResult importBackup(AppData local, String raw, {required bool merge}) {
       ),
       'transactions': incoming.transactions.length,
       'purchases': incoming.purchases.length,
-      'templates': incoming.templates.length,
       'stores': incoming.stores.length,
       'customRates': incoming.customRates.length,
       'accounts': incoming.accounts.length,

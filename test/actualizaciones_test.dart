@@ -198,7 +198,7 @@ void main() {
       await _pump(tester, cliente: falso);
       expect(find.text('Hay una actualización'), findsOneWidget);
       expect(find.textContaining('v1.14.3-beta+46'), findsOneWidget);
-      expect(find.text('ValoraVE 27.3'), findsOneWidget);
+      expect(find.text('ValoraVE 31'), findsOneWidget);
       expect(find.textContaining('revisa GitHub Releases'), findsOneWidget);
       // Las 4 filas de descarga (la primera, arm64, orden preferente).
       await _arrastrarHasta(

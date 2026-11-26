@@ -387,7 +387,7 @@ Future<void> main() async {
       expect(find.text('Convertir'), findsWidgets);
     });
 
-    testWidgets('Conversor: dual + swap + referencia + notas', (tester) async {
+    testWidgets('Conversor: dual + swap + selector de tasa', (tester) async {
       // v23.2: superficie de teléfono real — el piso de teclado convive con
       // el contenido sin pantallas gigantes.
       tester.view.physicalSize = const Size(390, 844);
@@ -411,20 +411,30 @@ Future<void> main() async {
       await tester.tap(find.byIcon(Icons.swap_vert));
       await tester.pumpAndSettle();
       expect(store.data.converter.from, isNot(fromBefore));
-      // v20: Ruta del cálculo ELIMINADA (orden del dueño). v23.2: la
-      // Referencia de fuentes vive en un half-sheet (patrón calculadora) —
-      // se abre desde la ficha «Fuentes» y NO ocupa alto de la pantalla.
-      final fuentes = find.text('Fuentes');
-      await tester.ensureVisible(fuentes);
+      // v29 (H-28): Fuentes/Tabla/Recientes ya NO viven como fichas — la
+      // hoja de fuentes se abre desde el SELECTOR DE TASA (H-24): sello +
+      // nombre «BCV · Oficial» + «1 USD = 40,0000 VES» + chevron.
+      expect(find.text('Fuentes'), findsNothing);
+      expect(find.text('Tabla'), findsNothing);
+      expect(find.text('Recientes'), findsNothing);
+      await tester.tap(find.text('BCV · Oficial'));
       await tester.pumpAndSettle();
-      await tester.tap(fuentes);
-      await tester.pumpAndSettle();
-      expect(find.text('REFERENCIA DE FUENTES'), findsOneWidget);
-      expect(find.text('RUTA DEL CÁLCULO'), findsNothing);
-      expect(find.text('TABLA DE REFERENCIA 6×6'), findsNothing);
+      expect(find.text('Fuente de tasa · Bolívar'), findsOneWidget);
+      // La fuente ACTIVA queda marcada (check de selección en la fila BCV).
+      final bcvRow = find.ancestor(
+        of: find.text('BCV'),
+        matching: find.byType(InkWell),
+      );
+      expect(
+        find.descendant(
+          of: bcvRow,
+          matching: find.byIcon(Icons.check_circle_rounded),
+        ),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('v23 VeKeypad: teclas escriben, borran y ponen coma es-VE', (
+    testWidgets('v29 VeKeypad: teclas escriben, borran y ⌫ largo limpia', (
       tester,
     ) async {
       final store = _pumpedStore(tester, dir: 'w3k');
@@ -443,16 +453,14 @@ Future<void> main() async {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
       await tester.pumpAndSettle();
-      // Desplegado por defecto: fichas + teclado + modo de vista. Los
-      // finders van ACOTADOS: la tabla de montos de referencia y las fichas
-      // comparten textos («20»…), así que las teclas se buscan dentro del
-      // VeKeypad y las fichas dentro de VeChip.
+      // v29 (H-25/H-26): sin fichas y sin numMode — el teclado es la única
+      // vía de entrada y la precisión es la escala única de Ajustes.
       Finder tecla(String k) =>
           find.descendant(of: find.byType(VeKeypad), matching: find.text(k));
-      Finder ficha(String k) =>
-          find.descendant(of: find.byType(VeChip), matching: find.text(k));
       expect(find.byType(VeKeypad), findsOneWidget);
-      expect(find.text('Redondear'), findsOneWidget);
+      expect(find.text('Redondear'), findsNothing);
+      expect(find.text('Decimales'), findsNothing);
+      expect(find.byType(VeChip), findsNothing);
       // El campo de origen arranca en «1»: teclas 2 y 4 → «124».
       await tester.tap(tecla('2'));
       await tester.pump();
@@ -470,18 +478,14 @@ Future<void> main() async {
       await tester.tap(tecla('7'));
       await tester.pump();
       expect(find.text('12,7'), findsWidgets);
-      // Ficha «20» fija el monto directo; «Limpiar» vacía el campo.
-      await tester.ensureVisible(ficha('20'));
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.tap(ficha('20'));
+      // v29 (H-25): ⌫ con PULSACIÓN LARGA limpia el campo activo — sin
+      // ficha «Limpiar», la convención de calculadora manda (la aserción
+      // inspecciona el CONTROLADOR del MoneyField — R-29e).
+      await tester.longPress(tecla('⌫'));
       await tester.pump();
-      expect(store.data.converter.from, 'USD');
-      await tester.ensureVisible(ficha('Limpiar'));
-      await tester.pump(const Duration(milliseconds: 200));
-      await tester.tap(ficha('Limpiar'));
-      await tester.pump();
+      final field = tester.widget<MoneyField>(find.byType(MoneyField).first);
+      expect(field.controller?.text ?? '', '');
       expect(find.text('12,7'), findsNothing);
-      expect(ficha('20'), findsOneWidget); // la ficha sigue; el campo no
     });
 
     testWidgets('v26 horizontal: el pad pasa a PANEL derecho y todo cabe', (
@@ -510,8 +514,12 @@ Future<void> main() async {
       final titulo = tester.getTopLeft(find.text('Conversor'));
       expect(pad.dx, greaterThan(500));
       expect(titulo.dx, lessThan(pad.dx));
-      // El display dual comparte fila con el panel (queda a la izquierda).
-      expect(tester.getTopLeft(find.text('Redondear')).dx, lessThan(pad.dx));
+      // El selector de tasa comparte fila con el panel (queda a la
+      // izquierda — v29: H-24 lo pinta a todo lo ancho del cuerpo).
+      expect(
+        tester.getTopLeft(find.text('BCV · Oficial')).dx,
+        lessThan(pad.dx),
+      );
       // Y el pad FUNCIONA en su nueva casa: teclas 2 + 4 → «124».
       Finder tecla(String k) =>
           find.descendant(of: find.byType(VeKeypad), matching: find.text(k));
@@ -522,7 +530,7 @@ Future<void> main() async {
       expect(find.text('124'), findsWidgets);
     });
 
-    testWidgets('v26: la cinta de cotizaciones y su configuración NO existen', (
+    testWidgets('v30 (H-42): Ajustes en UNA pantalla por secciones', (
       tester,
     ) async {
       final store = _pumpedStore(tester, dir: 'w26c');
@@ -532,19 +540,23 @@ Future<void> main() async {
           sources: {'ves-bcv': RateEntry(rate: 40, updatedAt: DateTime.now())},
         ),
       );
-      // Ajustes enteros: la sección «Personalización» (modo/tamaño/
-      // velocidad de la cinta) desapareció con la cinta del Inicio.
+      // Ajustes enteros (v30 · H-42): una sola pantalla, cinco secciones —
+      // sin hub de fichas ni subpantallas.
       await tester.pumpWidget(_wrap(const SettingsScreen(), store: store));
       await tester.pumpAndSettle();
       expect(find.textContaining('Cinta de cotizaciones'), findsNothing);
       expect(find.text('PERSONALIZACIÓN'), findsNothing);
-      // El resto de las secciones sigue completo (evaluar, no borrar) —
-      // la lista es perezosa: se baja hasta cada una para construirla.
       expect(find.text('Ajustes'), findsOneWidget);
-      expect(find.text('GENERAL'), findsOneWidget);
-      expect(find.text('TASAS'), findsOneWidget);
+      // Cuentas y cobro PRIMERO (deep link del Conversor e Inicio).
+      expect(find.text('CUENTAS Y COBRO'), findsOneWidget);
+      // La lista es perezosa: se baja hasta cada una para construirla.
       final lista = find.byType(Scrollable).first;
-      for (final seccion in ['PAGO MÓVIL', 'DATOS', 'ACERCA DE']) {
+      for (final seccion in [
+        'TASAS Y FUENTES',
+        'GENERAL',
+        'APARIENCIA',
+        'DATOS Y ACERCA DE',
+      ]) {
         await tester.scrollUntilVisible(
           find.text(seccion),
           300,
@@ -555,7 +567,7 @@ Future<void> main() async {
       }
     });
 
-    testWidgets('v23 numMode: Redondear entero + Decimales fiel + persiste', (
+    testWidgets('v29 precisión uniforme: 2 · 3 · Completo sin relleno', (
       tester,
     ) async {
       final store = _pumpedStore(tester, dir: 'w3r');
@@ -563,8 +575,10 @@ Future<void> main() async {
       store.setRateBoard(
         RateBoard(
           sources: {
-            // 10 × 43,25 = 432,50 → decimales «432,50» · redondeo «433».
-            'ves-bcv': RateEntry(rate: 43.25, updatedAt: DateTime.now()),
+            // 1 USD = 43,2563 → la vista recorta con 2 y 3 decimales
+            // (la línea «≈» aparece); con «Completo» muestra 43,2563 tal
+            // cual y la línea desaparece (V-2/H-26).
+            'ves-bcv': RateEntry(rate: 43.2563, updatedAt: DateTime.now()),
           },
         ),
       );
@@ -576,23 +590,23 @@ Future<void> main() async {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(_wrap(const ConverterScreen(), store: store));
       await tester.pumpAndSettle();
-      Finder ficha(String k) =>
-          find.descendant(of: find.byType(VeChip), matching: find.text(k));
-      // Ficha 10 → resultado fiel con decimales.
-      await tester.tap(ficha('10'));
+      // Escala 2: el pasivo redondea y la «≈» conserva la cifra exacta.
+      store.setPrecision(2);
       await tester.pumpAndSettle();
-      expect(find.text('432,5000'), findsWidgets);
-      // Cambiar a Redondear: el resultado pasa a entero (la línea «≈»
-      // conserva la cifra exacta).
-      await tester.tap(find.text('Redondear'));
+      expect(find.text('43,26'), findsOneWidget);
+      expect(find.text('≈ 43,2563'), findsOneWidget);
+      // Escala 3.
+      store.setPrecision(3);
       await tester.pumpAndSettle();
-      expect(find.text('433'), findsWidgets);
-      expect(store.data.settings.numMode, 'redondeo');
-      // Volver a Decimales restaura la vista fiel.
-      await tester.tap(find.text('Decimales'));
+      expect(find.text('43,256'), findsOneWidget);
+      expect(find.text('≈ 43,2563'), findsOneWidget);
+      // «Completo» (6): todos los decimales reales, sin ceros de relleno —
+      // y sin línea «≈» (la vista ya no recorta nada real).
+      store.setPrecision(6);
       await tester.pumpAndSettle();
-      expect(find.text('432,5000'), findsWidgets);
-      expect(store.data.settings.numMode, 'decimales');
+      expect(find.text('43,2563'), findsOneWidget);
+      expect(find.textContaining('≈'), findsNothing);
+      expect(store.settings.precision, 6);
     });
 
     testWidgets(
@@ -633,14 +647,10 @@ Future<void> main() async {
         }
 
         final fields = find.byType(MoneyField);
-        // El campo de origen arranca con «1» de cortesía: Limpiar abre la
-        // entrada nueva (el tocar el lado ya activo NO borra lo tecleado).
-        await tester.tap(
-          find.descendant(
-            of: find.byType(VeChip),
-            matching: find.text('Limpiar'),
-          ),
-        );
+        // El campo de origen arranca con «1» de cortesía: v29 (H-25) el
+        // ⌫ LARGO limpia el campo activo (antes era la ficha «Limpiar»);
+        // la entrada nueva queda abierta para escribir.
+        await tester.longPress(tecla('⌫'));
         await tester.pump();
         await escribir(tester, fields.first, '1000');
         await tester.pump();
@@ -664,11 +674,11 @@ Future<void> main() async {
       },
     );
 
-    testWidgets('Lista: agregar producto, plantilla, vuelto, dividir', (
+    testWidgets('Lista: agregar producto, total y checkout (v29)', (
       tester,
     ) async {
       // TASK-34 (p7): la Lista vive en teléfono — superficie real 390×844
-      // (a 800×600 el botón de alta queda bajo la VeStickyBar).
+      // (a 800×600 el botón de alta queda bajo la barra pegadiza).
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -685,19 +695,28 @@ Future<void> main() async {
       await tester.pumpWidget(_wrap(const ListaScreen(), store: store));
       await tester.pumpAndSettle();
       expect(find.text('Lista de compras'), findsOneWidget);
+      // v29 (H-35/H-36): plantillas y toggle «Más» NUNCA aparecen.
+      expect(find.text('Plantillas'), findsNothing);
+      expect(find.text('Más'), findsNothing);
+      expect(find.text('TOTALES'), findsNothing);
       // agrega un ítem (TASK-34: campos VeInput anclados por Key — el
       // placeholder sigue en pantalla para el usuario)
       await tester.enterText(find.byKey(const Key('lista-nombre')), 'Café');
       await tester.enterText(find.byKey(const Key('lista-precio')), '40');
-      // TASK-34: la zona de captura quedó más abajo (barra de presupuesto +
-      // alta rápida encima) — se baja hasta el botón antes de tocarlo y se
-      // arrastra UN POCO MÁS para que quede por encima de la VeStickyBar
-      // (el tap caería en la barra si el botón queda pegado al borde).
+      // La zona de captura vive más abajo (tarjeta del total + presupuesto +
+      // cálculos + alta rápida encima): se baja hasta el botón antes de
+      // tocarlo y se arrastra UN POCO MÁS para que quede del todo dentro
+      // del viewport (el tap del centro caería fuera si queda al borde).
       await tester.scrollUntilVisible(
         find.text('Agregar a la lista'),
         200,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.drag(
+        find.byType(Scrollable).first,
+        const Offset(0, -120),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Agregar a la lista'));
       await tester.pumpAndSettle();
       expect(store.cart.length, 1);
@@ -776,22 +795,45 @@ Future<void> main() async {
       );
       await tester.pumpWidget(_wrap(const InsightsScreen(), store: store));
       await tester.pumpAndSettle();
-      // Ancla Gastos (v17.8): sin carga manual, con compras entra la vista.
+      // Sección Gastos (v17.8): sin carga manual, con compras entra la vista.
       await tester.tap(find.text('Gastos'));
       await tester.pumpAndSettle();
       expect(find.text('Gastado · 1 M'), findsOneWidget);
       expect(find.text('POR TIENDA'), findsOneWidget);
     });
 
-    testWidgets('Análisis: 6 anclas conmutan', (tester) async {
+    testWidgets('Análisis (v30 · H-39): 4 secciones conmutan y el rango es '
+        'condicional', (tester) async {
       final store = _pumpedStore(tester, dir: 'w7');
       await _initServices(store);
       await tester.pumpWidget(_wrap(const InsightsScreen(), store: store));
       await tester.pumpAndSettle();
-      expect(find.text('Divisas'), findsOneWidget);
+      // La barra de secciones es el MISMO control del Conversor: 44 px con
+      // píldora — y SOLO 4 secciones.
+      expect(
+        find.byWidgetPredicate((w) => w is VeSegmented<int> && w.height == 44),
+        findsOneWidget,
+      );
+      for (final s in ['Divisas', 'Inflación', 'Canasta', 'Gastos']) {
+        expect(find.text(s), findsOneWidget, reason: s);
+      }
+      // H-40: «Productos» y «Tasa» salieron del tablero.
+      expect(find.text('Tasa'), findsNothing);
+      // El rango existe en Divisas…
+      expect(
+        find.byWidgetPredicate((w) => w is Offstage && w.offstage),
+        findsNothing,
+      );
+      // …y NO en Canasta (R-30f: Offstage — montado, invisible).
       await tester.tap(find.text('Canasta'));
       await tester.pumpAndSettle();
       expect(find.text('Canasta vacía'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((w) => w is Offstage && w.offstage),
+        findsOneWidget,
+      );
+      // H-40: el lookup de fecha del Conversor ya no se repite aquí.
+      expect(find.text('Consultar tasa por fecha'), findsNothing);
     });
 
     testWidgets('Análisis: Gastos vacío honesto sin compras', (tester) async {
@@ -966,7 +1008,9 @@ Future<void> main() async {
       tester.view.physicalSize = const Size(320, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
-      await tester.pumpWidget(_wrap(const SettingsTasasPage(), store: store));
+      // v30 (H-42): las tasas manuales viven en la sección «TASAS Y
+      // FUENTES» de la pantalla única — se scrollea hasta ellas.
+      await tester.pumpWidget(_wrap(const SettingsScreen(), store: store));
       await tester.pumpAndSettle(const Duration(milliseconds: 100));
       // Scroll hasta la sección de manuales.
       await tester.scrollUntilVisible(
@@ -974,6 +1018,7 @@ Future<void> main() async {
         400,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
       expect(find.textContaining('1 USD = 41,5'), findsOneWidget);
       expect(tester.takeException(), isNull, reason: 'sin desbordes a 320 px');
       // Tocar abre el editor compartido (MoneyField).

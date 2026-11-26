@@ -44,10 +44,15 @@ class TapScale extends StatefulWidget {
     required this.child,
     required this.onTap,
     this.scale = 0.96,
+    this.onLongPress,
   });
 
   final Widget child;
   final VoidCallback? onTap;
+
+  /// v29 (H-25): pulsación larga — el ⌫ del teclado limpia el campo activo.
+  final VoidCallback? onLongPress;
+
   final double scale;
 
   @override
@@ -60,12 +65,13 @@ class _TapScaleState extends State<TapScale> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: widget.onTap == null
+      onTapDown: widget.onTap == null && widget.onLongPress == null
           ? null
           : (_) => setState(() => _down = true),
       onTapCancel: () => setState(() => _down = false),
       onTapUp: (_) => setState(() => _down = false),
       onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
       child: AnimatedScale(
         scale: _down ? widget.scale : 1,
         duration: kTapDur,
@@ -1697,6 +1703,10 @@ class _MoneyFieldState extends State<MoneyField> {
   /// controlador; sin esto el cursor baila.
   bool _formatting = false;
 
+  /// Último texto formateado aceptado (la referencia del MODO BORRADO: el
+  /// texto nuevo debe ser SUBSECUENCIA de este para contar como borrado).
+  String _last = '';
+
   @override
   void initState() {
     super.initState();
@@ -1704,6 +1714,9 @@ class _MoneyFieldState extends State<MoneyField> {
       _own = TextEditingController(
         text: _format(_canon(widget.initialText ?? '')),
       );
+      _last = _own!.text;
+    } else {
+      _last = _ctrl.text;
     }
     _ctrl.addListener(_onCtrl);
   }
@@ -1727,13 +1740,23 @@ class _MoneyFieldState extends State<MoneyField> {
   ///   Regla: sin coma en el texto, el punto es decimal SOLO con 1-2
   ///   dígitos detrás, o cuando lo de adelante es puro cero («0.0001»,
   ///   hábito EN de las tasas chiquitas).
-  String _canon(String raw) {
+  ///
+  /// v29 (V-3 · MODO BORRADO, bug del dueño): cuando [borrado] es true el
+  /// texto nuevo SOLO quitó caracteres del formato propio — la intención
+  /// de edición se conserva y los puntos siguen siendo MIL ES-VE (borrar un
+  /// dígito de «1.000» deja «1.00», que NO es 1 coma 00: es 100). La coma,
+  /// si sobrevivió al borrado, sigue siendo la decimal.
+  String _canon(String raw, {bool borrado = false}) {
     final clean = raw.replaceAll(RegExp(r'[^0-9.,]'), '');
     if (clean.isEmpty) return '';
     final lastComma = clean.lastIndexOf(',');
     final lastDot = clean.lastIndexOf('.');
     String decSep;
-    if (lastComma > lastDot) {
+    if (borrado) {
+      // Modo borrado: la coma (si existe) es la decimal; los puntos son
+      // separadores de miles que caen solos — jamás se re-interpretan.
+      decSep = lastComma >= 0 ? ',' : '';
+    } else if (lastComma > lastDot) {
       decSep = ',';
     } else if (lastDot > lastComma) {
       final digitsAfter = clean.length - lastDot - 1;
@@ -1807,6 +1830,19 @@ class _MoneyFieldState extends State<MoneyField> {
     return s.length;
   }
 
+  /// ¿Es [ nueva] una SUBSECUENCIA de [vieja]? (mismos caracteres, en el
+  /// mismo orden, con alguno(s) de menos — el perfil exacto de un borrado).
+  /// R-29c: un REPLACE completo (pegar «3.5» sobre «1.000,5») NO lo es y
+  /// cae al canon normal — el hábito EN «3.5 = 3,5» vive.
+  static bool _esSubsecuencia(String nueva, String vieja) {
+    if (nueva.length >= vieja.length) return false;
+    var j = 0;
+    for (var i = 0; i < vieja.length && j < nueva.length; i++) {
+      if (vieja[i] == nueva[j]) j++;
+    }
+    return j == nueva.length;
+  }
+
   /// Re-formatea el texto del controlador (sea edición del usuario o
   /// setText programático). El cursor se conserva en su posición lógica; en
   /// cambios programáticos (sin selección válida) va al final.
@@ -1816,7 +1852,11 @@ class _MoneyFieldState extends State<MoneyField> {
     try {
       final old = _ctrl.text;
       final selection = _ctrl.selection;
-      final formatted = _format(_canon(old));
+      // v29 (V-3): MODO BORRADO — el texto nuevo es SUBSECUENCIA del
+      // formato propio (solo se quitaron caracteres). R-29c: REPLACE
+      // completos más cortos NO son borrado y siguen el canon normal.
+      final borrado = _esSubsecuencia(old, _last);
+      final formatted = _format(_canon(old, borrado: borrado));
       final keep = selection.isValid && selection.baseOffset <= old.length
           ? _valueCharsBefore(old, selection.baseOffset)
           : _valueCharsBefore(old, old.length);
@@ -1826,6 +1866,7 @@ class _MoneyFieldState extends State<MoneyField> {
           offset: _offsetAfter(formatted, keep).clamp(0, formatted.length),
         ),
       );
+      _last = formatted;
     } finally {
       _formatting = false;
     }
@@ -1872,13 +1913,20 @@ class _MoneyFieldState extends State<MoneyField> {
 /// ─── VeKeypad (v25 «HOJA») ────────────────────────────────────────────────
 /// Teclado numérico propio del conversor: 0-9 · «,» decimal es-VE · ⌫.
 /// Tecla = CUADRADO TONAL (muted) radius 16 SIN borde, h 56, cifras Space
-/// Grotesk tabulares 22. Háptica sutil (`selectionClick`) y `Semantics`
+/// Grotesk tabulares 30. Háptica sutil (`selectionClick`) y `Semantics`
 /// por tecla. «⌫» y «,» en tinta muted — son herramientas, no datos (§5).
+///
+/// v29 (H-25 · orden del dueño): el teclado es la ÚNICA vía de entrada del
+/// Conversor — «⌫» con PULSACIÓN LARGA limpia el campo activo (convención
+/// de calculadora, háptico propio y Semantics propio).
 class VeKeypad extends StatelessWidget {
-  const VeKeypad({super.key, required this.onKey});
+  const VeKeypad({super.key, required this.onKey, this.onClear});
 
   /// Tecla pulsada: '0'…'9' · ',' · '⌫'.
   final ValueChanged<String> onKey;
+
+  /// v29 (H-25): pulsación LARGA de «⌫» — limpia el campo activo.
+  final VoidCallback? onClear;
 
   static const List<List<String>> _rows = [
     ['1', '2', '3'],
@@ -1899,14 +1947,24 @@ class VeKeypad extends StatelessWidget {
     final quiet = scheme.onSurfaceVariant;
     Widget key(String k) {
       final isTool = k == '⌫' || k == ',';
+      final esBackspace = k == '⌫';
       return Semantics(
         button: true,
-        label: _semantics(k),
+        label: esBackspace && onClear != null
+            ? 'Borrar último dígito; mantén pulsado para limpiar el campo'
+            : _semantics(k),
         child: TapScale(
           onTap: () {
             HapticFeedback.selectionClick();
             onKey(k);
           },
+          // v29 (H-25): ⌫ largo = limpiar el campo activo.
+          onLongPress: esBackspace && onClear != null
+              ? () {
+                  HapticFeedback.mediumImpact();
+                  onClear!();
+                }
+              : null,
           child: Container(
             // v25 «HOJA»: tecla tonal SIN borde — h 56, radio 16.
             height: 56,

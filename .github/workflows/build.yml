@@ -1,5 +1,10 @@
 # Build release: APK firmados por ABI en MATRIZ paralela (anti-SIGTERM v17.6)
-# + AAB (v19.2) → PAQUETE ÚNICO: un solo ZIP con los 4 APK + el AAB.
+# → PAQUETE ÚNICO: un solo ZIP con los 4 APK.
+#
+# v31 (orden del dueño): SOLO APKs — 1 universal + las variantes por ABI.
+# El AAB (job `aab`) se RETIRÓ: no se genera ningún binario que no sea
+# instalable directamente en el teléfono. Google Play no está en el canal
+# de distribución del proyecto (instalación directa + Release de GitHub).
 #
 # POR QUÉ MATRIZ: el runner hosted mató 6 jobs con SIGTERM a los ~16-19 min
 # (reloj consistente). Un job único con Gradle frío (setup 4.5 + Gradle
@@ -14,12 +19,12 @@
 # no existe; un emulador 32-bit no puede correr la app.
 #
 # v18.0 — NOMBRES CON SEMÁNTICA (orden del dueño): cada binario sale como
-# valorave-v{versión}-build-{AAAAMMDD Caracas}-{abi}.apk/.aab.
+# valorave-v{versión}-build-{AAAAMMDD Caracas}-{abi}.apk.
 #
 # v19.2 — UN ZIP CON TODO (orden del dueño): el job `paquete` junta los
-# 4 APK + el AAB + un LEEME.txt y entrega UN solo artefacto
-# valorave-v{versión}-build-{fecha}-completo.zip. El AAB pasa de
-# solo-tags a CADA ronda. Los artefactos intermedios de la matriz viven
+# 4 APK + un LEEME.txt y entrega UN solo artefacto
+# valorave-v{versión}-build-{fecha}-completo.zip. Los artefactos
+# intermedios de la matriz viven
 # 1 día (solo sirven para que `paquete` los junte); el ZIP y los símbolos
 # de ofuscación viven 30. Compiladores estándar: ubuntu-latest + temurin
 # 17 + Flutter estable fijado (3.47.4).
@@ -148,83 +153,12 @@ jobs:
             build/app/outputs/flutter-apk/app-release.apk
             build/symbols/apk/
 
-  # AAB (Google Play) — v19.2: en CADA ronda de build (antes solo en
-  # tags). El dueño pidió el paquete completo siempre: 4 APK + AAB.
-  aab:
-    name: AAB (Play Store)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            ~/.android/build-cache
-          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
-          restore-keys: gradle-${{ runner.os }}-
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: 3.47.4
-          cache: true
-
-      - name: pub get
-        run: flutter pub get
-
-      - name: Decodificar keystore desde secrets
-        env:
-          KEYSTORE_B64: ${{ secrets.KEYSTORE_BASE64 }}
-          KS_STORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KS_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          echo "$KEYSTORE_B64" | base64 -d > android/app/valorave-release.keystore
-          {
-            echo "storeFile=valorave-release.keystore"
-            echo "storePassword=$KS_STORE_PASS"
-            echo "keyAlias=$KS_ALIAS"
-            echo "keyPassword=$KS_KEY_PASS"
-          } > android/keystore.properties
-
-      - name: flutter build appbundle release ofuscado
-        run: |
-          flutter build appbundle --release \
-            --obfuscate --split-debug-info=build/symbols/aab
-
-      # v18.0: el AAB también lleva su nombre semántico.
-      - name: Renombrar AAB (versión + build + fecha)
-        run: |
-          VERSION=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
-          DATE=$(TZ=America/Caracas date +%Y%m%d)
-          mv build/app/outputs/bundle/release/app-release.aab \
-             "build/app/outputs/bundle/release/valorave-v${VERSION}-build-${DATE}.aab"
-          ls -la build/app/outputs/bundle/release/
-
-      - name: Upload AAB (intermedio)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: valorave-aab
-          retention-days: 1
-          if-no-files-found: ignore
-          path: |
-            build/app/outputs/bundle/release/valorave-v*.aab
-            build/symbols/aab/
-
-  # PAQUETE ÚNICO (v19.2, orden del dueño): junta los 4 APK + el AAB,
-  # escribe un LEEME y entrega UN solo artefacto ZIP. Sin Flutter ni
-  # Gradle: solo descargar, ordenar y comprimir (~2 min).
+  # PAQUETE ÚNICO (v19.2 · v31): junta los 4 APK, escribe un LEEME y
+  # entrega UN solo artefacto ZIP. Sin Flutter ni Gradle: solo descargar,
+  # ordenar y comprimir (~2 min).
   paquete:
     name: ZIP todo-en-uno
-    needs: [apk, aab]
+    needs: [apk]
     runs-on: ubuntu-latest
     steps:
       - name: Descargar binarios de la matriz
@@ -232,12 +166,6 @@ jobs:
         with:
           pattern: 'valorave-apk-*'
           merge-multiple: true
-          path: dist
-
-      - name: Descargar AAB
-        uses: actions/download-artifact@v4
-        with:
-          name: valorave-aab
           path: dist
 
       - name: Armar paquete (LEEME + ZIP + símbolos)
@@ -255,17 +183,15 @@ jobs:
 
           mkdir -p paquete simbolos
           find dist -name 'valorave-v*.apk' -exec cp {} paquete/ \;
-          find dist -name 'valorave-v*.aab' -exec cp {} paquete/ \;
           find dist -name '*.symbols' -exec cp {} simbolos/ \;
 
           echo "Binarios del paquete:"
           ls -la paquete/
-          # Exigir los 5: si un rerun parcial dejara un hueco, falla AQUÍ
-          # y no en manos del dueño.
+          # Exigir los 4 APK: si un rerun parcial dejara un hueco, falla
+          # AQUÍ y no en manos del dueño.
           for f in arm64-v8a armeabi-v7a x86_64 universal; do
             ls paquete/valorave-v*-build-*-"$f".apk > /dev/null
           done
-          ls paquete/valorave-v*-build-*.aab > /dev/null
 
           cat > paquete/LEEME.txt <<'LEEME'
           VALORAVE — paquete completo de instalación
@@ -278,8 +204,6 @@ jobs:
           - *-x86_64.apk       → EMULADORES de PC y dispositivos Intel.
           - *-universal.apk    → TODO-EN-UNO: instala en cualquier
                                  dispositivo (pesa más).
-          - *.aab              → SOLO para subir a Google Play. No se
-                                 instala directo en el teléfono.
 
           CÓMO INSTALAR UN APK:
           1. Copia el APK al teléfono y ábrelo desde el administrador
@@ -297,9 +221,9 @@ jobs:
           Ver LICENSE en el repositorio.
           LEEME
 
-          (cd paquete && sha256sum *.apk *.aab > checksums.sha256)
+          (cd paquete && sha256sum *.apk > checksums.sha256)
 
-          (cd paquete && zip -X "../${ZIP}" LEEME.txt checksums.sha256 *.apk *.aab)
+          (cd paquete && zip -X "../${ZIP}" LEEME.txt checksums.sha256 *.apk)
 
           echo "== contenido del ZIP =="
           unzip -l "${ZIP}"
@@ -324,9 +248,9 @@ jobs:
           path: simbolos/
 
   # Release (SOLO tags): ya no compila nada — descarga el ZIP del job
-  # `paquete` de este MISMO run y adjunta los 6 archivos (4 APK + AAB +
-  # el ZIP todo-en-uno). v17.9: exigir TODOS (fail_on_unmatched_files)
-  # para que una Release jamás salga mutilada en silencio.
+  # `paquete` de este MISMO run y adjunta los 5 archivos (4 APK + el ZIP
+  # todo-en-uno). v17.9: exigir TODOS (fail_on_unmatched_files) para que
+  # una Release jamás salga mutilada en silencio.
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: paquete
@@ -348,7 +272,6 @@ jobs:
           test -n "$(find release-assets -name '*-armeabi-v7a.apk')"
           test -n "$(find release-assets -name '*-x86_64.apk')"
           test -n "$(find release-assets -name '*-universal.apk')"
-          test -n "$(find release-assets -name '*.aab')"
 
       - name: GitHub Release
         uses: softprops/action-gh-release@v2
@@ -358,7 +281,6 @@ jobs:
             release-assets/valorave-v*-armeabi-v7a.apk
             release-assets/valorave-v*-x86_64.apk
             release-assets/valorave-v*-universal.apk
-            release-assets/valorave-v*.aab
             dist/valorave-v*-completo.zip
           fail_on_unmatched_files: true
           generate_release_notes: true

@@ -19,6 +19,7 @@ import 'package:valorave/services/notifications.dart';
 import 'package:valorave/state/app_state.dart';
 import 'package:valorave/widgets/app_router.dart';
 import 'package:valorave/features/home/app_widgets.dart';
+import 'package:valorave/features/more/more_screen.dart';
 import 'package:valorave/widgets/app_tour.dart' show kTourDoneKey;
 import 'package:valorave/providers/providers.dart';
 
@@ -120,8 +121,9 @@ void main() {
   /// acotado (NO pumpAndSettle): el LoadingState con tablero vacío nunca
   /// asienta y el ticker del Inicio anima siempre.
   Future<void> abrirGaleria(WidgetTester tester, GoRouter router) async {
-    // v27: la galería vive en Ajustes → General → Widgets de Android.
-    router.go('/ajustes/general');
+    // v30 (H-42): la galería vive en Ajustes → General → Widgets de
+    // Android (la subpantalla `/ajustes/general` redirige a `/ajustes`).
+    router.go('/ajustes');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.scrollUntilVisible(
@@ -166,7 +168,7 @@ void main() {
     expect(find.text('Inicio limpio'), findsNothing);
   });
 
-  testWidgets('Más: el hub reúne los módulos que antes costaba encontrar', (
+  testWidgets('Más (v30 · H-41): SOLO los módulos autónomos, sin buscador', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -177,16 +179,36 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Más'), findsWidgets);
-    expect(find.text('Productos'), findsOneWidget);
-    expect(find.text('Historial'), findsOneWidget);
-    expect(find.text('Tickets'), findsOneWidget);
-    expect(find.text('Ajustes'), findsOneWidget);
-    expect(find.text('Sala en vivo'), findsOneWidget);
-    // El buscador filtra de verdad: «cuentas» deja solo Cuentas y Pago Móvil.
-    await tester.enterText(find.byType(TextField), 'cuentas');
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text('Cuentas y Pago Móvil'), findsOneWidget);
-    expect(find.text('Historial'), findsNothing);
+    // Scoped a la pantalla (la barra del shell tiene su propia pestaña
+    // «Análisis» y «Más»).
+    final mas = find.byType(MoreScreen);
+    Finder enMas(String t) => find.descendant(of: mas, matching: find.text(t));
+    // Los 5 módulos que quedan.
+    for (final m in [
+      'Productos',
+      'Tickets',
+      'Ajustes',
+      'Actualizaciones',
+      'Privacidad y licencias',
+    ]) {
+      expect(enMas(m), findsOneWidget, reason: m);
+    }
+    // H-41: duplicados y no-autónomos FUERA — Análisis, Historial, Sala en
+    // vivo, Cuentas y Escanear viven en sus sitios, no aquí.
+    for (final fuera in [
+      'Análisis',
+      'Historial',
+      'Sala en vivo',
+      'Cuentas y Pago Móvil',
+      'Escanear',
+    ]) {
+      expect(enMas(fuera), findsNothing, reason: fuera);
+    }
+    // Sin buscador: 5 módulos no lo necesitan.
+    expect(
+      find.descendant(of: mas, matching: find.byType(TextField)),
+      findsNothing,
+    );
   });
 
   testWidgets('la galería muestra los 3 widgets con preview fiel', (

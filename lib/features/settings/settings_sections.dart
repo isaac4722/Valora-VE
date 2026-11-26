@@ -1,7 +1,7 @@
 /// ─── Ajustes · secciones de datos (parte de settings_screen.dart) ──────────
-/// País · personalización · monedas y tasas (por módulo + manuales) ·
-/// apariencia (tema, Material You, biometría) · diagnóstico de fuentes.
-/// Parte del archivo principal: comparte privacidad e imports.
+/// País · monedas y tasas (por módulo + manuales) · apariencia (tema,
+/// Material You, biometría) · diagnóstico de fuentes · registros. Parte
+/// del archivo principal (v30 · H-42: UNA pantalla por secciones).
 part of 'settings_screen.dart';
 
 /// Ancla país: protagonista + foco 6 + orden subir/bajar/reset.
@@ -151,10 +151,11 @@ class _Monedas extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final ctx = store.contextOf();
+    // v30 (H-42): la sección «TASAS Y FUENTES» ya titula — sin eyebrow
+    // interno redundante.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const VeEyebrow(child: Text('MONEDAS Y TASAS')),
         _VeSettingsCard(
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -581,10 +582,10 @@ class _Apariencia extends ConsumerWidget {
     final theme = ref.watch(themeControllerProvider);
     final store = ref.watch(appStoreProvider);
     final scheme = Theme.of(context).colorScheme;
+    // v30 (H-42): la sección «APARIENCIA» ya titula — sin eyebrow interno.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const VeEyebrow(child: Text('APARIENCIA')),
         _VeSettingsCard(
           child: Padding(
             padding: const EdgeInsets.all(12),

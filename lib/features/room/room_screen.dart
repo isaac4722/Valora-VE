@@ -1,12 +1,19 @@
-/// ─── Sala · lobby de conexión (v19.8 → TASK-35 p4: lenguaje «Ve») ──────────
-/// TRES modos P2P sin internet (Cerca · WiFi o Hotspot · Bluetooth) + el
-/// servidor propio, cada uno con su tecnología. La pantalla arranca por la
-/// CONFIGURACIÓN de conexión (cómo se conectan) y de ahí a las acciones:
-/// Unirme (hoja JoinSheet del prototipo: modo · nombre · código · PIN) ·
-/// Crear (anfitrión, con PIN de emojis opcional) · Salas cercanas (escucha
-/// en vivo). Toda la superficie es del sistema del prototipo: VeCard con
-/// eyebrow caps, VeGroup de filas divididas, VeBtn/VeInput/VeToggle y
-/// Lucide — cero Material suelto.
+/// ─── Sala · lobby de conexión (v29 · H-38: reconstruido desde cero) ─────────
+/// El lobby en el lenguaje de secciones v28/v29: TÍTULO + descripción de una
+/// línea + detalles con hairlines, separadas por espacio en blanco, cero
+/// cajas dentro de cajas.
+///
+/// · CÓMO SE CONECTAN — la configuración primero (orden del dueño): TRES
+///   modos P2P sin internet (Cerca · WiFi o Hotspot · Bluetooth) + el
+///   servidor propio, cada uno con su tecnología.
+/// · INTENCIÓN (v20) — «dependiendo lo que se vaya a usar salga algo y no
+///   salga otro»: segmentos CORTOS («Unirme» · «Crear») que jamás se
+///   recortan; solo el flujo elegido se pinta.
+/// · SALAS CERCANAS — escucha en vivo de las públicas.
+///
+/// Unirse (hoja JoinSheet del prototipo: modo · nombre · código · PIN) ·
+/// Crear (anfitrión, con PIN de emojis opcional) · escaneo de QR y deep
+/// links. Toda la funcionalidad P2P/servidor/PIN intacta.
 library;
 
 import 'package:flutter/material.dart';
@@ -77,7 +84,7 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
       setState(() => _busyError = err);
       return;
     }
-    // En sala: a la Lista (el strip «En sala» lleva a la Sala Viva).
+    // En sala: a la Lista (la entrada «Sala en vivo» lleva a la Sala Viva).
     if (ref.read(roomControllerProvider).connected) {
       showToast(
         context,
@@ -100,41 +107,43 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
-            if (room.connected) _EnSalaBanner(room: room),
+            if (room.connected) _EnSalaRow(room: room),
             if (_busyError != null || room.lastError != null) ...[
-              _ErrorBanner(msg: _busyError ?? room.lastError!),
+              _AvisoPlano(msg: _busyError ?? room.lastError!),
               const SizedBox(height: 10),
             ],
             if (busy && !_creating) ...[
-              const _ConnectingCard(),
+              const _Conectando(),
               const SizedBox(height: 10),
             ],
             // 1º CÓMO SE CONECTAN (la configuración primero, orden del dueño).
-            _ModePicker(room: room),
+            _ComoSeConectan(room: room),
             // 2º El servidor propio, solo en su modo.
             if (room.mode == RoomMode.servidor) ...[
               const SizedBox(height: 10),
-              _ServerCard(room: room),
+              const _SeccionServidor(),
             ],
-            // 3º INTENCIÓN (v20): Unirme o Crear — y solo el flujo elegido.
-            const SizedBox(height: 10),
+            // 3º INTENCIÓN (v20): Unirme o Crear — segmentos cortos que
+            // jamás se recortan (H-38).
+            VeEyebrow(
+              hint: 'Elige primero qué vas a hacer — solo ese flujo se pinta.',
+              child: const Text('TU INTENCIÓN'),
+            ),
             VeSegmented<int>(
               value: _intent,
               onChanged: (v) => setState(() => _intent = v),
               segments: const [
-                VeSegment(value: 0, label: 'Unirme a una sala'),
-                VeSegment(value: 1, label: 'Crear una sala'),
+                VeSegment(value: 0, label: 'Unirme'),
+                VeSegment(value: 1, label: 'Crear'),
               ],
             ),
             const SizedBox(height: 10),
-            if (_intent == 0) ...[
-              // FLUJO UNIRSE: puerta + QR + salas cercanas — nada de crear.
-              _JoinEntryCard(room: room, busy: busy),
-              const SizedBox(height: 10),
-              _ScanCard(room: room, busy: busy),
-            ] else ...[
+            if (_intent == 0)
+              // FLUJO UNIRSE: puerta + QR — nada de crear.
+              _FlujoUnirse(busy: busy)
+            else
               // FLUJO CREAR: anfitrión completo — nada de unirse.
-              _CreateCard(
+              _FlujoCrear(
                 room: room,
                 roomNameCtrl: _roomNameCtrl,
                 hostNameCtrl: _hostNameCtrl,
@@ -143,7 +152,9 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
                 onRun: _run,
                 onCreating: (v) => setState(() => _creating = v),
               ),
-            ],
+            // 4º SALAS CERCANAS (escucha en vivo de las públicas).
+            const SizedBox(height: 10),
+            _SalasCercanas(room: room, busy: busy),
           ],
         ),
       ),
@@ -152,190 +163,191 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
 }
 
 /// Banner cuando YA hay sala activa: directo a la Sala Viva.
-class _EnSalaBanner extends ConsumerWidget {
-  const _EnSalaBanner({required this.room});
+class _EnSalaRow extends StatelessWidget {
+  const _EnSalaRow({required this.room});
 
   final RoomController room;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final scheme = context.ve.colorScheme;
     final title = room.roomName.isNotEmpty
         ? room.roomName
         : 'Sala ${room.code}';
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: VeCard(
-        onTap: () => context.push('/sala-viva'),
-        child: Row(
-          children: [
-            const VeBadge(tone: VeTone.pos, dot: true, child: Text('En sala')),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                '$title · ${room.visibleMembers.length} en la sala',
-                maxLines: 1,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.foreground,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.push('/sala-viva'),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(
+              children: [
+                const VeBadge(
+                  tone: VeTone.pos,
+                  dot: true,
+                  child: Text('En sala'),
                 ),
-              )),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '$title · ${room.visibleMembers.length} en la sala',
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.foreground,
+                      ),
+                    ),
+                  ),
+                ),
+                Icon(
+                  LucideIcons.chevronRight,
+                  size: 15,
+                  color: scheme.mutedForeground,
+                ),
+              ],
             ),
-            Icon(
-              LucideIcons.chevronRight,
-              size: 15,
-              color: scheme.mutedForeground,
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ErrorBanner extends ConsumerWidget {
-  const _ErrorBanner({required this.msg});
+/// Aviso plano (v25 «HOJA»): icono + texto en neg, sin fill ni borde.
+class _AvisoPlano extends StatelessWidget {
+  const _AvisoPlano({required this.msg});
 
   final String msg;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final sem = VeColors.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      // v25 «HOJA»: aviso PLANO — icono + texto en neg, sin fill ni borde.
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(LucideIcons.circleAlert, size: 15, color: sem.neg),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              msg,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
-                color: sem.neg,
-              ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(LucideIcons.circleAlert, size: 15, color: sem.neg),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            msg,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: sem.neg,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
 /// Conectando… con cancelar (como el resto de la app, en Ve).
-class _ConnectingCard extends ConsumerWidget {
-  const _ConnectingCard();
+class _Conectando extends ConsumerWidget {
+  const _Conectando();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final room = ref.watch(roomControllerProvider);
+    final live = ref.watch(roomControllerProvider);
     final scheme = context.ve.colorScheme;
-    return VeCard(
-      child: Row(
-        children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
+    return Row(
+      children: [
+        const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            'Conectando por ${live.modeLabel}…',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: scheme.foreground,
+            ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Conectando por ${room.modeLabel}…',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
-                color: scheme.foreground,
+        ),
+        VeBtn(
+          variant: VeBtnVariant.ghost,
+          size: VeBtnSize.sm,
+          onPressed: () => live.leave(),
+          child: const Text('Cancelar'),
+        ),
+      ],
+    );
+  }
+}
+
+/// CÓMO SE CONECTAN (H-38): sección con filas de hairline — un modo por
+/// fila, cada uno con SU tecnología; la activa lleva el check a la derecha.
+class _ComoSeConectan extends StatelessWidget {
+  const _ComoSeConectan({required this.room});
+
+  final RoomController room;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.ve.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        VeEyebrow(
+          hint:
+              'Tres modos sin internet y el servidor propio — cada uno con '
+              'su tecnología.',
+          child: const Text('CÓMO SE CONECTAN'),
+        ),
+        VeGroup(
+          semantic: 'Modos de conexión',
+          children: [
+            for (final m in RoomMode.values)
+              VeRow(
+                label: Text(m.label),
+                // tech·hint es LARGO (verificación visual 390: a 1 línea
+                // quedaba «Sin configurar…» «el Hot…»). 3 líneas explícitas:
+                // el texto completo cabe y respira.
+                sub: Text('${m.tech} · ${m.hint}'),
+                onTap: () => room.setMode(m),
+                right: room.mode == m
+                    ? Icon(
+                        LucideIcons.check,
+                        size: 15,
+                        color: scheme.foreground,
+                      )
+                    : Icon(
+                        switch (m) {
+                          RoomMode.cerca => LucideIcons.radioTower,
+                          RoomMode.wifi => LucideIcons.router,
+                          RoomMode.bt => LucideIcons.bluetooth,
+                          RoomMode.servidor => LucideIcons.server,
+                        },
+                        size: 15,
+                        color: scheme.mutedForeground,
+                      ),
               ),
-            ),
-          ),
-          VeBtn(
-            variant: VeBtnVariant.ghost,
-            size: VeBtnSize.sm,
-            onPressed: () => room.leave(),
-            child: const Text('Cancelar'),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 }
 
-/// TRES modos P2P + servidor, cada uno con SU tecnología — nada de internet.
-/// Filas divididas en VeGroup; la activa lleva el check a la derecha.
-class _ModePicker extends ConsumerWidget {
-  const _ModePicker({required this.room});
-
-  final RoomController room;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = context.ve.colorScheme;
-    return VeCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'CÓMO SE CONECTAN',
-            style: VeText.labelCaps(
-              11,
-              color: scheme.mutedForeground,
-              weight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          VeGroup(
-            semantic: 'Modos de conexión',
-            children: [
-              for (final m in RoomMode.values)
-                VeRow(
-                  label: Text(m.label),
-                  // tech·hint es LARGO (verificación visual 390: a 1 línea
-                  // quedaba «Sin configurar…» «el Hot…» «los tel…» «URL d…»).
-                  // 3 líneas explícitas: el texto completo cabe y respira.
-                  sub: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                    '${m.tech} · ${m.hint}',
-                    maxLines: 3,
-                  )),
-                  onTap: () => room.setMode(m),
-                  right: room.mode == m
-                      ? Icon(
-                          LucideIcons.check,
-                          size: 15,
-                          color: scheme.foreground,
-                        )
-                      : Icon(
-                          switch (m) {
-                            RoomMode.cerca => LucideIcons.radioTower,
-                            RoomMode.wifi => LucideIcons.router,
-                            RoomMode.bt => LucideIcons.bluetooth,
-                            RoomMode.servidor => LucideIcons.server,
-                          },
-                          size: 15,
-                          color: scheme.mutedForeground,
-                        ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Puerta única de unirse (v19.8): la hoja JoinSheet hace el flujo completo
+/// Puerta de unirse (v19.8): la hoja JoinSheet hace el flujo completo
 /// (modo · nombre · código · PIN). Aquí solo el atajo: botón grande + escanear.
-class _JoinEntryCard extends ConsumerWidget {
-  const _JoinEntryCard({required this.room, required this.busy});
+class _FlujoUnirse extends StatelessWidget {
+  const _FlujoUnirse({required this.busy});
 
-  final RoomController room;
   final bool busy;
 
   Future<void> _scanQr(BuildContext context) async {
@@ -353,54 +365,32 @@ class _JoinEntryCard extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = context.ve.colorScheme;
-    return VeCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'UNIRSE A UNA SALA',
-            style: VeText.labelCaps(
-              11,
-              color: scheme.mutedForeground,
-              weight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Con el código o el QR del anfitrión.',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 11,
-              height: 1.4,
-              color: scheme.mutedForeground,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: VeBtn(
-                  variant: VeBtnVariant.primary,
-                  icon: LucideIcons.logIn,
-                  enabled: !busy,
-                  onPressed: busy ? null : () => showJoinSheet(context),
-                  child: const Text('Unirme'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              VeBtn(
-                variant: VeBtnVariant.secondary,
-                icon: LucideIcons.scanLine,
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: VeBtn(
+                variant: VeBtnVariant.primary,
+                icon: LucideIcons.logIn,
                 enabled: !busy,
-                onPressed: busy ? null : () => _scanQr(context),
-                child: const Text('Escanear QR'),
+                onPressed: busy ? null : () => showJoinSheet(context),
+                child: const Text('Unirme con el código'),
               ),
-            ],
-          ),
-        ],
-      ),
+            ),
+            const SizedBox(width: 8),
+            VeBtn(
+              variant: VeBtnVariant.secondary,
+              icon: LucideIcons.scanLine,
+              enabled: !busy,
+              onPressed: busy ? null : () => _scanQr(context),
+              child: const Text('Escanear QR'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -409,7 +399,7 @@ typedef _RoomAction = Future<void> Function(Future<String?> Function() action);
 
 /// Fila de una sala avistada (escaneo o búsqueda): modo · nombre · código
 /// y anfitrión. Tap → hoja de unirse prellenada (pregunta nombre y PIN).
-class _RoomAdTile extends ConsumerWidget {
+class _RoomAdTile extends StatelessWidget {
   const _RoomAdTile({
     required this.ad,
     required this.busy,
@@ -421,7 +411,7 @@ class _RoomAdTile extends ConsumerWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final scheme = context.ve.colorScheme;
     return VeRow(
       label: Text(ad.label),
@@ -443,8 +433,11 @@ class _RoomAdTile extends ConsumerWidget {
   }
 }
 
-class _CreateCard extends ConsumerStatefulWidget {
-  const _CreateCard({
+/// FLUJO CREAR: anfitrión completo — nombres, sala pública, PIN de emojis,
+/// botón y búsqueda de salas existentes (antes de crear una nueva, se puede
+/// mirar si ya existe una con ese nombre).
+class _FlujoCrear extends ConsumerStatefulWidget {
+  const _FlujoCrear({
     required this.room,
     required this.roomNameCtrl,
     required this.hostNameCtrl,
@@ -463,10 +456,10 @@ class _CreateCard extends ConsumerStatefulWidget {
   final ValueChanged<bool> onCreating;
 
   @override
-  ConsumerState<_CreateCard> createState() => _CreateCardState();
+  ConsumerState<_FlujoCrear> createState() => _FlujoCrearState();
 }
 
-class _CreateCardState extends ConsumerState<_CreateCard> {
+class _FlujoCrearState extends ConsumerState<_FlujoCrear> {
   late final TextEditingController _searchCtrl;
 
   /// El escaneo se arranca UNA vez por búsqueda: cada arranque limpia la
@@ -516,24 +509,18 @@ class _CreateCardState extends ConsumerState<_CreateCard> {
     final room = widget.room;
     final scheme = context.ve.colorScheme;
     final matches = _matches;
-    return VeCard(
+    return KeyedSubtree(
+      // Ancla de tests: la búsqueda y sus resultados viven SOLO en el
+      // flujo CREAR (v20: flujos exclusivos).
+      key: const Key('lobby-crear'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'CREAR SALA',
-            style: VeText.labelCaps(
-              11,
-              color: scheme.mutedForeground,
-              weight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
             'Tu teléfono es el anfitrión: comparte el código de 6 letras.',
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 11,
+              fontSize: 13.5,
               color: scheme.mutedForeground,
             ),
           ),
@@ -634,7 +621,7 @@ class _CreateCardState extends ConsumerState<_CreateCard> {
                           'con el botón de arriba.',
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 11,
+                  fontSize: 13.5,
                   height: 1.4,
                   color: scheme.mutedForeground,
                 ),
@@ -667,7 +654,7 @@ class _CreateCardState extends ConsumerState<_CreateCard> {
 }
 
 /// Fila etiqueta + subtítulo + interruptor Ve (patrón Ajustes).
-class _ToggleRow extends ConsumerWidget {
+class _ToggleRow extends StatelessWidget {
   const _ToggleRow({
     required this.label,
     required this.sub,
@@ -681,7 +668,7 @@ class _ToggleRow extends ConsumerWidget {
   final ValueChanged<bool> onChanged;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final scheme = context.ve.colorScheme;
     return Semantics(
       label: label,
@@ -723,17 +710,19 @@ class _ToggleRow extends ConsumerWidget {
   }
 }
 
-class _ScanCard extends ConsumerStatefulWidget {
-  const _ScanCard({required this.room, required this.busy});
+/// SALAS CERCANAS (H-38): sección propia de escucha — las públicas del modo
+/// activo aparecen al tocar «Escuchar».
+class _SalasCercanas extends ConsumerStatefulWidget {
+  const _SalasCercanas({required this.room, required this.busy});
 
   final RoomController room;
   final bool busy;
 
   @override
-  ConsumerState<_ScanCard> createState() => _ScanCardState();
+  ConsumerState<_SalasCercanas> createState() => _SalasCercanasState();
 }
 
-class _ScanCardState extends ConsumerState<_ScanCard> {
+class _SalasCercanasState extends ConsumerState<_SalasCercanas> {
   @override
   void dispose() {
     // Al salir del lobby, el escaneo muere (no gasta batería de regalo).
@@ -747,46 +736,25 @@ class _ScanCardState extends ConsumerState<_ScanCard> {
   Widget build(BuildContext context) {
     final room = ref.watch(roomControllerProvider);
     final scheme = context.ve.colorScheme;
-    return VeCard(
+    return KeyedSubtree(
+      key: const Key('lobby-cercanas'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'SALAS CERCANAS',
-                  style: VeText.labelCaps(
-                    11,
-                    color: scheme.mutedForeground,
-                    weight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              VeBtn(
-                variant: VeBtnVariant.ghost,
-                size: VeBtnSize.sm,
-                icon: room.scanning
-                    ? LucideIcons.circleStop
-                    : LucideIcons.radar,
-                enabled: !widget.busy,
-                onPressed: widget.busy
-                    ? null
-                    : () => room.scanning ? room.stopScan() : room.startScan(),
-                child: Text(room.scanning ? 'Parar' : 'Escuchar'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Salas públicas por ${room.modeLabel}. ${room.mode.hint}',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 11,
-              color: scheme.mutedForeground,
+          VeEyebrow(
+            hint: 'Salas públicas por ${room.modeLabel}. ${room.mode.hint}',
+            right: VeBtn(
+              variant: VeBtnVariant.ghost,
+              size: VeBtnSize.sm,
+              icon: room.scanning ? LucideIcons.circleStop : LucideIcons.radar,
+              enabled: !widget.busy,
+              onPressed: widget.busy
+                  ? null
+                  : () => room.scanning ? room.stopScan() : room.startScan(),
+              child: Text(room.scanning ? 'Parar' : 'Escuchar'),
             ),
+            child: const Text('SALAS CERCANAS'),
           ),
-          const SizedBox(height: 10),
           if (room.scanning && room.foundRooms.isEmpty)
             Row(
               children: [
@@ -845,25 +813,27 @@ class _ScanCardState extends ConsumerState<_ScanCard> {
 /// Config del relay socket.io del usuario: URL host:puerto, token opcional,
 /// probar conexión y guía mínima del server.js de referencia. El modo NO se
 /// elimina: quien tenga su servidor lo usa con o sin internet.
-class _ServerCard extends ConsumerStatefulWidget {
-  const _ServerCard({required this.room});
-
-  final RoomController room;
+class _SeccionServidor extends ConsumerStatefulWidget {
+  const _SeccionServidor();
 
   @override
-  ConsumerState<_ServerCard> createState() => _ServerCardState();
+  ConsumerState<_SeccionServidor> createState() => _SeccionServidorState();
 }
 
-class _ServerCardState extends ConsumerState<_ServerCard> {
-  late final TextEditingController _addr = TextEditingController(
-    text: widget.room.serverAddress,
-  );
-  late final TextEditingController _token = TextEditingController(
-    text: widget.room.serverToken,
-  );
+class _SeccionServidorState extends ConsumerState<_SeccionServidor> {
+  late final TextEditingController _addr;
+  late final TextEditingController _token;
   String? _probeMsg;
   bool _probing = false;
   bool _guide = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final room = ref.read(roomControllerProvider);
+    _addr = TextEditingController(text: room.serverAddress);
+    _token = TextEditingController(text: room.serverToken);
+  }
 
   @override
   void dispose() {
@@ -876,125 +846,98 @@ class _ServerCardState extends ConsumerState<_ServerCard> {
   Widget build(BuildContext context) {
     final scheme = context.ve.colorScheme;
     final ink = VeColors.of(context);
-    return VeCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(LucideIcons.server, size: 14, color: scheme.foreground),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Tu servidor (socket.io)',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.foreground,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'El servidor solo TRANSPORTA: la lista, los roles y la verificación '
-            'viven en el teléfono del anfitrión. Sirve para grupos lejos o con '
-            'datos móviles.',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 11,
-              height: 1.4,
-              color: scheme.mutedForeground,
+    final room = ref.watch(roomControllerProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        VeEyebrow(
+          hint:
+              'El servidor solo TRANSPORTA: la lista, los roles y la '
+              'verificación viven en el teléfono del anfitrión.',
+          child: const Text('TU SERVIDOR (SOCKET.IO)'),
+        ),
+        VeInput(
+          controller: _addr,
+          placeholder: 'http://192.168.1.20:3000',
+          keyboardType: TextInputType.url,
+          onChanged: room.setServerAddress,
+          semantic: 'URL del servidor',
+        ),
+        const SizedBox(height: 8),
+        VeInput(
+          controller: _token,
+          placeholder: 'Token (opcional)',
+          onChanged: room.setServerToken,
+          semantic: 'Token del servidor',
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            VeBtn(
+              variant: VeBtnVariant.secondary,
+              icon: _probing ? null : LucideIcons.plugZap,
+              enabled: !_probing,
+              onPressed: _probing
+                  ? null
+                  : () async {
+                      setState(() => _probing = true);
+                      final msg = await room.probeServer();
+                      if (!mounted) return;
+                      setState(() {
+                        _probing = false;
+                        _probeMsg = msg ?? 'Conexión OK';
+                      });
+                    },
+              child: _probing
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Probar conexión'),
             ),
-          ),
-          const SizedBox(height: 12),
-          VeInput(
-            controller: _addr,
-            placeholder: 'http://192.168.1.20:3000',
-            keyboardType: TextInputType.url,
-            onChanged: widget.room.setServerAddress,
-            semantic: 'URL del servidor',
-          ),
-          const SizedBox(height: 8),
-          VeInput(
-            controller: _token,
-            placeholder: 'Token (opcional)',
-            onChanged: widget.room.setServerToken,
-            semantic: 'Token del servidor',
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              VeBtn(
-                variant: VeBtnVariant.secondary,
-                icon: _probing ? null : LucideIcons.plugZap,
-                enabled: !_probing,
-                onPressed: _probing
-                    ? null
-                    : () async {
-                        setState(() => _probing = true);
-                        final msg = await widget.room.probeServer();
-                        if (!mounted) return;
-                        setState(() {
-                          _probing = false;
-                          _probeMsg = msg ?? 'Conexión OK';
-                        });
-                      },
-                child: _probing
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Probar conexión'),
-              ),
-              VeBtn(
-                variant: VeBtnVariant.ghost,
-                onPressed: () => setState(() => _guide = !_guide),
-                child: Text(
-                  _guide ? 'Ocultar guía' : '¿Cómo monto mi servidor?',
-                ),
-              ),
-            ],
-          ),
-          if (_probeMsg != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                _probeMsg!,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: _probeMsg == 'Conexión OK' ? ink.pos : ink.neg,
-                ),
-              ),
+            VeBtn(
+              variant: VeBtnVariant.ghost,
+              onPressed: () => setState(() => _guide = !_guide),
+              child: Text(_guide ? 'Ocultar guía' : '¿Cómo monto mi servidor?'),
             ),
-          if (_guide) ...[
-            const SizedBox(height: 10),
-            Text(
-              '1. Instala Node.js y ejecuta: npm i socket.io\n'
-              '2. server.js mínimo: al recibir `join` mete el socket al room '
-              'del código y responde {ok: true, id: socket.id}; reenvía '
-              '`room_event` a los demás del room (añadiendo from: socket.id) '
-              'y `room_event_to` solo al destino.\n'
-              '3. Abre la URL aquí y prueba la conexión. También puedes usar '
-              'el modo WiFi local con este teléfono como servidor.',
+          ],
+        ),
+        if (_probeMsg != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              _probeMsg!,
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 13.5,
-                height: 1.5,
-                color: scheme.mutedForeground,
+                fontWeight: FontWeight.w700,
+                color: _probeMsg == 'Conexión OK' ? ink.pos : ink.neg,
               ),
             ),
-          ],
+          ),
+        if (_guide) ...[
+          const SizedBox(height: 10),
+          Text(
+            '1. Instala Node.js y ejecuta: npm i socket.io\n'
+            '2. server.js mínimo: al recibir `join` mete el socket al room '
+            'del código y responde {ok: true, id: socket.id}; reenvía '
+            '`room_event` a los demás del room (añadiendo from: socket.id) '
+            'y `room_event_to` solo al destino.\n'
+            '3. Abre la URL aquí y prueba la conexión. También puedes usar '
+            'el modo WiFi local con este teléfono como servidor.',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 13.5,
+              height: 1.5,
+              color: scheme.mutedForeground,
+            ),
+          ),
         ],
-      ),
+      ],
     );
   }
 }

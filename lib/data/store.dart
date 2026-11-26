@@ -61,7 +61,6 @@ class AppStore extends ChangeNotifier {
   List<CartItem> get cart => _data.cart;
   List<Purchase> get purchases => _data.purchases;
   List<String> get stores => _data.stores;
-  List<ShoppingTemplate> get templates => _data.templates;
   List<BasketItem> get basket => _data.basket;
 
   /// IDs únicos GLOBALES (v20.4 · uuid v4): antes `v<microseg><contador>`
@@ -275,7 +274,8 @@ class AppStore extends ChangeNotifier {
       numMode: numMode == 'redondeo'
           ? 'redondeo'
           : (numMode == null ? null : 'decimales'),
-      precision: precision?.clamp(2, 4),
+      // v29 (H-26 · R-29a): la escala única viaja clamp 2..6 («Completo» = 6).
+      precision: precision?.clamp(2, 6),
       accountsBiometric: accountsBiometric,
     );
     _data = _data.copyWith(settings: patched);
@@ -296,8 +296,9 @@ class AppStore extends ChangeNotifier {
   /// 'decimales' (fiel) o 'redondeo' (entero; la ruta conserva la cifra).
   void setNumMode(String v) => _patchSettings(numMode: v);
 
-  /// Precisión decimal visible (v27 · REA CalculaYa): 2, 3 o 4 decimales.
-  void setPrecision(int v) => _patchSettings(precision: v);
+  /// Precisión decimal visible (v27 · REA CalculaYa; v29 · H-26 escala
+  /// única): 2, 3, 4 o 6 («Completo», sin ceros de relleno).
+  void setPrecision(int v) => _patchSettings(precision: v.clamp(2, 6));
 
   /// Candado biométrico de la sección Cuentas y Pago Móvil (v23).
   void setAccountsBiometric(bool v) => _patchSettings(accountsBiometric: v);
@@ -307,10 +308,13 @@ class AppStore extends ChangeNotifier {
   /// Máximo de cuentas propias (CalculaYa no limita; 4 basta y respira).
   static const int kMaxAccounts = 4;
 
-  /// Agrega una cuenta de cobro. Validación SUAVE en la UI (avisos, no
-  /// bloqueos: la longitud real varía por banco); aquí solo lo esencial.
+  /// Agrega una cuenta de cobro. Validación DURA por tipo (v30 · H-43):
+  /// [PayAccount.missingFields] decide — pago móvil exige banco AND cédula
+  /// AND teléfono (R-30d); transferencia, banco + número + cédula; Zelle,
+  /// titular + contacto. La UI avisa QUÉ falta por tipo (R-30c); aquí es
+  /// el guard final (bool).
   bool addAccount(PayAccount a) {
-    if (a.bank.isEmpty || a.number.trim().isEmpty) return false;
+    if (a.missingFields.isNotEmpty) return false;
     if (_data.accounts.length >= kMaxAccounts) return false;
     final first = _data.accounts.isEmpty;
     final makeDefault = first || a.isDefault;
@@ -346,8 +350,10 @@ class AppStore extends ChangeNotifier {
     _persist();
   }
 
-  /// Cuenta que el Conversor usa al armar un Pago Móvil (v27): la marcada
-  /// o, si nadie lo está, la primera. Null sin cuentas.
+  /// Cuenta marcada como principal (v27): la estrella, o la primera si
+  /// nadie la lleva. Null sin cuentas. La hoja de Pago Móvil del Conversor
+  /// parte de esta y filtra además por `cobraEnBs` (v30: el Zelle, en
+  /// dólares, no arma cobros en Bs).
   PayAccount? get defaultAccount {
     for (final a in _data.accounts) {
       if (a.isDefault) return a;
@@ -891,64 +897,8 @@ class AppStore extends ChangeNotifier {
     _persist();
   }
 
-  // ─── 2.4 Plantillas (máx 20) ────────────────────────────────────────────
-
-  /// saveTemplate: null si carrito vacío; congela carrito; unshift + slice(0,20).
-  String? saveTemplate(String name) {
-    final cleanName = name.trim();
-    if (cleanName.isEmpty || _data.cart.isEmpty) return null;
-    final t = ShoppingTemplate(
-      id: newId(),
-      name: cleanName,
-      createdAt: DateTime.now(),
-      items: _data.cart
-          .map(
-            (c) => ShoppingTemplateItem(
-              name: c.name,
-              quantity: c.quantity,
-              price: c.price,
-              currency: c.currency,
-              productId: c.productId,
-              barcode: c.barcode,
-            ),
-          )
-          .toList(),
-    );
-    final list = [t, ..._data.templates].take(kMaxTemplates).toList();
-    _data = _data.copyWith(templates: list);
-    _persist();
-    return t.id;
-  }
-
-  void deleteTemplate(String id) {
-    final list = _data.templates.where((t) => t.id != id).toList();
-    _data = _data.copyWith(templates: list);
-    _persist();
-  }
-
-  /// applyTemplate → totalQty (0 si no existe/vacía; merge con regla addToCart).
-  int applyTemplate(String id) {
-    final t = _data.templates.where((t) => t.id == id).firstOrNull;
-    if (t == null || t.items.isEmpty) return 0;
-    var total = 0;
-    for (final item in t.items) {
-      addToCart(
-        CartItem(
-          id: newId(),
-          productId: item.productId,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          currency: item.currency,
-          barcode: item.barcode,
-        ),
-      );
-      total += item.quantity;
-    }
-    return total;
-  }
-
-  // ─── 2.5 Tiendas / backup / reset ───────────────────────────────────────
+  // ─── 2.4 Tiendas / backup / reset ────────────────────────────────────────
+  // v29 (H-35): las plantillas (save/apply/delete) se ELIMINARON del store.
 
   /// addStore: trim, no duplicados case-insensitive.
   void addStore(String name) {

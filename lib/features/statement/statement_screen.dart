@@ -3,20 +3,19 @@
 /// constancia es de COMPRAS (la rama «finanzas» se retiró con el módulo):
 /// nº compras + total USD + total Bs ponderado + asiento por tienda.
 /// Anexos trim/anual (tienda, top 6). Tres caminos NUNCA auto-print:
-/// PNG 1080×1350 (4:5) · Compartir · PDF.
+/// PNG 1080×1350 (4:5 real desde v31: 360×450 lógicos ×3) · Compartir · PDF.
 library;
 
 import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/fmt.dart';
 import '../../core/models.dart';
+import 'constancia_pdf.dart';
 import '../../core/theme.dart';
 import '../../core/version.dart';
 import '../../data/store.dart';
@@ -159,6 +158,8 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
   /// Genera el PNG de la constancia (v18.0): compone el documento
   /// OFF-STAGE (nunca depende del preview visible) y, si algo raro pasa,
   /// cae al boundary visible como último recurso.
+  /// v31: 360 px LÓGICOS (la convención única de rasterizado) → 1080 px
+  /// finales; el documento mide 450 de alto (4:5 → 1080×1350 real).
   Future<Uint8List?> _renderDocPng(
     DateTimeRange range,
     String label,
@@ -166,8 +167,10 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
   ) async {
     final off = await renderOffstagePng(
       context,
-      StatementDoc(label: label, scopeLabel: _scopeLabel, purchases: purchases),
-      width: 380,
+      constanciaPngCanvas(
+        StatementDoc(label: label, scopeLabel: _scopeLabel, purchases: purchases),
+      ),
+      width: 360,
     );
     if (off != null) return off;
     return captureWidget(_docKey, targetWidth: 1080);
@@ -175,6 +178,8 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
 
   /// Exportación UNIFICADA (v19.8): texto · PNG · PDF, cada uno con
   /// compartir o guardar — el mismo componente de toda la app.
+  /// v31: el PDF viaja por [pdfFormat] (MIME de documento, errores en
+  /// cristiano) igual que el PNG y el CSV.
   Future<void> _shareMenu(
     BuildContext context,
     AppStore store,
@@ -188,80 +193,26 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
         title: 'Constancia $_scopeLabel · $label',
         subtitle: 'Elige el formato; luego compartes o guardas',
         formats: [
-          ExportFormat(
-            icon: Icons.subject_rounded,
-            label: 'Texto',
+          textFormat(
             hint: 'Resumen legible para pegar donde quieras',
-            // v28 · TEXTO: se copia (o se guarda); jamás share nativo.
-            kind: ExportKind.texto,
-            run: (mode) async {
-              final t = _plainText(range, label, purchases);
-              if (mode == ExportMode.guardar) {
-                final path = await downloadText(
-                  t,
-                  fileName: 'constancia-valorave.txt',
-                );
-                return path == null
-                    ? 'No se pudo guardar.'
-                    : 'Guardado en: $path';
-              }
-              return copiarTexto(t, 'Texto copiado');
-            },
+            fileName: 'constancia-valorave.txt',
+            text: () => _plainText(range, label, purchases),
           ),
-          ExportFormat(
-            icon: Icons.image_outlined,
-            label: 'Imagen PNG',
-            hint: 'PNG de la constancia (1080 px) para redes o chat',
-            kind: ExportKind.archivo,
-            run: (mode) async {
-              final bytes = await _renderDocPng(range, label, purchases);
-              if (bytes == null) {
-                return 'No se pudo generar la imagen. Intenta de nuevo.';
-              }
-              if (mode == ExportMode.compartir) {
-                await sharePng(bytes, _pngName);
-                return null;
-              }
-              final path = await downloadBytes(bytes, fileName: _pngName);
-              return path == null
-                  ? 'No se pudo guardar la imagen.'
-                  : 'Guardado en: $path';
-            },
+          pngFormat(
+            hint: 'PNG de la constancia (1080×1350, 4:5) para redes o chat',
+            fileName: _pngName,
+            build: () => _renderDocPng(range, label, purchases),
           ),
-          ExportFormat(
-            icon: Icons.picture_as_pdf_outlined,
-            label: 'PDF',
-            hint: 'PDF con la tabla del período',
-            kind: ExportKind.archivo,
-            run: (mode) async {
-              final bytes = await _buildPdf(
-                store,
-                range,
-                label,
-                purchases,
-              ).save();
-              final file = Uint8List.fromList(bytes);
-              if (mode == ExportMode.compartir) {
-                await SharePlus.instance.share(
-                  ShareParams(
-                    files: [
-                      XFile.fromData(
-                        file,
-                        name: 'constancia-valorave.pdf',
-                        mimeType: 'application/pdf',
-                      ),
-                    ],
-                  ),
-                );
-                return null;
+          pdfFormat(
+            hint: 'Documento A4 con encabezado, tabla y numeración de página',
+            fileName: 'constancia-valorave.pdf',
+            build: () async {
+              try {
+                final doc = await _buildPdf(store, range, label, purchases);
+                return await doc.save();
+              } catch (_) {
+                return null; // un fallo de generación jamás tumba la app
               }
-              final path = await downloadBytes(
-                file,
-                fileName: 'constancia-valorave.pdf',
-              );
-              return path == null
-                  ? 'No se pudo guardar el PDF.'
-                  : 'Guardado en: $path';
             },
           ),
         ],
@@ -294,221 +245,33 @@ class _StatementScreenState extends ConsumerState<StatementScreen> {
     String label,
     List<Purchase> purchases,
   ) async {
-    final doc = _buildPdf(store, range, label, purchases);
-    await Printing.layoutPdf(onLayout: (_) async => await doc.save());
+    // v31: la impresión también se protege — un fallo de fuentes o de
+    // motor no puede tumbar la hoja; el usuario recibe un aviso humano.
+    try {
+      final doc = await _buildPdf(store, range, label, purchases);
+      await Printing.layoutPdf(onLayout: (_) async => await doc.save());
+    } catch (_) {
+      if (context.mounted) {
+        showToast(context, 'No pude preparar el PDF. Intenta de nuevo.');
+      }
+    }
   }
 
-  /// PDF de calidad (v17.2): encabezado de marca, cajas de totales con color,
-  /// tabla de desglose por tienda y pie honesto. Antes era un
-  /// puñado de líneas de texto sin identidad.
-  pw.Document _buildPdf(
+  /// PDF de calidad (v17.2 · v31): delega en [buildConstanciaPdf] —
+  /// ver constancia_pdf.dart (encabezado y pie en TODAS las páginas,
+  /// fuentes de la app, márgenes uniformes de 44 pt, tabla con cabecera
+  /// repetida y numeración «Página n»).
+  Future<pw.Document> _buildPdf(
     AppStore store,
     DateTimeRange range,
     String label,
     List<Purchase> purchases,
-  ) {
-    final doc = pw.Document();
-
-    final rows = _pdfStoreRows(purchases);
-    const breakdownTitle = 'Gastos por tienda';
-
-    doc.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.fromLTRB(36, 40, 36, 36),
-        build: (ctx) => [
-          // Encabezado de marca.
-          pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.Container(
-                width: 34,
-                height: 34,
-                decoration: pw.BoxDecoration(
-                  color: PdfColor.fromInt(0xFF22354E),
-                  borderRadius: pw.BorderRadius.all(pw.Radius.circular(9)),
-                ),
-                alignment: pw.Alignment.center,
-                child: pw.Text(
-                  'V',
-                  style: pw.TextStyle(
-                    fontSize: 17,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.white,
-                  ),
-                ),
-              ),
-              pw.SizedBox(width: 10),
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text(
-                    'ValoraVE',
-                    style: pw.TextStyle(
-                      fontSize: 17,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColor.fromInt(0xFF22354E),
-                    ),
-                  ),
-                  pw.Text(
-                    'Constancia de compras · $label',
-                    style: const pw.TextStyle(
-                      fontSize: 11,
-                      color: PdfColors.grey700,
-                    ),
-                  ),
-                ],
-              ),
-              pw.Spacer(),
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey400),
-                  borderRadius: pw.BorderRadius.circular(999),
-                ),
-                child: pw.Text(
-                  _scopeLabel.toUpperCase(),
-                  style: const pw.TextStyle(
-                    fontSize: 11,
-                    color: PdfColors.grey700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 14),
-          pw.Divider(color: PdfColors.grey400),
-          pw.SizedBox(height: 10),
-          // Totales en cajas con color.
-          pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-            children: [
-              _pdfTotalBox('Compras', '${purchases.length}', 0xFF22354E),
-              pw.SizedBox(width: 10),
-              _pdfTotalBox(
-                'Total USD',
-                fmtUSD(purchases.fold<double>(0, (a, p) => a + p.totalUSD)),
-                0xFF22354E,
-              ),
-              pw.SizedBox(width: 10),
-              _pdfTotalBox(
-                'Total Bs',
-                '${fmtNum(purchases.fold<double>(0, (a, p) => a + p.totalBS))} Bs',
-                0xFF10755A,
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 18),
-          // Desglose.
-          pw.Text(
-            breakdownTitle,
-            style: pw.TextStyle(
-              fontSize: 13.5,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColor.fromInt(0xFF22354E),
-            ),
-          ),
-          pw.SizedBox(height: 6),
-          if (rows.isEmpty)
-            pw.Text(
-              'Sin compras en este período.',
-              style: const pw.TextStyle(
-                fontSize: 11,
-                color: PdfColors.grey600,
-                fontStyle: pw.FontStyle.italic,
-              ),
-            )
-          else
-            pw.TableHelper.fromTextArray(
-              headers: const ['Concepto', 'Monto'],
-              data: rows,
-              headerStyle: pw.TextStyle(
-                fontSize: 11,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.white,
-              ),
-              headerDecoration: pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFF22354E),
-              ),
-              cellStyle: const pw.TextStyle(fontSize: 11),
-              cellAlignment: pw.Alignment.centerLeft,
-              columnWidths: const {
-                0: pw.FlexColumnWidth(3),
-                1: pw.FlexColumnWidth(1.4),
-              },
-              oddRowDecoration: pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFFF4F6FB),
-              ),
-            ),
-          pw.SizedBox(height: 22),
-          pw.Divider(color: PdfColors.grey400),
-          pw.SizedBox(height: 6),
-          pw.Text(
-            'Generado ${fmtDateTime(DateTime.now())} · ValoraVE $kAppVersionVisible',
-            style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
-          ),
-        ],
-      ),
-    );
-    return doc;
-  }
-
-  List<List<String>> _pdfStoreRows(List<Purchase> purchases) {
-    final byStore = <String, double>{};
-    for (final p in purchases) {
-      final s = p.store ?? 'Sin tienda';
-      byStore[s] = (byStore[s] ?? 0) + p.totalUSD;
-    }
-    final sorted = byStore.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    return [
-      for (final e in sorted) [e.key, fmtUSD(e.value)],
-    ];
-  }
-
-  pw.Widget _pdfTotalBox(String label, String value, int color) {
-    final c = PdfColor.fromInt(color);
-    // Tinte suave del color de firma (92% hacia blanco).
-    final tint = PdfColor(
-      1 - (1 - c.red) * 0.08,
-      1 - (1 - c.green) * 0.08,
-      1 - (1 - c.blue) * 0.08,
-    );
-    return pw.Expanded(
-      child: pw.Container(
-        padding: const pw.EdgeInsets.all(10),
-        decoration: pw.BoxDecoration(
-          color: tint,
-          borderRadius: pw.BorderRadius.circular(8),
-        ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              label.toUpperCase(),
-              style: pw.TextStyle(
-                fontSize: 11,
-                fontWeight: pw.FontWeight.bold,
-                color: c,
-              ),
-            ),
-            pw.SizedBox(height: 3),
-            pw.Text(
-              value,
-              style: pw.TextStyle(
-                fontSize: 13.5,
-                fontWeight: pw.FontWeight.bold,
-                color: c,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  ) =>
+      buildConstanciaPdf(
+        scopeLabel: _scopeLabel,
+        label: label,
+        purchases: purchases,
+      );
 }
 
 /// ─── Documento de la constancia (v18.0: público y reutilizable) ───────────
@@ -540,6 +303,10 @@ class StatementDoc extends ConsumerWidget {
       ..sort((a, b) => b.value.compareTo(a.value));
 
     return Container(
+      // v31: el documento es RESPONSIVO (se apila en pantalla, se reparte
+      // en el lienzo fijo 360×450 del PNG). El 4:5 exacto lo pone el
+      // lienzo [constanciaPngCanvas], no la tarjeta: Spacer/minHeight
+      // rompían en contenedores de altura no acotada (ListView/Overlay).
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -547,8 +314,13 @@ class StatementDoc extends ConsumerWidget {
         border: Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Grupo 1: cabecera + asientos (se apilan natural).
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           Row(
             children: [
               Container(
@@ -629,6 +401,8 @@ class StatementDoc extends ConsumerWidget {
                 color: Colors.black87,
               ),
           ],
+            ],
+          ),
           const SizedBox(height: 16),
           // black54: black38 daba contraste ≈2.7:1 sobre papel — ilegible
           // en el PNG compartido (piso WCAG para texto pequeño: 4.5:1).
@@ -641,6 +415,13 @@ class StatementDoc extends ConsumerWidget {
     );
   }
 }
+
+/// Lienzo del PNG de la constancia (v31): 360×450 lógicos → 1080×1350
+/// físicos (4:5 EXACTO) con la convención única de rasterizado. El MISMO
+/// [StatementDoc] sirve de preview en pantalla (responsivo) y de fuente
+/// del PNG (repartido en el lienzo): una sola definición.
+Widget constanciaPngCanvas(StatementDoc doc) =>
+    SizedBox(width: 360, height: 450, child: doc);
 
 /// Fila asiento del documento (rótulo · línea punteada · cifra).
 class StatementRow extends ConsumerWidget {

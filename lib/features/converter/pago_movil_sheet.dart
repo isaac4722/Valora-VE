@@ -1,8 +1,17 @@
 /// ─── Hoja de Pago Móvil (v23 · comparativa CalculaYa 1.1.0) ─────────────────
-/// «Compartir Pago Móvil» desde el Conversor cuando el destino es VES: la
-/// hoja arma el mensaje de cobro con el monto en bolívares y la cuenta
-/// elegida. Sin cuentas: invita a configurarlas (Ajustes → Cuentas). Dato
-/// sensible: el aviso de la hoja lo dice claro antes de compartir.
+/// «Pago Móvil» desde el Conversor cuando el par toca VES (v29 · H-29: con
+/// el bolívar de destino cobra el RESULTADO; con el de origen, el MONTO
+/// escrito): la hoja arma el mensaje de cobro con el monto en bolívares y
+/// la cuenta elegida. v30 (H-43): solo cobra con cuentas en Bs
+/// (`cobraEnBs`) — el Zelle, en dólares, no entra a esta hoja. Sin
+/// cuentas: invita a configurarlas (Ajustes → Cuentas). Dato sensible:
+/// el aviso de la hoja lo dice claro antes de compartir.
+///
+/// v29 (H-29 · regla global del dueño): DOS acciones — Compartir = IMAGEN
+/// (tarjeta de marca PagoMovilShareCard 1080×1080 rasterizada offstage,
+/// sin texto adjunto) y Copiar = TEXTO (portapapeles + aviso). Con el modo
+/// «Mañana» del Conversor, el cobro viaja fechado («Fecha: DD/MM
+/// (mañana)»).
 library;
 
 import 'package:flutter/material.dart';
@@ -11,6 +20,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
+import '../../services/sharing.dart' show sharePng;
+import '../../widgets/share_card.dart' show renderPagoMovilSharePng;
 import '../../widgets/ui.dart';
 import '../../widgets/bank_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,43 +29,66 @@ import 'package:valorave/providers/providers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Mensaje de cobro por Pago Móvil: monto es-VE + datos de la cuenta.
+/// v30 (H-43): las líneas del TIPO salen de `dataLines` — la única
+/// fuente de verdad (fila · copia · mensaje · tarjeta comparten texto).
 /// Texto plano, sin marcas — lo pega cualquier chat.
-String pagoMovilMessage(double montoBs, PayAccount a) {
-  final buf = StringBuffer('Pago Móvil · Bs ${fmtNum(montoBs, decimals: 2)}');
-  if (a.holderName.trim().isNotEmpty) {
-    buf.write('\nTitular: ${a.holderName.trim()}');
+/// v28/v29: símbolo SIEMPRE tras el número («Pago Móvil · 1.234,50 Bs»).
+/// v29: con [para] (modo «Mañana»), el cobro viaja fechado.
+String pagoMovilMessage(double montoBs, PayAccount a, {DateTime? para}) {
+  final buf = StringBuffer(
+    'Pago Móvil · ${fmtNum(montoBs, decimals: 2)} Bs',
+  );
+  if (para != null) {
+    buf.write(
+      '\nFecha: ${para.day.toString().padLeft(2, '0')}/'
+      '${para.month.toString().padLeft(2, '0')} (mañana)',
+    );
   }
-  buf.write('\nBanco: ${a.bank}');
-  buf.write('\nCuenta ${a.typeLabel.toLowerCase()}: ${a.number}');
-  if (a.docId.isNotEmpty) buf.write('\nCI: ${a.docId}');
-  if (a.phone.isNotEmpty) buf.write('\nTeléfono: ${a.phone}');
+  for (final (label, value) in a.dataLines) {
+    buf.write('\n$label: $value');
+  }
   return buf.toString();
 }
 
 /// Abre la hoja de Pago Móvil con [montoBs] ya convertido.
+/// [para] (v29 · «Mañana»): fecha el cobro para el día siguiente.
 Future<void> showPagoMovilSheet(
   BuildContext context, {
   required WidgetRef ref,
   required double montoBs,
+  DateTime? para,
 }) async {
   final store = ref.read(appStoreProvider);
-  final accounts = store.data.accounts;
+  // v30 (H-43): la hoja cobra en BOLÍVARES — solo cuentas `cobraEnBs`
+  // (pago móvil y transferencia). El Zelle (USD) no arma cobros aquí.
+  final accounts = store.data.accounts.where((a) => a.cobraEnBs).toList();
 
   // v23.3 (pez 2-a P0-1): chrome del kit (showVeSheet — radio 14, asa,
-  // cabecera 48 + ✕). Antes un modal crudo de radio 20 con título propio
-  // dentro del cuerpo y sin pie del sistema.
+  // cabecera 48 + ✕). v29 (H-29): título «Pago Móvil» a secas — el
+  // verbo vive en los dos botones de la regla global.
   await showVeSheet<void>(
     context: context,
-    title: 'Compartir Pago Móvil',
-    builder: (ctx) => _PagoMovilSheet(montoBs: montoBs, accounts: accounts),
+    title: 'Pago Móvil',
+    builder: (ctx) => _PagoMovilSheet(
+      montoBs: montoBs,
+      accounts: accounts,
+      para: para,
+    ),
   );
 }
 
 class _PagoMovilSheet extends ConsumerStatefulWidget {
-  const _PagoMovilSheet({required this.montoBs, required this.accounts});
+  const _PagoMovilSheet({
+    required this.montoBs,
+    required this.accounts,
+    this.para,
+  });
 
   final double montoBs;
   final List<PayAccount> accounts;
+
+  /// Cobro planificado con la tasa de hoy (v29 · H-22 «Mañana»).
+  final DateTime? para;
 
   @override
   ConsumerState<_PagoMovilSheet> createState() => _PagoMovilSheetState();
@@ -94,8 +128,8 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Guarda tu banco, número, cédula y teléfono una vez; después '
-              'el Conversor arma el cobro por ti.',
+              'Guarda tu pago móvil o tu transferencia una vez; después el '
+              'Conversor arma el cobro por ti.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13.5,
@@ -118,7 +152,7 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
     }
 
     final account = widget.accounts[_sel.clamp(0, widget.accounts.length - 1)];
-    final msg = pagoMovilMessage(widget.montoBs, account);
+    final msg = pagoMovilMessage(widget.montoBs, account, para: widget.para);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -126,12 +160,11 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // v23.3: el título vive en la cabecera del chrome (antes se
-          // repetía dentro del cuerpo con estilo propio de 16 w700).
           // El monto manda: cifra grande tabular en ReadWindow del sistema.
+          // v29: el modo «Mañana» dice su intención al lado del cobro.
           ReadWindow(
             child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-              'Bs ${fmtNum(widget.montoBs, decimals: 2)}',
+              '${fmtNum(widget.montoBs, decimals: 2)} Bs',
               maxLines: 1,
               style: VeText.displayNum(
                 30,
@@ -140,6 +173,17 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
               ),
             )),
           ),
+          if (widget.para != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Cobro planificado con la tasa de hoy',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           if (widget.accounts.length > 1)
             Padding(
@@ -197,21 +241,75 @@ class _PagoMovilSheetState extends ConsumerState<_PagoMovilSheet> {
             ],
           ),
           const SizedBox(height: 12),
-          // v28 · regla del dueño: el texto se COPIA (Compartir es solo para
-          // imágenes) — un solo botón primario a todo lo ancho.
-          VeBtn(
-            variant: VeBtnVariant.primary,
-            icon: LucideIcons.copy,
-            expands: true,
-            onPressed: () => copiarAlPortapapeles(
-              context,
-              msg,
-              'Mensaje de cobro copiado',
-            ),
-            child: const Text('Copiar mensaje'),
+          // v29 (H-29 · regla global): Compartir = IMAGEN de marca;
+          // Copiar = TEXTO. Ambas a todo lo ancho, como mandan los pies.
+          Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  label: 'Compartir tarjeta de cobro',
+                  child: VeBtn(
+                    size: VeBtnSize.lg,
+                    variant: VeBtnVariant.primary,
+                    icon: LucideIcons.share2,
+                    expands: true,
+                    onPressed: () => _compartirTarjeta(account),
+                    child: const Text('Compartir'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Semantics(
+                  label: 'Copiar mensaje de cobro',
+                  child: VeBtn(
+                    size: VeBtnSize.lg,
+                    variant: VeBtnVariant.secondary,
+                    icon: LucideIcons.copy,
+                    expands: true,
+                    onPressed: () => copiarAlPortapapeles(
+                      context,
+                      msg,
+                      'Mensaje de cobro copiado',
+                    ),
+                    child: const Text('Copiar'),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  /// Compartir = SOLO la imagen (v28/v29): la tarjeta de marca 1080×1080
+  /// se rasteriza offstage y viaja por el share nativo sin texto adjunto.
+  Future<void> _compartirTarjeta(PayAccount account) async {
+    final png = await renderPagoMovilSharePng(
+      context,
+      montoBs: widget.montoBs,
+      account: account,
+      para: widget.para,
+    );
+    if (png == null) {
+      if (mounted) {
+        showToast(context, 'No pude generar la tarjeta', kind: ToastKind.warn);
+      }
+      return;
+    }
+    try {
+      await sharePng(png, 'pago-movil-valorave.png');
+    } catch (_) {
+      // El share nativo falla (escritorio/pruebas): el cobro no se pierde —
+      // el mensaje queda en el portapapeles como plan B honesto.
+      if (mounted) {
+        copiarAlPortapapeles(
+          context,
+          pagoMovilMessage(widget.montoBs, account, para: widget.para),
+          'No se pudo compartir; mensaje copiado',
+        );
+      }
+    }
   }
 }

@@ -8,13 +8,15 @@ import 'package:valorave/core/models.dart';
 import 'package:valorave/data/store.dart';
 
 void main() {
-  group('Precisión decimal (REA CalculaYa)', () {
-    test('default 2 · setPrecision clamp 2..4 · persiste en JSON', () {
+  group('Precisión decimal (REA CalculaYa · v29 escala única)', () {
+    test('default 4 · setPrecision clamp 2..6 · persiste en JSON', () {
       const s = Settings(onboarded: true);
       expect(s.precision, 4);
       expect(s.copyWith(precision: 4).toJson()['precision'], 4);
+      // v29 (H-26 · R-29a): el clamp vive también en fromJson — «Completo»
+      // (6) jamás rebota a 4.
       final parsed = Settings.fromJson({'precision': 9});
-      expect(parsed.precision, 4);
+      expect(parsed.precision, 6);
       expect(Settings.fromJson(const {}).precision, 4);
     });
 
@@ -24,6 +26,11 @@ void main() {
       expect(store.settings.precision, 3);
       store.setPrecision(1);
       expect(store.settings.precision, 2);
+      // v29: «Completo» = 6, tope del clamp.
+      store.setPrecision(6);
+      expect(store.settings.precision, 6);
+      store.setPrecision(9);
+      expect(store.settings.precision, 6);
     });
   });
 
@@ -31,9 +38,11 @@ void main() {
     test('alias y cuenta principal viajan en el JSON', () {
       const a = PayAccount(
         id: 'a1',
+        kind: PayAccountKind.transferencia,
         bank: 'Banesco',
         type: 'ahorro',
         number: '0134',
+        docId: 'V12345678',
         label: 'Principal',
         holderName: 'María Pérez',
         isDefault: true,
@@ -53,17 +62,21 @@ void main() {
         store.addAccount(
           const PayAccount(
             id: 'a',
+            kind: PayAccountKind.transferencia,
             bank: 'Banesco',
             type: 'corriente',
             number: '1',
+            docId: 'V12345678',
           ),
         );
         store.addAccount(
           const PayAccount(
             id: 'b',
+            kind: PayAccountKind.transferencia,
             bank: 'Mercantil',
             type: 'ahorro',
             number: '2',
+            docId: 'V12345678',
           ),
         );
         expect(store.defaultAccount?.id, 'a');
@@ -78,17 +91,21 @@ void main() {
       store.addAccount(
         const PayAccount(
           id: 'a',
+          kind: PayAccountKind.transferencia,
           bank: 'Banesco',
           type: 'corriente',
           number: '1',
+          docId: 'V12345678',
         ),
       );
       store.addAccount(
         const PayAccount(
           id: 'b',
+          kind: PayAccountKind.transferencia,
           bank: 'Mercantil',
           type: 'ahorro',
           number: '2',
+          docId: 'V12345678',
         ),
       );
       store.removeAccount('a');

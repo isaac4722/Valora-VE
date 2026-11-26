@@ -2,15 +2,16 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y salas con su propia tecnología. Offline-first."
 publish_to: 'none'
 
-# 1.17.0-beta+53 · v28 — «reglas globales del dueño»: sistema tipográfico de
-# 4 tamaños (11/13.5/17/30) en TODA la app, cero recortes «…» (FittedBox),
-# símbolo SIEMPRE después del número («915,38 Bs»), Compartir solo para
-# imágenes (el texto se COPIA), iconos centrados y del tamaño de su letra,
-# botones delineados identificables, cero sobrecapas (popup/coach marks fuera),
-# Inicio como equivalencia «1 USD = X Bs» (una moneda, sin gráfica ni
-# paralelo) y Tasas en secciones USD/EUR con título, descripción, detalles y
-# acción — separadas por espacio en blanco, sin cajas dentro de cajas.
-version: 1.17.0-beta+53
+# 1.18.0-beta+54 · v29–v31 — reconstrucción íntegra del trabajo perdido
+# (v29 Parte 3 Conversor + Parte 4 Lista; v30 Parte 5 Análisis/Más/
+# Ajustes con cuentas por tipo de cobro) + revisión integral v31: sistema
+# de exportación PDF/imágenes profesional (fuentes de marca en el PDF,
+# encabezado/pie con numeración en TODAS las páginas, márgenes uniformes
+# 44 pt, convención única de rasterizado 360 lógico ×3 → 1080 px,
+# constancia 4:5 exacto 1080×1350, tarjetas de marca a escala de teléfono,
+# manejo de errores en cristiano) y builds SOLO APK (el AAB se retiró del
+# CI: 1 universal + arm64/v7a/x86_64).
+version: 1.18.0-beta+54
 
 environment:
   sdk: ^3.9.2

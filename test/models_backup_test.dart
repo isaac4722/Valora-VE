@@ -269,7 +269,6 @@ void main() {
           rate: 40,
         ),
       ],
-      templates: const [],
       stores: const ['Tienda A', 'Común'],
       cart: [
         const CartItem(
@@ -359,12 +358,18 @@ void main() {
     });
 
     test('importBackup replace: conserva tablero vivo y sanea rateSource', () {
+      // v29 (H-35): respaldo VIEJO con la clave «templates» (con contenido
+      // real) — se IGNORA sin romper: el modelo ya no la lee ni la escribe.
       final raw =
           '{"version":12,"data":{"products":[],"transactions":[],"cart":[],'
-          '"purchases":[],"budget":{},"basket":[],"stores":[],"templates":[],'
+          '"purchases":[],"budget":{},"basket":[],"stores":[],'
+          '"templates":[{"id":"t1","name":"Mercado","items":[],'
+          '"createdAt":"2025-01-01T10:00:00.000"}],'
           '"rateSource":{"VES":"basura","COP":"cop-trm"},"settings":{}}}';
       final r = importBackup(local, raw, merge: false);
       expect(r.ok, isTrue);
+      // La clave retirada no aparece en los conteos.
+      expect(r.counts!.containsKey('templates'), isFalse);
       // replace no ejecuta la fusión aquí: el caller hace replaceAll —
       // comprobamos el saneo vía export→import round-trip en merge.
       expect(r.counts, isNotNull);
@@ -381,8 +386,20 @@ void main() {
           CustomRate(id: 'cr2', name: 'Efectivo', bsPerUsd: 90),
         ],
         accounts: const [
-          PayAccount(id: 'a1', bank: 'BDV', type: 'corriente', number: '0134…'),
-          PayAccount(id: 'a2', bank: 'Mercantil', type: 'ahorro', number: '0105…'),
+          PayAccount(
+            id: 'a1',
+            kind: PayAccountKind.transferencia,
+            bank: 'BDV',
+            type: 'corriente',
+            number: '0134…',
+          ),
+          PayAccount(
+            id: 'a2',
+            kind: PayAccountKind.pagoMovil,
+            bank: 'Mercantil',
+            docId: 'V12345678',
+            phone: '04141234567',
+          ),
         ],
       );
       final raw = exportBackupJson(data);

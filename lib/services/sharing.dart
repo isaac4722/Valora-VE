@@ -1,6 +1,11 @@
 /// ─── Compartir: textos, enlaces de lista, PNG (share_plus) ─────────────────
-/// El PNG 1080×1080 del conversor y 1080×1350 de constancias se dibuja en
-/// canvas Flutter (ui.Image → PNG bytes) — aquí están los helpers comunes.
+/// CONVENCIÓN ÚNICA DE RASTERIZADO (v31): TODOS los documentos compartibles
+/// (tarjetas de marca y constancias) se componen a **360 px LÓGICOS** de
+/// ancho — el «papel de teléfono» para el que está diseñada la app, con su
+/// sistema tipográfico real (11 · 13,5 · 17 · 30) — y se rasterizan a
+/// **pixelRatio 3 → 1080 px físicos**. Una sola escala para todos los
+/// artefactos: la tipografía de cualquier imagen compartida tiene la misma
+/// proporción y ninguna tarjeta sale con texto diminuto.
 /// v18.0: renderOffstagePng compone documentos FUERA DE PANTALLA (causa
 /// raíz de «No se puede generar»: capturar el boundary visible de una
 /// tarjeta que el scroll ya recicló/destruyó devuelve null).
@@ -45,27 +50,30 @@ void copyTotalsText(
   copiarAlPortapapeles(context, lines.join('\n'), 'Lista copiada');
 }
 
+/// Busca el RenderRepaintBoundary SUBIENDO por el árbol (v19.4): el key
+/// puede vivir sobre un widget compuesto cuyo render directo no es un
+/// boundary — el cast ciego anterior reventaba y el catch lo tragaba
+/// («No pude generar la tarjeta» SIEMPRE). Nunca lanza; null si no hay
+/// boundary saludable (desmontado o sin tamaño).
+RenderRepaintBoundary? _findBoundary(RenderObject? node) {
+  while (node != null && node is! RenderRepaintBoundary) {
+    final parent = node.parent;
+    node = parent is RenderObject ? parent : null;
+  }
+  if (node is RenderRepaintBoundary && node.attached && node.hasSize) {
+    return node;
+  }
+  return null;
+}
+
 /// Captura un widget (RepaintBoundary) a PNG bytes 1080 px de ancho.
-/// Endurecido (v18.0): boundary muerto/desmontado/sin tamaño → null limpio
-/// en vez de excepción; el llamante decide el mensaje humano.
-/// Endurecido (v19.4): el render del key puede NO ser el RepaintBoundary
-/// (key sobre un widget compuesto) — se SUBE hasta el boundary que lo
-/// envuelve. El cast ciego anterior reventaba y el catch lo tragaba:
-/// «No pude generar la tarjeta» SIEMPRE (bug de la tarjeta del conversor).
 Future<Uint8List?> captureWidget(
   GlobalKey key, {
   int targetWidth = 1080,
 }) async {
   try {
-    RenderObject? node = key.currentContext?.findRenderObject();
-    while (node != null && node is! RenderRepaintBoundary) {
-      final parent = node.parent;
-      node = parent is RenderObject ? parent : null;
-    }
-    final boundary = node is RenderRepaintBoundary ? node : null;
-    if (boundary == null || !boundary.attached || !boundary.hasSize) {
-      return null;
-    }
+    final boundary = _findBoundary(key.currentContext?.findRenderObject());
+    if (boundary == null) return null;
     final image = await boundary.toImage(pixelRatio: 3);
     return await _resizeToWidth(image, targetWidth);
   } catch (_) {
@@ -111,7 +119,8 @@ Future<Uint8List?> renderOffstagePng(
   OverlayEntry? entry;
   final key = GlobalKey();
   try {
-    final overlay = Overlay.of(context, rootOverlay: true);
+    final overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay == null) return null;
     entry = OverlayEntry(
       builder: (_) => Positioned(
         left: -4000,
@@ -124,14 +133,15 @@ Future<Uint8List?> renderOffstagePng(
       ),
     );
     overlay.insert(entry);
-    // Dos frames: montaje+layout y settle de pintura/fuentes.
-    await WidgetsBinding.instance.endOfFrame;
-    await WidgetsBinding.instance.endOfFrame;
-    final boundary =
-        key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    if (boundary == null || !boundary.attached || !boundary.hasSize) {
-      return null;
+    // Frames acotados (v31): montaje+layout, settle de pintura/fuentes y
+    // uno de margen. En cuanto el boundary tiene tamaño, se avanza.
+    for (var i = 0; i < 3; i++) {
+      await WidgetsBinding.instance.endOfFrame;
+      final node = key.currentContext?.findRenderObject();
+      if (node is RenderBox && node.attached && node.hasSize) break;
     }
+    final boundary = _findBoundary(key.currentContext?.findRenderObject());
+    if (boundary == null) return null;
     final image = await boundary.toImage(pixelRatio: 3);
     return await _resizeToWidth(image, targetWidth);
   } catch (_) {
@@ -139,6 +149,17 @@ Future<Uint8List?> renderOffstagePng(
   } finally {
     entry?.remove();
   }
+}
+
+/// Comparte PDF por WebShare nativo. Mismo trato que el PNG (v31): SOLO el
+/// archivo con su MIME correcto — el receptor abre un documento (no una
+/// imagen) y el menú jamás ofrece «enviar texto».
+Future<void> sharePdf(Uint8List bytes, String name) async {
+  await SharePlus.instance.share(
+    ShareParams(
+      files: [XFile.fromData(bytes, name: name, mimeType: 'application/pdf')],
+    ),
+  );
 }
 
 /// Comparte PNG por WebShare nativo de Android. SOLO el archivo viaja al

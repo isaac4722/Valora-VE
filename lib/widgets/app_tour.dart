@@ -149,7 +149,7 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         body:
             'Inicio · Conversor · Lista · Análisis · Más. La campana '
             'guarda tus avisos, la lupa abre la búsqueda y «Más» reúne '
-            'Productos, Historial, Tickets, Sala y Ajustes.',
+            'Productos, Tickets, Ajustes, Actualizaciones y Privacidad.',
       ),
     ],
   ),
@@ -162,9 +162,9 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         title: 'La tasa de otro día',
         anchor: TourKeys.convFecha,
         body:
-            '«Ayer» o «Elegir fecha» cargan la tasa REAL de ese día, '
-            'guardada en tu teléfono. «Volver a hoy» regresa al tablero '
-            'vivo.',
+            '«Ayer» o «Fecha» cargan la tasa REAL de ese día, guardada en tu '
+            'teléfono; «Mañana» planifica el cobro del día siguiente con la '
+            'tasa viva de hoy. «Hoy» regresa al tablero vivo.',
       ),
       TourStep(
         id: 'divisas.fuente',
@@ -224,18 +224,18 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         title: 'Brecha, inflación y gastos',
         anchor: TourKeys.anclas,
         body:
-            'Cada ancla abre su gráfica con datos reales: brecha '
-            'BCV↔paralelo, inflación personal, productos, canasta y los '
-            'gastos de tus compras de Lista.',
+            'Cada sección abre su gráfica con datos reales: brecha '
+            'BCV↔paralelo, inflación personal, canasta y los gastos de tus '
+            'compras de Lista.',
       ),
       TourStep(
         id: 'analisis.rango',
         title: 'La ventana de tiempo',
         anchor: TourKeys.rango,
         body:
-            'Los chips cambian el rango de todas las gráficas. La '
-            'cobertura disponible siempre se anuncia: nunca prometemos más '
-            'de lo que hay.',
+            'La barra del rango cambia la ventana de todas las gráficas '
+            '(no existe en Canasta). La cobertura disponible siempre se '
+            'anuncia: nunca prometemos más de lo que hay.',
       ),
     ],
   ),
@@ -248,9 +248,9 @@ final List<TourSegment> kTourSegments = <TourSegment>[
         title: 'General: país, precisión y conexión',
         anchor: TourKeys.conexion,
         body:
-            'Aquí viven el país, los decimales que ves y el modo sin red: '
-            'si apagas las consultas, la app trabaja solo con tu libro local '
-            'y tus tasas manuales.',
+            'Ajustes es UNA pantalla: en «General» viven el país, los '
+            'decimales que ves y el modo sin red — si apagas las consultas, '
+            'la app trabaja solo con tu libro local y tus tasas manuales.',
       ),
       TourStep(
         id: 'ajustes.tutorial',

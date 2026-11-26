@@ -826,25 +826,42 @@ class VeSegment<T> {
 /// Control segmentado v25 «HOJA»: contenedor transparente y la pastilla
 /// activa — píldora de TINTA sólida — se DESLIZA entre segmentos
 /// (AnimatedAlign). Cero borde, cero sombra.
+///
+/// v29 (H-44 · bug de píldora): la fórmula anterior
+/// `Alignment(-1 + 2·(i+0.5)/n)` dejaba la píldora DESPLAZADA respecto de su
+/// casilla (alineaba el punto (x+1)/2 de la píldora con el mismo punto del
+/// contenedor; con píldora del ancho de UNA casilla eso no coincide con
+/// ninguna casilla salvo la central). La geometría correcta alinea el BORDE
+/// IZQUIERDO de la píldora con el borde izquierdo de su casilla:
+/// `Alignment(2i/(n−1) − 1, 0)` (n=1 → Alignment(0,0)).
 class VeSegmented<T> extends StatelessWidget {
   const VeSegmented({
     super.key,
     required this.value,
     required this.onChanged,
     required this.segments,
+    this.height = 32,
   });
 
   final T value;
   final ValueChanged<T> onChanged;
   final List<VeSegment<T>> segments;
 
+  /// Alto del control (v29 · H-22: los segmentos de FECHA del Conversor son
+  /// de 44 px; el resto de la app conserva 32).
+  final double height;
+
   @override
   Widget build(BuildContext context) {
     final scheme = context.ve.colorScheme;
     final int active = segments.indexWhere((s) => s.value == value);
+    // H-44: alineación de casilla exacta; n=1 → la píldora es el control.
+    final Alignment pillAlign = segments.length == 1
+        ? Alignment.center
+        : Alignment(2 * active / (segments.length - 1) - 1, 0);
 
     return Container(
-      height: 32,
+      height: height,
       padding: const EdgeInsets.all(2),
       child: LayoutBuilder(
         builder: (context, c) {
@@ -855,10 +872,7 @@ class VeSegmented<T> extends StatelessWidget {
                 AnimatedAlign(
                   duration: const Duration(milliseconds: 220),
                   curve: kEaseVe,
-                  alignment: Alignment(
-                    -1 + 2 * (active + 0.5) / segments.length,
-                    0,
-                  ),
+                  alignment: pillAlign,
                   child: Container(
                     width: w,
                     height: double.infinity,
@@ -882,17 +896,28 @@ class VeSegmented<T> extends StatelessWidget {
                           onChanged(segments[i].value);
                         },
                         child: Center(
-                          child: AnimatedDefaultTextStyle(
-                            duration: const Duration(milliseconds: 150),
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w500,
-                              color: i == active
-                                  ? scheme.background
-                                  : scheme.mutedForeground,
+                          child: Semantics(
+                            button: true,
+                            selected: i == active,
+                            label: segments[i].label,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: AnimatedDefaultTextStyle(
+                                duration: const Duration(milliseconds: 150),
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: i == active
+                                      ? scheme.background
+                                      : scheme.mutedForeground,
+                                ),
+                                child: Text(
+                                  segments[i].label,
+                                  maxLines: 1,
+                                ),
+                              ),
                             ),
-                            child: Text(segments[i].label),
                           ),
                         ),
                       ),
