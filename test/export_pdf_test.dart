@@ -20,7 +20,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pdf/widgets.dart' as pw;
 import 'package:valorave/core/currencies.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/features/statement/constancia_pdf.dart';

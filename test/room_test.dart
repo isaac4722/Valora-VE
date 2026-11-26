@@ -13,7 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:valorave/core/models.dart';
 import 'package:valorave/data/store.dart';
 import 'package:valorave/widgets/ui.dart'
-    show VeCard, VeInput;
+    show VeInput;
 import 'package:valorave/core/theme.dart';
 import 'package:valorave/features/room/pin_emoji.dart';
 import 'package:valorave/features/room/room_screen.dart';
