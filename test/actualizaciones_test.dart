@@ -18,6 +18,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:valorave/core/theme.dart';
+import 'package:valorave/core/version.dart' show kAppVersionVisible;
 import 'package:valorave/data/github_releases.dart';
 import 'package:valorave/features/actualizaciones/actualizaciones_screen.dart';
 import 'package:valorave/services/instalador_apk.dart';
@@ -198,7 +199,8 @@ void main() {
       await _pump(tester, cliente: falso);
       expect(find.text('Hay una actualización'), findsOneWidget);
       expect(find.textContaining('v1.14.3-beta+46'), findsOneWidget);
-      expect(find.text('ValoraVE 31'), findsOneWidget);
+      // v32: anclado a la constante — dejar de romper en cada subida de versión.
+      expect(find.text('ValoraVE $kAppVersionVisible'), findsOneWidget);
       expect(find.textContaining('revisa GitHub Releases'), findsOneWidget);
       // Las 4 filas de descarga (la primera, arm64, orden preferente).
       await _arrastrarHasta(

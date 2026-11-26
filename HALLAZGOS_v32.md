@@ -65,6 +65,11 @@ Goldfish→Elephant con la especificación como revisor); gate visual web
 
 - `flutter analyze`: 0 errores/avisos (solo infos de deprecación del SDK
   local 3.50, pre-existentes; CI usa 3.47.4).
+- **El gate de CI cazó un test**: `actualizaciones_test` esperaba la
+  versión vieja («ValoraVE 31») tras subir `kAppVersionVisible` a 32 — el
+  bump se hizo DESPUÉS del run local de la suite. CORREGIDO anclando la
+  expectativa a la constante (`ValoraVE $kAppVersionVisible`); jamás vuelve
+  a romper por subida de versión.
 - Suite completa: **380/380 verdes** tras actualizar 2 contratos de test
   (encabezados de Ajustes y etiqueta del widget).
 - Gate visual web 390×844 (capturas del ciclo): Inicio sin lupa y con
