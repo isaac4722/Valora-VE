@@ -80,6 +80,12 @@ rotar_progress() {
 }
 
 # ── CHANGELOG: bloques «^## versión», hot conserva los 3 más recientes ──────
+# Orden de los tres archivos: newest-first (el más nuevo ARRIBA).
+# v33: arreglo del script — antes insertaba los bloques entrantes DESPUÉS
+# del primer encabezado de WARM (partía la entrada) y al superar 10 movía
+# los primeros bloques (los MÁS NUEVOS) a COLD. Ahora: los entrantes van
+# ARRIBA del todo (tras el título) y a COLD bajan los ÚLTIMOS (los más
+# viejos, al final del archivo), también por arriba de la lista de COLD.
 rotar_changelog() {
   local hot="$WORK/CHANGELOG.md" warm="$WORK/CHANGELOG_WARM.md" cold="$WORK/CHANGELOG_COLD.md"
   local bloques=()
@@ -89,12 +95,18 @@ rotar_changelog() {
     echo "CHANGELOG: nada que rotar ($n versión(es) en hot)"
   else
     local desde="${bloques[3]}"   # primera línea del 4º bloque
-    # El bloque baja a WARM justo después de su cabecera (orden newest-first).
+    sed -n "${desde},\$p" "$hot" > "$WORK/.rot_bloque"
+    # exactamente una línea en blanco al final del bloque movido
+    printf '%s\n\n' "$(cat "$WORK/.rot_bloque")" > "$WORK/.rot_bloque"
+    # Insertar los bloques entrantes ANTES del primer encabezado de WARM
+    # (nuevos encima: newest-first); si no hay encabezados, al final.
     local cabecera_warm
     cabecera_warm="$(awk '/^## /{print NR; exit}' "$warm")"
-    sed -n "${desde},\$p" "$hot" > "$WORK/.rot_bloque"
     if [[ -n "${cabecera_warm:-}" ]]; then
-      sed -i "$((cabecera_warm))r $WORK/.rot_bloque" "$warm"
+      head -n "$((cabecera_warm - 1))" "$warm" > "$WORK/.rot_warm_new"
+      cat "$WORK/.rot_bloque" >> "$WORK/.rot_warm_new"
+      tail -n "+${cabecera_warm}" "$warm" >> "$WORK/.rot_warm_new"
+      mv "$WORK/.rot_warm_new" "$warm"
     else
       cat "$WORK/.rot_bloque" >> "$warm"
     fi
@@ -103,24 +115,28 @@ rotar_changelog() {
     echo "CHANGELOG: $(( n - 3 )) versión(es) bajaron a WARM"
   fi
 
-  # WARM > 10 bloques → los más viejos bajan al COLD (top de su lista).
+  # WARM > 10 bloques → los más VIEJOS (al FINAL del archivo) bajan al
+  # COLD, insertados por ARRIBA de su lista (newest-first).
   local wbloques=()
   while IFS= read -r l; do wbloques+=("${l%%:*}"); done < <(grep -n '^## ' "$warm" || true)
   local wn=${#wbloques[@]}
   if (( wn > 10 )); then
     local quitar=$(( wn - 10 ))
-    local primera="${wbloques[0]}"              # bloque más VIEJO (al inicio)
-    local ultima="${wbloques[$((quitar-1))]}"   # último bloque a mover
-    local hasta=$(( ultima - 1 ))
+    local primera="${wbloques[$((wn - quitar))]}"   # primer bloque a mover (de los viejos, el más nuevo)
+    sed -n "${primera},\$p" "$warm" > "$WORK/.rot_warm"
+    # exactamente una línea en blanco al final del bloque movido
+    printf '%s\n\n' "$(cat "$WORK/.rot_warm")" > "$WORK/.rot_warm"
     local cabecera_cold
     cabecera_cold="$(awk '/^## /{print NR; exit}' "$cold")"
-    sed -n "${primera},${hasta}p" "$warm" > "$WORK/.rot_warm"
     if [[ -n "${cabecera_cold:-}" ]]; then
-      sed -i "$((cabecera_cold))r $WORK/.rot_warm" "$cold"
+      head -n "$((cabecera_cold - 1))" "$cold" > "$WORK/.rot_cold_new"
+      cat "$WORK/.rot_warm" >> "$WORK/.rot_cold_new"
+      tail -n "+${cabecera_cold}" "$cold" >> "$WORK/.rot_cold_new"
+      mv "$WORK/.rot_cold_new" "$cold"
     else
       cat "$WORK/.rot_warm" >> "$cold"
     fi
-    sed -i "${primera},${hasta}d" "$warm"
+    sed -i "$((primera - 1)),\$d" "$warm"   # recorta (con su línea en blanco previa)
     rm -f "$WORK/.rot_warm"
     echo "CHANGELOG: $quitar versión(es) de WARM bajaron a COLD"
   fi
