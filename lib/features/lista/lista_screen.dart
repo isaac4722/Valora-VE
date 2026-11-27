@@ -237,7 +237,7 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
     if (item.name.trim().isEmpty || item.price <= 0) {
       showToast(
         context,
-        'Nombre y precio válido (> 0) requeridos',
+        'Nombre y precio válidos (> 0) requeridos',
         kind: ToastKind.warn,
       );
       return;
@@ -314,7 +314,7 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
     if (name.isEmpty || price <= 0) {
       showToast(
         context,
-        'Escribe nombre y precio válido',
+        'Escribe nombre y precio válidos',
         kind: ToastKind.warn,
       );
       return;
@@ -871,7 +871,7 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
     if (edited.name.trim().isEmpty || edited.price <= 0) {
       showToast(
         context,
-        'Nombre y precio válido (> 0) requeridos',
+        'Nombre y precio válidos (> 0) requeridos',
         kind: ToastKind.warn,
       );
       return;

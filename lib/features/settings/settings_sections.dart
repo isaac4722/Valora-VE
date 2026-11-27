@@ -408,7 +408,7 @@ class _CustomRates extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Zelle, Efectivo, Binance… Aparece en Tasas con su brecha frente al BCV.',
+              'Zelle, Efectivo, Binance… Aparecen en Tasas con sus brechas frente al BCV.',
               style: TextStyle(
                 fontSize: 13.5,
                 color: Theme.of(ctx).colorScheme.onSurfaceVariant,

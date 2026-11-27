@@ -371,7 +371,7 @@ List<List<String>> gapCsvRows(List<HistPoint> bcv, List<HistPoint> parallel) {
     }
   }
   final rows = <List<String>>[
-    ['Dia', 'BCV', 'Paralelo', 'Brecha %'],
+    ['Día', 'BCV', 'Paralelo', 'Brecha %'],
   ];
   final days =
       byDay.entries.where((e) => e.value.b > 0 && e.value.p > 0).toList()

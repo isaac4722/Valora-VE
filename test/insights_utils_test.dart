@@ -183,7 +183,7 @@ void main() {
         ],
       );
       expect(rows.length, 2); // encabezado + 01
-      expect(rows[0], ['Dia', 'BCV', 'Paralelo', 'Brecha %']);
+      expect(rows[0], ['Día', 'BCV', 'Paralelo', 'Brecha %']);
       expect(rows[1][0], '2026-09-01');
       expect(rows[1][1], '40.0000');
       expect(rows[1][2], '45.0000');
@@ -195,7 +195,7 @@ void main() {
         const HistPoint(date: '2026-09-01', rate: 45),
       ]);
       expect(rows.length, 1);
-      expect(rows.first.first, 'Dia');
+      expect(rows.first.first, 'Día');
     });
   });
 }

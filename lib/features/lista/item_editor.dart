@@ -277,7 +277,7 @@ class _ItemEditorState extends State<_ItemEditor> {
     if (name.isEmpty || _price <= 0) {
       showToast(
         context,
-        'Escribe nombre y precio válido (> 0)',
+        'Escribe nombre y precio válidos (> 0)',
         kind: ToastKind.warn,
       );
       return;

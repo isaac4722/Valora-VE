@@ -2084,7 +2084,7 @@ class RateHealthBanner extends StatelessWidget {
             child: Text(
               netDown
                   ? 'Sin conexión — tasas guardadas a la vista'
-                  : 'Las tasas no se actualizan hace más de 15 min',
+                  : 'Las tasas no se actualizan desde hace más de 15 min',
               style: TextStyle(
                 fontSize: 13.5,
                 color: netDown ? sem.manual : sem.warn,

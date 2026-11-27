@@ -18,8 +18,9 @@ paso "3/3 · flutter test (suite completa)"
 flutter test
 
 paso "Auditoría de prohibiciones del contrato en lib/"
-# R5 del AGENT.md: nada de AppStateScope, patrones web prohibidos ni mocks
-# en lib/ (los fakes viven en test/, detrás de seams — ver docs/agent/TESTING.md).
+# Contrato AGENT.md (Límites de Tres Niveles): nada de AppStateScope,
+# patrones web prohibidos ni mocks en lib/ (los fakes viven en test/,
+# detrás de seams).
 if grep -rnE 'AppStateScope|ServiceWorker|localStorage' lib/; then
   echo "VIOLACIÓN: patrones web prohibidos en lib/"; exit 1
 fi

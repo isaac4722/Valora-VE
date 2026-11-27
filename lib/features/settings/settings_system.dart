@@ -96,9 +96,9 @@ class _Respaldo extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        // ── Zona peligro (v32: tinta negativa sobre el papel, sin caja).
+        // ── Zona de peligro (v32: tinta negativa sobre el papel, sin caja).
         Text(
-          'Zona peligro',
+          'Zona de peligro',
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w800,

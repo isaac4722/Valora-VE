@@ -1827,7 +1827,7 @@ const List<CatalogSeed> kCatalogVE = [
     sizeUnit: null,
   ),
   CatalogSeed(
-    'Antiacídico pastillas',
+    'Antiácido en pastillas',
     barcode: '7590211000197',
     category: ProductCategory.farmacia,
     presentation: Presentation.pack,

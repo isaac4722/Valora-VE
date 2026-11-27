@@ -6,9 +6,8 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v31 · revisión integral del dueño:
-/// reconstrucción v29/v30 — Conversor calculadora con «Mañana», Lista sin
-/// plantillas con sala propia, Análisis en 4 secciones, Más sin
-/// duplicados, Ajustes en UNA pantalla con cuentas por tipo de cobro —
-/// más exportación PDF/imágenes profesional y builds solo APK).
-const String kAppVersionVisible = '32';
+/// Versión visible (ronda v33 · revisión Goldfish de textos: ortografía y
+/// gramática de la UI y la documentación, README al día con la realidad
+/// v31/v32 — solo APK, cuatro transportes de Sala, Ajustes por secciones —
+/// y bitácoras al día con las rondas v25 y v29–v32).
+const String kAppVersionVisible = '33';

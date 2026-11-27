@@ -358,7 +358,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     );
   }
 
-  /// Importa productos desde CSV (columnas «Codigo,Nombre,Fecha»; delimitador
+  /// Importa productos desde CSV (columnas «Código,Nombre,Fecha»; delimitador
   /// y comillas los maneja parseCSV). Dedupe por código o nombre dentro de
   /// store.importProducts → SnackBar honesta con importados vs duplicados.
   Future<void> _importCsv(BuildContext context, AppStore store) async {
@@ -376,7 +376,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         showToast(
           context,
           'El CSV no trae filas de datos '
-          '(se espera encabezado + filas, ej.: Codigo,Nombre,Fecha)',
+          '(se espera encabezado + filas, ej.: Código,Nombre,Fecha)',
           kind: ToastKind.warn,
         );
       }
@@ -402,7 +402,7 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       }
       return;
     }
-    final iCode = findCol(['codigo']);
+    final iCode = findCol(['codigo', 'código']);
     final iDate = findCol(['fecha', 'date']);
     final valid = <({String name, String? barcode, DateTime? date})>[];
     for (final row in rows.skip(1)) {
@@ -433,9 +433,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       context,
       added > 0
           ? (dedupe > 0
-                ? '$added importados · Ya están en libro: $dedupe'
+                ? '$added importados · Ya están en el libro: $dedupe'
                 : '$added importados')
-          : 'Ya están en libro: $dedupe',
+          : 'Ya están en el libro: $dedupe',
       kind: added > 0 ? ToastKind.ok : ToastKind.info,
     );
   }
@@ -444,8 +444,8 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     final rows = <List<String>>[
       [
         'Producto',
-        'Codigo',
-        'Categoria',
+        'Código',
+        'Categoría',
         'PrecioUSD',
         'PrecioOriginal',
         'Moneda',

@@ -2,18 +2,17 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y salas con su propia tecnología. Offline-first."
 publish_to: 'none'
 
-# 1.18.0-beta+55 · v32 — GUI del dueño: barra pegadiza sin franja, títulos
-# solos, Modo Cachea en fila propia, header de Inicio sin lupa, iconos
-# grandes y centrados, sub legible en filas, Ajustes refactor plano.
-# (v29 Parte 3 Conversor + Parte 4 Lista; v30 Parte 5 Análisis/Más/
-# Ajustes con cuentas por tipo de cobro) + revisión integral v31: sistema
-# de exportación PDF/imágenes profesional (fuentes de marca en el PDF,
-# encabezado/pie con numeración en TODAS las páginas, márgenes uniformes
-# 44 pt, convención única de rasterizado 360 lógico ×3 → 1080 px,
-# constancia 4:5 exacto 1080×1350, tarjetas de marca a escala de teléfono,
-# manejo de errores en cristiano) y builds SOLO APK (el AAB se retiró del
-# CI: 1 universal + arm64/v7a/x86_64).
-version: 1.18.0-beta+55
+# 1.18.0-beta+56 · v33 — revisión Goldfish de textos: ortografía y
+# gramática de la UI visible y de la documentación (README al día con la
+# realidad v31/v32: builds solo APK, cuatro transportes de Sala, Ajustes
+# por secciones), CSV con encabezados con tilde (importador tolerante a
+# ambas grafías) y bitácoras al día con las rondas v25 y v29–v32.
+# (v32: GUI del dueño — barra pegadiza sin franja, títulos solos, Modo
+# Cachea en fila propia, header de Inicio sin lupa, iconos grandes y
+# centrados, sub legible en filas, Ajustes refactor plano; v31: revisión
+# integral con exportación PDF/imágenes profesional y builds SOLO APK,
+# con la recuperación de v29/v30.)
+version: 1.18.0-beta+56
 
 environment:
   sdk: ^3.9.2

@@ -194,7 +194,7 @@ RateEntry? parseDolarVzlaBcv(dynamic v, {required bool euro}) {
   );
 }
 
-/// Worker público de Calculaya `/tasas` (v23.2 — REA del APK 1.1.0, endpoint
+/// Worker público de CalculaYa `/tasas` (v23.2 — REA del APK 1.1.0, endpoint
 /// hallado en libapp-strings y VERIFICADO con curl 21/11/2026):
 /// {"usd":918.7662,"eur":1009.07,"usdt":1075.67,"rate_date":"2026-11-20",
 ///  "remesas":{"COP":{…,"rate_per_usd":3345.3929,…},…}}
@@ -243,7 +243,7 @@ RateEntry? parseCoinGeckoUsd(dynamic v, String coinId) {
 
 /// Derivación honesta de último recurso (v23.2): Bs por USDT = Bs por USD
 /// (paralelo vivo) × USD por USDT (precio global del tether). Publicada
-/// como función PURA para el test — se usa solo si el Worker de Calculaya
+/// como función PURA para el test — se usa solo si el Worker de CalculaYa
 /// no dio la referencia P2P.
 RateEntry? deriveUsdtVesFromGlobal(RateEntry? usdtUsd, RateEntry? parallel) {
   if (usdtUsd == null || parallel == null) return null;
@@ -265,7 +265,7 @@ RateEntry? deriveUsdtVesFromGlobal(RateEntry? usdtUsd, RateEntry? parallel) {
   return RateEntry(rate: rate, updatedAt: oldest);
 }
 
-/// Memo del Worker de Calculaya (v23.3, pez 2-b P2-3): VE, CO y cripto
+/// Memo del Worker de CalculaYa (v23.3, pez 2-b P2-3): VE, CO y cripto
 /// pueden pedir /tasas en la MISMA ronda (y corren en paralelo) — UNA
 /// consulta por ventana de 30 s compartida por todos: la primera llamada
 /// dispara el fetch, el resto espera el mismo futuro, y un Worker caído
@@ -368,7 +368,7 @@ Future<RegionBlock> _veBlock() async {
     errors.add('ve.dolarapi/euros: $e');
     VeLog.e('board', e);
   }
-  // Respaldo VE #2 (v23.2): el Worker público de Calculaya — mismo valor
+  // Respaldo VE #2 (v23.2): el Worker público de CalculaYa — mismo valor
   // oficial que DolarAPI (verificado en vivo). Solo llena los oficiales que
   // SIGAN FALTANDO: el respaldo nunca pisa dato fresco. La referencia USDT
   // P2P vive en el bloque cripto (_cryptoBlock), no aquí.
@@ -464,7 +464,7 @@ Future<RegionBlock> _coBlock() async {
       errors.add('cop-market respaldo awesome: $err');
     }
   }
-  // Respaldo COP mercado #2 (v23.2): remesas COP del Worker de Calculaya.
+  // Respaldo COP mercado #2 (v23.2): remesas COP del Worker de CalculaYa.
   // v23.3 (pez 2-b P2-3): consulta por el memo — la misma ventana de 30 s
   // que VE y cripto (nada de 3 hits idénticos al Worker por ronda).
   if (!sources.containsKey('cop-market')) {
@@ -481,7 +481,7 @@ Future<RegionBlock> _coBlock() async {
   return (sources, errors, providers.toList());
 }
 
-/// Cripto (v23.2): USDT P2P (Worker de Calculaya) + tether global
+/// Cripto (v23.2): USDT P2P (Worker de CalculaYa) + tether global
 /// (CoinGecko). El manual del usuario cubre la referencia local.
 Future<RegionBlock> _cryptoBlock() async {
   final sources = <String, RateEntry>{};
@@ -648,7 +648,7 @@ Future<BoardResult> fetchBoard([RateBoard? previous]) async {
     _brBlock(),
     _cryptoBlock(),
   ]);
-  // v23.2 — USDT de último recurso: si el Worker de Calculaya no dio la
+  // v23.2 — USDT de último recurso: si el Worker de CalculaYa no dio la
   // referencia P2P, deriva Bs por USDT = paralelo vivo × tether global
   // (derivación honesta con guard; el sello sigue diciendo «Mercado»).
   var crypto = results[4];
