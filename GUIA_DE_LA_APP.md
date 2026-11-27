@@ -1,7 +1,7 @@
 # Cómo funciona ValoraVE — guía de la app
 
 > Documento de referencia para el dueño y para quien llegue al código.
-> Versión descrita: **1.18.0-beta (ronda v32)** · rama `v1.1.0-dp4-paridad`.
+> Versión descrita: **1.18.0-beta (ronda v33)** · rama `v1.1.0-dp4-paridad`.
 > La versión con formato (Word/PDF) se entrega junto a cada ciclo.
 
 ## 1. Qué es
@@ -9,7 +9,7 @@
 ValoraVE es un **libro de precios y divisas de Venezuela** que vive en el
 teléfono: ¿a cuánto está el dólar (y el euro) hoy?, ¿cuánto es mi dinero de
 una moneda a otra? y ¿cuánto me cuesta lo que compro? Todo lo que guardas
-permanece en el teléfono: **offline primero, sin cuentas, sin servidores**.
+permanece en el teléfono: **offline primero, sin cuentas, sin nube**.
 
 ## 2. Principios del producto
 
@@ -19,7 +19,7 @@ permanece en el teléfono: **offline primero, sin cuentas, sin servidores**.
   (`1.500,100 Bs`).
 - **Compartir = imagen, Copiar = texto.**
 - **El texto nunca se corta ni se encoge ilegible**: la cifra grande reduce
-  tamaño gradualmente antes que romper la línea (`FittedBox.scaleDown`
+  tamaño gradualmente antes de romper la línea (`FittedBox.scaleDown`
   solo en valores); los subtítulos ENVUELVEN a 13.5 px reales.
 - **Títulos/headers SOLOS**, con la separación requerida; las puertas
   (Sala, Historial, Cachea) viven en filas delineadas gemelas.
@@ -32,7 +32,7 @@ permanece en el teléfono: **offline primero, sin cuentas, sin servidores**.
 | --- | --- |
 | `/` Inicio | Equivalencia «1 USD = X Bs» de la fuente activa (BCV · Oficial por defecto), acciones del día, resumen del mes y actividad. Header sin lupa (avisos · tema · ajustes). |
 | `/tasas` | Tablero de fuentes por divisa (Oficial · Promedio · Mercado · Manual), brecha, diagnóstico; fuente por módulo. |
-| `/conversor` | Conversión con fecha **Ayer · Hoy · Mañana · Fecha**; escala única Redondeo/Precisión/Completo; panel de cobro (pago móvil, transferencia, Zelle) con Compartir (imagen) y Copiar (texto). |
+| `/conversor` | Conversión con fecha **Ayer · Hoy · Mañana · Fecha**; escala única de precisión 2/3/4/«Completo»; panel de cobro (pago móvil, transferencia, Zelle) con Compartir (imagen) y Copiar (texto). |
 | `/lista` | Calculadora de compras: captura QUÉ·CUÁNTO·DÓNDE, total en tarjeta, **Modo Cachea** (fila propia: inicial + cuotas quincenales, solo cálculo), presupuesto, cálculos, barra pegadiza con **Dividir cuenta** y **Cerrar compra** (checkout con vuelto multi-divisa y foto de ticket). |
 | `/sala-viva` | Lista sincronizada P2P sin internet: modos Cerca/WiFi/Bluetooth/Servidor, código + QR centrados, roles anfitrión/editor/observador, PIN opcional de emojis. |
 | `/analisis` | Divisas · Inflación · Canasta · Gastos (barra segmentada; rango de tiempo solo donde se usa). |

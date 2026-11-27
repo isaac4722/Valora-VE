@@ -12,7 +12,7 @@ la rama estaba en v28 (commit 7dc0265) mientras la documentación local
 
 - **H-45 · v29/v30 perdidos** (hallazgo mayor): la rama remota contenía
   v28; las Partes 3, 4 y 5 vivían solo en docs. — **CORREGIDO**:
-  re-implementación completa desde la especificación documentada
+  reimplementación completa desde la especificación documentada
   (HALLAZGOS_v29/v30 como spec maestro), ciclo por ciclo, con la suite
   como gate en cada paso (332 → 351 → 349 → 369 verdes).
 - EGM operativo (Fase 0 del encargo original): skills de Fase 2 en
@@ -25,8 +25,8 @@ la rama estaba en v28 (commit 7dc0265) mientras la documentación local
 - Parte 3 completa (H-21..H-30 + V-1..V-4 + R-29a..R-29e): título solo,
   fecha con protagonismo **Ayer · Hoy · Mañana · Fecha** («Mañana» = cobro
   planificado con la tasa viva), campos gemelos con símbolo en ambos
-  lados, selector de tasa obvio, atajos eliminados (teclado única vía, ⌫
-  largo limpia), precisión UNA escala X,XX·X,XXX·X,XXXX·Completo con clamp
+  lados, selector de tasa obvio, atajos eliminados (teclado como única
+  vía; ⌫ largo limpia), precisión UNA escala X,XX·X,XXX·X,XXXX·Completo con clamp
   2..6 en los tres sitios, **regla del 0 del swap** (vacío entra, vacío
   sale — verificado por controladores, no por find.text), Fuentes/Tabla/
   Recientes fuera y Notas inline, Pago Móvil con puerta ante cualquier
@@ -62,7 +62,7 @@ la rama estaba en v28 (commit 7dc0265) mientras la documentación local
 - **H-46 · Dos escalas de rasterizado incompatibles** — las tarjetas de
   marca se maquetaban a 1080 px LÓGICOS con fontSize 30: el texto de la
   imagen final medía 30 px (diminuto); la constancia, en cambio, se
-  renderizaba a 380 lógico ×3. — **CORREGIDO**: convención ÚNICA — todo
+  renderizaba a 380 px lógicos ×3. — **CORREGIDO**: convención ÚNICA — todo
   documento compartible se compone a **360 px lógicos** (el papel de
   teléfono, con la tipografía real de la app 11·13,5·17·30) y se
   rasteriza a **pixelRatio 3 → 1080 px**. Tarjetas recompuestas a esa
@@ -101,7 +101,7 @@ la rama estaba en v28 (commit 7dc0265) mientras la documentación local
 - **H-51 · DOS tuberías de render gemelas** — `renderSharePng`
   (Overlay propio) y `renderOffstagePng` (otro Overlay) podían divergir;
   la segunda tenía un cast ciego (`as RenderRepaintBoundary?`) que
-  reventaba con keys compuestos. — **CORREGIDO**: UNA sola tubería
+  reventaba con keys compuestas. — **CORREGIDO**: UNA sola tubería
   (`renderSharePng` delega), boundary buscado SUBIENDO por el árbol,
   espera de frames ACOTADA (3 máximo; jamás cuelga) y overlay retirado
   SIEMPRE (finally). `Overlay.maybeOf` en vez de `of` (sin crash fuera
@@ -116,8 +116,8 @@ la rama estaba en v28 (commit 7dc0265) mientras la documentación local
   4 APK + AAB + ZIP con los 5 binarios. — **CORREGIDO**: job `aab`
   retirado por completo; el paquete lleva SOLO los 4 APK (1 universal +
   arm64-v8a + armeabi-v7a + x86_64), el LEEME y los checksums sin AAB, y
-  la Release (tags) adjunta 4 APK + ZIP. Ningún binario del canal es no
-  instalable. Matriz anti-SIGTERM intacta.
+  la Release (tags) adjunta 4 APK + ZIP. Todos los binarios del canal son
+  instalables. Matriz anti-SIGTERM intacta.
 
 ## Tareas programadas
 
@@ -134,7 +134,7 @@ la rama estaba en v28 (commit 7dc0265) mientras la documentación local
   paginación real, cero compras sin morir, errores en cristiano de
   pdfFormat, dimensiones EXACTAS de los tres PNG compartibles leídas del
   IHDR del archivo real).
-- `flutter analyze`: 0 errores; solo infos de deprecación pre-existentes
+- `flutter analyze`: 0 errores; solo infos de deprecación preexistentes
   del SDK 3.50 local (CI usa 3.47.4).
 - Inventario de tipografía en lib/: SOLO {11, 13.5, 17, 30} (+ helpers
   parametrizados del sistema y el PDF a la misma escala);

@@ -7,10 +7,11 @@
 
 </div>
 
-> 📦 **Descarga actual:** [Release v1.0.2-beta](https://github.com/isaac4722/Valora-VE/releases/latest) — APK firmados por ABI (armeabi-v7a · arm64-v8a · x86_64) + AAB, ofuscados (`--obfuscate --split-debug-info`). Desde v17.9 cada build produce **APK para cualquier dispositivo**: androids viejos (v7a), nuevos (arm64-v8a), **emuladores (x86_64, ya en cada push)** y un **APK universal todo-en-uno** (~45 MB) que instala sin saber la arquitectura.
+> 📦 **Descarga actual:** [Última release](https://github.com/isaac4722/Valora-VE/releases/latest) — **4 APK firmados** (armeabi-v7a · arm64-v8a · x86_64 · universal), ofuscados (`--obfuscate --split-debug-info`), más un ZIP con LEEME y checksums. Desde v31 las releases son **solo APK** (el AAB se retiró): androids viejos (v7a), nuevos (arm64-v8a), **emuladores (x86_64)** y un **APK universal todo-en-uno** que instala sin saber la arquitectura.
 >
 > El historial completo de rondas vive en [CHANGELOG.md](CHANGELOG.md).
-> El repo ya no arrastra documentación de proceso: solo la app.
+> El proceso de desarrollo queda en AGENT.md, MVP-CRUD.md, PROGRESS*.md y
+> HALLAZGOS_*.md; este README describe solo la app.
 
 **ValoraVE** es una app Android nativa (Flutter/Dart puro) para saber
 cuánto vale tu dinero en Venezuela: tasas BCV y paralelo, conversor
@@ -23,21 +24,22 @@ teléfono.
 | Módulo | Qué hace |
 |---|---|
 | **Inicio** | la tasa del día con su fuente, cuatro acciones rápidas, tu mes y tu actividad reciente; la cotización completa vive en Tasas y los módulos secundarios en Más |
-| **Conversor** | teclado propio VeKeypad + fichas 1-100 + redondeo, precisión de 2/3/4 decimales (BCV publica 4), puente USD + EUR visible, fecha histórica honesta, notas, recientes y **Pago Móvil** compartible (cuentas propias con titular y logos reales de 27 bancos) |
+| **Conversor** | teclado propio VeKeypad + redondeo, precisión de 2/3/4 decimales (BCV publica 4), puente USD + EUR visible, fecha histórica honesta, notas, recientes y **Pago Móvil** compartible (cuentas propias con titular y logos reales de 27 bancos) |
 | **Lista** | presupuesto, plantillas, vuelto, dividir la cuenta, **Modo Cachea** (simulador de inicial + cuotas), checkout con foto de ticket, **sala en vivo** |
 | **Productos** | libro de precios con tiendas, sparklines, metas con aviso, CSV ⇄, escáner |
 | **Historial** | asientos por compra, filtros, CSV de compras, constancias |
 | **Análisis** | brecha BCV↔paralelo, devaluación, inflación personal, rankings, canasta, **gastos por tienda y por mes (auto, con tus compras)** |
 | **Tasas** | cotización completa por divisa, tus tasas con nombre, edición manual y el estado de cada fuente |
-| **Más** | hub con buscador: Productos, Historial, Tickets, Sala Viva, Cuentas, Ajustes, Actualizaciones y Privacidad |
-| **Ajustes** | hub con General (país, decimales, conexión), Tasas, Cuentas de cobro, Apariencia y Datos (respaldo, registros, tutorial) |
+| **Más** | Productos, Tickets, Ajustes, Actualizaciones y Privacidad (Análisis, Historial, Sala y Cuentas viven en sus sitios) |
+| **Ajustes** | una pantalla por secciones: Cuentas y cobro, Tasas y fuentes, Alertas, Diagnóstico, País y decimales, Datos y conexión, Apariencia, Respaldo y Acerca de |
 
-La sala en vivo tiene **tres transportes** con el mismo protocolo
+La sala en vivo tiene **cuatro transportes** con el mismo protocolo
 (`lista-sync`): un **servidor socket.io** que tú decides (viene en
 `server/lista-sync/`, listo para desplegar con Bun o Node), **Cerca**
-(Google Nearby Connections: WiFi-Direct/Bluetooth, sin internet) y
-**WiFi local** (mismo SSID, descubrimiento por broadcast). Sin conexión,
-los cambios quedan en outbox y salen al reconectar.
+(Google Nearby Connections: WiFi-Direct/Bluetooth, sin internet),
+**Bluetooth clásico** (RFCOMM/SPP) y **WiFi local** (mismo SSID,
+descubrimiento por broadcast). Sin conexión, los cambios quedan en outbox
+y salen al reconectar.
 
 ## Cómo compilar
 ```bash
@@ -47,7 +49,7 @@ flutter test                # unit + widget
 
 # release (requiere android/keystore.properties — ver example):
 flutter build apk --release --split-per-abi \
-  --obfuscate --split-debug-info=build/symbols/apk   # 3 APK por ABI
+  --obfuscate --split-debug-info=build/symbols/apk   # 3 APK, uno por ABI
 flutter build apk --release \
   --obfuscate --split-debug-info=build/symbols/apk   # universal (todo-en-uno)
 flutter build appbundle --release \
@@ -58,8 +60,8 @@ flutter build appbundle --release \
 Gates locales: `bash scripts/quality_gate.sh` (analyze + tests) e
 integration tests en emulador. Un tag `v*` dispara el workflow
 `build.yml`, que publica la GitHub Release con 4 APK (armeabi-v7a ·
-arm64-v8a · x86_64 · universal) + AAB firmados con el keystore de
-secrets y ofuscados.
+arm64-v8a · x86_64 · universal) + ZIP (LEEME + checksums), firmados
+con el keystore de secrets y ofuscados; sin AAB desde v31.
 
 ## Permisos (y por qué)
 | Permiso | Uso |
@@ -69,7 +71,7 @@ secrets y ofuscados.
 | `VIBRATE` | háptica del escáner |
 | `POST_NOTIFICATIONS` | alertas locales de picos/metas/brecha (API 33+) |
 | `BLUETOOTH_SCAN/ADVERTISE/CONNECT` | sala P2P sin internet (API 31+) |
-| `ACCESS_FINE_LOCATION` (API <31) | descubrimiento Nearby en Android antiguos |
+| `ACCESS_FINE_LOCATION` (API <31) | descubrimiento Nearby en dispositivos Android antiguos |
 | `NEARBY_WIFI_DEVICES` | sala por WiFi local (API 33+) |
 
 Nada más. Sin FCM: las notificaciones son locales (canales

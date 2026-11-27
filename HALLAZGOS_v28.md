@@ -34,7 +34,7 @@ código ya cumplía) o **DECISIÓN** (interpretación documentada).
    **CORREGIDO**: piso `labelCaps` subido a 11 (caption).
 
 ### Envío de información
-4. **H-4 · Texto compartido por el share nativo** (7 puntos: totales de
+4. **H-4 · Texto compartido por el share nativo** (6 puntos: totales de
    Lista, resultado del Conversor, constancia, respaldo JSON, CSV histórico,
    mensaje de cobro) → abría el menú del sistema con opciones «enviar
    texto». — **CORREGIDO**: regla de dos vías. **Compartir** solo para
@@ -103,7 +103,7 @@ código ya cumplía) o **DECISIÓN** (interpretación documentada).
 17. **H-17 · Las dos categorías (USD/EUR) se confundían** — encabezado
     pequeño con hint «1 USD = X» y no se entendía dónde terminaba cada
     sección. — **CORREGIDO**: secciones con las cuatro partes en orden —
-    TÍTULO (bandera + «USD · Dólar», display 17) → DESCRIPCIÓN de una línea
+    TÍTULO (bandera + «USD · Dólar», title 17) → DESCRIPCIÓN de una línea
     («Cuánto vale 1 USD. Toca una fila para usarla.») → DETALLES (filas con
     hairlines: la información importante) → ACCIÓN («Configurar fuentes»,
     botón delineado) — separadas por **espacio en blanco + hairline** y sin
@@ -129,7 +129,7 @@ código ya cumplía) o **DECISIÓN** (interpretación documentada).
 ## Tests
 
 - Suite completa: **329/329 verdes** (`flutter analyze` sin incidencias
-  nuevas; 68 infos de deprecación pre-existentes del SDK 3.50 local vs CI
+  nuevas; 68 infos de deprecación preexistentes del SDK 3.50 local vs CI
   3.47.4).
 - Tests actualizados al nuevo contrato (estructura v28, no debilitados):
   `rate_sheet_test` (secciones), `custom_rates_test` («Tus tasas»),
@@ -178,6 +178,6 @@ de la conversación) auditaron la implementación. Hallazgos y resolución:
 - R-Q7 · Hairline de VS sobraba sin dato → **CORREGIDO**: separador visible
   solo con badge.
 
-Re-verificación tras resolver: `flutter analyze` sin incidencias nuevas
+Reverificación tras resolver: `flutter analyze` sin incidencias nuevas
 (69 infos de deprecación del SDK 3.50 local; CI 3.47.4 no las emite),
-**332/332 tests** verdes, gate visual web re-ejecutado.
+**332/332 tests** verdes, gate visual web reejecutado.

@@ -74,7 +74,7 @@ Cuando el flujo llega a `6_RETRY`, el agente **no vuelve ciegamente al paso 1**.
 - **Fallo de Análisis/Plan (viene de 1 o 2):** Vuelve a `1_ANALYZE`.
 - **Fallo de Implementación (analyze/test fallan):** Vuelve a `3_IMPLEMENT`.
 - **Fallo de Auditoría/Control (el diff no coincide, falta doc):** Vuelve a `3_IMPLEMENT` o `4_AUDIT` según corresponda.
-- **Regla de Oro:** En reintentos, el estado `2_PLAN` se salta por defecto. Solo se re-ejecuta si el fallo fue explícitamente por un plan incorrecto.
+- **Regla de Oro:** En reintentos, el estado `2_PLAN` se salta por defecto. Solo se reejecuta si el fallo fue explícitamente por un plan incorrecto.
 
 ## Bitácora de Tres Niveles (Hot / Warm / Cold)
 
@@ -114,7 +114,7 @@ Las skills se invocan **dentro** de los estados del flujo. El agente debe leer s
 
 ### Ubicación y Organización Estándar
 
-- **Ubicación canónica:** `.agents/skills/<skill-name>/SKILL.md` (59 skills; catálogo y procedencia en `.agents/skills/README.md`).
+- **Ubicación canónica:** `.agents/skills/<skill-name>/SKILL.md` (67 skills; reglas de uso en `.agents/skills/README.md` y procedencia de cada una en `skills-lock.json`).
 - **Verificación:** Si el repo ya contiene skills, verificar que estén en `.agents/skills/` y no dispersas en otras ubicaciones no estándar. Si hay duplicados, consolidar en la ubicación canónica.
 - **Instalación:** `npx skills add <owner/repo> --agent universal --yes` (mantiene `skills-lock.json`). En entornos sin red npm, la vía alternativa probada es clonar y copiar a `.agents/skills/<skill>/` (precedente TASK-13/23). Instalaciones y ausencias se registran en `PROGRESS.md`.
 
@@ -141,14 +141,14 @@ Las skills se invocan **dentro** de los estados del flujo. El agente debe leer s
 |---|---|---|
 | **`ui-nice-skill`** | 1_ANALYZE, 4_AUDIT | Siempre que el encargo implique crear/modificar pantallas o flujos de UI. Skill propia del repo (v19.9): audita contra el sistema de diseño vigente, no inventa estética. |
 | **`flutter-frontend-design`** | 3_IMPLEMENT | Siempre que se implemente UI nueva en `lib/`. |
-| **`mobile-design`** | 2_PLAN (consulta) | Verificar convenciones de plataforma (touch targets ≥48dp, breakpoints). **Solo consulta, no dicta estética.** |
+| **`mobile-design`** | 2_PLAN (consulta) | Verificar convenciones de plataforma (touch targets ≥48dp como referencia de Material; el estándar del producto es 44 — MVP-CRUD §9 —, breakpoints). **Solo consulta, no dicta estética.** |
 | **`humanizer`** | 3_IMPLEMENT (post-UI) | Antes de cerrar `3_IMPLEMENT`, para pulir TODO texto visible al usuario. |
 | **`vlm`** | 3.5_VISUAL_GATE | Capturas Flutter web local; descartar slop/BASURA. **No rediseñar.** |
 | **`taste-skill`** | 4_AUDIT | Opcional. Si la auditoría visual detecta riesgo de "AI slop". |
 | **`flutter-accessibility`** (oficial) | 4_AUDIT | Verificar semántica, contraste, `Semantics()` y navegación por teclado si hay UI nueva. |
 | **`flutter-testing`** (oficial) | 4_AUDIT | Widget/golden tests si el encargo tocó widgets o layouts. Complementa `quality_gate.sh`. |
 
-**Regla de No Contradicción:** Si una skill sugiere algo que viola los Límites de Tres Niveles, **prevalece el `AGENT.md`**. Toda skill del contrato debe estar instalada y con carga previa de su `SKILL.md` antes de usarse; si falta, el agente lo registra en `PROGRESS.md` y continúa manualmente aplicando sus principios o procede a instalarlo.
+**Regla de No Contradicción:** Si una skill sugiere algo que viola los Límites de Tres Niveles, **prevalece el `AGENT.md`**. Toda skill del contrato debe estar instalada y con carga previa de su `SKILL.md` antes de usarse; si falta, el agente la registra en `PROGRESS.md` y continúa manualmente aplicando sus principios o procede a instalarla.
 
 ## Definición de Hecho (Por Pieza)
 
@@ -156,12 +156,12 @@ Código + Test que lo cubre + `quality_gate.sh` verde + Entrada en `PROGRESS.md`
 
 ## Documentación con Alcance (Progressive Disclosure)
 
-Para mantener este archivo delgado, el detalle vive en `MVP-CRUD.md`; los tokens de diseño viven en el código canónico (`lib/core/shad_theme.dart`, `lib/core/theme.dart`, `lib/widgets/ui.dart`). El agente **debe consultar** la referencia correspondiente cuando el estado del flujo lo requiera.
+Para mantener este archivo delgado, el detalle vive en `MVP-CRUD.md`; los tokens de diseño viven en el código canónico (`lib/core/theme.dart`, `lib/widgets/ui.dart`). El agente **debe consultar** la referencia correspondiente cuando el estado del flujo lo requiera.
 
 | Necesidad | Archivo de Referencia | Cuándo Consultarlo |
 |---|---|---|
 | Verdad funcional | `MVP-CRUD.md` (raíz; reconstrucción canónica v19.9 · ver su nota de procedencia) | Estado `1_ANALYZE` (siempre) |
-| Sistema de diseño y tokens | `lib/core/shad_theme.dart` + `lib/widgets/ui.dart` (código canónico) | Estados `2_PLAN`/`3_IMPLEMENT` (si se toca UI) |
+| Sistema de diseño y tokens | `lib/core/theme.dart` + `lib/widgets/ui.dart` (código canónico) | Estados `2_PLAN`/`3_IMPLEMENT` (si se toca UI) |
 | Bitácora hot | `PROGRESS.md` | Al inicio y fin de cada turno |
 | Bitácora warm | `PROGRESS_WARM.md` | Al cerrar turno (rotación) |
 | Bitácora cold | `PROGRESS_COLD.md` | Al rotar warm → cold |

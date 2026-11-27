@@ -4,7 +4,7 @@ Ciclo de GUI ordenado por el dueño: barra pegadiza que dejaba una franja
 vacía, títulos que no estaban solos, Modo Cachea mal ubicado, lupa en el
 header de Inicio, iconos pequeños y descentrados (escáner, atrás), filas
 con texto microscópico, Sala por trabajar de nuevo y Ajustes por
-refactorizar. EG M operativo (Fase 0/2: skills del repo + flujo
+refactorizar. EGM operativo (Fase 0/2: skills del repo + flujo
 Goldfish→Elephant con la especificación como revisor); gate visual web
 390×844 como cierre.
 
@@ -18,8 +18,8 @@ Goldfish→Elephant con la especificación como revisor); gate visual web
 - **G-2 · Texto microscópico en filas**: `VeRow` envolvía el `sub` en
   `FittedBox.scaleDown` — los subtítulos largos (modos de Sala, «Nearby ·
   WiFi-Direct/BLE…») se encogían hasta ~8 px. **CORREGIDO**: el sub
-  ENVUELVE a varias líneas a 13.5 px reales (regla del dueño: el texto
-  jamás se encoge ni se corta). Verificado en captura de Sala.
+  se envuelve en varias líneas a 13.5 px reales (regla del dueño:
+  el texto jamás se encoge ni se corta). Verificado en captura de Sala.
 - **G-3 · Títulos acompañados**: el título de Lista llevaba el icono de
   Historial al lado. **CORREGIDO**: títulos SOLOS (Lista · Ajustes) y las
   puertas viven en filas de entrada gemelas (Sala en vivo · Historial de
@@ -64,7 +64,7 @@ Goldfish→Elephant con la especificación como revisor); gate visual web
 ## Verificación
 
 - `flutter analyze`: 0 errores/avisos (solo infos de deprecación del SDK
-  local 3.50, pre-existentes; CI usa 3.47.4).
+  local 3.50, preexistentes; CI usa 3.47.4).
 - **El gate de CI cazó un test**: `actualizaciones_test` esperaba la
   versión vieja («ValoraVE 31») tras subir `kAppVersionVisible` a 32 — el
   bump se hizo DESPUÉS del run local de la suite. CORREGIDO anclando la

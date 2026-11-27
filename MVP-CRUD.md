@@ -37,7 +37,7 @@ este documento con la orden del dueño.
 | `ShoppingTemplate` | plantilla de lista (máx. 20) | crear/aplicar/borrar |
 | `Transaction` | (LEGADO) transacciones del módulo Finanzas retirado | solo round-trip de respaldos viejos |
 | `RateEntry` / `RateBoard` | tasas por fuente con frescura | lectura del motor; manuales editables |
-| `Settings` / `Budget` / `ConverterState` | preferencias (13 claves AppData) | editar; persistir |
+| `Settings` / `Budget` / `ConverterState` | preferencias (15 claves AppData: 13 originales + `customRates` y `accounts` de v23) | editar; persistir |
 | `NotificationItem` (9 kinds) | centro de notificaciones | listar; leer; limpiar |
 | `RecentConversion` / `SnapshotPoint` | recientes (dedupe 60s) / «vs ayer» | agregar/podar; snapshots diarios |
 | `CustomRate` (v23) | tasa propia con nombre + brecha vs BCV (máx 8) | crear/retirar; aplicar (por el mecanismo manual) |
@@ -45,7 +45,7 @@ este documento con la orden del dueño.
 | Semillas | 21 productos de arranque | primera ejecución |
 
 Persistencia: Hive en 4 cajas JSON (`lib/data/store.dart`), migración
-tolerante y merge HMR-safe. `AppData` es el agregado de las 13 claves.
+tolerante y merge HMR-safe. `AppData` es el agregado de las 15 claves.
 
 ## §3 · Motor de tasas
 
@@ -55,11 +55,11 @@ tolerante y merge HMR-safe. `AppData` es el agregado de las 13 claves.
   `lib/core/currencies.dart`. USDT↔Bs es arista DIRECTA. ETH se retiró en
   v27 por orden del dueño.
 - **Respaldos por región (v23.2):** VE → DolarAPI → DolarVZLA → Worker
-  Calculaya (`calculaya-api.jalvarezgw19.workers.dev/tasas`, hallado por
+  CalculaYa (`calculaya-api.jalvarezgw19.workers.dev/tasas`, hallado por
   REA del APK 1.1.0; `usd` = BCV verificado al dígito en vivo) — el
   respaldo NUNCA pisa dato fresco. COP mercado → AwesomeAPI → remesas
-  Calculaya. Cripto: USDT P2P desde Calculaya; tether global desde
-  CoinGecko; si Calculaya cae, Bs/USDT se DERIVA del paralelo × tether
+  CalculaYa. Cripto: USDT P2P desde CalculaYa; tether global desde
+  CoinGecko; si CalculaYa cae, Bs/USDT se DERIVA del paralelo × tether
   global (guard sanidad 0.2–2 USD; el sello sigue «Mercado»).
 - **Plan de conversión:** `RateContext.plan` devuelve la ruta VISIBLE
   (path + sourceIds), incl. puente USD y ruta EUR de 4 tramos
@@ -75,17 +75,18 @@ tolerante y merge HMR-safe. `AppData` es el agregado de las 13 claves.
 ## §4 · Decisiones técnicas
 
 - **§4.10 — Sala multi-transporte:** el MISMO protocolo lista-sync sobre
-  tres transportes: Servidor socket.io (URL configurable),
-  Cerca (Nearby Connections, sin internet) y WiFi local (ServerSocket
-  48130 + broadcast UDP).
+  cuatro transportes: Servidor socket.io (URL configurable),
+  Cerca (Nearby Connections, sin internet), Bluetooth clásico
+  (RFCOMM/SPP) y WiFi local (ServerSocket 48130 + broadcast UDP).
 - **§4.16 — Flutter SIEMPRE última stable** en CI; el gate protege de
   roturas (analiza y testea en cada push).
 - Obfuscación de release con `--split-debug-info`; firma v2; símbolos
   aparte en artefactos.
-- Cobertura total de builds (v17.9/v19.2): 4 APK (v7a, arm64-v8a, x86_64,
-  universal) + AAB + ZIP único con LEEME y checksums. Prohibido retirar
-  un ABI, el AAB o el ZIP sin orden expresa del dueño. (x86 32 bits no
-  es construible: Flutter no distribuye ese motor.)
+- Cobertura total de builds (v31, orden del dueño): **solo APK** — 1
+  universal + arm64-v8a + armeabi-v7a + x86_64 — más ZIP único con LEEME
+  y checksums. El AAB se retiró del CI en v31 por orden del dueño;
+  prohibido retirar un ABI o el ZIP sin orden expresa del dueño. (x86 32
+  bits no es construible: Flutter no distribuye ese motor.)
 - Software PROPIETARIO: licencia de titular privado (LICENSE).
 
 ## §5 · Reglas de tasas y salud
@@ -99,7 +100,7 @@ tolerante y merge HMR-safe. `AppData` es el agregado de las 13 claves.
   paralelo rojo · manual violeta; sube/baja pos/neg.
 - **v23.3 · Ingesta:** el stream SSE FUSIONA por id contra el tablero
   vigente (`mergeSseSources`: lo ausente sobrevive, un push viejo no pisa
-  un dato fresco del poll); el respaldo de Calculaya se consulta solo tras
+  un dato fresco del poll); el respaldo de CalculaYa se consulta solo tras
   el bloque de euros (antes en cada ronda) y con memo de 30 s compartido
   por VE/CO/cripto; el sello de una tasa DERIVADA es el mín de sus
   insumos (tan fresco como el más viejo); el auto-poll pausado en
@@ -130,29 +131,30 @@ WorkManager ±1 h). Motor: `lib/services/alerts.dart` +
 
 ## §8 · Diseño «El Instrumento»
 
-Fuente canónica de tokens y firmas: `lib/core/shad_theme.dart` +
-`lib/core/theme.dart` + `lib/widgets/ui.dart`. Resumen operativo:
+Fuente canónica de tokens y firmas: `lib/core/theme.dart` +
+`lib/widgets/ui.dart`. Resumen operativo:
 papel-tinta (claro canónico, grafito oscuro), Inter cuerpo / Space
 Grotesk display con cifras tabulares, borde `border` SIEMPRE 100 %,
 sin gradientes ni tricolor, `label-caps` para rótulos técnicos,
-componentes firma (ReadWindow, Stamp, LedgerRow, RateTicker,
-SkeletonPaper). **El sistema se evoluciona; no se reemplaza.**
+componentes firma (ReadWindow, Stamp, LedgerRow, SkeletonPaper;
+RateTicker se retiró en v26 con la cinta del Inicio). **El sistema se
+evoluciona; no se reemplaza.**
 
 ## §9 · Pantallas y flujos (por módulo)
 
 | Módulo | Pantalla | Flujo esencial |
 |---|---|---|
 | Bienvenida | `welcome_screen` | 0+país+done; tutorial rejugable (13 pasos) |
-| Shell | `main_shell` | 7 rutas / móvil 5 tabs; ticker solo-inicio; badge carrito; banner salud; búsqueda global |
+| Shell | `main_shell` | 8 rutas / móvil 5 tabs; tasas del país al pie del sidebar de escritorio (RateTicker retirado de Inicio en v26); badge carrito; banner salud; búsqueda global |
 | Inicio | `home_screen` | v23: héroe fresco + «vs ayer»; cotización + divisas del foco + tu mes a la vista; «TODO LO DEMÁS · Ver todo» (despliegue progresivo: alertas, tiendas, registros, herramientas, App Widgets); bloque «Libro» (Historial·Tickets·Ajustes) siempre visible al pie; tasas propias «TUS TASAS» con GapChip vs BCV (aplicar = mecanismo manual). v23.2: RateTile compacto (~50dp), Divisas del foco + Tu mes tras «Ver todo», estados offline/primera carga a una línea |
-| Conversor | `converter` + reference + history | v23.2 patrón calculadora: teclado VeKeypad (0-9 · «,» · ⌫, teclas 44) como PISO FIJO abajo — cifra del resultado SIEMPRE a la vista, sin subir/bajar; arriba: fecha (Hoy/Ayer/7 días/Fecha) + dual input + ajustes ± y acciones (compartir/copiar iconos · Pago Móvil con destino VES: mensaje de cobro); secciones secundarias Fuentes·Tabla·Recientes·Notas abren half-sheets (4 fichas a una línea); fichas 1-100 en el piso; [Decimales\|Redondear] numMode persiste; puente visible, fecha histórica, notas (5000), recientes 10 |
+| Conversor | `converter` + reference + history | v23.2 patrón calculadora (depurado en v29): teclado VeKeypad (0-9 · «,» · ⌫, teclas 44) como PISO FIJO abajo — cifra del resultado SIEMPRE a la vista, sin subir/bajar; arriba: fecha (Ayer/Hoy/Mañana/Fecha) + dual input + ajustes ± y acciones (compartir/copiar iconos · Pago Móvil con destino VES: mensaje de cobro); Fuentes/Tabla/Recientes fuera y Notas inline (v29); [Decimales\|Redondear] numMode persiste; puente visible, fecha histórica, notas (5000), recientes 10 |
 | Lista | `lista_screen` (+checkout, item_editor) | presupuesto, plantillas, vuelto, dividir cuenta, checkout con foto ticket, sala en vivo. v23.2: captura en 2 filas, héroe 48, frecuentes+totales+plantillas tras «Más» |
 | Productos | `products_screen` (+product_sheet) | libro de precios, sparklines, metas, CSV⇄, escáner. v23.2: chips de categoría en una línea deslizable |
 | Historial | `history_screen` | asientos por compra, filtros, pág. 20, 2 CSV |
 | Constancias | `statement_screen` | estado de cuenta exportable |
-| Análisis | `insights_*` (§9.7) | 6 anclas + Gastos (§9.6 alimentado por compras), brecha, proyección amortiguada, heatmap con meses con datos, rankings, canasta, exportación. v23.3: barra de anclas FIJA (título+anclas+rango fuera del scroll), gráficos a 184, pestañas con Semantics(selected) |
+| Análisis | `insights_*` | barra segmentada de 4 secciones — Divisas · Inflación · Canasta · Gastos (Gastos alimentado por compras) —, brecha, proyección amortiguada, heatmap con meses con datos, rankings, canasta, exportación. v23.3: barra FIJA (título+secciones+rango fuera del scroll), gráficos a 184, pestañas con Semantics(selected) |
 | Sala | `room_*` + `sala_viva` + `join_sheet` + `pin_emoji` | lobby (conexión→nombre→código+PIN), sala viva, PIN emojis, QR |
-| Ajustes | `settings_*` | 8 anclas, respaldo replace/merge, tema, fuentes por módulo, Zona peligro; v23: «Cuentas y Pago Móvil» (máx 4, biométrico opt-in) y «Tus tasas con nombre» (máx 8) bajo Monedas y tasas; v23.3: altas de tasas/cuentas con chrome+kit Ve (VeField/VeInput/VeSelect, pie VeBtn) |
+| Ajustes | `settings_*` | UNA pantalla por secciones (v32: 9 encabezados, cero subpantallas), respaldo replace/merge, tema, fuentes por módulo, Zona de peligro; v23: «Cuentas y Pago Móvil» (máx 4, biométrico opt-in) y «Tus tasas con nombre» (máx 8) bajo Monedas y tasas; v23.3: altas de tasas/cuentas con chrome+kit Ve (VeField/VeInput/VeSelect, pie VeBtn) |
 | Escáner | `scanner_screen` | continuo + linterna + fallback manual + debounce; Productos/Lista consumen |
 | Tickets | `tickets_screen` | foto de ticket 1024px ≤12MB, zoom 1–8× |
 
