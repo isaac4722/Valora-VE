@@ -2,10 +2,11 @@
 /// bug del borrado «1.000»→«100» (V-3 + R-29c), swap vacío sin «0» (H-27 +
 /// R-29b/R-29e: inspección de CONTROLADORES), selector de fecha
 /// Ayer·Hoy·Mañana·Fecha con su contexto (H-22), título solo (H-21),
-/// símbolos en AMBOS campos gemelos (H-23/V-1), notas inline con
-/// persistencia (H-28), atajos eliminados (H-25), precisión uniforme
-/// (H-26), píldora del segmented clavada a su casilla (H-44) y patrón
-/// calculadora sin scroll en 390×844 (H-30).
+/// símbolos en AMBOS campos gemelos (H-23/V-1), notas RETIRADAS por
+/// orden del dueño en v34 (la pantalla es solo cálculo), atajos
+/// eliminados (H-25), precisión uniforme (H-26), píldora del segmented
+/// clavada a su casilla (H-44) y patrón calculadora sin scroll en
+/// 390×844 (H-30).
 ///
 /// R-29d: las fuentes del ASSET se cargan ANTES de los widget tests — el
 /// fallback de test mide cada glifo al ancho del fontSize y fabrica
@@ -235,22 +236,23 @@ Future<void> main() async {
       expect(find.text('0,00'), findsNothing);
     });
 
-    testWidgets('con monto: el swap lleva el resultado y el pasivo se rellena solo', (
-      tester,
-    ) async {
-      final store = _pumpedStore();
-      await _initServices(store);
-      await _pumpConverter(tester, store);
-      // 1 USD = 40 Bs → swap → origen «40,00» Bs y pasivo «1,0000» USD.
-      await tester.tap(find.byIcon(Icons.swap_vert));
-      await tester.pumpAndSettle();
-      expect(store.data.converter.from, 'VES');
-      expect(find.text('40,00'), findsOneWidget);
-      expect(find.text('1,0000'), findsOneWidget);
-      // R-29b: el guard no salta la limpieza — el pasivo (USD) muestra SOLO
-      // el cálculo nuevo, nunca texto heredado del lado viejo.
-      expect(find.text('40.000,0000'), findsNothing);
-    });
+    testWidgets(
+      'con monto: el swap lleva el resultado y el pasivo se rellena solo',
+      (tester) async {
+        final store = _pumpedStore();
+        await _initServices(store);
+        await _pumpConverter(tester, store);
+        // 1 USD = 40 Bs → swap → origen «40,00» Bs y pasivo «1,0000» USD.
+        await tester.tap(find.byIcon(Icons.swap_vert));
+        await tester.pumpAndSettle();
+        expect(store.data.converter.from, 'VES');
+        expect(find.text('40,00'), findsOneWidget);
+        expect(find.text('1,0000'), findsOneWidget);
+        // R-29b: el guard no salta la limpieza — el pasivo (USD) muestra SOLO
+        // el cálculo nuevo, nunca texto heredado del lado viejo.
+        expect(find.text('40.000,0000'), findsNothing);
+      },
+    );
   });
 
   group('H-22 · Selector de fecha', () {
@@ -295,17 +297,14 @@ Future<void> main() async {
       await _pumpConverter(tester, store);
       expect(find.text('Conversor'), findsOneWidget);
       // El subtítulo gris completo del v28 NO existe.
-      expect(
-        find.text('Dólar Oficial · 1 USD = 40,0000 VES'),
-        findsNothing,
-      );
+      expect(find.text('Dólar Oficial · 1 USD = 40,0000 VES'), findsNothing);
       expect(find.textContaining('Sin tasa disponible'), findsNothing);
-      // H-24: el selector delineado lleva sello + nombre + tasa + chevron.
-      expect(find.text('BCV · Oficial'), findsOneWidget);
-      expect(
-        find.textContaining('1 USD = 40,0000 VES · '),
-        findsOneWidget,
-      );
+      // H-24 v34: el selector delineado lleva el nombre SOLO (coloreado
+      // por tipo de tasa) + la fecha de actualización + chevron — sin la
+      // línea «1 USD = X» que saturaba (orden del dueño).
+      expect(find.text('BCV'), findsOneWidget);
+      expect(find.text('BCV · Oficial'), findsNothing);
+      expect(find.textContaining('1 USD = 40,0000 VES'), findsNothing);
       expect(find.byIcon(LucideIcons.chevronDown), findsOneWidget);
     });
 
@@ -323,26 +322,18 @@ Future<void> main() async {
     });
   });
 
-  group('H-28 · Notas inline', () {
-    testWidgets('una línea bajo el resultado, pegada al cálculo y persiste', (
+  group('v34 · Notas retiradas (orden del dueño)', () {
+    testWidgets('la pantalla es solo cálculo — sin campo de notas', (
       tester,
     ) async {
       final store = _pumpedStore();
       await _initServices(store);
       await _pumpConverter(tester, store);
-      // La nota vive INLINE (una línea, sin hoja «Notas»).
-      expect(find.text('Nota de esta conversión'), findsOneWidget);
+      // v34: las notas de conversión se retiraron — ni hint ni icono ni
+      // campo libre; la pantalla quedó cálculo puro.
+      expect(find.text('Nota de esta conversión'), findsNothing);
+      expect(find.byIcon(LucideIcons.notebookPen), findsNothing);
       expect(find.text('NOTAS'), findsNothing);
-      // Escribe y espera el debounce de 600 ms (persistencia intacta).
-      await tester.enterText(
-        find.byType(TextField).last,
-        'Cobro del lunes con la tasa del BCV',
-      );
-      await tester.pump(const Duration(milliseconds: 700));
-      expect(
-        store.readConversionNotes(),
-        'Cobro del lunes con la tasa del BCV',
-      );
     });
   });
 

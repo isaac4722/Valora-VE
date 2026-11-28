@@ -412,12 +412,12 @@ Future<void> main() async {
       await tester.pumpAndSettle();
       expect(store.data.converter.from, isNot(fromBefore));
       // v29 (H-28): Fuentes/Tabla/Recientes ya NO viven como fichas — la
-      // hoja de fuentes se abre desde el SELECTOR DE TASA (H-24): sello +
-      // nombre «BCV · Oficial» + «1 USD = 40,0000 VES» + chevron.
+      // hoja de fuentes se abre desde el SELECTOR DE TASA (H-24 v34:
+      // nombre COLOREADO por tipo + fecha + chevron).
       expect(find.text('Fuentes'), findsNothing);
       expect(find.text('Tabla'), findsNothing);
       expect(find.text('Recientes'), findsNothing);
-      await tester.tap(find.text('BCV · Oficial'));
+      await tester.tap(find.text('BCV'));
       await tester.pumpAndSettle();
       expect(find.text('Fuente de tasa · Bolívar'), findsOneWidget);
       // La fuente ACTIVA queda marcada (check de selección en la fila BCV).
@@ -515,11 +515,9 @@ Future<void> main() async {
       expect(pad.dx, greaterThan(500));
       expect(titulo.dx, lessThan(pad.dx));
       // El selector de tasa comparte fila con el panel (queda a la
-      // izquierda — v29: H-24 lo pinta a todo lo ancho del cuerpo).
-      expect(
-        tester.getTopLeft(find.text('BCV · Oficial')).dx,
-        lessThan(pad.dx),
-      );
+      // izquierda — v34: H-24 lo pinta a todo lo ancho del cuerpo, con
+      // el nombre SOLO coloreado por tipo).
+      expect(tester.getTopLeft(find.text('BCV')).dx, lessThan(pad.dx));
       // Y el pad FUNCIONA en su nueva casa: teclas 2 + 4 → «124».
       Finder tecla(String k) =>
           find.descendant(of: find.byType(VeKeypad), matching: find.text(k));
@@ -548,18 +546,19 @@ Future<void> main() async {
       expect(find.text('PERSONALIZACIÓN'), findsNothing);
       expect(find.text('Ajustes'), findsOneWidget);
       // Cuentas y cobro PRIMERO (deep link del Conversor e Inicio).
-      expect(find.text('CUENTAS Y COBRO'), findsOneWidget);
+      // v34: cada sección vive en su tarjeta con título en caja normal.
+      expect(find.text('Cuentas y cobro'), findsOneWidget);
       // La lista es perezosa: se baja hasta cada una para construirla.
       final lista = find.byType(Scrollable).first;
-      // v32: la GUI se refactorizó — cada sección tiene UN encabezado solo
-      // (PAÍS Y DECIMALES · DATOS Y CONEXIÓN · RESPALDO · ACERCA DE) y el
-      // contrato H-42 se mantiene: UNA pantalla, cero subpantallas.
+      // v34: la GUI se reescribió en tarjetas — un encabezado por caja
+      // (icono + título + pista) y el contrato H-42 se mantiene: UNA
+      // pantalla, cero subpantallas.
       for (final seccion in [
-        'TASAS Y FUENTES',
-        'PAÍS Y DECIMALES',
-        'APARIENCIA',
-        'RESPALDO',
-        'ACERCA DE',
+        'Tasas y fuentes',
+        'País y decimales',
+        'Apariencia',
+        'Respaldo',
+        'Acerca de',
       ]) {
         await tester.scrollUntilVisible(
           find.text(seccion),
@@ -716,10 +715,7 @@ Future<void> main() async {
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.drag(
-        find.byType(Scrollable).first,
-        const Offset(0, -120),
-      );
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -120));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Agregar a la lista'));
       await tester.pumpAndSettle();

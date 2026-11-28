@@ -1,19 +1,19 @@
-/// ─── Sala · lobby de conexión (v29 · H-38: reconstruido desde cero) ─────────
-/// El lobby en el lenguaje de secciones v28/v29: TÍTULO + descripción de una
-/// línea + detalles con hairlines, separadas por espacio en blanco, cero
-/// cajas dentro de cajas.
+/// ─── Sala · lobby de conexión (v34 · reescritura de la GUI) ────────────────
+/// El lobby en TARJETAS del mismo lenguaje del Inicio (v34 · orden del
+/// dueño): cada bloque — Cómo se conectan · Tu intención · Salas
+/// cercanas — vive en su PROPIA caja delineada con encabezado claro,
+/// jerarquía y tamaños uniformes.
 ///
 /// · CÓMO SE CONECTAN — la configuración primero (orden del dueño): TRES
 ///   modos P2P sin internet (Cerca · WiFi o Hotspot · Bluetooth) + el
 ///   servidor propio, cada uno con su tecnología.
-/// · INTENCIÓN (v20) — «dependiendo lo que se vaya a usar salga algo y no
-///   salga otro»: segmentos CORTOS («Unirme» · «Crear») que jamás se
+/// · INTENCIÓN (v20) — segmentos CORTOS («Unirme» · «Crear») que jamás se
 ///   recortan; solo el flujo elegido se pinta.
 /// · SALAS CERCANAS — escucha en vivo de las públicas.
 ///
-/// Unirse (hoja JoinSheet del prototipo: modo · nombre · código · PIN) ·
-/// Crear (anfitrión, con PIN de emojis opcional) · escaneo de QR y deep
-/// links. Toda la funcionalidad P2P/servidor/PIN intacta.
+/// Unirse (hoja JoinSheet: modo · nombre · código · PIN) · Crear
+/// (anfitrión, con PIN de emojis opcional) · escaneo de QR y deep links.
+/// Toda la funcionalidad P2P/servidor/PIN intacta.
 library;
 
 import 'package:flutter/material.dart';
@@ -124,39 +124,105 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
               const _SeccionServidor(),
             ],
             // 3º INTENCIÓN (v20): Unirme o Crear — segmentos cortos que
-            // jamás se recortan (H-38).
-            VeEyebrow(
-              hint: 'Elige primero qué vas a hacer — solo ese flujo se pinta.',
-              child: const Text('TU INTENCIÓN'),
-            ),
-            VeSegmented<int>(
-              value: _intent,
-              onChanged: (v) => setState(() => _intent = v),
-              segments: const [
-                VeSegment(value: 0, label: 'Unirme'),
-                VeSegment(value: 1, label: 'Crear'),
-              ],
-            ),
-            const SizedBox(height: 10),
-            if (_intent == 0)
-              // FLUJO UNIRSE: puerta + QR — nada de crear.
-              _FlujoUnirse(busy: busy)
-            else
-              // FLUJO CREAR: anfitrión completo — nada de unirse.
-              _FlujoCrear(
-                room: room,
-                roomNameCtrl: _roomNameCtrl,
-                hostNameCtrl: _hostNameCtrl,
-                busy: busy,
-                creating: _creating,
-                onRun: _run,
-                onCreating: (v) => setState(() => _creating = v),
+            // jamás se recortan (H-38). v34: en su propia tarjeta.
+            _SalaCard(
+              titulo: 'TU INTENCIÓN',
+              pista: 'Elige primero qué vas a hacer — solo ese flujo se pinta.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  VeSegmented<int>(
+                    value: _intent,
+                    onChanged: (v) => setState(() => _intent = v),
+                    segments: const [
+                      VeSegment(value: 0, label: 'Unirme'),
+                      VeSegment(value: 1, label: 'Crear'),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_intent == 0)
+                    // FLUJO UNIRSE: puerta + QR — nada de crear.
+                    _FlujoUnirse(busy: busy)
+                  else
+                    // FLUJO CREAR: anfitrión completo — nada de unirse.
+                    _FlujoCrear(
+                      room: room,
+                      roomNameCtrl: _roomNameCtrl,
+                      hostNameCtrl: _hostNameCtrl,
+                      busy: busy,
+                      creating: _creating,
+                      onRun: _run,
+                      onCreating: (v) => setState(() => _creating = v),
+                    ),
+                ],
               ),
+            ),
             // 4º SALAS CERCANAS (escucha en vivo de las públicas).
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             _SalasCercanas(room: room, busy: busy),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Tarjeta de sección del lobby (v34 · reescritura de la GUI): la misma
+/// piel de las tarjetas del Inicio y Ajustes — superficie + hairline +
+/// radio 16, rótulo técnico arriba y pista de una línea.
+class _SalaCard extends StatelessWidget {
+  const _SalaCard({
+    required this.titulo,
+    required this.pista,
+    required this.child,
+    this.trailing,
+  });
+
+  final String titulo;
+  final String pista;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.ve.colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: scheme.border),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  titulo,
+                  style: VeText.labelCaps(11, color: scheme.mutedForeground),
+                ),
+              ),
+              ?trailing,
+            ],
+          ),
+          if (pista.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              pista,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11,
+                height: 1.4,
+                color: scheme.mutedForeground,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          child,
+        ],
       ),
     );
   }
@@ -289,8 +355,8 @@ class _Conectando extends ConsumerWidget {
   }
 }
 
-/// CÓMO SE CONECTAN (H-38): sección con filas de hairline — un modo por
-/// fila, cada uno con SU tecnología; la activa lleva el check a la derecha.
+/// CÓMO SE CONECTAN (H-38 · v34 en tarjeta): un modo por fila con hairline
+/// — cada uno con SU tecnología; la activa lleva el check a la derecha.
 class _ComoSeConectan extends StatelessWidget {
   const _ComoSeConectan({required this.room});
 
@@ -299,46 +365,37 @@ class _ComoSeConectan extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = context.ve.colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        VeEyebrow(
-          hint:
-              'Tres modos sin internet y el servidor propio — cada uno con '
-              'su tecnología.',
-          child: const Text('CÓMO SE CONECTAN'),
-        ),
-        VeGroup(
-          semantic: 'Modos de conexión',
-          children: [
-            for (final m in RoomMode.values)
-              VeRow(
-                label: Text(m.label),
-                // tech·hint es LARGO (verificación visual 390: a 1 línea
-                // quedaba «Sin configurar…» «el Hot…»). 3 líneas explícitas:
-                // el texto completo cabe y respira.
-                sub: Text('${m.tech} · ${m.hint}'),
-                onTap: () => room.setMode(m),
-                right: room.mode == m
-                    ? Icon(
-                        LucideIcons.check,
-                        size: 15,
-                        color: scheme.foreground,
-                      )
-                    : Icon(
-                        switch (m) {
-                          RoomMode.cerca => LucideIcons.radioTower,
-                          RoomMode.wifi => LucideIcons.router,
-                          RoomMode.bt => LucideIcons.bluetooth,
-                          RoomMode.servidor => LucideIcons.server,
-                        },
-                        size: 15,
-                        color: scheme.mutedForeground,
-                      ),
-              ),
-          ],
-        ),
-      ],
+    return _SalaCard(
+      titulo: 'CÓMO SE CONECTAN',
+      pista:
+          'Tres modos sin internet y el servidor propio — cada uno con '
+          'su tecnología.',
+      child: VeGroup(
+        semantic: 'Modos de conexión',
+        children: [
+          for (final m in RoomMode.values)
+            VeRow(
+              label: Text(m.label),
+              // tech·hint es LARGO (verificación visual 390: a 1 línea
+              // quedaba «Sin configurar…» «el Hot…»). 3 líneas explícitas:
+              // el texto completo cabe y respira.
+              sub: Text('${m.tech} · ${m.hint}'),
+              onTap: () => room.setMode(m),
+              right: room.mode == m
+                  ? Icon(LucideIcons.check, size: 15, color: scheme.foreground)
+                  : Icon(
+                      switch (m) {
+                        RoomMode.cerca => LucideIcons.radioTower,
+                        RoomMode.wifi => LucideIcons.router,
+                        RoomMode.bt => LucideIcons.bluetooth,
+                        RoomMode.servidor => LucideIcons.server,
+                      },
+                      size: 15,
+                      color: scheme.mutedForeground,
+                    ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -744,72 +801,72 @@ class _SalasCercanasState extends ConsumerState<_SalasCercanas> {
     final scheme = context.ve.colorScheme;
     return KeyedSubtree(
       key: const Key('lobby-cercanas'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          VeEyebrow(
-            hint: 'Salas públicas por ${room.modeLabel}. ${room.mode.hint}',
-            right: VeBtn(
-              variant: VeBtnVariant.ghost,
-              size: VeBtnSize.sm,
-              icon: room.scanning ? LucideIcons.circleStop : LucideIcons.radar,
-              enabled: !widget.busy,
-              onPressed: widget.busy
-                  ? null
-                  : () => room.scanning ? room.stopScan() : room.startScan(),
-              child: Text(room.scanning ? 'Parar' : 'Escuchar'),
-            ),
-            child: const Text('SALAS CERCANAS'),
-          ),
-          if (room.scanning && room.foundRooms.isEmpty)
-            Row(
-              children: [
-                const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Buscando…',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 13.5,
-                    color: scheme.mutedForeground,
+      child: _SalaCard(
+        titulo: 'SALAS CERCANAS',
+        pista: 'Salas públicas por ${room.modeLabel}. ${room.mode.hint}',
+        trailing: VeBtn(
+          variant: VeBtnVariant.ghost,
+          size: VeBtnSize.sm,
+          icon: room.scanning ? LucideIcons.circleStop : LucideIcons.radar,
+          enabled: !widget.busy,
+          onPressed: widget.busy
+              ? null
+              : () => room.scanning ? room.stopScan() : room.startScan(),
+          child: Text(room.scanning ? 'Parar' : 'Escuchar'),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (room.scanning && room.foundRooms.isEmpty)
+              Row(
+                children: [
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                ),
-              ],
-            )
-          else if (!room.scanning && room.foundRooms.isEmpty)
-            Text(
-              'Toca «Escuchar» para ver las salas públicas cerca.',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13.5,
-                color: scheme.mutedForeground,
-              ),
-            )
-          else
-            VeGroup(
-              children: [
-                for (final ad in room.foundRooms)
-                  _RoomAdTile(
-                    ad: ad,
-                    busy: widget.busy,
-                    onTap: () => showJoinSheet(
-                      context,
-                      invite: SalaInvite(
-                        code: ad.code,
-                        mode: ad.mode,
-                        roomName: ad.roomName,
-                        hostName: ad.hostName,
-                      ),
-                      ad: ad,
+                  const SizedBox(width: 8),
+                  Text(
+                    'Buscando…',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13.5,
+                      color: scheme.mutedForeground,
                     ),
                   ),
-              ],
-            ),
-        ],
+                ],
+              )
+            else if (!room.scanning && room.foundRooms.isEmpty)
+              Text(
+                'Toca «Escuchar» para ver las salas públicas cerca.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13.5,
+                  color: scheme.mutedForeground,
+                ),
+              )
+            else
+              VeGroup(
+                children: [
+                  for (final ad in room.foundRooms)
+                    _RoomAdTile(
+                      ad: ad,
+                      busy: widget.busy,
+                      onTap: () => showJoinSheet(
+                        context,
+                        invite: SalaInvite(
+                          code: ad.code,
+                          mode: ad.mode,
+                          roomName: ad.roomName,
+                          hostName: ad.hostName,
+                        ),
+                        ad: ad,
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -853,97 +910,99 @@ class _SeccionServidorState extends ConsumerState<_SeccionServidor> {
     final scheme = context.ve.colorScheme;
     final ink = VeColors.of(context);
     final room = ref.watch(roomControllerProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        VeEyebrow(
-          hint:
-              'El servidor solo TRANSPORTA: la lista, los roles y la '
-              'verificación viven en el teléfono del anfitrión.',
-          child: const Text('TU SERVIDOR (SOCKET.IO)'),
-        ),
-        VeInput(
-          controller: _addr,
-          placeholder: 'http://192.168.1.20:3000',
-          keyboardType: TextInputType.url,
-          onChanged: room.setServerAddress,
-          semantic: 'URL del servidor',
-        ),
-        const SizedBox(height: 8),
-        VeInput(
-          controller: _token,
-          placeholder: 'Token (opcional)',
-          onChanged: room.setServerToken,
-          semantic: 'Token del servidor',
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            VeBtn(
-              variant: VeBtnVariant.secondary,
-              icon: _probing ? null : LucideIcons.plugZap,
-              enabled: !_probing,
-              onPressed: _probing
-                  ? null
-                  : () async {
-                      setState(() => _probing = true);
-                      final msg = await room.probeServer();
-                      if (!mounted) return;
-                      setState(() {
-                        _probing = false;
-                        _probeMsg = msg ?? 'Conexión OK';
-                      });
-                    },
-              child: _probing
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Probar conexión'),
+    return _SalaCard(
+      titulo: 'TU SERVIDOR (SOCKET.IO)',
+      pista:
+          'El servidor solo TRANSPORTA: la lista, los roles y la '
+          'verificación viven en el teléfono del anfitrión.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          VeInput(
+            controller: _addr,
+            placeholder: 'http://192.168.1.20:3000',
+            keyboardType: TextInputType.url,
+            onChanged: room.setServerAddress,
+            semantic: 'URL del servidor',
+          ),
+          const SizedBox(height: 8),
+          VeInput(
+            controller: _token,
+            placeholder: 'Token (opcional)',
+            onChanged: room.setServerToken,
+            semantic: 'Token del servidor',
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              VeBtn(
+                variant: VeBtnVariant.secondary,
+                icon: _probing ? null : LucideIcons.plugZap,
+                enabled: !_probing,
+                onPressed: _probing
+                    ? null
+                    : () async {
+                        setState(() => _probing = true);
+                        final msg = await room.probeServer();
+                        if (!mounted) return;
+                        setState(() {
+                          _probing = false;
+                          _probeMsg = msg ?? 'Conexión OK';
+                        });
+                      },
+                child: _probing
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Probar conexión'),
+              ),
+              VeBtn(
+                variant: VeBtnVariant.ghost,
+                onPressed: () => setState(() => _guide = !_guide),
+                child: Text(
+                  _guide ? 'Ocultar guía' : '¿Cómo monto mi servidor?',
+                ),
+              ),
+            ],
+          ),
+          if (_probeMsg != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                _probeMsg!,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: _probeMsg == 'Conexión OK' ? ink.pos : ink.neg,
+                ),
+              ),
             ),
-            VeBtn(
-              variant: VeBtnVariant.ghost,
-              onPressed: () => setState(() => _guide = !_guide),
-              child: Text(_guide ? 'Ocultar guía' : '¿Cómo monto mi servidor?'),
-            ),
-          ],
-        ),
-        if (_probeMsg != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              _probeMsg!,
+          if (_guide) ...[
+            const SizedBox(height: 10),
+            Text(
+              '1. Instala Node.js y ejecuta: npm i socket.io\n'
+              '2. server.js mínimo: al recibir `join` mete el socket al room '
+              'del código y responde {ok: true, id: socket.id}; reenvía '
+              '`room_event` a los demás del room (añadiendo from: socket.id) '
+              'y `room_event_to` solo al destino.\n'
+              '3. Abre la URL aquí y prueba la conexión. También puedes usar '
+              'el modo WiFi local con este teléfono como servidor.',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: _probeMsg == 'Conexión OK' ? ink.pos : ink.neg,
+                height: 1.5,
+                color: scheme.mutedForeground,
               ),
             ),
-          ),
-        if (_guide) ...[
-          const SizedBox(height: 10),
-          Text(
-            '1. Instala Node.js y ejecuta: npm i socket.io\n'
-            '2. server.js mínimo: al recibir `join` mete el socket al room '
-            'del código y responde {ok: true, id: socket.id}; reenvía '
-            '`room_event` a los demás del room (añadiendo from: socket.id) '
-            'y `room_event_to` solo al destino.\n'
-            '3. Abre la URL aquí y prueba la conexión. También puedes usar '
-            'el modo WiFi local con este teléfono como servidor.',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.5,
-              height: 1.5,
-              color: scheme.mutedForeground,
-            ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

@@ -271,27 +271,35 @@ class LedgerRow extends StatelessWidget {
         if (leading != null) ...[leading!, const SizedBox(width: 6)],
         if (dots)
           Flexible(
-            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-              label,
-              // TASK-33 Linear: etiqueta en peso regular — la cifra manda.
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurface,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                label,
+                // TASK-33 Linear: etiqueta en peso regular — la cifra manda.
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: scheme.onSurface,
+                ),
               ),
-            )),
+            ),
           )
         else
           Expanded(
-            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-              label,
-              // TASK-33 Linear: etiqueta en peso regular — la cifra manda.
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurface,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                label,
+                // TASK-33 Linear: etiqueta en peso regular — la cifra manda.
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: scheme.onSurface,
+                ),
               ),
-            )),
+            ),
           ),
         if (dots) ...[
           const SizedBox(width: 6),
@@ -389,32 +397,22 @@ class SourceSeal extends StatelessWidget {
     final (icon, word, c) = switch (cat) {
       SourceCategory.official => (
         Icons.account_balance_rounded,
-        'OFICIAL',
+        'Oficial',
         sem.pos,
       ),
-      SourceCategory.parallel => (Icons.storefront_rounded, 'MERCADO', sem.neg),
-      SourceCategory.mixed => (Icons.balance_rounded, 'PROMEDIO', sem.warn),
-      SourceCategory.manual => (Icons.edit_note_rounded, 'MANUAL', sem.manual),
+      SourceCategory.parallel => (Icons.storefront_rounded, 'Mercado', sem.neg),
+      SourceCategory.mixed => (Icons.balance_rounded, 'Promedio', sem.warn),
+      SourceCategory.manual => (Icons.edit_note_rounded, 'Manual', sem.manual),
     };
-    // v25 «HOJA»: sello SOLO texto de color (icono + palabra) — sin fondo,
-    // sin borde. La identidad no necesita caja.
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 11, color: c),
-          const SizedBox(width: 4),
-          Text(
-            word,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-              color: c,
-            ),
-          ),
-        ],
+    // v34 · código de colores por tipo de tasa (orden del dueño): el sello
+    // se queda SOLO en el icono de color — la palabra era la etiqueta
+    // secundaria que saturaba las filas; el TIPO lo dice ahora el COLOR del
+    // nombre de la tasa. La palabra sigue viva para el lector de pantalla.
+    return Semantics(
+      label: word,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+        child: Icon(icon, size: 13, color: c),
       ),
     );
   }
@@ -1009,10 +1007,14 @@ class StatCard extends StatelessWidget {
                 const SizedBox(width: 5),
               ],
               Expanded(
-                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                  label.toUpperCase(),
-                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
-                )),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    label.toUpperCase(),
+                    style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
+                  ),
+                ),
               ),
             ],
           ),
@@ -1262,17 +1264,21 @@ class RateBadge extends StatelessWidget {
             // Flexible: en pantallas angostas el nombre achica con ellipsis y
             // la cifra NUNCA se sale del pill.
             Flexible(
-              child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                label,
-                maxLines: 1,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: selected
-                      ? scheme.surfaceContainerLowest
-                      : scheme.onSurface,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: selected
+                        ? scheme.surfaceContainerLowest
+                        : scheme.onSurface,
+                  ),
                 ),
-              )),
+              ),
             ),
             if (trailing != null) ...[
               const SizedBox(width: 6),
@@ -1374,14 +1380,18 @@ class CurrencySelect extends StatelessWidget {
               // Flexible + ellipsis: en espacios ajustados (fila del panel
               // de presupuesto) la pill encoge sin desbordar.
               Flexible(
-                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                  value.code,
-                  maxLines: 1,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value.code,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                )),
+                ),
               ),
               const SizedBox(width: 2),
               Icon(
@@ -1591,27 +1601,35 @@ class PushScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                            title,
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.2,
-                              color: scheme.onSurface,
-                            ),
-                          )),
-                          if (subtitle != null)
-                            FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                              subtitle!,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              title,
                               maxLines: 1,
                               style: TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 11,
-                                color: scheme.onSurfaceVariant,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.2,
+                                color: scheme.onSurface,
                               ),
-                            )),
+                            ),
+                          ),
+                          if (subtitle != null)
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                subtitle!,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -2448,13 +2466,17 @@ class MiniRateCard extends StatelessWidget {
               children: [
                 if (leading != null) ...[leading!, const SizedBox(width: 5)],
                 Flexible(
-                  child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: scheme.onSurfaceVariant,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
-                  )),
+                  ),
                 ),
               ],
             ),
@@ -2651,55 +2673,78 @@ class _SettleState extends State<Settle> with SingleTickerProviderStateMixin {
   );
 }
 
-/// Leyenda de categorías de tasa con el SourceSeal de la casa (v19.0:
-/// icono + palabra). Usada en Bienvenida y Ajustes para explicar de un
-/// vistazo qué significa cada sello del libro.
+/// Leyenda de categorías de tasa (v34 · código de colores del dueño): el
+/// COLOR del nombre dice qué tipo de tasa es — verde oficial · rojo
+/// mercado/paralelo · naranja promedio · morado manual. Cada opción vive en
+/// su PROPIA fila separada por hairlines (hallazgo del dueño: sin
+/// separación las opciones se fundían). Usada en Bienvenida y Ajustes.
 class CategoryLegend extends StatelessWidget {
   const CategoryLegend({super.key});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    const rows = <(SourceCategory, String, String)>[
+    final VeInk ink = VeColors.of(context);
+    final rows = <(SourceCategory, String, String, Color)>[
       (
         SourceCategory.official,
         'Oficial',
         'BCV · TRM · Banxico · Real · EUR oficial',
+        ink.pos,
       ),
-      (SourceCategory.mixed, 'Promedio', 'Entre oficial y mercado'),
-      (SourceCategory.parallel, 'Mercado', 'Paralelo VES · COP · EUR'),
-      (SourceCategory.manual, 'Manual', 'Tu propia tasa'),
+      (SourceCategory.parallel, 'Mercado', 'Paralelo VES · COP · EUR', ink.neg),
+      (SourceCategory.mixed, 'Promedio', 'Entre oficial y mercado', ink.warn),
+      (SourceCategory.manual, 'Manual', 'Tu propia tasa', ink.manual),
     ];
-    return Column(
-      children: [
-        for (final (cat, label, detail) in rows)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(
-              children: [
-                SourceSeal(cat),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
+    return Semantics(
+      label:
+          'Leyenda de colores de tasas: verde oficial, rojo mercado, '
+          'naranja promedio, morado manual',
+      child: Column(
+        children: [
+          for (final (cat, label, detail, c) in rows) ...<Widget>[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 9),
+              child: Row(
+                children: [
+                  // Muestra del COLOR: punto grande de la tinta de la
+                  // categoría — exactamente como se pinta el nombre.
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(color: c, shape: BoxShape.circle),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    detail,
+                  const SizedBox(width: 10),
+                  Text(
+                    label,
                     style: TextStyle(
-                      fontSize: 11,
-                      color: scheme.onSurfaceVariant,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                      color: c,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      detail,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-      ],
+            if (cat != SourceCategory.manual)
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: scheme.outlineVariant.withValues(alpha: 0.65),
+              ),
+          ],
+        ],
+      ),
     );
   }
 }

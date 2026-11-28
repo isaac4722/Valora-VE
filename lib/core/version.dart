@@ -6,8 +6,9 @@
 /// en settings y los PDF ponían versiones viejas a mano.
 library;
 
-/// Versión visible (ronda v33 · revisión Goldfish de textos: ortografía y
-/// gramática de la UI y la documentación, README al día con la realidad
-/// v31/v32 — solo APK, cuatro transportes de Sala, Ajustes por secciones —
-/// y bitácoras al día con las rondas v25 y v29–v32).
-const String kAppVersionVisible = '33';
+/// Versión visible (ronda v34 · GUI del dueño: fixes de la ronda de
+/// errores — barra de bienvenida centrada, bandera US en Global/USD,
+/// frescura por última consulta, icono del tema centrado, conversor sin
+/// notas y con código de colores por tipo de tasa, tarjetas en Inicio,
+/// Ajustes, Sala y rejerarquización de la Lista).
+const String kAppVersionVisible = '34';

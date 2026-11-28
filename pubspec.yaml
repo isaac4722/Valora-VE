@@ -2,17 +2,21 @@ name: valorave
 description: "ValoraVE — cuánto vale tu dinero en Venezuela. Tasas BCV/paralelo, conversor, lista en vivo, libro de precios y salas con su propia tecnología. Offline-first."
 publish_to: 'none'
 
-# 1.18.0-beta+56 · v33 — revisión Goldfish de textos: ortografía y
-# gramática de la UI visible y de la documentación (README al día con la
-# realidad v31/v32: builds solo APK, cuatro transportes de Sala, Ajustes
-# por secciones), CSV con encabezados con tilde (importador tolerante a
-# ambas grafías) y bitácoras al día con las rondas v25 y v29–v32.
-# (v32: GUI del dueño — barra pegadiza sin franja, títulos solos, Modo
-# Cachea en fila propia, header de Inicio sin lupa, iconos grandes y
-# centrados, sub legible en filas, Ajustes refactor plano; v31: revisión
-# integral con exportación PDF/imágenes profesional y builds SOLO APK,
-# con la recuperación de v29/v30.)
-version: 1.18.0-beta+56
+# 1.18.0-beta+57 · v34 — ronda de errores del dueño: barra de bienvenida
+# con puntos CENTRADOS de verdad y bandera US en Global/USD, frescura por
+# última consulta (fix «hace 9 horas»), icono del interruptor de tema
+# centrado, conversor SIN notas y con selector nombre+fecha coloreado por
+# tipo de tasa (verde oficial · rojo mercado · naranja promedio · morado
+# manual) con difuminado de selección, swap como botón delineado,
+# etiquetas secundarias fuera de toda la UI, «Tu mes» y «Actividad
+# reciente» en tarjetas separadas, Ajustes y Sala en Vivo reescritos en
+# tarjetas, y Lista rejerarquizada (captura arriba, configuración abajo).
+# (v33: revisión Goldfish de textos; v32: GUI del dueño — barra pegadiza
+# sin franja, títulos solos, Modo Cachea en fila propia, header de Inicio
+# sin lupa, iconos grandes y centrados, sub legible en filas, Ajustes
+# refactor plano; v31: revisión integral con exportación PDF/imágenes
+# profesional y builds SOLO APK.)
+version: 1.18.0-beta+57
 
 environment:
   sdk: ^3.9.2

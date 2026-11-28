@@ -1,14 +1,24 @@
-/// ─── Onboarding (§9.9 · v19.0 · orden del dueño: slides) ─────────────────────
+/// ─── Onboarding (§9.9 · v34 · reescritura completa de la GUI) ──────────────
 /// Bienvenida en PageView de 4 slides con avanzar/retroceder (botones y
 /// gesto de swipe): marca → lo que hace → datos tuyos → país con banderas.
-/// El botón final «Comenzar en {país}» fija el país, cierra el onboarding y
-/// deja pasar al tutorial completo (que arranca solo al montar el shell).
 ///
-/// La última vez (v18.0) esto era UN scroll — el dueño pidió volver a
-/// slides. El tutorial sigue siendo UNO (app_tour.dart); la bienvenida NO
-/// se repite sola (replay en Ajustes → «Volver a ver la bienvenida»).
+/// v34 (hallazgos del dueño, ronda de errores):
+/// · La barra inferior se REESCRIBIÓ con un Stack: los puntos van
+///   CENTRADOS DE VERDAD sobre el eje de la pantalla (antes vivían en el
+///   hueco que dejaban los botones y salían corridos — «Atrás» era más
+///   angosto que «Siguiente» y empujaba los puntos a la izquierda).
+/// · Tercer slide: las opciones de tasas (leyenda de colores) viven en
+///   filas PROPIAS separadas por hairlines — antes se fundían.
+/// · Cuarto slide: «Global / USD» lleva la BANDERA DE ESTADOS UNIDOS
+///   (assets/flags/us.png), como el resto de los países — el ícono de
+///   globo era el único sin bandera.
+/// · Tamaños jerárquicos: título display 30, subtítulo 17, cuerpo 13.5,
+///   todo centrado en su propio eje.
 ///
-/// Sin logotipo gráfico: la marca es tipografía pura «ValoraVE».
+/// El botón final «Comenzar» fija el país, cierra el onboarding y deja
+/// pasar al tutorial completo (que arranca solo al montar el shell). La
+/// bienvenida NO se repite sola (replay en Ajustes → «Volver a ver la
+/// bienvenida»). Sin logotipo gráfico: la marca es tipografía pura.
 library;
 
 import 'package:flutter/material.dart';
@@ -81,67 +91,77 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 ],
               ),
             ),
-            // Barra de control: atrás · puntos · siguiente/comenzar.
-            // TASK-34 p11: botones Ve (ghost atrás · primario adelante) —
-            // misma píldora de tinta invertida del prototipo. FittedBox en
-            // los puntos y Flexible en los botones (fix overflow <356 dp).
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: Row(
+            // ── Barra de control v34: Stack con los PUNTOS centrados sobre
+            // el eje REAL de la pantalla y los botones anclados a los
+            // bordes en cajas IGUALES (110 px) — antes los puntos flotaban
+            // en el hueco entre botones de distinto ancho y se veían
+            // corridos junto a «Siguiente» (hallazgo del dueño).
+            SizedBox(
+              height: 76,
+              child: Stack(
+                alignment: Alignment.center,
                 children: <Widget>[
-                  Flexible(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 96),
-                      // v21.4: en el slide 1 «Atrás» no lleva a nada — un
-                      // botón muerto a la vista confunde al usuario nuevo.
-                      // Se desvanece (opacity 0 + sin puntero + sin voz) y
-                      // el hueco se reserva igual para que los puntos no
-                      // salten de posición entre páginas.
-                      child: AnimatedOpacity(
-                        opacity: _index > 0 ? 1 : 0,
-                        duration: const Duration(milliseconds: 220),
-                        curve: kEaseVe,
-                        child: IgnorePointer(
-                          ignoring: _index == 0,
-                          child: ExcludeSemantics(
-                            excluding: _index == 0,
-                            child: VeBtn(
-                              variant: VeBtnVariant.ghost,
-                              enabled: _index > 0,
-                              onPressed: () => _go(_index - 1),
-                              child: const Text('Atrás'),
+                  // Puntos: centrados sobre TODO el ancho de la pantalla.
+                  Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: _Dots(count: 4, index: _index, onTap: _go),
+                    ),
+                  ),
+                  // Botones: cajas gemelas a los bordes.
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: <Widget>[
+                        // v21.4: en el slide 1 «Atrás» no lleva a nada — se
+                        // desvanece (opacity 0 + sin puntero + sin voz) y el
+                        // hueco se reserva para que nada salte de posición.
+                        SizedBox(
+                          width: 110,
+                          child: AnimatedOpacity(
+                            opacity: _index > 0 ? 1 : 0,
+                            duration: const Duration(milliseconds: 220),
+                            curve: kEaseVe,
+                            child: IgnorePointer(
+                              ignoring: _index == 0,
+                              child: ExcludeSemantics(
+                                excluding: _index == 0,
+                                child: VeBtn(
+                                  variant: VeBtnVariant.ghost,
+                                  enabled: _index > 0,
+                                  onPressed: () => _go(_index - 1),
+                                  expands: true,
+                                  child: const Text('Atrás'),
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: _Dots(count: 4, index: _index, onTap: _go),
-                      ),
-                    ),
-                  ),
-                  Flexible(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 150),
-                      child: VeBtn(
-                        variant: VeBtnVariant.primary,
-                        onPressed: _index < 3
-                            ? () => _go(_index + 1)
-                            : () => _finish(store),
-                        child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                          _index < 3 ? 'Siguiente' : 'Comenzar',
-                          maxLines: 1,
-                        )),
-                      ),
+                        const Spacer(),
+                        SizedBox(
+                          width: 110,
+                          child: VeBtn(
+                            variant: VeBtnVariant.primary,
+                            onPressed: _index < 3
+                                ? () => _go(_index + 1)
+                                : () => _finish(store),
+                            expands: true,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                _index < 3 ? 'Siguiente' : 'Comenzar',
+                                maxLines: 1,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 10),
           ],
         ),
       ),
@@ -156,9 +176,9 @@ class _SlideMarca extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // Scroll + centrado (patrón de los slides 2-4): en landscape o con
-    // textScale >=1.5 el contenido superaba el viewport fijo del PageView
-    // y desbordaba — el primer slide que ve un usuario nuevo (fix).
+    // Scroll + centrado: en landscape o con textScale >=1.5 el contenido
+    // supera el viewport fijo del PageView y desborda — el primer slide
+    // que ve un usuario nuevo jamás se rompe.
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
@@ -168,10 +188,10 @@ class _SlideMarca extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              // Marca del prototipo (TASK-34 p11): rombo de tinta con el
-              // círculo del fondo — el mismo gesto del SVG del web, pintado.
+              // Marca del prototipo: rombo de tinta con el círculo del
+              // fondo — el mismo gesto del SVG del web, pintado.
               const Center(child: _VeLogo(size: 44)),
-              const SizedBox(height: 20),
+              const SizedBox(height: 22),
               Center(
                 child: RichText(
                   text: TextSpan(
@@ -215,8 +235,9 @@ class _SlideMarca extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 34),
-              // Las siete divisas del foco con banderas reales (assets/flags).
-              // v27: rejilla 4+3 — sin ETH, la segunda fila queda equilibrada.
+              // Las siete divisas del foco con banderas reales
+              // (assets/flags). Rejilla 4+3 — la segunda fila queda
+              // equilibrada.
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -282,8 +303,7 @@ class _FlagPill extends ConsumerWidget {
 }
 
 /// Marca del prototipo web: rombo (cuadrado rotado 45° con esquinas
-/// redondeadas) en tinta fg con el círculo del fondo al centro — el mismo
-/// gesto del `<svg>` del Onboarding, pintado en Flutter.
+/// redondeadas) en tinta fg con el círculo del fondo al centro.
 class _VeLogo extends ConsumerWidget {
   const _VeLogo({this.size = 40});
 
@@ -340,9 +360,6 @@ class _SlideQueHace extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final sem = VeColors.of(context);
-    // Centrado vertical (v19.10): mismo patrón del slide 1 — el
-    // contenido respira centrado y con textScale alto sigue habiendo
-    // scroll sin desbordes (antes quedaba colgado arriba, ~45 % vacío).
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(26, 12, 26, 8),
@@ -363,9 +380,15 @@ class _SlideQueHace extends ConsumerWidget {
               const SizedBox(height: 4),
               Text(
                 'Tres cosas, bien hechas.',
-                style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 22),
+              // v34: los tres pilares como TARJETAS delineadas — icono en
+              // tile tintado, título 17 y cuerpo 13.5; jerarquía clara y
+              // separación honesta entre opciones (hallazgo del dueño).
               _WelcomeBullet(
                 icon: Icons.swap_horiz,
                 color: scheme.primary,
@@ -404,9 +427,6 @@ class _SlideDatos extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // Centrado vertical (v19.10): mismo patrón del slide 1 — el
-    // contenido respira centrado y con textScale alto sigue habiendo
-    // scroll sin desbordes (antes quedaba colgado arriba, ~45 % vacío).
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(26, 12, 26, 8),
@@ -427,7 +447,10 @@ class _SlideDatos extends ConsumerWidget {
               const SizedBox(height: 4),
               Text(
                 'Sin cuentas, sin nube, sin claves.',
-                style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 18),
               Builder(
@@ -475,7 +498,9 @@ class _SlideDatos extends ConsumerWidget {
                           ),
                         ),
                         const Divider(height: 22),
-                        // Leyenda de categorías (dp6): el color dice qué es la tasa.
+                        // v34: leyenda del código de colores — una fila por
+                        // tipo, separadas por hairlines (hallazgo del
+                        // dueño: faltaba separación entre las opciones).
                         const CategoryLegend(),
                       ],
                     ),
@@ -490,7 +515,7 @@ class _SlideDatos extends ConsumerWidget {
   }
 }
 
-/// ─── Slide 4 · País (banderas reales) + Comenzar ─────────────────────────────
+/// ─── Slide 4 · País (banderas reales) ────────────────────────────────────────
 class _SlidePais extends ConsumerWidget {
   const _SlidePais({required this.country, required this.onPickCountry});
 
@@ -500,9 +525,6 @@ class _SlidePais extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // Centrado vertical (v19.10): mismo patrón del slide 1 — el
-    // contenido respira centrado y con textScale alto sigue habiendo
-    // scroll sin desbordes (antes quedaba colgado arriba, ~45 % vacío).
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(26, 12, 26, 8),
@@ -523,7 +545,10 @@ class _SlidePais extends ConsumerWidget {
               const SizedBox(height: 4),
               Text(
                 'Define el tablero protagonista.',
-                style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -535,10 +560,14 @@ class _SlidePais extends ConsumerWidget {
                   color: scheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
+              // v34: chips de país a 40 px de alto, centrados — TODOS con
+              // bandera real (Global / USD usa la bandera de Estados
+              // Unidos: su divisa protagonista es el dólar; hallazgo del
+              // dueño, era el único chip con un ícono suelto).
               Wrap(
-                spacing: 6,
-                runSpacing: 6,
+                spacing: 8,
+                runSpacing: 8,
                 alignment: WrapAlignment.center,
                 children: <Widget>[
                   for (final c in Country.values)
@@ -596,7 +625,8 @@ class _Dots extends ConsumerWidget {
   }
 }
 
-/// Chip compacto de país (bandera real).
+/// Chip de país (bandera real SIEMPRE — v34: Global / USD usa la bandera
+/// de Estados Unidos, como pidió el dueño; era el único sin bandera).
 class _CountryChip extends ConsumerWidget {
   const _CountryChip({
     required this.country,
@@ -613,13 +643,14 @@ class _CountryChip extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final shad = context.ve.colorScheme;
     // v25 «HOJA»: píldora SIN borde — seleccionada = tinta sólida (como el
-    // VeChip del kit), resto = tonal muted.
+    // VeChip del kit), resto = tonal muted. v34: 40 px de alto para que la
+    // bandera de 16 respire y el toque sea cómodo.
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(999),
           color: selected ? shad.primary : shad.muted,
@@ -627,19 +658,11 @@ class _CountryChip extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // BANDERA REAL del país (assets/flags): "Global" usa ícono
-            // public porque USD no tiene bandera de país.
-            country == Country.US
-                ? Icon(
-                    Icons.public,
-                    size: 14,
-                    color: selected ? shad.background : scheme.onSurfaceVariant,
-                  )
-                : Opacity(
-                    opacity: selected ? 1 : 0.9,
-                    child: Flag(country.currency, size: 14),
-                  ),
-            const SizedBox(width: 6),
+            Opacity(
+              opacity: selected ? 1 : 0.9,
+              child: Flag(country.currency, size: 16),
+            ),
+            const SizedBox(width: 8),
             Text(
               country.label,
               style: TextStyle(
@@ -656,6 +679,8 @@ class _CountryChip extends ConsumerWidget {
   }
 }
 
+/// Pilares del «Lo que hace» (v34): tarjeta delineada con icono en tile
+/// tintado, título 17 y cuerpo 13.5 — jerarquía y separación honesta.
 class _WelcomeBullet extends ConsumerWidget {
   const _WelcomeBullet({
     required this.icon,
@@ -672,14 +697,25 @@ class _WelcomeBullet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    // v25 «HOJA»: bullet PLANO — icono de color sobre el papel, sin tile
-    // de relleno ni caja contenedora; la jerarquía la dan el aire y la
-    // tipografía.
     return Container(
       padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: context.ve.colorScheme.border),
+      ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(icon, size: 20, color: color),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: color.withValues(alpha: 0.12),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 20, color: color),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -689,8 +725,8 @@ class _WelcomeBullet extends ConsumerWidget {
                   title,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
                     color: scheme.onSurface,
                   ),
                 ),

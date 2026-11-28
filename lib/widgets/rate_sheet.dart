@@ -74,13 +74,13 @@ class RateTile extends ConsumerWidget {
     final has = rate > 0;
 
     return Padding(
-      // v23.2: fila compacta (2/6 en vez de 4/9) — la Cotización del Inicio
-      // cabe en media pantalla; la zona de toque sigue ≥48dp.
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Material(
-        // v25 «HOJA»: fila PLANA — la selección se marca con tinta (nombre +
-        // check) y valores displayNum, sin caja de fondo ni borde; las filas
-        // sin tasa quedan atenuadas por su texto muted, no por un fill.
+        // v34 · código de colores del dueño: el NOMBRE lleva la tinta de su
+        // categoría (verde oficial · rojo mercado · naranja promedio · morado
+        // manual) y la fila ACTIVA se marca con un DIFUMINADO del mismo
+        // color que se desvanece hacia la derecha + barra de acento a la
+        // izquierda. Sin etiquetas secundarias: el color dice el tipo.
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
@@ -88,6 +88,20 @@ class RateTile extends ConsumerWidget {
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: selected
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        ink.withValues(alpha: 0.16),
+                        ink.withValues(alpha: 0.02),
+                      ],
+                    ),
+                    border: Border(left: BorderSide(color: ink, width: 3)),
+                  )
+                : null,
             child: Row(
               children: <Widget>[
                 if (showFlag) ...<Widget>[
@@ -101,16 +115,18 @@ class RateTile extends ConsumerWidget {
                       Row(
                         children: <Widget>[
                           Flexible(
-                            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                              s.edgeName,
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w800,
-                                color: has
-                                    ? scheme.onSurface
-                                    : scheme.onSurfaceVariant,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                s.edgeName,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: has ? ink : scheme.onSurfaceVariant,
+                                ),
                               ),
-                            )),
+                            ),
                           ),
                           if (selected) ...<Widget>[
                             const SizedBox(width: 6),
@@ -123,41 +139,24 @@ class RateTile extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 1),
-                      // Copy honesto (fix): «Toca el lápiz…» se mostraba en
-                      // TODA fila sin tasa, pero el lápiz solo existe en
-                      // fuentes manuales — en oficiales/paralelo era una
-                      // instrucción imposible de seguir.
-                      //
-                      // v20 (orden del dueño): SELLO de categoría delante
-                      // del detalle — icono + palabra + color establecido en
-                      // TODA fila de tasa de la app (identificación
-                      // precisa, no solo el fondo tenue).
-                      Row(
-                        children: <Widget>[
-                          SourceSeal(s.category),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                              has
-                                  ? (freshness ?? s.detail)
-                                  : (s.category == SourceCategory.manual
-                                        // v20: hint corto — con el sello
-                                        // delante la frase larga se
-                                        // truncaba (VLM gate).
-                                        ? 'Fija tu tasa con el lápiz'
-                                        : 'Sin tasa aún para esta fuente'),
-                              maxLines: 1,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: has
-                                    ? scheme.onSurfaceVariant
-                                    : scheme.onSurfaceVariant.withValues(
-                                        alpha: 0.8,
-                                      ),
-                              ),
-                            )),
+                      // v34 · sin etiqueta secundaria: bajo el nombre vive
+                      // SOLO la fecha de actualización (o el hint de acción
+                      // si no hay valor). El tipo lo dice el color.
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          has
+                              ? (freshness ?? s.detail)
+                              : (s.category == SourceCategory.manual
+                                    ? 'Fija tu tasa con el lápiz'
+                                    : 'Sin tasa aún para esta fuente'),
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: scheme.onSurfaceVariant,
                           ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
@@ -302,6 +301,12 @@ Future<void> showRateSheet(
 }
 
 String? _freshnessOf(AppStore store, String id) {
+  // v34 · fix del «hace 9 horas» (hallazgo del dueño): la frescura que ve
+  // el usuario es la de la ÚLTIMA CONSULTA del tablero (fetchedAt) — la
+  // fecha de publicación de la API (updatedAt, p. ej. BCV 1 vez al día)
+  // nunca se movía al actualizar a mano y el sello quedaba clavado.
+  final fetched = store.board.fetchedAt;
+  if (fetched != null) return timeAgo(fetched);
   final e = store.board.sources[id];
   return e == null ? null : timeAgo(e.updatedAt);
 }

@@ -105,14 +105,18 @@ class _ProvidersLine extends ConsumerWidget {
     if (providers.isEmpty && degraded.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-        [
-          if (providers.isNotEmpty) 'Responden: ${providers.join(' · ')}',
-          if (degraded.isNotEmpty) 'Sin respuesta: ${degraded.join(' · ')}',
-        ].join('  ·  '),
-        maxLines: 2,
-        style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-      )),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          [
+            if (providers.isNotEmpty) 'Responden: ${providers.join(' · ')}',
+            if (degraded.isNotEmpty) 'Sin respuesta: ${degraded.join(' · ')}',
+          ].join('  ·  '),
+          maxLines: 2,
+          style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+        ),
+      ),
     );
   }
 }
@@ -309,7 +313,8 @@ class RatesBoard extends ConsumerWidget {
                         bcv: ctx.rate('ves-bcv'),
                         selected:
                             ctx.sel(Currency.ves) == 'ves-manual' &&
-                            (store.data.manualRates['ves-manual'] == r.bsPerUsd),
+                            (store.data.manualRates['ves-manual'] ==
+                                r.bsPerUsd),
                         onTap: () => store.applyCustomRate(r),
                       ),
                     ],
@@ -392,9 +397,14 @@ class RatesBoard extends ConsumerWidget {
           rate: ctx.rate(s.id),
           precision: store.settings.precision,
           selected: ctx.sel(s.currency) == s.id,
-          freshness: store.board.sources[s.id] == null
-              ? null
-              : timeAgo(store.board.sources[s.id]!.updatedAt),
+          // v34 · fix del «hace 9 horas» (hallazgo del dueño): la frescura
+          // es la de la ÚLTIMA CONSULTA del tablero (fetchedAt) — la fecha
+          // de publicación de la API nunca se movía al actualizar a mano.
+          freshness: store.board.fetchedAt != null
+              ? timeAgo(store.board.fetchedAt!)
+              : (store.board.sources[s.id] == null
+                    ? null
+                    : timeAgo(store.board.sources[s.id]!.updatedAt)),
           onTap: () {
             if (ctx.rate(s.id) <= 0) {
               // Manual sin valor: el editor ES la activación.
@@ -476,18 +486,12 @@ class _RateSection extends StatelessWidget {
           child: Text(
             description,
             maxLines: 1,
-            style: TextStyle(
-              fontSize: 13.5,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
           ),
         ),
         const SizedBox(height: 12),
         ...rows,
-        if (action != null) ...[
-          const SizedBox(height: 12),
-          action!,
-        ],
+        if (action != null) ...[const SizedBox(height: 12), action!],
       ],
     );
   }
@@ -512,9 +516,10 @@ Future<void> editManualRate(
   }
 }
 
-/// Fila de tasa propia (v23): sello manual (violeta) + nombre + GapChip de
-/// brecha vs BCV + valor tabular a la derecha; seleccionada invierte la
-/// tinta como las filas de fuente. Mismo ritmo vertical que RateTile.
+/// Fila de tasa propia (v23 · v34): nombre en la tinta MANUAL (morado —
+/// el color dice el tipo, sin sello de texto) + GapChip de brecha vs BCV
+/// + valor tabular a la derecha; seleccionada lleva el check morado.
+/// Mismo ritmo vertical que RateTile.
 class _CustomRateRow extends ConsumerWidget {
   const _CustomRateRow({
     required this.rate,
@@ -536,13 +541,10 @@ class _CustomRateRow extends ConsumerWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        // v25 «HOJA»: fila seleccionada SIN CAJA — tinta plena + check 14.
         margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         child: Row(
           children: [
-            const SourceSeal(SourceCategory.manual),
-            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -550,17 +552,19 @@ class _CustomRateRow extends ConsumerWidget {
                   Row(
                     children: [
                       Flexible(
-                        child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                          rate.name,
-                          maxLines: 1,
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w700,
-                            color: selected
-                                ? scheme.onSurface
-                                : scheme.onSurfaceVariant,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            rate.name,
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w800,
+                              color: ink.manual,
+                            ),
                           ),
-                        )),
+                        ),
                       ),
                       if (selected) ...[
                         const SizedBox(width: 6),

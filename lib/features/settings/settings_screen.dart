@@ -24,6 +24,7 @@ import '../../core/currencies.dart';
 import '../../core/fmt.dart';
 import '../../core/models.dart';
 import '../../core/theme.dart';
+import '../../core/ve_theme.dart';
 import '../../data/backup.dart';
 import '../../data/board.dart';
 import '../../data/store.dart';
@@ -49,8 +50,10 @@ part 'settings_alertas.dart';
 part 'settings_system.dart';
 part 'cuentas_pago_movil.dart';
 
-/// Ajustes en UNA pantalla (v30 · H-42) con GUI refactorizada (v32): una
-/// sección = un encabezado solo + filas planas del kit.
+/// Ajustes en UNA pantalla (v30 · H-42) con la GUI v34 reescrita: cada
+/// sección vive en su PROPIA TARJETA delineada con encabezado de icono +
+/// título + pista — jerarquía de un vistazo, tamaños uniformes y cero
+/// bloques planos fundidos (orden del dueño).
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -63,7 +66,7 @@ class SettingsScreen extends ConsumerWidget {
       backgroundColor: scheme.surfaceContainerLowest,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
           children: [
             // ── Título SOLO (v32: los títulos no llevan nada al lado).
             Text(
@@ -79,76 +82,184 @@ class SettingsScreen extends ConsumerWidget {
               'La app, a tu manera.',
               style: TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
             ),
-            // ── 1 · Cuentas y cobro (H-42: PRIMERO — el deep link del
+            const SizedBox(height: 16),
+            // ── v34: cada sección en su tarjeta — el índice le dice al
+            // ojo dónde empieza y dónde termina cada grupo.
+            // 1 · Cuentas y cobro (H-42: PRIMERO — el deep link del
             // Conversor e Inicio aterriza directo en esta sección).
-            const VeEyebrow(
-              hint:
+            _AjustesSeccion(
+              icono: LucideIcons.wallet,
+              titulo: 'Cuentas y cobro',
+              pista:
                   'Guarda tus datos de cobro una vez y comparte el cobro '
                   'desde el Conversor. Todo queda en este teléfono.',
-              child: Text('CUENTAS Y COBRO'),
+              child: const CuentasPagoMovil(),
             ),
-            const CuentasPagoMovil(),
-            // ── 2 · Tasas y fuentes: monedas por módulo, manuales y propias.
-            const VeEyebrow(
-              hint:
+            // 2 · Tasas y fuentes: monedas por módulo, manuales y propias.
+            _AjustesSeccion(
+              icono: LucideIcons.arrowLeftRight,
+              titulo: 'Tasas y fuentes',
+              pista:
                   'De dónde sale cada tasa: la fuente por divisa y por '
                   'módulo, más tus tasas manuales.',
-              child: Text('TASAS Y FUENTES'),
+              child: _Monedas(store: store),
             ),
-            _Monedas(store: store),
-            // ── 3 · Alertas: permiso + picos + metas + recordatorio.
-            const VeEyebrow(
-              hint:
+            // 3 · Alertas: permiso + picos + metas + recordatorio.
+            _AjustesSeccion(
+              icono: LucideIcons.bell,
+              titulo: 'Alertas',
+              pista:
                   'Avisos útiles sin ruido: picos de tasa, metas que tú '
                   'fijas y el recordatorio de precios.',
-              child: Text('ALERTAS'),
+              child: _Alertas(store: store),
             ),
-            _Alertas(store: store),
-            // ── 4 · Diagnóstico: salud de las fuentes, a pedido.
-            const VeEyebrow(
-              hint: 'Consulta cada región y mide su respuesta. Si una falla, '
-                  'las demás siguen.',
-              child: Text('DIAGNÓSTICO DE FUENTES'),
+            // 4 · Diagnóstico: salud de las fuentes, a pedido.
+            _AjustesSeccion(
+              icono: LucideIcons.activity,
+              titulo: 'Diagnóstico de fuentes',
+              pista:
+                  'Consulta cada región y mide su respuesta. Si una '
+                  'falla, las demás siguen.',
+              child: const _Diagnostico(),
             ),
-            const _Diagnostico(),
-            // ── 5 · País y decimales: el foco del tablero y la escala.
-            const VeEyebrow(
-              hint: 'Tu tablero en tu país y la escala decimal que quieres '
-                  'ver.',
-              child: Text('PAÍS Y DECIMALES'),
+            // 5 · País y decimales: el foco del tablero y la escala.
+            _AjustesSeccion(
+              icono: LucideIcons.globe,
+              titulo: 'País y decimales',
+              pista:
+                  'Tu tablero en tu país y la escala decimal que '
+                  'quieres ver.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Pais(store: store),
+                  const SizedBox(height: 8),
+                  _Precision(store: store),
+                ],
+              ),
             ),
-            _Pais(store: store),
-            _Precision(store: store),
-            // ── 6 · Datos y conexión: offline, intervalo, en vivo, widgets.
-            const VeEyebrow(
-              hint:
+            // 6 · Datos y conexión: offline, intervalo, en vivo, widgets.
+            _AjustesSeccion(
+              icono: LucideIcons.wifi,
+              titulo: 'Datos y conexión',
+              pista:
                   'Cuándo consulta la app y qué hace sin red. Las tasas se '
                   'guardan en tu teléfono.',
-              child: Text('DATOS Y CONEXIÓN'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _DatosConexion(store: store),
+                  const _AppWidgetsRow(),
+                ],
+              ),
             ),
-            _DatosConexion(store: store),
-            const _AppWidgetsRow(),
-            // ── 7 · Apariencia: tema, Material You, biometría.
-            const VeEyebrow(
-              hint: 'El tono de la app y el candado al abrir.',
-              child: Text('APARIENCIA'),
+            // 7 · Apariencia: tema, Material You, biometría.
+            _AjustesSeccion(
+              icono: LucideIcons.palette,
+              titulo: 'Apariencia',
+              pista: 'El tono de la app y el candado al abrir.',
+              child: const _Apariencia(),
             ),
-            const _Apariencia(),
-            // ── 8 · Respaldo: exportar, importar y zona de peligro.
-            const VeEyebrow(
-              hint:
+            // 8 · Respaldo: exportar, importar y zona de peligro.
+            _AjustesSeccion(
+              icono: LucideIcons.databaseBackup,
+              titulo: 'Respaldo',
+              pista:
                   'Tus datos viven en este teléfono: respalda y recupera '
                   'cuando cambies de equipo.',
-              child: Text('RESPALDO'),
+              child: _Respaldo(store: store),
             ),
-            _Respaldo(store: store),
-            // ── 9 · Acerca de: registros, bienvenida, actualizaciones, legal.
-            const VeEyebrow(
-              hint: 'La versión, los registros y los papeles de la casa.',
-              child: Text('ACERCA DE'),
+            // 9 · Acerca de: registros, bienvenida, actualizaciones, legal.
+            _AjustesSeccion(
+              icono: LucideIcons.info,
+              titulo: 'Acerca de',
+              pista: 'La versión, los registros y los papeles de la casa.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _Registros(),
+                  _TutorialLegal(store: store),
+                ],
+              ),
             ),
-            const _Registros(),
-            _TutorialLegal(store: store),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tarjeta de sección de Ajustes (v34 · reescritura de la GUI): icono en
+/// tile tintado + título 17 + pista 11, contenido dentro de una caja
+/// delineada (superficie + hairline + radio 16) — la misma piel de las
+/// tarjetas del Inicio. Cada sección respira separada de las demás.
+class _AjustesSeccion extends StatelessWidget {
+  const _AjustesSeccion({
+    required this.icono,
+    required this.titulo,
+    required this.pista,
+    required this.child,
+  });
+
+  final IconData icono;
+  final String titulo;
+  final String pista;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          border: Border.all(color: context.ve.colorScheme.border),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(9),
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.10),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(icono, size: 17, color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    titulo,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              pista,
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.4,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 10),
+            child,
           ],
         ),
       ),
@@ -357,10 +468,7 @@ class _DatosConexion extends ConsumerWidget {
                 const SizedBox(height: 6),
                 Text(
                   'Intervalo de consulta de tasas',
-                  style: VeText.labelCaps(
-                    11,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  style: VeText.labelCaps(11, color: scheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 8),
                 Wrap(

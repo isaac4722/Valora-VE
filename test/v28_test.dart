@@ -57,7 +57,11 @@ void main() {
     return RatesPoller(store, notifs, AlertEngine(prefs));
   }
 
-  Future<void> pumpHome(WidgetTester tester, AppStore store, RatesPoller poller) async {
+  Future<void> pumpHome(
+    WidgetTester tester,
+    AppStore store,
+    RatesPoller poller,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -88,8 +92,11 @@ void main() {
     final poller = await makePoller(store);
     await pumpHome(tester, store, poller);
 
-    // Nombre de la tasa en UNA forma, con «Oficial» siempre presente.
-    expect(find.text('BCV · Oficial'), findsOneWidget);
+    // v34 (orden del dueño): el nombre va SOLO y COLOREADO por tipo de
+    // tasa — verde oficial · rojo mercado · naranja promedio · morado
+    // manual. La etiqueta secundaria «· Oficial» ya no existe.
+    expect(find.text('BCV'), findsOneWidget);
+    expect(find.text('BCV · Oficial'), findsNothing);
     // La equivalencia completa: lado base, símbolo igual y cifra en Bs
     // (con la precisión configurada, 4 por defecto en v27).
     expect(find.text('1 USD'), findsOneWidget);

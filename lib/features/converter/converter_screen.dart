@@ -1,26 +1,27 @@
 /// ─── Conversor (§9.2 · MODULE=converter) ───────────────────────────────────
-/// v29 (Parte 3 · orden del dueño): el patrón CALCULADORA queda desnudo y
-/// simétrico — título solo (H-21), fecha con protagonismo: «FECHA DE LA
-/// TASA» con segmentos de 44 px **Ayer · Hoy · Mañana · Fecha** (H-22;
-/// «Mañana» planifica el cobro del día siguiente con la tasa viva de hoy),
-/// campos GEMELOS from/to con símbolo tras el número en ambos lados y tinta
+/// v34 (orden del dueño): el patrón CALCULADORA queda desnudo y simétrico
+/// — título solo (H-21), fecha con protagonismo: «FECHA DE LA TASA» con
+/// segmentos de 44 px **Ayer · Hoy · Mañana · Fecha** (H-22), campos
+/// GEMELOS from/to con símbolo tras el número en ambos lados y tinta
 /// plena en el activo (H-23), selector de tasa delineado a todo lo ancho
-/// (sello + nombre + «1 USD = X VES · hace X» + chevron → hoja de fuentes,
-/// H-24), teclado como ÚNICA vía de entrada con ⌫ largo que limpia (H-25),
-/// precisión UNA escala 2/3/4/«Completo» (H-26), swap «vacío entra, vacío
-/// sale» (H-27), notas en UNA línea inline bajo el resultado (H-28) y
-/// puerta de Pago Móvil ante cualquier par con VES — destino cobra el
-/// resultado, origen el monto escrito (H-29). Calendario histórico de
+/// con el NOMBRE COLOREADO por tipo de tasa (verde oficial · rojo mercado
+/// · naranja promedio · morado manual) y SOLO la fecha de actualización
+/// debajo — sin la línea «1 USD = X» que saturaba (v34), teclado como
+/// ÚNICA vía de entrada con ⌫ largo que limpia (H-25), precisión UNA
+/// escala 2/3/4/«Completo» (H-26), swap como BOTÓN de verdad (v34: caja
+/// delineada que no se deja cortar por el hairline), puerta de Pago
+/// Móvil ante cualquier par con VES (H-29). Las NOTAS de conversión se
+/// retiraron por orden del dueño (v34). Calendario histórico de
 /// snapshots reales (sin dato → sin dato, nunca fabrica). Sin subtítulo,
-/// sin atajos y sin fichas, el cuerpo cabe sin scroll en 390×844 (H-30; el
-/// SingleChildScrollView queda como red de seguridad para textScale alto).
+/// sin atajos y sin fichas, el cuerpo cabe sin scroll en 390×844 (H-30;
+/// el SingleChildScrollView queda como red de seguridad para textScale
+/// alto).
 library;
 
 import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-
 
 import '../../core/currencies.dart';
 import '../../core/fmt.dart';
@@ -35,7 +36,7 @@ import '../../widgets/app_tour.dart' show TourKeys;
 import '../../widgets/rate_sheet.dart';
 import '../../widgets/share_card.dart';
 import '../../widgets/export_sheet.dart';
-import '../../widgets/ui.dart';
+import '../../widgets/ui.dart' hide categoryInk;
 import 'pago_movil_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:valorave/providers/providers.dart';
@@ -67,8 +68,6 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
   DateTime? _customDate;
   Map<String, double>? _historicRates;
   bool _historicLoading = false;
-  final _notesCtrl = TextEditingController();
-  Timer? _notesSave;
   AppStore? _storeRef;
 
   /// Tecla del VeKeypad sobre el campo ACTIVO (driver v19: los dos lados
@@ -123,27 +122,15 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
   @override
   void initState() {
     super.initState();
-    final store = ref.read(appStoreProvider);
-    _storeRef = store;
-    _notesCtrl.text = store.readConversionNotes();
-    _notesCtrl.addListener(_onNotesChanged);
-  }
-
-  void _onNotesChanged() {
-    _notesSave?.cancel();
-    _notesSave = Timer(const Duration(milliseconds: 600), () {
-      _storeRef?.writeConversionNotes(_notesCtrl.text);
-    });
+    _storeRef = ref.read(appStoreProvider);
+    // v34: las notas de conversión se retiraron por orden del dueño — la
+    // pantalla quedó solo cálculo, sin campo libre que saturara el espacio.
   }
 
   @override
   void dispose() {
-    final pending = _notesSave?.isActive ?? false;
-    _notesSave?.cancel();
-    if (pending) _storeRef?.writeConversionNotes(_notesCtrl.text);
     _fromCtrl.dispose();
     _toCtrl.dispose();
-    _notesCtrl.dispose();
     super.dispose();
   }
 
@@ -548,7 +535,13 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
         : ctx.sel(from);
     final src = RateSource.of(primaryId);
     final entry = store.board.sources[primaryId];
-    final when = entry?.updatedAt ?? store.board.fetchedAt;
+    // v34 · fix del «hace 9 horas» (hallazgo del dueño): la fecha que ve el
+    // usuario es la de la ÚLTIMA CONSULTA (fetchedAt) — la fecha de
+    // publicación de la API (BCV 1 vez al día) jamás se movía al
+    // actualizar a mano. La manual conserva su propio reloj.
+    final when = src?.category == SourceCategory.manual
+        ? (entry?.updatedAt ?? store.board.fetchedAt)
+        : (store.board.fetchedAt ?? entry?.updatedAt);
     final frescura = src?.category == SourceCategory.manual
         ? 'tu tasa manual'
         : (when != null ? timeAgo(when) : 'sin fecha aún');
@@ -614,7 +607,6 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                 precision: precision,
                 fromCtrl: _fromCtrl,
                 toCtrl: _toCtrl,
-                notesCtrl: _notesCtrl,
                 from: from,
                 to: to,
                 result: result,
@@ -647,8 +639,11 @@ class _ConverterScreenState extends ConsumerState<ConverterScreen> {
                     ? _swapSides(store, from, to, plan, result)
                     : store.setConverterPair(from.code, c.code),
                 onPickSource: _pickSource,
-                onClearOverride: () =>
-                    store.setModuleRateSource(RateModule.converter, fuenteCur, null),
+                onClearOverride: () => store.setModuleRateSource(
+                  RateModule.converter,
+                  fuenteCur,
+                  null,
+                ),
               ),
             ),
           ),
@@ -805,7 +800,9 @@ class _FechaTasas extends StatelessWidget {
       'tomorrow' => 'Para mañana · cobro planificado con la tasa de hoy',
       'yesterday' => 'Tasa de ayer',
       _ =>
-        customDate == null ? 'Tasa del día elegido' : 'Tasa del ${fmtDate(customDate!)}',
+        customDate == null
+            ? 'Tasa del día elegido'
+            : 'Tasa del ${fmtDate(customDate!)}',
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -864,19 +861,23 @@ class _FechaTasas extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                    sinDatos
-                        ? 'Sin datos ese día. Elige otro en el calendario.'
-                        : contexto,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      color: mode == 'tomorrow'
-                          ? scheme.onSurfaceVariant
-                          : (ink?.warn ?? scheme.onSurfaceVariant),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      sinDatos
+                          ? 'Sin datos ese día. Elige otro en el calendario.'
+                          : contexto,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: mode == 'tomorrow'
+                            ? scheme.onSurfaceVariant
+                            : (ink?.warn ?? scheme.onSurfaceVariant),
+                      ),
                     ),
-                  )),
+                  ),
                 ),
                 VeBtn(
                   variant: VeBtnVariant.ghost,
@@ -892,19 +893,19 @@ class _FechaTasas extends StatelessWidget {
   }
 }
 
-/// v29 (H-23/H-24/H-28): el bloque de cálculo — selector de tasa delineado
-/// a todo lo ancho (H-24), campos GEMELOS (mismo MoneyField + símbolo tras
-/// el número + CurrencySelect, display 30, tinta plena en el lado activo)
-/// con el swap entre ambos (H-23), la línea «≈» SOLO cuando la vista
-/// recorta decimales reales (V-2/H-26) y las notas en UNA línea inline
-/// pegada al resultado (H-28). Estética «HOJA»: sin caja envolvente — el
-/// control delineado es la única pieza con borde (es un CONTROL, no una
-/// tarjeta de contenido).
+/// v34: el bloque de cálculo — selector de tasa delineado a todo lo ancho
+/// con el NOMBRE COLOREADO por tipo (H-24 v34) y SOLO la fecha de
+/// actualización debajo (sin la línea «1 USD = X», orden del dueño),
+/// campos GEMELOS (mismo MoneyField + símbolo tras el número +
+/// CurrencySelect, display 30, tinta plena en el lado activo) con el swap
+/// entre ambos como BOTÓN delineado de verdad, y la línea «≈» SOLO cuando
+/// la vista recorta decimales reales (V-2/H-26). Estética «HOJA»: sin caja
+/// envolvente — el control delineado es la única pieza con borde (es un
+/// CONTROL, no una tarjeta de contenido).
 class _DualInput extends ConsumerWidget {
   const _DualInput({
     required this.fromCtrl,
     required this.toCtrl,
-    required this.notesCtrl,
     required this.from,
     required this.to,
     required this.result,
@@ -922,7 +923,7 @@ class _DualInput extends ConsumerWidget {
     required this.onClearOverride,
     required this.precision,
   });
-  final TextEditingController fromCtrl, toCtrl, notesCtrl;
+  final TextEditingController fromCtrl, toCtrl;
   final int precision;
   final Currency from, to;
   final double result;
@@ -940,14 +941,12 @@ class _DualInput extends ConsumerWidget {
   final void Function(Currency c, String id) onPickSource;
   final VoidCallback onClearOverride;
 
-  /// Nombre ÚNICO en una sola forma, con «Oficial» siempre en oficiales
-  /// (v28 home / v29 H-24: mismo lenguaje en toda la app).
+  /// v34 · nombre SOLO (sin etiqueta secundaria «· Oficial»): el TIPO lo
+  /// dice el color del texto — verde oficial · rojo mercado · naranja
+  /// promedio · morado manual (orden del dueño).
   String _nombreFuente() {
     final src = RateSource.of(activeSourceId);
-    if (src == null) return activeSourceId;
-    return src.label.contains(src.category.label)
-        ? src.label
-        : '${src.label} · ${src.category.label}';
+    return src?.label ?? activeSourceId;
   }
 
   /// La divisa cuyas fuentes alimentan el par (H-24): la de origen si
@@ -1002,10 +1001,7 @@ class _DualInput extends ConsumerWidget {
               border: InputBorder.none,
               isCollapsed: true,
               contentPadding: const EdgeInsets.symmetric(vertical: 6),
-              hintStyle: VeText.displayNum(
-                30,
-                color: scheme.onSurfaceVariant,
-              ),
+              hintStyle: VeText.displayNum(30, color: scheme.onSurfaceVariant),
             ),
           ),
         ),
@@ -1028,6 +1024,12 @@ class _DualInput extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final ok = plan != null && result > 0;
+    final activeSrc = RateSource.of(activeSourceId);
+    // v34 · tinta de la categoría de la tasa activa — pinta el nombre y el
+    // difuminado del selector (orden del dueño).
+    final Color tipoInk = activeSrc == null
+        ? scheme.onSurface
+        : categoryInk(context, activeSrc.category);
 
     // H-26/V-2: la línea «≈» muestra la cifra exacta SOLO cuando la vista
     // recorta decimales reales (COP recorta a 0 por formato local).
@@ -1038,7 +1040,8 @@ class _DualInput extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── H-24: selector de tasa delineado a todo lo ancho ──
+        // ── v34 (H-24): selector de tasa — nombre COLOREADO + fecha, con
+        // difuminado del color de su tipo que indica la selección ──
         InkWell(
           onTap: () => _openSourcesSheet(context, ref),
           borderRadius: BorderRadius.circular(12),
@@ -1048,38 +1051,54 @@ class _DualInput extends ConsumerWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: context.ve.colorScheme.border),
+              // v34 · difuminado del color del tipo de tasa (orden del
+              // dueño): la selección se intuye del color antes de leer.
+              gradient: ok
+                  ? LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        tipoInk.withValues(alpha: 0.12),
+                        tipoInk.withValues(alpha: 0.01),
+                      ],
+                    )
+                  : null,
             ),
             child: Row(
               children: [
-                if (RateSource.of(activeSourceId) != null) ...[
-                  SourceSeal(RateSource.of(activeSourceId)!.category),
-                  const SizedBox(width: 8),
-                ],
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                        _nombreFuente(),
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: scheme.onSurface,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          _nombreFuente(),
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: ok ? tipoInk : scheme.onSurfaceVariant,
+                          ),
                         ),
-                      )),
+                      ),
                       const SizedBox(height: 2),
-                      FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                        (plan != null && plan!.rate > 0)
-                            ? '1 ${from.code} = ${fmtRatePrecise(plan!.rate, precision)} ${to.code} · $frescura'
-                            : 'Sin tasa disponible para este par',
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w500,
-                          color: scheme.onSurfaceVariant,
+                      // v34: SOLO la fecha de actualización — sin la línea
+                      // «1 USD = X» que saturaba (orden del dueño).
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          ok ? frescura : 'Sin tasa disponible para este par',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w500,
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
-                      )),
+                      ),
                     ],
                   ),
                 ),
@@ -1125,9 +1144,7 @@ class _DualInput extends ConsumerWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                const Positioned.fill(
-                  child: Center(child: Divider(height: 1)),
-                ),
+                const Positioned.fill(child: Center(child: Divider(height: 1))),
                 _SwapBtn(onTap: onSwap),
               ],
             ),
@@ -1146,50 +1163,20 @@ class _DualInput extends ConsumerWidget {
         if (recorta || !ok)
           Padding(
             padding: const EdgeInsets.only(left: 4, top: 2),
-            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-              recorta ? '≈ $exacta' : 'sin tasa para este par',
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurfaceVariant,
-              ),
-            )),
-          ),
-        // ── H-28: notas en UNA línea inline, pegadas al cálculo ──
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              LucideIcons.notebookPen,
-              size: 13.5,
-              color: scheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: TextField(
-                controller: notesCtrl,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                recorta ? '≈ $exacta' : 'sin tasa para este par',
                 maxLines: 1,
-                maxLength: 5000,
                 style: TextStyle(
-                  fontSize: 13.5,
-                  color: scheme.onSurface,
-                ),
-                decoration: const InputDecoration(
-                  hintText: 'Nota de esta conversión',
-                  counterText: '',
-                  border: InputBorder.none,
-                  isCollapsed: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 6),
-                  hintStyle: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
       ],
     );
   }
@@ -1208,6 +1195,7 @@ class _SwapBtnState extends ConsumerState<_SwapBtn> {
   Widget build(BuildContext context) {
     final shad = context.ve;
     final scheme = shad.colorScheme;
+    final bool dark = context.ve.brightness == Brightness.dark;
     return Semantics(
       button: true,
       label: 'Invertir par',
@@ -1221,11 +1209,22 @@ class _SwapBtnState extends ConsumerState<_SwapBtn> {
           duration: const Duration(milliseconds: 220),
           curve: kEaseVe,
           child: Container(
-            // v23.3 (pez 2-a P1-1): visual 32, pista 44×44 — el dedo
-            // tiene margen sin engordar el control.
-            // v25 «HOJA»: IconButton PLANO — sin círculo ni borde.
+            // v34 · swap como BOTÓN de verdad (hallazgo del dueño): el
+            // glifo plano sobre el hairline parecía un gráfico cortado y
+            // no un control. Caja delineada de 40×40 con superficie OPACA
+            // — el hairline muere detrás, el botón se lee tocable — y la
+            // pista de golpe sigue siendo 44×44 (pez 2-a P1-1).
             width: 44,
             height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: scheme.card,
+              border: Border.all(
+                color: dark
+                    ? VeColors.lineStrongDark
+                    : VeColors.lineStrongLight,
+              ),
+            ),
             alignment: Alignment.center,
             child: Icon(Icons.swap_vert, size: 20, color: scheme.foreground),
           ),

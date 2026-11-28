@@ -435,41 +435,16 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           // v32 (orden del dueño): el TÍTULO VA SOLO — sin iconos a la
-          // derecha (el Historial tiene su fila de entrada abajo, junto a
-          // Sala en vivo). Separación requerida bajo el título.
+          // derecha. v34: REJERARQUIZACIÓN de la pantalla (orden del
+          // dueño) — primero lo que se hace todos los días (ver el total y
+          // capturar productos), después la lista viva, y AL FINAL la
+          // configuración y las puertas de navegación.
           VeTitle(
             sub: Text('Presupuesto y vuelto'),
             child: Text('Lista de compras'),
           ),
           const TipsTrigger(scope: 'lista'),
-          // v29 (H-37) · v32: entrada propia de la Sala en vivo — fila
-          // delineada (icono · título · descripción · chevron); con sala
-          // activa muestra nombre, «En vivo», código y personas. Ancla del
-          // tour conservada. El Historial vive SU fila gemela debajo (v32:
-          // salió del título — títulos solos).
-          KeyedSubtree(
-            key: TourKeys.listaSala,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _SalaEntry(room: room, onTap: () => _openRoom(context)),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _FilaEntrada(
-              icon: LucideIcons.receiptText,
-              title: 'Historial de compras',
-              sub: 'Tus compras cerradas, con su tasa y su tienda.',
-              semantic: 'Historial de compras',
-              onTap: () => context.push('/historial'),
-            ),
-          ),
-          // v29 (H-31): el VALOR GRANDE vive en su TARJETA — tono de
-          // superficie, radio 14. La cifra va envuelta en FittedBox
-          // (scaleDown): si los caracteres crecen, el tamaño se reduce
-          // gradualmente, jamás rompe a una segunda línea. El número grande
-          // en la moneda de cálculo y, como extra al lado, su equivalente
-          // en USD.
+          // ── 1 · El héroe: el total de la compra (v29 H-31).
           ReadWindow(
             semanticLabel:
                 'Total de la compra: ${fmtMoney(totalInCalc, calcCur)} ${calcCur.code}',
@@ -561,206 +536,167 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
               ),
             ),
           ),
-          // v27.3 · v32 · Modo Cachea BIEN UBICADO (orden del dueño): ya no
-          // es una píldora suelta — es una FILA delineada a todo lo ancho,
-          // gemela de Sala/Historial, bajo la tarjeta del total: icono,
-          // título, explicación y chevron. Sin carrito queda honesta y
-          // deshabilitada.
-          Padding(
-            padding: const EdgeInsets.only(top: 10, bottom: 4),
-            child: _FilaEntrada(
-              icon: LucideIcons.wallet,
-              title: 'Modo Cachea',
-              sub: totalInCalc > 0
-                  ? 'Simula inicial + cuotas quincenales, sin intereses.'
-                  : 'Agrega productos y simula inicial + cuotas.',
-              semantic: 'Modo Cachea',
-              enabled: totalInCalc > 0,
-              onTap: () => showCacheaSheet(
-                context,
-                ref: ref,
-                totalInCalc: totalInCalc,
-                calcCur: calcCur,
-                totalUsd: totals.usd,
-                ctx: ctx,
-              ),
-            ),
-          ),
-          // v29 (H-32): presupuesto de UNA línea de estado — toca la tarjeta
-          // para fijar el tope (la barra se llena con el total del carrito).
-          Padding(
-            padding: const EdgeInsets.only(top: 14),
-            child: _PanelPresupuesto(
-              store: store,
-              ctx: ctx,
-              totalUsd: totals.usd,
-            ),
-          ),
-          // v29 (H-33): CÁLCULOS DE LA LISTA — sección propia fuera del
-          // presupuesto: en qué moneda se suma la lista y con qué tasa (es
-          // cosa de TODA la pantalla, no del tope del mes). El selector
-          // GRANDE habla el mismo lenguaje del Conversor (H-24).
-          _CalculosLista(
-            store: store,
-            calcCur: calcCur,
-            onCalcCurrency: (c) => store.setSetting('calcCurrency', c.code),
-          ),
-          // ── Zona de captura (ancla del tour v17.8) ─────────────────
+          // ── 2 · Zona de captura (ancla del tour v17.8) · v34: SUBE justo
+          // debajo del total — es lo que se hace TODOS los días; la
+          // configuración vive abajo.
           KeyedSubtree(
             key: TourKeys.listaAgregar,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                VeEyebrow(child: const Text('AGREGAR PRODUCTO')),
-                // Alta rápida por nombre (prototipo): libro de precios o
-                // editor prellenado.
-                Row(
-                  children: [
-                    Expanded(
-                      child: VeInput(
-                        controller: _quickCtrl,
-                        placeholder: 'Agregar producto…',
-                        onSubmitted: (_) => _quickAdd(store),
-                        semantic: 'Agregar producto',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    VeBtn(
-                      variant: VeBtnVariant.primary,
-                      size: VeBtnSize.sm,
-                      icon: LucideIcons.plus,
-                      onPressed: () => _quickAdd(store),
-                      semantic: 'Agregar',
-                      child: const SizedBox(width: 13),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                // Captura manual con detalle: nombre · cantidad ·
-                // escáner · precio + moneda · tienda (sugerencia).
-                VeCard(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  VeEyebrow(child: const Text('AGREGAR PRODUCTO')),
+                  // Alta rápida por nombre (prototipo): libro de precios o
+                  // editor prellenado.
+                  Row(
                     children: [
-                      // v29 (H-34): captura por espacios lógicos — QUÉ
-                      // (Producto · escáner) · CUÁNTO (Cant. · Precio ·
-                      // moneda) · DÓNDE (Tienda en fila propia) · acción
-                      // a todo lo ancho.
-                      // ── QUÉ ──
-                      Row(
-                        children: [
-                          Expanded(
-                            child: VeInput(
-                              key: const Key('lista-nombre'),
-                              controller: _nameCtrl,
-                              placeholder: 'Producto',
-                              semantic: 'Nombre del producto',
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // v32 (orden del dueño): el ESCANER se ve — 40
-                          // visual / 18 de glifo, centrado contra el input.
-                          VeIconBtn(
-                            icon: LucideIcons.scanBarcode,
-                            size: 40,
-                            iconSize: 18,
-                            onTap: () => _scanItem(store),
-                            label: 'Escanear código de barras',
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // ── CUÁNTO ──
-                      Row(
-                        children: [
-                          SizedBox(
-                            width: 64,
-                            child: VeInput(
-                              key: const Key('lista-cant'),
-                              controller: _qtyCtrl,
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              placeholder: 'Cant.',
-                              semantic: 'Cantidad',
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: VeInput(
-                              key: const Key('lista-precio'),
-                              controller: _priceCtrl,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              placeholder: 'Precio',
-                              semantic: 'Precio unitario',
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          CurrencySelect(
-                            value: CurrencyX.from(_addCurrency),
-                            onChanged: (c) =>
-                                setState(() => _addCurrency = c.code),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // ── DÓNDE ──
-                      VeInput(
-                        key: const Key('lista-tienda'),
-                        controller: _storeCtrl,
-                        onChanged: (v) => setState(() => _storeName = v),
-                        placeholder: 'Tienda',
-                        semantic: 'Tienda',
-                      ),
-                      if (suggestion != null)
-                        // Sugerencia PASIVA anti-duplicado: nunca bloquea
-                        // el alta.
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: TapScale(
-                            onTap: () {
-                              _storeCtrl.text = suggestion;
-                              setState(() => _storeName = suggestion);
-                            },
-                            child: Row(
-                              children: [
-                                Icon(
-                                  LucideIcons.lightbulb,
-                                  size: 13,
-                                  color: scheme.primary,
-                                ),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    '¿Quizá quisiste «$suggestion»?',
-                                    style: TextStyle(
-                                      fontSize: 13.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: scheme.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                      Expanded(
+                        child: VeInput(
+                          controller: _quickCtrl,
+                          placeholder: 'Agregar producto…',
+                          onSubmitted: (_) => _quickAdd(store),
+                          semantic: 'Agregar producto',
                         ),
-                      const SizedBox(height: 12),
+                      ),
+                      const SizedBox(width: 8),
                       VeBtn(
                         variant: VeBtnVariant.primary,
-                        expands: true,
+                        size: VeBtnSize.sm,
                         icon: LucideIcons.plus,
-                        onPressed: () => _addItem(store),
-                        child: const Text('Agregar a la lista'),
+                        onPressed: () => _quickAdd(store),
+                        semantic: 'Agregar',
+                        child: const SizedBox(width: 13),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  // Captura manual con detalle: nombre · cantidad ·
+                  // escáner · precio + moneda · tienda (sugerencia).
+                  VeCard(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        // v29 (H-34): captura por espacios lógicos — QUÉ
+                        // (Producto · escáner) · CUÁNTO (Cant. · Precio ·
+                        // moneda) · DÓNDE (Tienda en fila propia) · acción
+                        // a todo lo ancho.
+                        // ── QUÉ ──
+                        Row(
+                          children: [
+                            Expanded(
+                              child: VeInput(
+                                key: const Key('lista-nombre'),
+                                controller: _nameCtrl,
+                                placeholder: 'Producto',
+                                semantic: 'Nombre del producto',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // v32 (orden del dueño): el ESCANER se ve — 40
+                            // visual / 18 de glifo, centrado contra el input.
+                            VeIconBtn(
+                              icon: LucideIcons.scanBarcode,
+                              size: 40,
+                              iconSize: 18,
+                              onTap: () => _scanItem(store),
+                              label: 'Escanear código de barras',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        // ── CUÁNTO ──
+                        Row(
+                          children: [
+                            SizedBox(
+                              width: 64,
+                              child: VeInput(
+                                key: const Key('lista-cant'),
+                                controller: _qtyCtrl,
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                placeholder: 'Cant.',
+                                semantic: 'Cantidad',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: VeInput(
+                                key: const Key('lista-precio'),
+                                controller: _priceCtrl,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                placeholder: 'Precio',
+                                semantic: 'Precio unitario',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            CurrencySelect(
+                              value: CurrencyX.from(_addCurrency),
+                              onChanged: (c) =>
+                                  setState(() => _addCurrency = c.code),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        // ── DÓNDE ──
+                        VeInput(
+                          key: const Key('lista-tienda'),
+                          controller: _storeCtrl,
+                          onChanged: (v) => setState(() => _storeName = v),
+                          placeholder: 'Tienda',
+                          semantic: 'Tienda',
+                        ),
+                        if (suggestion != null)
+                          // Sugerencia PASIVA anti-duplicado: nunca bloquea
+                          // el alta.
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: TapScale(
+                              onTap: () {
+                                _storeCtrl.text = suggestion;
+                                setState(() => _storeName = suggestion);
+                              },
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    LucideIcons.lightbulb,
+                                    size: 13,
+                                    color: scheme.primary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      '¿Quizá quisiste «$suggestion»?',
+                                      style: TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: scheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 12),
+                        VeBtn(
+                          variant: VeBtnVariant.primary,
+                          expands: true,
+                          icon: LucideIcons.plus,
+                          onPressed: () => _addItem(store),
+                          child: const Text('Agregar a la lista'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          // ── Lista de compras ────────────────────────────────────────
+          // ── 3 · Lista de compras (lo capturado, a la vista).
           if (!hasCart)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -780,14 +716,17 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
               ),
             )
           else ...[
-            VeEyebrow(
-              right: VeBtn(
-                variant: VeBtnVariant.ghost,
-                size: VeBtnSize.sm,
-                onPressed: () => store.clearCart(),
-                child: const Text('Vaciar'),
+            Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: VeEyebrow(
+                right: VeBtn(
+                  variant: VeBtnVariant.ghost,
+                  size: VeBtnSize.sm,
+                  onPressed: () => store.clearCart(),
+                  child: const Text('Vaciar'),
+                ),
+                child: const Text('EN LA LISTA'),
               ),
-              child: const Text('EN LA LISTA'),
             ),
             VeGroup(
               children: [
@@ -838,6 +777,74 @@ class _ListaScreenState extends ConsumerState<ListaScreen> {
                 ),
               ),
           ],
+          // ── 4 · Cálculos de la lista (v29 H-33): en qué moneda se suma y
+          // con qué tasa. v34: vive tras la lista — es configuración.
+          Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: _CalculosLista(
+              store: store,
+              calcCur: calcCur,
+              onCalcCurrency: (c) => store.setSetting('calcCurrency', c.code),
+            ),
+          ),
+          // ── 5 · Presupuesto de UNA línea de estado (v29 H-32).
+          Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: _PanelPresupuesto(
+              store: store,
+              ctx: ctx,
+              totalUsd: totals.usd,
+            ),
+          ),
+          // ── 6 · Modo Cachea (v27.3 · v32): fila delineada a todo lo
+          // ancho, gemela de Sala/Historial.
+          Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: _FilaEntrada(
+              icon: LucideIcons.wallet,
+              title: 'Modo Cachea',
+              sub: totalInCalc > 0
+                  ? 'Simula inicial + cuotas quincenales, sin intereses.'
+                  : 'Agrega productos y simula inicial + cuotas.',
+              semantic: 'Modo Cachea',
+              enabled: totalInCalc > 0,
+              onTap: () => showCacheaSheet(
+                context,
+                ref: ref,
+                totalInCalc: totalInCalc,
+                calcCur: calcCur,
+                totalUsd: totals.usd,
+                ctx: ctx,
+              ),
+            ),
+          ),
+          // ── 7 · Puertas de navegación (v34): Sala en vivo e Historial
+          // agrupadas al final en UN solo bloque con hairline — la Lista
+          // es de capturar; salir a otro lado va abajo.
+          Padding(
+            padding: const EdgeInsets.only(top: 14),
+            child: VeGroup(
+              children: [
+                // v29 (H-37): entrada propia de la Sala en vivo — con sala
+                // activa muestra nombre, «En vivo», código y personas.
+                // Ancla del tour conservada.
+                KeyedSubtree(
+                  key: TourKeys.listaSala,
+                  child: _SalaEntry(
+                    room: room,
+                    onTap: () => _openRoom(context),
+                  ),
+                ),
+                _FilaEntrada(
+                  icon: LucideIcons.receiptText,
+                  title: 'Historial de compras',
+                  sub: 'Tus compras cerradas, con su tasa y su tienda.',
+                  semantic: 'Historial de compras',
+                  onTap: () => context.push('/historial'),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

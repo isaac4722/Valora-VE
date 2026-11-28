@@ -1,5 +1,62 @@
 # Changelog
 
+## v34 — Ronda de errores del dueño: GUI honesta y código de colores
+
+Ciclo de corrección ordenado por el dueño («verifica que las hayas
+aplicado bien, y corrige los errores que presenta la app»), con el
+registro de errores observados pantalla por pantalla. Registro detallado
+en `HALLAZGOS_v34.md`.
+
+- **Bienvenida reescrita (4 slides)**: la barra inferior es un Stack —
+  los puntos van CENTRADOS sobre el eje real de la pantalla y los
+  botones «Atrás/Siguiente» viven en cajas gemelas de 110 px (antes los
+  puntos flotaban en el hueco entre botones de distinto ancho y se veían
+  corridos en los CUATRO slides). Las opciones de tasas del tercer slide
+  (leyenda de colores) viven en filas propias separadas por hairlines.
+  «Global / USD» lleva la BANDERA DE ESTADOS UNIDOS — era el único chip
+  con un ícono suelto. Pilares del «Lo que hace» en tarjetas delineadas
+  con icono en tile tintado.
+- **Fix «hace 9 horas» (en todas partes)**: el indicador de
+  actualización ahora dice cuándo llegó el ÚLTIMO TABLERO
+  (`board.fetchedAt`), no cuándo publicó la API (`updatedAt` — BCV
+  publica 1 vez al día y el sello quedaba clavado aunque actualizaras a
+  mano). Aplicado en Inicio, Tasas, hoja de fuentes y Conversor; las
+  manuales conservan su propio reloj.
+- **Icono del interruptor de tema centrado (ambos modos)**: el `Row`
+  interno de `_VeRawButton` empaquetaba el glifo a la IZQUIERDA cuando
+  el ancho está forzado (`VeIconBtn` 40×40) — centrado explícito del
+  eje principal; arregla el descentrado en TODOS los botones de icono.
+- **Código de colores por tipo de tasa en TODA la UI** (verde oficial ·
+  rojo mercado/paralelo · naranja promedio · morado manual): el nombre
+  de la tasa se pinta con la tinta de su categoría en Inicio, hoja de
+  fuentes, Tasas (propias incluidas) y selector del Conversor; las
+  filas seleccionadas llevan un DIFUMINADO del color que se desvanece a
+  la derecha + barra de acento. **Etiquetas secundarias fuera**: el
+  sello queda solo en icono (la palabra vive en el lector de pantalla) y
+  el nombre va solo — «BCV», no «BCV · Oficial». `CategoryLegend`
+  reescrita como leyenda del código de colores.
+- **Conversor**: notas de conversión RETIRADAS (la pantalla es solo
+  cálculo); el selector muestra SOLO el nombre coloreado y la fecha de
+  actualización — fuera la línea «1 USD = X» que saturaba; el botón de
+  intercambio es un BOTÓN de verdad: caja circular delineada 44×44 con
+  superficie opaca (el hairline ya no lo «corta») y la rotación intacta.
+- **Inicio**: «Tu mes» y «Actividad reciente» en TARJETAS SEPARADAS con
+  la misma piel del héroe (superficie + hairline + radio 16), vacíos
+  centrados y jerarquía interna (título → cifra → detalle).
+- **Ajustes reescritos**: cada sección vive en su PROPIA tarjeta con
+  encabezado de icono en tile tintado + título + pista — la misma piel
+  de las tarjetas del Inicio. Lógica H-43 intacta.
+- **Sala en Vivo reescrita**: el lobby en tarjetas — «Cómo se conectan»,
+  «Tu intención» y «Salas cercanas» cada una en su caja delineada, con
+  el botón «Escuchar» en el encabezado de su sección.
+- **Lista rejerarquizada**: el total arriba, la CAPTURA justo debajo
+  (lo que se hace todos los días), la lista viva después, y la
+  configuración (cálculos · presupuesto · Cachea) y las puertas (Sala ·
+  Historial, agrupadas con hairline) al final.
+- Verificación: analyze 0 errores/avisos · suite al verde (gate local
+  con Flutter 3.50; los 72 infos de deprecación del SDK nuevo no
+  existen en el 3.47.4 del CI).
+
 ## v33 — Revisión Goldfish de textos y documentación
 
 Ciclo de corrección ordenado por el dueño («busca cualquier error o mala

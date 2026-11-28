@@ -100,10 +100,11 @@ Future<void> main() async {
         docId: 'V12345678',
         phone: '04141234567',
       );
-      expect(
-        a.dataLines,
-        [('Banco', 'Banesco'), ('Cédula', 'V12345678'), ('Teléfono', '04141234567')],
-      );
+      expect(a.dataLines, [
+        ('Banco', 'Banesco'),
+        ('Cédula', 'V12345678'),
+        ('Teléfono', '04141234567'),
+      ]);
       expect(a.cobraEnBs, isTrue);
       expect(a.displayLabel, 'Banesco · Pago Móvil');
       expect(a.missingFields, isEmpty);
@@ -119,14 +120,11 @@ Future<void> main() async {
         docId: 'E12345678',
         phone: '04141234567', // exista o no: jamás se renderiza
       );
-      expect(
-        a.dataLines,
-        [
-          ('Banco', 'Mercantil'),
-          ('Cuenta ahorro', '01050000000000000000'),
-          ('Cédula', 'E12345678'),
-        ],
-      );
+      expect(a.dataLines, [
+        ('Banco', 'Mercantil'),
+        ('Cuenta ahorro', '01050000000000000000'),
+        ('Cédula', 'E12345678'),
+      ]);
       expect(a.cobraEnBs, isTrue);
       expect(a.displayLabel, 'Mercantil · Ahorro');
     });
@@ -138,49 +136,58 @@ Future<void> main() async {
         holderName: 'María Pérez',
         phone: 'maria@correo.com',
       );
-      expect(a.dataLines, [('Titular', 'María Pérez'), ('Zelle', 'maria@correo.com')]);
+      expect(a.dataLines, [
+        ('Titular', 'María Pérez'),
+        ('Zelle', 'maria@correo.com'),
+      ]);
       expect(a.cobraEnBs, isFalse);
       expect(a.displayLabel, 'Zelle · María Pérez');
     });
   });
 
-  group('H-43 · migración de respaldos viejos (única vía: Hive y respaldo)', () {
-    test('sin kind: con número → transferencia; con teléfono → pago móvil', () {
-      // JSON crudo del respaldo viejo (v23-v29): sin «kind».
-      final viejaConNumero = PayAccount.tryParse(const {
-        'id': 'old1',
-        'bank': 'Banesco',
-        'type': 'corriente',
-        'number': '01340000000000000000',
-        'docId': 'V12345678',
-        'phone': '04141234567',
-        'holderName': 'María Pérez',
-        'label': 'Principal',
-        'isDefault': true,
-      });
-      expect(viejaConNumero!.kind, PayAccountKind.transferencia);
-      // Sin pérdida de datos: TODO el JSON viejo sobrevive.
-      expect(viejaConNumero.label, 'Principal');
-      expect(viejaConNumero.holderName, 'María Pérez');
-      expect(viejaConNumero.docId, 'V12345678');
-      expect(viejaConNumero.phone, '04141234567');
-      expect(viejaConNumero.isDefault, isTrue);
+  group(
+    'H-43 · migración de respaldos viejos (única vía: Hive y respaldo)',
+    () {
+      test(
+        'sin kind: con número → transferencia; con teléfono → pago móvil',
+        () {
+          // JSON crudo del respaldo viejo (v23-v29): sin «kind».
+          final viejaConNumero = PayAccount.tryParse(const {
+            'id': 'old1',
+            'bank': 'Banesco',
+            'type': 'corriente',
+            'number': '01340000000000000000',
+            'docId': 'V12345678',
+            'phone': '04141234567',
+            'holderName': 'María Pérez',
+            'label': 'Principal',
+            'isDefault': true,
+          });
+          expect(viejaConNumero!.kind, PayAccountKind.transferencia);
+          // Sin pérdida de datos: TODO el JSON viejo sobrevive.
+          expect(viejaConNumero.label, 'Principal');
+          expect(viejaConNumero.holderName, 'María Pérez');
+          expect(viejaConNumero.docId, 'V12345678');
+          expect(viejaConNumero.phone, '04141234567');
+          expect(viejaConNumero.isDefault, isTrue);
 
-      final viejaSinNumero = PayAccount.tryParse(const {
-        'id': 'old2',
-        'bank': 'Mercantil',
-        'phone': '04141234567',
-      });
-      expect(viejaSinNumero!.kind, PayAccountKind.pagoMovil);
-      expect(viejaSinNumero.number, '');
+          final viejaSinNumero = PayAccount.tryParse(const {
+            'id': 'old2',
+            'bank': 'Mercantil',
+            'phone': '04141234567',
+          });
+          expect(viejaSinNumero!.kind, PayAccountKind.pagoMovil);
+          expect(viejaSinNumero.number, '');
 
-      // Round-trip: el JSON migrado lleva kind (estable en adelante).
-      final again = PayAccount.tryParse(
-        Map<String, dynamic>.from(viejaSinNumero.toJson()),
+          // Round-trip: el JSON migrado lleva kind (estable en adelante).
+          final again = PayAccount.tryParse(
+            Map<String, dynamic>.from(viejaSinNumero.toJson()),
+          );
+          expect(again!.kind, PayAccountKind.pagoMovil);
+        },
       );
-      expect(again!.kind, PayAccountKind.pagoMovil);
-    });
-  });
+    },
+  );
 
   group('H-43 · R-30d: pago móvil valida banco AND cédula AND teléfono', () {
     test('addAccount rechaza cualquier combinación incompleta del tipo', () {
@@ -457,9 +464,10 @@ Future<void> main() async {
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsOneWidget);
       // La sección 1 vive ARRIBA de la 2 — el deep link del Conversor
-      // (→ /ajustes/cuentas) aterriza sin scrollear.
-      final cuentas = tester.getTopLeft(find.text('CUENTAS Y COBRO'));
-      final tasas = tester.getTopLeft(find.text('TASAS Y FUENTES'));
+      // (→ /ajustes/cuentas) aterriza sin scrollear. v34: tarjetas con
+      // títulos en caja normal.
+      final cuentas = tester.getTopLeft(find.text('Cuentas y cobro'));
+      final tasas = tester.getTopLeft(find.text('Tasas y fuentes'));
       expect(cuentas.dy, lessThan(tasas.dy));
     });
 

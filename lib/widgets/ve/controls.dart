@@ -376,6 +376,12 @@ class VeIconBtn extends StatelessWidget {
             width: size,
             height: size,
             padding: EdgeInsets.zero,
+            // v34 · fix del interruptor de tema (hallazgo del dueño): el
+            // Row interno empaquetaba el icono a la IZQUIERDA cuando el
+            // ancho está forzado (width: size) — el glifo quedaba pegado al
+            // borde con aire muerto a la derecha y se leía descentrado en
+            // ambos modos. Centrado explícito del eje principal.
+            mainAxisAlignment: MainAxisAlignment.center,
             backgroundColor: Colors.transparent,
             hoverBackgroundColor: scheme.accent,
             pressedBackgroundColor: scheme.accent,
@@ -915,10 +921,7 @@ class VeSegmented<T> extends StatelessWidget {
                                       ? scheme.background
                                       : scheme.mutedForeground,
                                 ),
-                                child: Text(
-                                  segments[i].label,
-                                  maxLines: 1,
-                                ),
+                                child: Text(segments[i].label, maxLines: 1),
                               ),
                             ),
                           ),
@@ -1227,15 +1230,19 @@ class VeSelect<T> extends StatelessWidget {
       children: [
         if (leading != null) ...[leading, const SizedBox(width: 8)],
         Expanded(
-          child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-            text,
-            maxLines: 1,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13.5,
-              color: isPlaceholder ? faint : scheme.foreground,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              text,
+              maxLines: 1,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13.5,
+                color: isPlaceholder ? faint : scheme.foreground,
+              ),
             ),
-          )),
+          ),
         ),
         Icon(LucideIcons.chevronDown, size: 14, color: scheme.mutedForeground),
       ],
@@ -1268,15 +1275,19 @@ class VeSelect<T> extends StatelessWidget {
                     const SizedBox(width: 8),
                   ],
                   Flexible(
-                    child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                      o.label,
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13.5,
-                        color: scheme.foreground,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        o.label,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13.5,
+                          color: scheme.foreground,
+                        ),
                       ),
-                    )),
+                    ),
                   ),
                 ],
               ),

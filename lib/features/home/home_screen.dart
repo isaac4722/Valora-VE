@@ -21,12 +21,13 @@ import '../../state/app_state.dart';
 import '../../widgets/app_router.dart' show kHeroRateKey;
 import '../../widgets/app_tips.dart';
 import '../../widgets/app_tour.dart' show TourKeys;
-import '../../widgets/ui.dart';
+import '../../widgets/ui.dart' hide categoryInk;
 // v32: la lupa salió del header — el import del command palette muere aquí
 // (el sidebar de escritorio sigue teniendo su ⌘K propio).
 import '../shell/main_shell.dart' show toggleVeTheme, veEffectiveDark;
 import '../shell/notifs_center.dart' show showNotificationCenter;
 import '../rates/rates_screen.dart' show editManualRate;
+import '../../widgets/rate_sheet.dart' show categoryInk;
 import 'package:valorave/providers/providers.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -50,11 +51,40 @@ class HomeScreen extends ConsumerWidget {
             _RateCard(poller: poller),
             const SizedBox(height: 22),
             const _QuickActions(),
-            const _MonthSummary(),
-            const _RecentActivity(),
+            const SizedBox(height: 22),
+            // v34 (orden del dueño): «Tu mes» y «Actividad reciente» viven
+            // en TARJETAS SEPARADAS — misma piel del héroe (superficie +
+            // hairline + radio 16) para que cada bloque se lea como su
+            // propia unidad, con jerarquía y centrado internos.
+            _HomeCard(child: _MonthSummary()),
+            const SizedBox(height: 12),
+            _HomeCard(child: _RecentActivity()),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Tarjeta de sección del Inicio (v34 · orden del dueño): la misma piel del
+/// héroe — superficie, hairline y radio 16 — para que «Tu mes» y
+/// «Actividad reciente» sean bloques hermanos, separados y jerárquicos.
+class _HomeCard extends StatelessWidget {
+  const _HomeCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: context.ve.colorScheme.border),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: child,
     );
   }
 }
@@ -83,15 +113,19 @@ class _HomeHeader extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                      saludo(DateTime.now()),
-                      maxLines: 1,
-                      style: VeText.displayNum(
-                        30,
-                        color: scheme.onSurface,
-                        weight: FontWeight.w600,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        saludo(DateTime.now()),
+                        maxLines: 1,
+                        style: VeText.displayNum(
+                          30,
+                          color: scheme.onSurface,
+                          weight: FontWeight.w600,
+                        ),
                       ),
-                    )),
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       'Tu dinero, en orden.',
@@ -167,7 +201,15 @@ class _RateCard extends ConsumerWidget {
       return _RateEmpty(poller: poller, country: country);
     }
     final double displayRate = e?.rate ?? manualRate;
-    final DateTime updatedAt = e?.updatedAt ?? DateTime.now();
+
+    // v34 · fix del «hace 9 horas» (hallazgo del dueño): el indicador dice
+    // cuándo llegó el ÚLTIMO TABLERO (fetchedAt), no cuándo publicó la API
+    // (updatedAt — BCV publica 1 vez al día y el sello quedaba clavado en
+    // «hace 9 horas» aunque actualizaras a mano). Solo la manual conserva
+    // su propio reloj.
+    final DateTime freshnessAt = s.category == SourceCategory.manual
+        ? (e?.updatedAt ?? DateTime.now())
+        : (store.board.fetchedAt ?? e!.updatedAt);
 
     final dayKey = SnapshotPoint.dayKey(
       DateTime.now().subtract(const Duration(days: 1)),
@@ -181,13 +223,11 @@ class _RateCard extends ConsumerWidget {
         ? (displayRate / yest.last.rate - 1) * 100
         : null;
 
-    // Nombre ÚNICO en una línea (v28): «BCV · Oficial» o «Paralelo ·
-    // Mercado» — la categoría entra en la MISMA forma, nunca un segundo
-    // nombre debajo. En oficiales la palabra «Oficial» siempre está. Si el
-    // label ya contiene la palabra de categoría no se duplica.
-    final String nombre = s.label.contains(s.category.label)
-        ? s.label
-        : '${s.label} · ${s.category.label}';
+    // v34 · código de colores del dueño: el nombre va SOLO («BCV», sin la
+    // etiqueta secundaria «· Oficial») y pintado con la tinta de su
+    // categoría — verde oficial · rojo mercado · naranja promedio · morado
+    // manual. El tipo lo dice el color.
+    final Color nombreInk = categoryInk(context, s.category);
 
     return KeyedSubtree(
       key: TourKeys.cotizacion,
@@ -202,7 +242,7 @@ class _RateCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Nombre de la tasa (una sola forma) + frescura ──
+            // ── Nombre de la tasa (color de su tipo) + frescura ──
             Row(
               children: [
                 Expanded(
@@ -210,12 +250,12 @@ class _RateCard extends ConsumerWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      nombre,
+                      s.label,
                       maxLines: 1,
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
+                        color: nombreInk,
                       ),
                     ),
                   ),
@@ -229,7 +269,7 @@ class _RateCard extends ConsumerWidget {
                   )
                 else
                   Text(
-                    timeAgo(updatedAt),
+                    timeAgo(freshnessAt),
                     style: TextStyle(
                       fontSize: 11,
                       color: scheme.onSurfaceVariant,
@@ -302,11 +342,7 @@ class _RateCard extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 if (vsAyer != null) ...[
-                  Container(
-                    width: 1,
-                    height: 12,
-                    color: scheme.outlineVariant,
-                  ),
+                  Container(width: 1, height: 12, color: scheme.outlineVariant),
                   const SizedBox(width: 8),
                   TrendBadge(vsAyer),
                   const SizedBox(width: 6),
@@ -523,15 +559,19 @@ class _QuickActionButton extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 7),
-              FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                action.label,
-                maxLines: 1,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  action.label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
                 ),
-              )),
+              ),
             ],
           ),
         ),
@@ -577,6 +617,7 @@ class _MonthSummary extends ConsumerWidget {
           ),
           child: const Text('TU MES'),
         ),
+        const SizedBox(height: 2),
         if (purchases.isEmpty)
           _EmptyPanel(
             icon: LucideIcons.receiptText,
@@ -601,15 +642,19 @@ class _MonthSummary extends ConsumerWidget {
                           ),
                     ),
                     const SizedBox(height: 3),
-                    FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                      '${purchases.length} ${purchases.length == 1 ? 'compra' : 'compras'}'
-                      '${top.isEmpty ? '' : ' · ${top.first.key}'}',
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: scheme.onSurfaceVariant,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${purchases.length} ${purchases.length == 1 ? 'compra' : 'compras'}'
+                        '${top.isEmpty ? '' : ' · ${top.first.key}'}',
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
@@ -667,6 +712,7 @@ class _RecentActivity extends ConsumerWidget {
           ),
           child: const Text('ACTIVIDAD RECIENTE'),
         ),
+        const SizedBox(height: 2),
         if (recents.isEmpty)
           _EmptyPanel(
             icon: LucideIcons.history,
@@ -694,24 +740,32 @@ class _RecentActivity extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                            (p.store ?? '').trim().isEmpty
-                                ? 'Sin tienda'
-                                : p.store!,
-                            maxLines: 1,
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w600,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              (p.store ?? '').trim().isEmpty
+                                  ? 'Sin tienda'
+                                  : p.store!,
+                              maxLines: 1,
+                              style: const TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          )),
-                          FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(
-                            '${fmtDate(p.date)} · ${p.items.length} artículos',
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: scheme.onSurfaceVariant,
+                          ),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '${fmtDate(p.date)} · ${p.items.length} artículos',
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: scheme.onSurfaceVariant,
+                              ),
                             ),
-                          )),
+                          ),
                         ],
                       ),
                     ),
@@ -750,28 +804,39 @@ class _EmptyPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    // v34 (orden del dueño): el vacío se CENTRA dentro de su tarjeta —
+    // icono, título, texto y salida comparten el mismo eje óptico.
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 22, color: scheme.onSurfaceVariant),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
+          Icon(icon, size: 24, color: scheme.onSurfaceVariant),
+          const SizedBox(height: 10),
           Text(
             title,
-            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
             body,
-            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.45,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
-          const SizedBox(height: 8),
-          VeBtn(
-            variant: VeBtnVariant.ghost,
-            size: VeBtnSize.sm,
-            onPressed: onAction,
-            child: Text(action),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.center,
+            child: VeBtn(
+              variant: VeBtnVariant.ghost,
+              size: VeBtnSize.sm,
+              onPressed: onAction,
+              child: Text(action),
+            ),
           ),
         ],
       ),
